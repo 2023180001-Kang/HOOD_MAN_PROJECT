@@ -13,7 +13,7 @@ def main():
         "HoodMan_Sprite.png",
         "HoodMan_StreetThug_FINAL_2048x1536.png",
         "HoodMan_HP_pico2d.png",
-        "stage.png",
+        "newStage.png",
     ):
         with Image.open(ROOT / name) as source:
             image = source.convert("RGBA")

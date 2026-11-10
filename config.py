@@ -45,7 +45,10 @@ SPAWN_SCHEDULE = ((1.0, -1), (3.0, 1), (5.0, -1), (7.0, 1))
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 HP_IMAGE = "HoodMan_HP_pico2d.png"
-STAGE_IMAGE = "stage.png"
+STAGE_IMAGE = "newStage.png"
+STAGE_SCALE = 1.0
+# Walking line measured upward from the source image's bottom edge (941 - 797).
+STAGE_GROUND_Y = 144.0
 
 # State: (one-based source row, frames per second, loop).
 PLAYER_ANIMATIONS = {

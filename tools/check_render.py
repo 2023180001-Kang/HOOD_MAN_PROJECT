@@ -80,6 +80,16 @@ def main():
         game.world.controls.press("restart")
         game.update(1 / 60)
         capture(game, "restarted")
+        for name, x in (("stage_left", config.PLAYER_HALF_WIDTH),
+                        ("stage_center", config.START_X),
+                        ("stage_right", config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)):
+            game.world = World(spawn_schedule=())
+            game.world.player.x = x
+            game.world.camera.update(0, x)
+            capture(game, name)
+            game.world.camera.shake()
+            game.world.camera.update(0.05, x)
+            capture(game, f"{name}_shake")
     finally:
         if game is not None:
             game.close()

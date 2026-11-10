@@ -32,6 +32,7 @@ def capture(game, name):
     image.save(directory / f"{name}.png")
     pico2d.update_canvas()
     print(f"Captured artifacts/{name}.png")
+    return image
 
 
 def main():

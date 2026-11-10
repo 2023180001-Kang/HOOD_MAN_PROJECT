@@ -41,7 +41,7 @@ class Enemy:
     def try_hit(self, player):
         box = self.attack_box
         if box is not None and box.overlaps(player.body):
-            # A swing is spent even when the target is temporarily invulnerable.
+            # Per-enemy swing consumption prevents repeated active-frame damage.
             self.has_hit = True
             return player.take_damage(config.ENEMY_DAMAGE)
         return False

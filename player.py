@@ -16,7 +16,6 @@ class Player:
         self.jump_count = 0
         self.facing = 1
         self.hp = config.MAX_HP
-        self.invulnerability = 0.0
         self.animation = Animation(config.PLAYER_ANIMATIONS)
 
     @property
@@ -37,12 +36,12 @@ class Player:
                     self.x + config.PLAYER_HALF_WIDTH, self.y + config.PLAYER_HEIGHT)
 
     def take_damage(self, damage):
-        if self.hp <= 0 or self.invulnerability > 0 or self.state == "HIT":
+        if not self.alive:
             return False
         self.hp = max(0, self.hp - damage)
         self.vx = 0.0
-        hit_fps = config.PLAYER_ANIMATIONS["HIT"][1]
-        self.invulnerability = max(config.HIT_INVULNERABILITY, 8 / hit_fps)
+        # Every enemy swing applies damage. Re-entering HIT preserves the
+        # current animation clock; a lethal hit always overrides it with DYING.
         self.animation.set_state("HIT" if self.hp else "DYING")
         return True
 
@@ -57,7 +56,6 @@ class Player:
 
     def update(self, dt, controls):
         self.previous_x = self.x
-        self.invulnerability = max(0.0, self.invulnerability - dt)
         jump_pressed = controls.take_press("jump")
         if self.state in ("HIT", "DYING", "DEAD"):
             self.vx = 0.0

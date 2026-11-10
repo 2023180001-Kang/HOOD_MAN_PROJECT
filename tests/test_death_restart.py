@@ -90,7 +90,6 @@ class DeathRestartTests(unittest.TestCase):
                 world.player.vy = 200
                 world.player.jump_count = 2
                 world.player.hp = 0 if state in ("DYING", "DEAD") else 100
-                world.player.invulnerability = 1
                 world.camera.shake()
                 world.controls.press("right")
                 world.controls.press("jump")
@@ -103,7 +102,6 @@ class DeathRestartTests(unittest.TestCase):
                 self.assertEqual(world.player.y, config.GROUND_Y)
                 self.assertEqual((world.player.vx, world.player.vy), (0, 0))
                 self.assertEqual(world.player.jump_count, 0)
-                self.assertEqual(world.player.invulnerability, 0)
                 self.assertEqual(world.elapsed, 0)
                 self.assertEqual(world.accumulator, 0)
                 self.assertEqual(world.spawner.spawned_count, 0)

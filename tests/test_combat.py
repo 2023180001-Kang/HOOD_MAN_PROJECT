@@ -25,27 +25,79 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(world.player.state, "HIT")
         self.assertEqual(world.player.animation.row, 6)
 
-    def test_each_swing_hits_only_once_even_if_invulnerability_is_removed(self):
+    def test_each_swing_hits_only_once_throughout_hit_recovery(self):
         world = World(spawn_schedule=())
         enemy = attacking_enemy(config.START_X - 80)
         self.assertTrue(enemy.try_hit(world.player))
-        world.player.invulnerability = 0
-        world.player.animation.set_state("IDLE")
-        self.assertFalse(enemy.try_hit(world.player))
+        for _ in range(100):
+            world.player.update(config.FIXED_DT, world.controls)
+            self.assertFalse(enemy.try_hit(world.player))
         self.assertEqual(world.player.hp, 480)
 
-    def test_simultaneous_attacks_apply_only_one_damage_and_shake_event(self):
+    def test_two_simultaneous_enemy_attacks_each_apply_damage(self):
         world = World(spawn_schedule=())
         world.enemies = [attacking_enemy(config.START_X - 80),
                          attacking_enemy(config.START_X + 80, -1)]
         world.update(1 / 60)
-        self.assertEqual(world.player.hp, 480)
+        self.assertEqual(world.player.hp, 460)
         self.assertGreater(world.camera.shake_remaining, 0)
         self.assertTrue(all(enemy.has_hit for enemy in world.enemies))
         initial_shake = world.camera.shake_remaining
         world.update(1 / 60)
-        self.assertEqual(world.player.hp, 480)
+        self.assertEqual(world.player.hp, 460)
         self.assertLess(world.camera.shake_remaining, initial_shake)
+
+    def test_four_simultaneous_enemy_attacks_deal_eighty_without_repeats(self):
+        world = World(spawn_schedule=())
+        world.enemies = [attacking_enemy(config.START_X - 80),
+                         attacking_enemy(config.START_X - 80),
+                         attacking_enemy(config.START_X + 80, -1),
+                         attacking_enemy(config.START_X + 80, -1)]
+        world.update(1 / 60)
+        self.assertEqual(world.player.hp, 420)
+        self.assertEqual(world.player.state, "HIT")
+        self.assertTrue(all(enemy.has_hit for enemy in world.enemies))
+        advance(world, 0.1)
+        self.assertEqual(world.player.hp, 420)
+
+    def test_another_enemy_hits_during_hit_without_restarting_the_animation(self):
+        world = World(spawn_schedule=())
+        world.enemies = [attacking_enemy(config.START_X - 80)]
+        world.step(config.FIXED_DT)
+        advance(world, 0.2)
+        before = world.player.animation.elapsed
+        self.assertEqual(world.player.state, "HIT")
+        self.assertEqual(world.player.hp, 480)
+        world.enemies.append(attacking_enemy(config.START_X + 80, -1))
+        world.step(config.FIXED_DT)
+        self.assertEqual(world.player.hp, 460)
+        self.assertAlmostEqual(world.player.animation.elapsed, before + config.FIXED_DT)
+        self.assertGreater(world.camera.shake_remaining, 0)
+        world.enemies.clear()
+        advance(world, 0.5)
+        self.assertEqual(world.player.state, "IDLE")
+
+    def test_each_enemy_can_damage_again_on_its_next_attack(self):
+        world = World(spawn_schedule=())
+        world.enemies = [Enemy(config.START_X - 80), Enemy(config.START_X + 80, -1)]
+        advance(world, 0.5)
+        self.assertEqual(world.player.hp, 460)
+        advance(world, 1)
+        self.assertEqual(world.player.hp, 420)
+
+    def test_lethal_crowd_attack_stops_at_zero_and_preserves_death_state(self):
+        world = World(spawn_schedule=())
+        world.player.hp = 60
+        world.enemies = [attacking_enemy(config.START_X - 80) for _ in range(4)]
+        world.step(config.FIXED_DT)
+        self.assertEqual(world.player.hp, 0)
+        self.assertEqual(world.player.state, "DYING")
+        self.assertEqual(world.player.animation.row, 5)
+        self.assertTrue(world.death_handled)
+        self.assertTrue(all(enemy.knockback_started for enemy in world.enemies))
+        advance(world, 1)
+        self.assertEqual(world.player.hp, 0)
+        self.assertEqual(world.player.state, "DEAD")
 
     def test_attack_misses_outside_reach_behind_or_above(self):
         world = World(spawn_schedule=())

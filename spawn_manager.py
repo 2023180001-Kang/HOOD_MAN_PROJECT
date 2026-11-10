@@ -17,6 +17,7 @@ class SpawnManager:
                 break
             x = (config.ENEMY_HALF_WIDTH if side < 0
                  else config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
-            enemies.append(Enemy(x, facing=-side, spawned_at=at))
+            run_speed = config.ENEMY_RUN_SPEEDS[self.spawned_count % len(config.ENEMY_RUN_SPEEDS)]
+            enemies.append(Enemy(x, facing=-side, spawned_at=at, run_speed=run_speed))
             self.spawned_count += 1
         return enemies

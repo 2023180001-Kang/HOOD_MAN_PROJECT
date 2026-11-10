@@ -7,7 +7,7 @@ from physics import approach, clamp
 
 
 class Enemy:
-    def __init__(self, x, facing=1, spawned_at=0.0):
+    def __init__(self, x, facing=1, spawned_at=0.0, *, run_speed=None):
         self.x = x
         self.previous_x = x
         self.y = config.GROUND_Y
@@ -17,6 +17,8 @@ class Enemy:
         self.cooldown = 0.0
         self.has_hit = False
         self.knockback_started = False
+        self.run_speed = config.ENEMY_RUN_SPEEDS[0] if run_speed is None else run_speed
+        self.running = False
         self.animation = Animation(config.ENEMY_ANIMATIONS)
 
     @property
@@ -50,6 +52,7 @@ class Enemy:
         if self.knockback_started:
             return
         self.knockback_started = True
+        self.running = False
         distance = self.x - player_x
         direction = (1 if distance > 0 else -1) if distance else -self.facing
         self.vx = direction * config.KNOCKBACK_SPEED
@@ -61,6 +64,7 @@ class Enemy:
     def stop(self):
         """Cancel pursuit and attacks without moving or turning the enemy."""
         self.vx = 0.0
+        self.running = False
         self.cooldown = 0.0
         self.has_hit = True
         self.animation.set_state("IDLE")
@@ -96,11 +100,20 @@ class Enemy:
             return
 
         distance = player.x - self.x
+        gap = abs(distance)
         if distance:
             self.facing = 1 if distance > 0 else -1
+        # Separate entry/exit thresholds prevent rapid WALK/RUN flickering.
+        if gap >= config.ENEMY_RUN_START_DISTANCE:
+            self.running = True
+        elif gap <= config.ENEMY_RUN_STOP_DISTANCE:
+            self.running = False
         self.vx = 0.0
-        if abs(distance) > config.ENEMY_ATTACK_DISTANCE:
-            self.vx = self.facing * config.ENEMY_SPEED
+        state = "IDLE"
+        if gap > config.ENEMY_ATTACK_DISTANCE:
+            speed = self.run_speed if self.running else config.ENEMY_SPEED
+            self.vx = self.facing * speed
+            state = "RUN" if self.running else "WALK"
         elif self.cooldown <= 0:
             self.animation.set_state("ATTACK")
             self.has_hit = False
@@ -109,5 +122,5 @@ class Enemy:
             return
         self.x = clamp(self.x + self.vx * dt, config.ENEMY_HALF_WIDTH,
                        config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
-        self.animation.set_state("WALK" if self.vx else "IDLE")
+        self.animation.set_state(state)
         self.animation.update(dt)

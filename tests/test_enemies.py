@@ -21,8 +21,10 @@ class EnemyTests(unittest.TestCase):
                         else config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
             self.assertEqual(enemy.x, expected)
             self.assertEqual(enemy.spawned_at, at)
+            self.assertEqual(enemy.run_speed, config.ENEMY_RUN_SPEEDS[index])
             spawned.append(enemy)
         self.assertEqual(len({id(enemy) for enemy in spawned}), 4)
+        self.assertEqual(len({enemy.run_speed for enemy in spawned}), 4)
         self.assertEqual(spawner.update(1000), [])
 
     def test_world_spawns_on_schedule_and_tracks_player(self):
@@ -31,7 +33,8 @@ class EnemyTests(unittest.TestCase):
         self.assertEqual(len(world.enemies), 4)
         enemy = world.enemies[0]
         world.player.x = 200
-        advance(world, 0.1)
+        # A committed attack finishes before the next chase direction is chosen.
+        advance(world, 1)
         self.assertEqual(enemy.facing, -1)
         self.assertLess(enemy.vx, 0)
 

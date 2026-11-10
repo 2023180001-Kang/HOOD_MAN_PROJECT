@@ -19,11 +19,27 @@ class Enemy:
         self.knockback_started = False
         self.run_speed = config.ENEMY_RUN_SPEEDS[0] if run_speed is None else run_speed
         self.running = False
+        self.hp = config.ENEMY_MAX_HP
         self.animation = Animation(config.ENEMY_ANIMATIONS)
 
     @property
     def state(self):
         return self.animation.state
+
+    @property
+    def alive(self):
+        return self.hp > 0
+
+    def take_damage(self, damage):
+        if not self.alive:
+            return False
+        self.hp = max(0, self.hp - damage)
+        self.vx = 0.0
+        self.running = False
+        self.has_hit = True
+        self.knockback_started = False
+        self.animation.set_state("HIT" if self.alive else "DYING")
+        return True
 
     @property
     def body(self):
@@ -32,7 +48,7 @@ class Enemy:
 
     @property
     def attack_box(self):
-        if (self.state != "ATTACK" or self.has_hit
+        if (not self.alive or self.state != "ATTACK" or self.has_hit
                 or self.animation.frame not in config.ENEMY_ACTIVE_FRAMES):
             return None
         near = self.x + self.facing * 12
@@ -49,7 +65,7 @@ class Enemy:
         return False
 
     def knockback(self, player_x):
-        if self.knockback_started:
+        if not self.alive or self.knockback_started:
             return
         self.knockback_started = True
         self.running = False
@@ -63,6 +79,8 @@ class Enemy:
 
     def stop(self):
         """Cancel pursuit and attacks without moving or turning the enemy."""
+        if not self.alive:
+            return
         self.vx = 0.0
         self.running = False
         self.cooldown = 0.0
@@ -84,6 +102,15 @@ class Enemy:
 
     def update(self, dt, player):
         self.previous_x = self.x
+        if not self.alive:
+            self.vx = 0.0
+            self.running = False
+            if self.state != "DEAD":
+                self.animation.update(dt)
+                if self.animation.finished:
+                    self.animation.set_state("DEAD")
+                    self.animation.elapsed = 8 / config.ENEMY_ANIMATIONS["DEAD"][1]
+            return
         if self.knockback_started:
             self.update_knockback(dt)
             return
@@ -92,6 +119,11 @@ class Enemy:
             self.animation.update(dt)
             return
         self.cooldown = max(0.0, self.cooldown - dt)
+        if self.state == "HIT":
+            self.animation.update(dt)
+            if self.animation.finished:
+                self.animation.set_state("IDLE")
+            return
         if self.state == "ATTACK":
             self.vx = 0.0
             self.animation.update(dt)

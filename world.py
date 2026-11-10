@@ -44,6 +44,8 @@ class World:
         if self.player.alive:
             resolve_bodies(self.player, self.enemies)
             for enemy in self.enemies:
+                self.player.try_hit(enemy)
+            for enemy in self.enemies:
                 if enemy.try_hit(self.player):
                     self.camera.shake()
                     if not self.player.alive:
@@ -55,6 +57,8 @@ class World:
         if not self.player.alive and not self.death_handled:
             self.death_handled = True
             for enemy in self.enemies:
+                if not enemy.alive:
+                    continue
                 dx = enemy.x - self.player.x
                 dy = enemy.y - self.player.y
                 if dx * dx + dy * dy <= config.KNOCKBACK_RADIUS ** 2:

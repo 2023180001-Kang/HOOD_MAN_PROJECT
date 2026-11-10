@@ -124,6 +124,53 @@ def check_player_action_inputs(game):
           "R attack and F5 restart have distinct actions.")
 
 
+def check_player_damage_and_enemy_health(game):
+    for key_name, damage in zip("qwerasdf", (20, 30, 20, 20, 20, 20, 50, 40)):
+        game.world = World(spawn_schedule=())
+        enemy = Enemy(config.START_X + 80, -1)
+        enemy.cooldown = 100
+        game.world.enemies = [enemy]
+        key = getattr(pico2d, f"SDLK_{key_name}")
+        push_key(key)
+        tick(game, 17)
+        assert enemy.hp == 200 - damage and enemy.state == "HIT"
+        if key_name in "wdf":
+            capture(game, f"player_damage_{key_name}")
+        tick(game, 20)
+        assert enemy.hp == 200 - damage
+        push_key(key, down=False)
+        game.handle_events()
+
+    game.world = World(spawn_schedule=())
+    enemy = Enemy(config.START_X + 80, -1)
+    game.world.enemies = [enemy]
+    for hp, expected in ((200, 48), (100, 24), (0, 0)):
+        if enemy.hp != hp:
+            enemy.take_damage(enemy.hp - hp)
+        image = capture(game, f"enemy_hp_{hp}")
+        red_width = max(
+            sum(image.getpixel((x, y))[0] > 160 and image.getpixel((x, y))[1] < 90
+                and image.getpixel((x, y))[2] < 90 for x in range(690, 751))
+            for y in range(420, 501)
+        )
+        assert abs(red_width - expected) <= 2, (hp, red_width)
+
+    game.world = World(spawn_schedule=())
+    enemy = Enemy(config.START_X + 80, -1)
+    enemy.cooldown = 100
+    game.world.enemies = [enemy]
+    for _ in range(4):
+        push_key(pico2d.SDLK_d)
+        tick(game, 48)
+        push_key(pico2d.SDLK_d, down=False)
+        game.handle_events()
+    tick(game, 60)
+    assert enemy.hp == 0 and enemy.state == "DEAD" and enemy.animation.frame == 7
+    capture(game, "enemy_defeated")
+    print("PASS: SDL 8 attacks deal 20/30/20/20/20/20/50/40 once; red enemy HP bars "
+          "are full/half/hidden at 200/100/0; four uppercuts defeat an enemy.")
+
+
 def running_jump_distance(game, record=False):
     game.world = World(spawn_schedule=())
     game.world.player.x = 350
@@ -242,6 +289,7 @@ def check_enemy_run_chase(game):
     push_key(pico2d.SDLK_F5, down=False)
     tick(game, 426)
     assert [enemy.run_speed for enemy in game.world.enemies] == list(config.ENEMY_RUN_SPEEDS)
+    assert all(enemy.hp == 200 for enemy in game.world.enemies)
     assert all(enemy not in old_enemies for enemy in game.world.enemies)
     print("PASS: SDL sprint/double-jump escape triggers 360/420/480/540px/s chases "
           "with row 3; arrivals walk/attack; F5 restores the speed profiles.")
@@ -370,6 +418,7 @@ def main():
         check_input(game)
         check_movement_tuning(game)
         check_player_action_inputs(game)
+        check_player_damage_and_enemy_health(game)
         check_jump_range(game)
         check_crowd_damage(game)
         check_enemy_run_chase(game)

@@ -5,6 +5,27 @@ from physics import clamp
 
 
 class UI:
+    def draw_enemy_health(self, assets, world, camera_x, camera_y):
+        import pico2d
+
+        for enemy in world.enemies:
+            if not enemy.alive:
+                continue
+            height = assets.frames[config.ENEMY_IMAGE][enemy.animation.row - 1][
+                enemy.animation.frame]["clip"][3] * config.SPRITE_SCALE
+            left = enemy.x - camera_x - config.ENEMY_HP_BAR_WIDTH / 2
+            bottom = enemy.y - camera_y + height + config.ENEMY_HP_BAR_GAP
+            right = left + config.ENEMY_HP_BAR_WIDTH
+            ratio = clamp(enemy.hp / config.ENEMY_MAX_HP, 0.0, 1.0)
+            pico2d.draw_rectangle(left - 1, bottom - 1, right,
+                                  bottom + config.ENEMY_HP_BAR_HEIGHT, 12, 12, 16, filled=True)
+            pico2d.draw_rectangle(left, bottom, right - 1,
+                                  bottom + config.ENEMY_HP_BAR_HEIGHT - 1, 50, 15, 20, filled=True)
+            if ratio > 0:
+                pico2d.draw_rectangle(left, bottom, left + config.ENEMY_HP_BAR_WIDTH * ratio - 1,
+                                      bottom + config.ENEMY_HP_BAR_HEIGHT - 1,
+                                      215, 38, 45, filled=True)
+
     def draw(self, assets, world):
         import pico2d
 

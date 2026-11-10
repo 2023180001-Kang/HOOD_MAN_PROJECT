@@ -57,6 +57,24 @@ class Player:
         return Rect(self.x - config.PLAYER_HALF_WIDTH, self.y,
                     self.x + config.PLAYER_HALF_WIDTH, self.y + config.PLAYER_HEIGHT)
 
+    @property
+    def attack_box(self):
+        move = self.active_move
+        if (not self.alive or move is None or move.blocking or self.state != move.state
+                or self.animation.frame not in config.PLAYER_ACTIVE_FRAMES):
+            return None
+        near = self.x + self.facing * 10
+        far = self.x + self.facing * move.reach
+        return Rect(min(near, far), self.y + 20, max(near, far), self.y + move.height)
+
+    def try_hit(self, enemy):
+        box = self.attack_box
+        if (box is None or not enemy.alive or enemy in self.hit_enemies
+                or not box.overlaps(enemy.body)):
+            return False
+        self.hit_enemies.add(enemy)
+        return enemy.take_damage(self.active_move.damage)
+
     def take_damage(self, damage):
         if not self.alive:
             return False

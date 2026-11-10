@@ -28,6 +28,8 @@ def resolve_bodies(player, enemies):
     separation = config.PLAYER_HALF_WIDTH + config.ENEMY_HALF_WIDTH
     colliders = []
     for enemy in enemies:
+        if not enemy.alive:
+            continue
         if not player.body.overlaps_vertically(enemy.body):
             continue
         difference = enemy.previous_x - player.previous_x

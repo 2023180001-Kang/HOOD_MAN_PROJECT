@@ -25,12 +25,13 @@ class UI:
         if assets.font is not None:
             assets.font.draw(x + image.w * scale + 16, y + 56,
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
-            assets.font.draw(22, 28,
-                             "← → 이동   Shift 달리기   Space 이단 점프   R 다시 시작",
+            assets.font.draw(22, 48, "Q W E R A S D F 공격   H 블로킹", (205, 218, 231))
+            assets.font.draw(22, 25,
+                             "← → 이동   Shift 달리기   Space 이단 점프   F5 다시 시작",
                              (205, 218, 231))
             if world.player.state in ("DYING", "DEAD"):
                 center = config.SCREEN_WIDTH / 2
                 pico2d.draw_rectangle(center - 240, 322, center + 240, 400,
                                       12, 21, 33, filled=True)
-                assets.font.draw(center - 175, 365, "쓰러졌습니다. R 키로 다시 시작하세요.",
+                assets.font.draw(center - 175, 365, "쓰러졌습니다. F5 키로 다시 시작하세요.",
                                  (240, 211, 194))

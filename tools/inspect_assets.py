@@ -12,6 +12,8 @@ def main():
     for name in (
         "HoodMan_Sprite.png",
         "HoodMan_StreetThug_FINAL_2048x1536.png",
+        "HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png",
+        "Hood_man_blood_hit_effect_4x2.png",
         "HoodMan_HP_pico2d.png",
         "newStage.png",
     ):
@@ -25,14 +27,16 @@ def main():
                             if image.getpixel((x, y))[2] > image.getpixel((x, y))[0] + 25
                             and image.getpixel((x, y))[3] > 200]
                     print("blue fill", y, (min(blue), max(blue)) if blue else None)
-            if "Sprite" in name or "StreetThug" in name:
-                for row in range(6):
+            if any(part in name for part in ("Sprite", "StreetThug", "BasicCombat", "blood_hit")):
+                columns = 4 if "blood_hit" in name else 8
+                row_count = 2 if "blood_hit" in name else image.height // 256
+                for row in range(row_count):
                     bounds = []
-                    for col in range(8):
-                        left = col * image.width // 8
-                        top = row * image.height // 6
-                        tile = image.crop((left, top, (col + 1) * image.width // 8,
-                                           (row + 1) * image.height // 6))
+                    for col in range(columns):
+                        left = col * image.width // columns
+                        top = row * image.height // row_count
+                        tile = image.crop((left, top, (col + 1) * image.width // columns,
+                                           (row + 1) * image.height // row_count))
                         bounds.append(tile.getbbox())
                     print("row", row + 1, bounds)
 

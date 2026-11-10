@@ -20,8 +20,15 @@ class Controls:
             return True
         return False
 
+    def take_first_press(self, keys):
+        selected = None
+        for key in keys:
+            if self.take_press(key) and selected is None:
+                selected = key
+        return selected
+
     def reset_for_restart(self):
-        # Keep R latched until KEYUP so held/repeated R cannot reset each frame.
+        # Keep restart latched until KEYUP to avoid repeated resets while held.
         self.held.intersection_update({"restart"})
         self.pressed.clear()
 

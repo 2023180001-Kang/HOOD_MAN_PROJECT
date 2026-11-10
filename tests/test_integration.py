@@ -79,10 +79,11 @@ class IntegrationTests(unittest.TestCase):
     def test_generated_clips_stay_inside_original_sprite_sheets(self):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             metadata = json.load(file)
-        self.assertEqual(set(metadata), {config.PLAYER_IMAGE, config.ENEMY_IMAGE})
+        row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.COMBAT_IMAGE: 9}
+        self.assertEqual(set(metadata), set(row_counts))
         for name, rows in metadata.items():
             self.assertTrue((config.ROOT / name).is_file())
-            self.assertEqual(len(rows), 6)
+            self.assertEqual(len(rows), row_counts[name])
             for row_index, row in enumerate(rows):
                 self.assertEqual(len(row), 8)
                 for col_index, frame in enumerate(row):
@@ -91,8 +92,8 @@ class IntegrationTests(unittest.TestCase):
                     self.assertGreater(height, 0)
                     self.assertGreaterEqual(left, col_index * 256)
                     self.assertLessEqual(left + width, (col_index + 1) * 256)
-                    self.assertGreaterEqual(bottom, (5 - row_index) * 256)
-                    self.assertLessEqual(bottom + height, (6 - row_index) * 256)
+                    self.assertGreaterEqual(bottom, (row_counts[name] - 1 - row_index) * 256)
+                    self.assertLessEqual(bottom + height, (row_counts[name] - row_index) * 256)
 
 
 if __name__ == "__main__":

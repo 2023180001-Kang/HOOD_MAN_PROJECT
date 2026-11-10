@@ -14,6 +14,7 @@ from sdl2 import SDL_Event, SDL_PushEvent
 from sdl2 import SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST
 
 import config
+from combat import MOVES
 from enemy import Enemy
 from game import Game
 from tools.check_render import capture
@@ -55,20 +56,20 @@ def check_input(game):
     assert game.world.player.vy > config.DOUBLE_JUMP_SPEED
 
     textures = dict(game.assets.images)
-    push_key(pico2d.SDLK_r)
+    push_key(pico2d.SDLK_F5)
     tick(game)
     player = game.world.player
     assert player.hp == 500 and player.state == "IDLE"
     assert game.world.elapsed == 0
-    push_key(pico2d.SDLK_r, repeat=True)
+    push_key(pico2d.SDLK_F5, repeat=True)
     tick(game, 2)
     assert game.world.player is player
-    push_key(pico2d.SDLK_r, down=False)
-    push_key(pico2d.SDLK_r)
+    push_key(pico2d.SDLK_F5, down=False)
+    push_key(pico2d.SDLK_F5)
     tick(game)
     assert game.world.player is not player
     assert all(game.assets.images[name] is image for name, image in textures.items())
-    for key in (pico2d.SDLK_r, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
+    for key in (pico2d.SDLK_F5, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
         push_key(key, down=False)
     tick(game)
     print("PASS: SDL move/run/double-jump/key-repeat/restart; shared textures reused.")
@@ -101,6 +102,26 @@ def check_movement_tuning(game):
     game.handle_events()
     print(f"PASS: SDL walk 300/run 720px/s; direction reversal within 0.1s, "
           f"forward slide {maximum_slide:.2f}px; released movement stops within 0.1s.")
+
+
+def check_player_action_inputs(game):
+    for action, move in MOVES.items():
+        game.world = World(spawn_schedule=())
+        player = game.world.player
+        key = getattr(pico2d, f"SDLK_{move.key}")
+        push_key(key)
+        tick(game, 16)
+        assert game.world.player is player  # In particular R must not restart.
+        assert player.active_move == move and player.animation.row == move.row
+        assert player.sprite_image == config.COMBAT_IMAGE
+        capture(game, f"player_move_{move.key}")
+        push_key(key, repeat=True)
+        tick(game, 35)
+        assert player.state == "IDLE" and player.active_move is None
+        push_key(key, down=False)
+        game.handle_events()
+    print("PASS: SDL Q/W/E/R/A/S/D/F/H map to rows 1-9; one-shot playback, "
+          "R attack and F5 restart have distinct actions.")
 
 
 def running_jump_distance(game, record=False):
@@ -178,13 +199,13 @@ def check_crowd_damage(game):
     assert game.world.player.hp == 460
     assert game.world.player.animation.elapsed > elapsed
     capture(game, "staggered_hit")
-    push_key(pico2d.SDLK_r)
+    push_key(pico2d.SDLK_F5)
     tick(game)
     assert game.world.player.hp == 500 and not game.world.enemies
-    push_key(pico2d.SDLK_r, down=False)
+    push_key(pico2d.SDLK_F5, down=False)
     game.handle_events()
     print("PASS: four enemies deal 80; HIT accepts another enemy's 20 without "
-          "animation reset; spent swings do not repeat; R clears combat state.")
+          "animation reset; spent swings do not repeat; F5 clears combat state.")
 
 
 def check_enemy_run_chase(game):
@@ -215,15 +236,15 @@ def check_enemy_run_chase(game):
     assert all(not enemy.running for enemy in old_enemies)
     assert all(enemy.state in ("WALK", "ATTACK", "IDLE") for enemy in old_enemies)
     capture(game, "enemy_chase_arrival")
-    push_key(pico2d.SDLK_r)
+    push_key(pico2d.SDLK_F5)
     tick(game)
     assert not game.world.enemies and game.world.spawner.spawned_count == 0
-    push_key(pico2d.SDLK_r, down=False)
+    push_key(pico2d.SDLK_F5, down=False)
     tick(game, 426)
     assert [enemy.run_speed for enemy in game.world.enemies] == list(config.ENEMY_RUN_SPEEDS)
     assert all(enemy not in old_enemies for enemy in game.world.enemies)
     print("PASS: SDL sprint/double-jump escape triggers 360/420/480/540px/s chases "
-          "with row 3; arrivals walk/attack; R restores the speed profiles.")
+          "with row 3; arrivals walk/attack; F5 restores the speed profiles.")
 
 
 def check_nearby_death_knockback(game):
@@ -348,6 +369,7 @@ def main():
         game.handle_events()
         check_input(game)
         check_movement_tuning(game)
+        check_player_action_inputs(game)
         check_jump_range(game)
         check_crowd_damage(game)
         check_enemy_run_chase(game)

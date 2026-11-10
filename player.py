@@ -3,6 +3,7 @@
 import config
 from animation import Animation
 from collision import Rect
+from combat import MOVES
 from physics import approach, clamp
 
 
@@ -16,7 +17,12 @@ class Player:
         self.jump_count = 0
         self.facing = 1
         self.hp = config.MAX_HP
-        self.animation = Animation(config.PLAYER_ANIMATIONS)
+        self.active_move = None
+        self.hit_enemies = set()
+        definitions = dict(config.PLAYER_ANIMATIONS)
+        definitions.update({move.state: (move.row, config.COMBAT_FPS, False)
+                            for move in MOVES.values()})
+        self.animation = Animation(definitions)
 
     @property
     def state(self):
@@ -25,6 +31,22 @@ class Player:
     @property
     def alive(self):
         return self.hp > 0
+
+    @property
+    def sprite_image(self):
+        return config.COMBAT_IMAGE if self.active_move is not None else config.PLAYER_IMAGE
+
+    def cancel_combat(self):
+        self.active_move = None
+        self.hit_enemies.clear()
+
+    def start_move(self, move, direction):
+        self.active_move = move
+        self.hit_enemies.clear()
+        self.vx = 0.0
+        if direction:
+            self.facing = direction
+        self.animation.set_state(move.state)
 
     @property
     def grounded(self):
@@ -40,6 +62,7 @@ class Player:
             return False
         self.hp = max(0, self.hp - damage)
         self.vx = 0.0
+        self.cancel_combat()
         # Every enemy swing applies damage. Re-entering HIT preserves the
         # current animation clock; a lethal hit always overrides it with DYING.
         self.animation.set_state("HIT" if self.hp else "DYING")
@@ -57,6 +80,7 @@ class Player:
     def update(self, dt, controls):
         self.previous_x = self.x
         jump_pressed = controls.take_press("jump")
+        combat_pressed = controls.take_first_press(MOVES)
         if self.state in ("HIT", "DYING", "DEAD"):
             self.vx = 0.0
             self.update_vertical(dt)
@@ -69,6 +93,17 @@ class Player:
                     self.animation.elapsed = 8 / config.PLAYER_ANIMATIONS["DEAD"][1]
                 else:
                     self.animation.set_state("IDLE")
+            return
+
+        if self.active_move is None and combat_pressed is not None:
+            self.start_move(MOVES[combat_pressed], controls.direction)
+        if self.active_move is not None:
+            self.vx = 0.0
+            self.update_vertical(dt)
+            self.animation.update(dt)
+            if self.animation.finished:
+                self.cancel_combat()
+                self.animation.set_state("IDLE")
             return
 
         if jump_pressed and self.jump_count < 2:

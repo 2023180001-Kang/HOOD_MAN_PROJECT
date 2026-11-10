@@ -47,6 +47,21 @@ KNOCKBACK_RADIUS = 160.0
 SPAWN_SCHEDULE = ((1.0, -1), (3.0, 1), (5.0, -1), (7.0, 1))
 
 PLAYER_IMAGE = "HoodMan_Sprite.png"
+COMBAT_IMAGE = "HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png"
+COMBAT_FPS = 12.0
+PLAYER_ACTIVE_FRAMES = (3, 4)
+# Key, name, damage, horizontal reach, attack height; source rows follow order.
+COMBAT_MOVE_SPECS = (
+    ("q", "왼발 앞차기", 20, 115.0, 146.0),
+    ("w", "오른발 강한 앞차기", 30, 130.0, 146.0),
+    ("e", "왼손 잽", 20, 95.0, 146.0),
+    ("r", "오른손 스트레이트", 20, 105.0, 146.0),
+    ("a", "왼손 훅", 20, 100.0, 146.0),
+    ("s", "오른손 훅", 20, 105.0, 146.0),
+    ("d", "어퍼컷", 50, 95.0, 190.0),
+    ("f", "카운터", 40, 105.0, 146.0),
+    ("h", "블로킹", 0, 0.0, 0.0),
+)
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "newStage.png"

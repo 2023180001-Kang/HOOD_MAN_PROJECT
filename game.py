@@ -20,8 +20,10 @@ KEYS = {
     pico2d.SDLK_LSHIFT: "left_shift",
     pico2d.SDLK_RSHIFT: "right_shift",
     pico2d.SDLK_SPACE: "jump",
-    pico2d.SDLK_r: "restart",
+    pico2d.SDLK_F5: "restart",
 }
+KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
+             for key, *_ in config.COMBAT_MOVE_SPECS})
 
 
 class Game:
@@ -64,7 +66,7 @@ class Game:
                                     enemy.animation.frame, enemy.x - camera_x,
                                     enemy.y - camera_y, enemy.facing)
         player = self.world.player
-        self.assets.draw_sprite(config.PLAYER_IMAGE, player.animation.row,
+        self.assets.draw_sprite(player.sprite_image, player.animation.row,
                                 player.animation.frame, player.x - camera_x,
                                 player.y - camera_y, player.facing)
         self.ui.draw(self.assets, self.world)

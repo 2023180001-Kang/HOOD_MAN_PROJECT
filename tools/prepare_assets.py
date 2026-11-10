@@ -7,15 +7,19 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SHEETS = ("HoodMan_Sprite.png", "HoodMan_StreetThug_FINAL_2048x1536.png")
+SHEETS = {
+    "HoodMan_Sprite.png": 6,
+    "HoodMan_StreetThug_FINAL_2048x1536.png": 6,
+    "HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png": 9,
+}
 
 
 def main():
     metadata = {}
-    for name in SHEETS:
+    for name, row_count in SHEETS.items():
         with Image.open(ROOT / name) as image:
             rows = []
-            for row in range(6):
+            for row in range(row_count):
                 frames = []
                 for col in range(8):
                     tile = image.crop((col * 256, row * 256,
@@ -33,7 +37,7 @@ def main():
     (destination / "frames.json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
     )
-    print("Prepared sprite clips: 2 sheets, 6 rows x 8 frames; source PNGs unchanged.")
+    print("Prepared sprite clips: 3 sheets, 168 frames; source PNGs unchanged.")
 
 
 if __name__ == "__main__":

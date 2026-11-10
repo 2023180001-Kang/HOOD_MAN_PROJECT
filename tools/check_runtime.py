@@ -187,6 +187,87 @@ def check_crowd_damage(game):
           "animation reset; spent swings do not repeat; R clears combat state.")
 
 
+def check_enemy_run_chase(game):
+    game.world = World()
+    # Fast-forward only the spawn schedule, then stage an escape at walking range.
+    game.world.enemies = game.world.spawner.update(7)
+    old_enemies = list(game.world.enemies)
+    assert [enemy.run_speed for enemy in old_enemies] == list(config.ENEMY_RUN_SPEEDS)
+    for enemy in old_enemies:
+        enemy.x = config.START_X - 280
+    tick(game)
+    assert all(enemy.state == "WALK" for enemy in old_enemies)
+    for key in (pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
+        push_key(key)
+    tick(game, 30)
+    assert game.world.player.y > config.GROUND_Y
+    assert all(enemy.state == "RUN" for enemy in old_enemies)
+    push_key(pico2d.SDLK_SPACE, down=False)
+    push_key(pico2d.SDLK_SPACE)
+    tick(game, 42)
+    assert all(enemy.state == "RUN" and enemy.animation.row == 3 for enemy in old_enemies)
+    assert [enemy.vx for enemy in old_enemies] == list(config.ENEMY_RUN_SPEEDS)
+    assert len({enemy.x for enemy in old_enemies}) == 4
+    capture(game, "enemy_run_chase")
+    for key in (pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
+        push_key(key, down=False)
+    tick(game, 120)
+    assert all(not enemy.running for enemy in old_enemies)
+    assert all(enemy.state in ("WALK", "ATTACK", "IDLE") for enemy in old_enemies)
+    capture(game, "enemy_chase_arrival")
+    push_key(pico2d.SDLK_r)
+    tick(game)
+    assert not game.world.enemies and game.world.spawner.spawned_count == 0
+    push_key(pico2d.SDLK_r, down=False)
+    tick(game, 426)
+    assert [enemy.run_speed for enemy in game.world.enemies] == list(config.ENEMY_RUN_SPEEDS)
+    assert all(enemy not in old_enemies for enemy in game.world.enemies)
+    print("PASS: SDL sprint/double-jump escape triggers 360/420/480/540px/s chases "
+          "with row 3; arrivals walk/attack; R restores the speed profiles.")
+
+
+def check_nearby_death_knockback(game):
+    game.world = World(spawn_schedule=())
+    game.world.player.hp = 20
+    near_left = ready_enemy(config.START_X - 80)
+    near_right = Enemy(config.START_X + 140, -1)
+    far_left = Enemy(config.START_X - 300)
+    far_right = Enemy(config.START_X + 500, -1, run_speed=540)
+    game.world.enemies = [near_left, near_right, far_left, far_right]
+    tick(game)
+    assert game.world.player.hp == 0 and game.world.player.state == "DYING"
+    assert near_left.knockback_started and near_right.knockback_started
+    assert not far_left.knockback_started and not far_right.knockback_started
+    far_positions = (far_left.x, far_right.x)
+    far_facings = (far_left.facing, far_right.facing)
+    assert far_left.vx == far_right.vx == 0
+    assert not any(enemy.running for enemy in game.world.enemies)
+    tick(game, 12)
+    capture(game, "nearby_death_knockback")
+    tick(game, 90)
+    assert (far_left.x, far_right.x) == far_positions
+    assert (far_left.facing, far_right.facing) == far_facings
+    assert far_left.attack_box is None and far_right.attack_box is None
+    assert game.world.player.state == "DEAD"
+    capture(game, "nearby_death_settled")
+
+    game.world = World(spawn_schedule=())
+    game.world.player.hp = 20
+    game.world.player.y += 140
+    diagonal = ready_enemy(config.START_X + 88, -1)
+    game.world.enemies = [diagonal]
+    tick(game)  # The attack reaches the feet, but sqrt(88^2 + 140^2) exceeds 160.
+    assert game.world.player.hp == 0
+    assert not diagonal.knockback_started
+    position = diagonal.x
+    capture(game, "airborne_death_outside_radius")
+    tick(game, 90)
+    assert game.world.player.grounded and game.world.player.state == "DEAD"
+    assert not diagonal.knockback_started and diagonal.x == position
+    print("PASS: fatal attack knocks back two nearby enemies; two distant enemies "
+          "stop in place; airborne death uses the 2D radius once, without landing retrigger.")
+
+
 def check_hp_pixels(game):
     game.world = World(spawn_schedule=())
     shots = {}
@@ -236,22 +317,26 @@ def check_natural_game(game):
     assert game.world.spawner.spawned_count == 4
     assert game.world.player.hp == 0
     assert game.world.player.state == "DEAD"
-    assert all(enemy.knockback_started for enemy in game.world.enemies)
+    assert any(enemy.knockback_started for enemy in game.world.enemies)
+    assert all(enemy.vx == 0 and not enemy.running for enemy in game.world.enemies)
     capture(game, "natural_death")
     print(f"PASS: natural spawn/chase/attack/death after {game.world.elapsed:.2f} simulated seconds.")
 
 
 def benchmark(game):
     game.world = World(spawn_schedule=())
-    game.world.enemies = [Enemy(config.START_X - 80), Enemy(config.START_X - 80),
-                          Enemy(config.START_X + 80, -1), Enemy(config.START_X + 80, -1)]
+    game.world.enemies = [
+        Enemy(config.START_X + (-600 if index % 2 == 0 else 600),
+              facing=1 if index % 2 == 0 else -1, run_speed=speed)
+        for index, speed in enumerate(config.ENEMY_RUN_SPEEDS)
+    ]
     start = perf_counter()
     frames = game.run(max_frames=180)
     seconds = perf_counter() - start
     assert frames == 180
     assert len(game.world.enemies) == 4
     print(f"BENCHMARK: {frames} frames / {seconds:.3f}s = {frames / seconds:.2f} FPS; "
-          f"4 enemies + attacks + HP + shake, target {config.TARGET_FPS} FPS.")
+          f"4 enemies + run/walk/attacks + HP + shake, target {config.TARGET_FPS} FPS.")
 
 
 def main():
@@ -265,6 +350,8 @@ def main():
         check_movement_tuning(game)
         check_jump_range(game)
         check_crowd_damage(game)
+        check_enemy_run_chase(game)
+        check_nearby_death_knockback(game)
         check_focus_loss(game)
         check_hp_pixels(game)
         check_natural_game(game)

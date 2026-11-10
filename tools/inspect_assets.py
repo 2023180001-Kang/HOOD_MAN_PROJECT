@@ -19,6 +19,12 @@ def main():
             image = source.convert("RGBA")
             print(name, source.size, source.mode, "alpha", image.getextrema()[3])
             print("corners", image.getpixel((0, 0)), image.getpixel((image.width - 1, 0)))
+            if "HP" in name:
+                for y in (140, 145, 150, 180, 210, 230, 234, 240):
+                    blue = [x for x in range(400, 2010)
+                            if image.getpixel((x, y))[2] > image.getpixel((x, y))[0] + 25
+                            and image.getpixel((x, y))[3] > 200]
+                    print("blue fill", y, (min(blue), max(blue)) if blue else None)
             if "Sprite" in name or "StreetThug" in name:
                 for row in range(6):
                     bounds = []

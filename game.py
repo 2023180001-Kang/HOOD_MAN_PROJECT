@@ -7,6 +7,7 @@ import pico2d
 import config
 from assets import Assets
 from stage import Stage
+from ui import UI
 from world import World
 
 
@@ -23,6 +24,7 @@ class Game:
     def __init__(self):
         self.assets = Assets()
         self.stage = Stage()
+        self.ui = UI()
         self.world = World()
         self.running = True
 
@@ -52,6 +54,7 @@ class Game:
         self.assets.draw_sprite(config.PLAYER_IMAGE, player.animation.row,
                                 player.animation.frame, player.x - camera_x,
                                 player.y - camera_y, player.facing)
+        self.ui.draw(self.assets, self.world)
         if present:
             pico2d.update_canvas()
 

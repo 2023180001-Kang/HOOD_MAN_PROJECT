@@ -15,6 +15,8 @@ class Player:
         self.vy = 0.0
         self.jump_count = 0
         self.facing = 1
+        self.hp = config.MAX_HP
+        self.invulnerability = 0.0
         self.animation = Animation(config.PLAYER_ANIMATIONS)
 
     @property
@@ -30,6 +32,16 @@ class Player:
         return Rect(self.x - config.PLAYER_HALF_WIDTH, self.y,
                     self.x + config.PLAYER_HALF_WIDTH, self.y + config.PLAYER_HEIGHT)
 
+    def take_damage(self, damage):
+        if self.hp <= 0 or self.invulnerability > 0 or self.state == "HIT":
+            return False
+        self.hp = max(0, self.hp - damage)
+        self.vx = 0.0
+        hit_fps = config.PLAYER_ANIMATIONS["HIT"][1]
+        self.invulnerability = max(config.HIT_INVULNERABILITY, 8 / hit_fps)
+        self.animation.set_state("HIT")
+        return True
+
     def update_vertical(self, dt):
         if not self.grounded:
             self.vy -= config.GRAVITY * dt
@@ -41,7 +53,17 @@ class Player:
 
     def update(self, dt, controls):
         self.previous_x = self.x
-        if controls.take_press("jump") and self.jump_count < 2:
+        self.invulnerability = max(0.0, self.invulnerability - dt)
+        jump_pressed = controls.take_press("jump")
+        if self.state == "HIT":
+            self.vx = 0.0
+            self.update_vertical(dt)
+            self.animation.update(dt)
+            if self.animation.finished:
+                self.animation.set_state("IDLE")
+            return
+
+        if jump_pressed and self.jump_count < 2:
             self.vy = config.JUMP_SPEED if self.jump_count == 0 else config.DOUBLE_JUMP_SPEED
             self.jump_count += 1
             self.animation.set_state("JUMP")

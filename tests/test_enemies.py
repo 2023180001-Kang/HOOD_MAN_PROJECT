@@ -50,7 +50,7 @@ class EnemyTests(unittest.TestCase):
         world.enemies = [Enemy(config.START_X + 100, facing=-1)]
         world.controls.press("right")
         world.controls.press("left_shift")
-        advance(world, 0.5)
+        advance(world, 0.2)
         self.assertFalse(world.player.body.overlaps(world.enemies[0].body))
         self.assertLess(world.player.x, world.enemies[0].x)
         world.player.y = config.GROUND_Y + config.ENEMY_HEIGHT + 40

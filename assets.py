@@ -1,6 +1,8 @@
 """Load shared pico2d resources once, independent of the working directory."""
 
 import json
+import os
+from pathlib import Path
 
 import pico2d
 
@@ -16,6 +18,8 @@ class Assets:
         }
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             self.frames = json.load(file)
+        font_path = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "malgun.ttf"
+        self.font = pico2d.load_font(str(font_path), 17) if font_path.is_file() else None
 
     def draw_sprite(self, name, row, frame, x, feet_y, facing=1):
         tile = self.frames[name][row - 1][frame]
@@ -30,3 +34,6 @@ class Assets:
     def release(self):
         # Destroy textures before pico2d destroys the renderer.
         self.images.clear()
+        if self.font is not None:
+            pico2d.TTF_CloseFont(self.font.font)
+            self.font = None

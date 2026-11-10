@@ -31,4 +31,7 @@ class World:
         for enemy in self.enemies:
             enemy.update(dt, self.player)
         resolve_bodies(self.player, self.enemies)
+        for enemy in self.enemies:
+            if enemy.try_hit(self.player):
+                self.camera.shake()
         self.camera.update(dt, self.player.x)

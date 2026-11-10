@@ -57,6 +57,15 @@ def main():
         for _ in range(30):
             game.update(1 / 60)
         capture(game, "enemies")
+        game.world.enemies = [Enemy(config.START_X - 80)]
+        for _ in range(26):
+            game.update(1 / 60)
+        capture(game, "hit")
+        game.world.enemies.clear()
+        game.world.camera.update(1, game.world.player.x)
+        for hp in (500, 480, 250, 0):
+            game.world.player.hp = hp
+            capture(game, f"hp_{hp}")
     finally:
         if game is not None:
             game.close()

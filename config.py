@@ -27,6 +27,17 @@ ENEMY_HALF_WIDTH = 32.0
 ENEMY_HEIGHT = 145.0
 ENEMY_SPEED = 120.0
 ENEMY_ATTACK_DISTANCE = 88.0
+ENEMY_DAMAGE = 20
+ENEMY_ATTACK_INTERVAL = 1.0
+ENEMY_ATTACK_REACH = 106.0
+ENEMY_ACTIVE_FRAMES = (4, 5)  # zero-based columns of source row 4
+HIT_INVULNERABILITY = 0.7
+SHAKE_DURATION = 0.2
+SHAKE_STRENGTH = 8.0
+UI_SCALE = 0.25
+UI_MARGIN = 20
+# Source PNG coordinates, converted from top-left (420, 145)-(1989, 234).
+HP_FILL = (420, 170, 1569, 89)
 SPAWN_SCHEDULE = ((1.0, -1), (3.0, 1), (5.0, -1), (7.0, 1))
 
 PLAYER_IMAGE = "HoodMan_Sprite.png"
@@ -40,8 +51,10 @@ PLAYER_ANIMATIONS = {
     "WALK": (2, 10.0, True),
     "RUN": (3, 13.0, True),
     "JUMP": (4, 10.0, False),
+    "HIT": (6, 12.0, False),
 }
 ENEMY_ANIMATIONS = {
     "IDLE": (1, 7.0, True),
     "WALK": (2, 10.0, True),
+    "ATTACK": (4, 12.0, False),
 }

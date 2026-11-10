@@ -47,17 +47,89 @@ class DeathRestartTests(unittest.TestCase):
         self.assertEqual((left.x, right.x), positions)
         self.assertEqual((left.facing, right.facing), (1, -1))
 
-    def test_boundary_knockback_is_clamped_and_same_x_uses_opposite_facing(self):
+    def test_same_x_knockback_uses_opposite_facing(self):
         world = World(spawn_schedule=())
-        world.enemies = [Enemy(config.ENEMY_HALF_WIDTH, 1),
-                         Enemy(config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH, -1),
-                         Enemy(config.START_X, 1)]
+        world.enemies = [Enemy(config.START_X, 1)]
         world.player.take_damage(500)
         world.step(config.FIXED_DT)
-        self.assertLess(world.enemies[2].vx, 0)
+        self.assertLess(world.enemies[0].vx, 0)
+
+    def test_nearby_knockback_at_both_map_boundaries_is_clamped(self):
+        for player_x, enemy_x, facing in (
+            (80, config.ENEMY_HALF_WIDTH, 1),
+            (config.WORLD_WIDTH - 80, config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH, -1),
+        ):
+            with self.subTest(player_x=player_x):
+                world = World(spawn_schedule=())
+                world.player.x = player_x
+                enemy = Enemy(enemy_x, facing)
+                world.enemies = [enemy]
+                world.player.take_damage(500)
+                advance(world, 1)
+                self.assertTrue(enemy.knockback_started)
+                self.assertEqual(enemy.x, enemy_x)
+                self.assertEqual(enemy.vx, 0)
+                self.assertEqual(enemy.facing, facing)
+
+    def test_death_only_knocks_back_nearby_enemies_and_stops_far_enemies(self):
+        world = World(spawn_schedule=())
+        near = Enemy(config.START_X - 80, 1)
+        boundary = Enemy(config.START_X + config.KNOCKBACK_RADIUS, -1)
+        outside = Enemy(config.START_X - config.KNOCKBACK_RADIUS - 1, 1)
+        far = Enemy(config.START_X + 600, -1)
+        far.animation.set_state("ATTACK")
+        far.vx = -config.ENEMY_SPEED
+        far.cooldown = 1
+        world.enemies = [near, boundary, outside, far]
+        far_positions = (outside.x, far.x)
+        world.player.take_damage(500)
+        world.handle_death()
+        self.assertTrue(near.knockback_started)
+        self.assertTrue(boundary.knockback_started)
+        self.assertFalse(outside.knockback_started)
+        self.assertFalse(far.knockback_started)
+        self.assertEqual((outside.vx, far.vx), (0, 0))
+        self.assertEqual((outside.state, far.state), ("IDLE", "IDLE"))
+        self.assertEqual(far.cooldown, 0)
+        advance(world, 2)
+        self.assertEqual((outside.x, far.x), far_positions)
+        self.assertEqual((outside.facing, far.facing), (1, -1))
+        self.assertIsNone(far.attack_box)
+
+    def test_knockback_radius_is_circular_and_includes_the_boundary(self):
+        world = World(spawn_schedule=())
+        world.player.y += 128
+        on_boundary = Enemy(config.START_X + 96)
+        outside = Enemy(config.START_X + 96.01)
+        world.enemies = [on_boundary, outside]
+        world.player.take_damage(500)
+        world.handle_death()  # 96^2 + 128^2 = 160^2.
+        self.assertTrue(on_boundary.knockback_started)
+        self.assertFalse(outside.knockback_started)
+
+    def test_airborne_death_does_not_later_knock_back_enemies_on_landing(self):
+        world = World(spawn_schedule=())
+        world.player.y += config.KNOCKBACK_RADIUS + 20
+        enemy = Enemy(world.player.x)
+        world.enemies = [enemy]
+        world.player.take_damage(500)
+        world.handle_death()
+        self.assertFalse(enemy.knockback_started)
+        position = enemy.x
+        advance(world, 2)
+        self.assertTrue(world.player.grounded)
+        self.assertFalse(enemy.knockback_started)
+        self.assertEqual(enemy.x, position)
+
+    def test_death_with_only_far_enemies_does_not_knock_back_anyone(self):
+        world = World(spawn_schedule=())
+        world.enemies = [Enemy(config.START_X - 500), Enemy(config.START_X + 500, -1)]
+        positions = [enemy.x for enemy in world.enemies]
+        world.player.take_damage(500)
         advance(world, 1)
-        self.assertEqual(world.enemies[0].x, config.ENEMY_HALF_WIDTH)
-        self.assertEqual(world.enemies[1].x, config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
+        self.assertTrue(world.death_handled)
+        self.assertTrue(all(not enemy.knockback_started for enemy in world.enemies))
+        self.assertEqual([enemy.x for enemy in world.enemies], positions)
 
     def test_early_death_stops_pending_spawns_and_other_attacks(self):
         world = World()

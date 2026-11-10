@@ -55,4 +55,9 @@ class World:
         if not self.player.alive and not self.death_handled:
             self.death_handled = True
             for enemy in self.enemies:
-                enemy.knockback(self.player.x)
+                dx = enemy.x - self.player.x
+                dy = enemy.y - self.player.y
+                if dx * dx + dy * dy <= config.KNOCKBACK_RADIUS ** 2:
+                    enemy.knockback(self.player.x)
+                else:
+                    enemy.stop()

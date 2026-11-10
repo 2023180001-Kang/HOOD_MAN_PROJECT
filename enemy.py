@@ -58,6 +58,13 @@ class Enemy:
         self.animation.set_state("KNOCKBACK")
         # Facing deliberately stays unchanged while sliding away.
 
+    def stop(self):
+        """Cancel pursuit and attacks without moving or turning the enemy."""
+        self.vx = 0.0
+        self.cooldown = 0.0
+        self.has_hit = True
+        self.animation.set_state("IDLE")
+
     def update_knockback(self, dt):
         if self.state == "KNOCKBACK":
             proposed = self.x + self.vx * dt
@@ -77,8 +84,7 @@ class Enemy:
             self.update_knockback(dt)
             return
         if not player.alive:
-            self.vx = 0.0
-            self.animation.set_state("IDLE")
+            self.stop()
             self.animation.update(dt)
             return
         self.cooldown = max(0.0, self.cooldown - dt)

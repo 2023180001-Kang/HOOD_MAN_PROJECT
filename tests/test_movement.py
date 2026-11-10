@@ -2,11 +2,7 @@ import unittest
 
 import config
 from world import World
-
-
-def advance(world, seconds, fps=60):
-    for _ in range(round(seconds * fps)):
-        world.update(1 / fps)
+from tests.helpers import advance
 
 
 class MovementTests(unittest.TestCase):

@@ -1,6 +1,7 @@
 """Fixed-step simulation usable without pico2d or a display."""
 
 import config
+from camera import Camera
 from controls import Controls
 from player import Player
 
@@ -9,6 +10,7 @@ class World:
     def __init__(self):
         self.controls = Controls()
         self.player = Player()
+        self.camera = Camera(self.player.x)
         self.elapsed = 0.0
         self.accumulator = 0.0
 
@@ -21,3 +23,4 @@ class World:
     def step(self, dt):
         self.elapsed += dt
         self.player.update(dt, self.controls)
+        self.camera.update(dt, self.player.x)

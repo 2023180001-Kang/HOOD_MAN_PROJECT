@@ -15,6 +15,7 @@ KEYS = {
     pico2d.SDLK_RIGHT: "right",
     pico2d.SDLK_LSHIFT: "left_shift",
     pico2d.SDLK_RSHIFT: "right_shift",
+    pico2d.SDLK_SPACE: "jump",
 }
 
 
@@ -38,15 +39,17 @@ class Game:
     def update(self, dt):
         self.world.update(dt)
 
-    def draw(self):
+    def draw(self, present=True):
         pico2d.clear_canvas()
-        camera_x = config.START_X - config.SCREEN_WIDTH / 2
-        self.stage.draw(self.assets, camera_x)
+        camera_x = self.world.camera.render_x
+        camera_y = self.world.camera.render_y
+        self.stage.draw(self.assets, camera_x, camera_y)
         player = self.world.player
         self.assets.draw_sprite(config.PLAYER_IMAGE, player.animation.row,
                                 player.animation.frame, player.x - camera_x,
-                                player.y, player.facing)
-        pico2d.update_canvas()
+                                player.y - camera_y, player.facing)
+        if present:
+            pico2d.update_canvas()
 
     def run(self, max_frames=None):
         previous = perf_counter()

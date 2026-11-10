@@ -20,6 +20,9 @@ WALK_SPEED = 180.0
 RUN_SPEED = 360.0
 ACCELERATION = 1000.0
 FRICTION = 1200.0
+GRAVITY = 1800.0
+JUMP_SPEED = 650.0
+DOUBLE_JUMP_SPEED = 600.0
 
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
@@ -31,4 +34,5 @@ PLAYER_ANIMATIONS = {
     "IDLE": (1, 7.0, True),
     "WALK": (2, 10.0, True),
     "RUN": (3, 13.0, True),
+    "JUMP": (4, 10.0, False),
 }

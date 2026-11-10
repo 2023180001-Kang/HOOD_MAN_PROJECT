@@ -38,6 +38,8 @@ UI_SCALE = 0.25
 UI_MARGIN = 20
 # Source PNG coordinates, converted from top-left (420, 145)-(1989, 234).
 HP_FILL = (420, 170, 1569, 89)
+KNOCKBACK_SPEED = 450.0
+KNOCKBACK_FRICTION = 900.0
 SPAWN_SCHEDULE = ((1.0, -1), (3.0, 1), (5.0, -1), (7.0, 1))
 
 PLAYER_IMAGE = "HoodMan_Sprite.png"
@@ -52,9 +54,12 @@ PLAYER_ANIMATIONS = {
     "RUN": (3, 13.0, True),
     "JUMP": (4, 10.0, False),
     "HIT": (6, 12.0, False),
+    "DYING": (5, 10.0, False),
+    "DEAD": (5, 10.0, False),
 }
 ENEMY_ANIMATIONS = {
     "IDLE": (1, 7.0, True),
     "WALK": (2, 10.0, True),
     "ATTACK": (4, 12.0, False),
+    "KNOCKBACK": (5, 12.0, False),
 }

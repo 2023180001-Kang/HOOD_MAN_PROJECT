@@ -17,6 +17,7 @@ KEYS = {
     pico2d.SDLK_LSHIFT: "left_shift",
     pico2d.SDLK_RSHIFT: "right_shift",
     pico2d.SDLK_SPACE: "jump",
+    pico2d.SDLK_r: "restart",
 }
 
 

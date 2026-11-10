@@ -20,6 +20,11 @@ class Controls:
             return True
         return False
 
+    def reset_for_restart(self):
+        # Keep R latched until KEYUP so held/repeated R cannot reset each frame.
+        self.held.intersection_update({"restart"})
+        self.pressed.clear()
+
     @property
     def direction(self):
         return int("right" in self.held) - int("left" in self.held)

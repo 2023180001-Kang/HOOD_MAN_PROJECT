@@ -3,7 +3,7 @@
 import config
 from animation import Animation
 from collision import Rect
-from physics import clamp
+from physics import approach, clamp
 
 
 class Enemy:
@@ -16,6 +16,7 @@ class Enemy:
         self.spawned_at = spawned_at
         self.cooldown = 0.0
         self.has_hit = False
+        self.knockback_started = False
         self.animation = Animation(config.ENEMY_ANIMATIONS)
 
     @property
@@ -45,8 +46,41 @@ class Enemy:
             return player.take_damage(config.ENEMY_DAMAGE)
         return False
 
+    def knockback(self, player_x):
+        if self.knockback_started:
+            return
+        self.knockback_started = True
+        distance = self.x - player_x
+        direction = (1 if distance > 0 else -1) if distance else -self.facing
+        self.vx = direction * config.KNOCKBACK_SPEED
+        self.cooldown = 0.0
+        self.has_hit = True
+        self.animation.set_state("KNOCKBACK")
+        # Facing deliberately stays unchanged while sliding away.
+
+    def update_knockback(self, dt):
+        if self.state == "KNOCKBACK":
+            proposed = self.x + self.vx * dt
+            self.x = clamp(proposed, config.ENEMY_HALF_WIDTH,
+                           config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
+            self.vx = (0.0 if proposed != self.x else
+                       approach(self.vx, 0.0, config.KNOCKBACK_FRICTION * dt))
+            self.animation.update(dt)
+            if self.vx == 0 and self.animation.finished:
+                self.animation.set_state("IDLE")
+        else:
+            self.animation.update(dt)
+
     def update(self, dt, player):
         self.previous_x = self.x
+        if self.knockback_started:
+            self.update_knockback(dt)
+            return
+        if not player.alive:
+            self.vx = 0.0
+            self.animation.set_state("IDLE")
+            self.animation.update(dt)
+            return
         self.cooldown = max(0.0, self.cooldown - dt)
         if self.state == "ATTACK":
             self.vx = 0.0

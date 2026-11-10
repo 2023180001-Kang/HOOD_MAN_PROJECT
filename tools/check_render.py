@@ -66,6 +66,19 @@ def main():
         for hp in (500, 480, 250, 0):
             game.world.player.hp = hp
             capture(game, f"hp_{hp}")
+        game.world = World(spawn_schedule=())
+        game.world.enemies = [Enemy(config.START_X - 80),
+                              Enemy(config.START_X + 80, facing=-1)]
+        game.world.player.take_damage(500)
+        for _ in range(24):
+            game.update(1 / 60)
+        capture(game, "dying")
+        for _ in range(60):
+            game.update(1 / 60)
+        capture(game, "dead")
+        game.world.controls.press("restart")
+        game.update(1 / 60)
+        capture(game, "restarted")
     finally:
         if game is not None:
             game.close()

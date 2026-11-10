@@ -24,6 +24,10 @@ class Player:
         return self.animation.state
 
     @property
+    def alive(self):
+        return self.hp > 0
+
+    @property
     def grounded(self):
         return self.y <= config.GROUND_Y and self.vy == 0
 
@@ -39,7 +43,7 @@ class Player:
         self.vx = 0.0
         hit_fps = config.PLAYER_ANIMATIONS["HIT"][1]
         self.invulnerability = max(config.HIT_INVULNERABILITY, 8 / hit_fps)
-        self.animation.set_state("HIT")
+        self.animation.set_state("HIT" if self.hp else "DYING")
         return True
 
     def update_vertical(self, dt):
@@ -55,12 +59,18 @@ class Player:
         self.previous_x = self.x
         self.invulnerability = max(0.0, self.invulnerability - dt)
         jump_pressed = controls.take_press("jump")
-        if self.state == "HIT":
+        if self.state in ("HIT", "DYING", "DEAD"):
             self.vx = 0.0
             self.update_vertical(dt)
+            if self.state == "DEAD":
+                return
             self.animation.update(dt)
             if self.animation.finished:
-                self.animation.set_state("IDLE")
+                if self.state == "DYING":
+                    self.animation.set_state("DEAD")
+                    self.animation.elapsed = 8 / config.PLAYER_ANIMATIONS["DEAD"][1]
+                else:
+                    self.animation.set_state("IDLE")
             return
 
         if jump_pressed and self.jump_count < 2:

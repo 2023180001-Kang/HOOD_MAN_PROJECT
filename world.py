@@ -4,6 +4,7 @@ import config
 from camera import Camera
 from collision import resolve_bodies
 from controls import Controls
+from effects import HitEffect
 from player import Player
 from spawn_manager import SpawnManager
 
@@ -19,6 +20,7 @@ class World:
         self.player = Player()
         self.camera = Camera(self.player.x)
         self.enemies = []
+        self.effects = []
         self.spawner = SpawnManager(self.spawn_schedule)
         self.death_handled = False
         self.elapsed = 0.0
@@ -35,6 +37,9 @@ class World:
 
     def step(self, dt):
         self.elapsed += dt
+        for effect in self.effects:
+            effect.update(dt)
+        self.effects = [effect for effect in self.effects if not effect.finished]
         if self.player.alive:
             self.enemies.extend(self.spawner.update(self.elapsed))
         self.player.update(dt, self.controls)
@@ -43,10 +48,17 @@ class World:
             enemy.update(dt, self.player)
         if self.player.alive:
             resolve_bodies(self.player, self.enemies)
+            player_box = self.player.attack_box
+            if player_box is not None:
+                for enemy in self.enemies:
+                    if self.player.try_hit(enemy):
+                        self.effects.append(HitEffect.at_contact(player_box, enemy.body,
+                                                                 self.player.facing))
             for enemy in self.enemies:
-                self.player.try_hit(enemy)
-            for enemy in self.enemies:
-                if enemy.try_hit(self.player):
+                enemy_box = enemy.attack_box
+                if enemy_box is not None and enemy.try_hit(self.player):
+                    self.effects.append(HitEffect.at_contact(enemy_box, self.player.body,
+                                                             enemy.facing))
                     self.camera.shake()
                     if not self.player.alive:
                         self.handle_death()

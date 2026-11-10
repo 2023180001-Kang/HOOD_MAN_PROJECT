@@ -54,6 +54,15 @@ PLAYER_IMAGE = "HoodMan_Sprite.png"
 COMBAT_IMAGE = "HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png"
 COMBAT_FPS = 12.0
 PLAYER_ACTIVE_FRAMES = (3, 4)
+BLOCK_ACTIVE_FRAMES = (2, 3, 4)
+BLOCK_DAMAGE_RATIO = 0.5
+BLOOD_IMAGE = "Hood_man_blood_hit_effect_4x2.png"
+HIT_EFFECT_FPS = 20.0
+HIT_EFFECT_COLUMNS = 4
+HIT_EFFECT_ROWS = 2
+HIT_EFFECT_SCALE = 0.5
+HIT_EFFECT_ANCHOR_X = 80.0
+HIT_EFFECT_ANCHOR_Y = 128.0
 # Key, name, damage, horizontal reach, attack height; source rows follow order.
 COMBAT_MOVE_SPECS = (
     ("q", "왼발 앞차기", 20, 115.0, 146.0),

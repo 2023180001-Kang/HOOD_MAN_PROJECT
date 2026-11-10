@@ -13,7 +13,7 @@ class Assets:
     def __init__(self):
         self.images = {
             name: pico2d.load_image(str(config.ROOT / name))
-            for name in (config.PLAYER_IMAGE, config.COMBAT_IMAGE, config.ENEMY_IMAGE,
+            for name in (config.PLAYER_IMAGE, config.COMBAT_IMAGE, config.ENEMY_IMAGE, config.BLOOD_IMAGE,
                          config.HP_IMAGE, config.STAGE_IMAGE)
         }
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
@@ -37,3 +37,18 @@ class Assets:
         if self.font is not None:
             pico2d.TTF_CloseFont(self.font.font)
             self.font = None
+
+    def draw_hit_effect(self, effect, camera_x, camera_y):
+        image = self.images[config.BLOOD_IMAGE]
+        width = image.w // config.HIT_EFFECT_COLUMNS
+        height = image.h // config.HIT_EFFECT_ROWS
+        column = effect.frame % config.HIT_EFFECT_COLUMNS
+        row = effect.frame // config.HIT_EFFECT_COLUMNS
+        scale = config.HIT_EFFECT_SCALE
+        image.clip_composite_draw(
+            column * width, image.h - (row + 1) * height, width, height,
+            0, "h" if effect.facing < 0 else "",
+            effect.x - camera_x + (width / 2 - config.HIT_EFFECT_ANCHOR_X) * scale * effect.facing,
+            effect.y - camera_y + (height / 2 - config.HIT_EFFECT_ANCHOR_Y) * scale,
+            width * scale, height * scale,
+        )

@@ -75,11 +75,18 @@ class Player:
         self.hit_enemies.add(enemy)
         return enemy.take_damage(self.active_move.damage)
 
-    def take_damage(self, damage):
+    def take_damage(self, damage, *, source_x=None):
         if not self.alive:
             return False
+        blocked = (self.active_move is not None and self.active_move.blocking
+                   and self.state == "BLOCK" and self.animation.frame in config.BLOCK_ACTIVE_FRAMES
+                   and source_x is not None and (source_x - self.x) * self.facing >= 0)
+        if blocked:
+            damage = round(damage * config.BLOCK_DAMAGE_RATIO)
         self.hp = max(0, self.hp - damage)
         self.vx = 0.0
+        if blocked and self.alive:
+            return True
         self.cancel_combat()
         # Every enemy swing applies damage. Re-entering HIT preserves the
         # current animation clock; a lethal hit always overrides it with DYING.

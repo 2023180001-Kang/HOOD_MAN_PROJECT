@@ -17,7 +17,7 @@ import config
 from combat import MOVES
 from enemy import Enemy
 from game import Game
-from tools.check_render import capture
+from tools.check_render import capture, render_image
 from world import World
 
 
@@ -134,6 +134,9 @@ def check_player_damage_and_enemy_health(game):
         push_key(key)
         tick(game, 17)
         assert enemy.hp == 200 - damage and enemy.state == "HIT"
+        assert len(game.world.effects) == 1
+        if key_name == "q":
+            verify_blood_pixels(game, "blood_player_to_enemy")
         if key_name in "wdf":
             capture(game, f"player_damage_{key_name}")
         tick(game, 20)
@@ -169,6 +172,64 @@ def check_player_damage_and_enemy_health(game):
     capture(game, "enemy_defeated")
     print("PASS: SDL 8 attacks deal 20/30/20/20/20/20/50/40 once; red enemy HP bars "
           "are full/half/hidden at 200/100/0; four uppercuts defeat an enemy.")
+
+
+def verify_blood_pixels(game, name):
+    image = capture(game, name)
+    effects = game.world.effects
+    try:
+        game.world.effects = []
+        clean = render_image(game)
+    finally:
+        game.world.effects = effects
+    red_pixels = sum(image.getpixel((x, y))[0] > clean.getpixel((x, y))[0] + 25
+                     for y in range(400, 651) for x in range(480, 871))
+    assert red_pixels > 20, (name, red_pixels)
+
+
+def check_timed_block_and_blood(game):
+    game.world = World(spawn_schedule=())
+    game.world.enemies = [ready_enemy(config.START_X - 80)]
+    tick(game, 7)
+    assert game.world.player.hp == 480 and len(game.world.effects) == 1
+    verify_blood_pixels(game, "blood_enemy_to_player")
+    game.world.enemies.clear()
+    tick(game, 30)
+    assert not game.world.effects
+
+    game.world = World(spawn_schedule=())
+    push_key(pico2d.SDLK_h)
+    tick(game, 12)
+    game.world.enemies = [ready_enemy(config.START_X + 80, -1)]
+    tick(game, 7)
+    assert game.world.player.hp == 490 and game.world.player.state == "BLOCK"
+    assert len(game.world.effects) == 1
+    verify_blood_pixels(game, "timed_block_half_damage")
+    push_key(pico2d.SDLK_h, repeat=True)
+    elapsed = game.world.player.animation.elapsed
+    tick(game)
+    assert game.world.player.animation.elapsed > elapsed
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    assert not game.world.effects and not game.world.enemies
+    assert game.world.player.hp == 500 and game.world.player.active_move is None
+    push_key(pico2d.SDLK_F5, down=False)
+    push_key(pico2d.SDLK_h, down=False)
+    game.handle_events()
+
+    for label, wait, side in (("late", 30, 1), ("rear", 12, -1)):
+        game.world = World(spawn_schedule=())
+        push_key(pico2d.SDLK_h)
+        tick(game, wait)
+        game.world.enemies = [ready_enemy(config.START_X + side * 80, -side)]
+        tick(game)
+        assert game.world.player.hp == 480 and game.world.player.state == "HIT"
+        assert len(game.world.effects) == 1
+        capture(game, f"block_{label}_full_damage")
+        push_key(pico2d.SDLK_h, down=False)
+        game.handle_events()
+    print("PASS: SDL H timed frontal block takes 10, late/rear hits take 20; "
+          "both attack directions add visible blood pixels; effects expire and F5 clears them.")
 
 
 def running_jump_distance(game, record=False):
@@ -419,6 +480,7 @@ def main():
         check_movement_tuning(game)
         check_player_action_inputs(game)
         check_player_damage_and_enemy_health(game)
+        check_timed_block_and_blood(game)
         check_jump_range(game)
         check_crowd_damage(game)
         check_enemy_run_chase(game)

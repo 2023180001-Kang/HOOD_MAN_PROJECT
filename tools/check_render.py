@@ -19,14 +19,18 @@ from enemy import Enemy
 from world import World
 
 
-def capture(game, name):
+def render_image(game):
     game.draw(present=False)
     pixels = (ctypes.c_ubyte * (config.SCREEN_WIDTH * config.SCREEN_HEIGHT * 4))()
     result = SDL_RenderReadPixels(backend.renderer, None, SDL_PIXELFORMAT_RGBA32,
                                   pixels, config.SCREEN_WIDTH * 4)
     if result != 0:
         raise RuntimeError("SDL_RenderReadPixels failed")
-    image = Image.frombytes("RGBA", (config.SCREEN_WIDTH, config.SCREEN_HEIGHT), bytes(pixels))
+    return Image.frombytes("RGBA", (config.SCREEN_WIDTH, config.SCREEN_HEIGHT), bytes(pixels))
+
+
+def capture(game, name):
+    image = render_image(game)
     directory = ROOT / "artifacts"
     directory.mkdir(exist_ok=True)
     image.save(directory / f"{name}.png")

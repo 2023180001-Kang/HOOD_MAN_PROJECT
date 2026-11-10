@@ -69,6 +69,8 @@ class Game:
         self.assets.draw_sprite(player.sprite_image, player.animation.row,
                                 player.animation.frame, player.x - camera_x,
                                 player.y - camera_y, player.facing)
+        for effect in self.world.effects:
+            self.assets.draw_hit_effect(effect, camera_x, camera_y)
         self.ui.draw_enemy_health(self.assets, self.world, camera_x, camera_y)
         self.ui.draw(self.assets, self.world)
         if present:

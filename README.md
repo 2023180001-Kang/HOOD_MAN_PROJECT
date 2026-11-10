@@ -70,10 +70,11 @@ python -m venv .venv
 | --- | --- |
 | `main.py`, `game.py` | 캔버스·SDL 입력·게임 루프·렌더링·종료 |
 | `world.py` | 그래픽과 독립된 고정 시간 시뮬레이션·사망 이벤트·재시작 |
-| `player.py`, `controls.py`, `physics.py` | 이동·점프·피격·사망 상태와 입력·물리 |
-| `enemy.py`, `spawn_manager.py`, `collision.py` | 적 추적·공격·넉백·생성 일정·충돌 |
+| `player.py`, `controls.py`, `physics.py` | 이동·점프·공격·블로킹·피격·사망·입력·물리 |
+| `combat.py`, `effects.py` | 전투 행·피해·범위 정의와 blood_hit 프레임·수명 |
+| `enemy.py`, `spawn_manager.py`, `collision.py` | 적 HP·피격·사망·추적·공격·넉백·생성 일정·충돌 |
 | `assets.py`, `animation.py` | 이미지·Windows 기본 맑은 고딕 로딩, 프레임 재생 |
 | `stage.py`, `camera.py`, `ui.py` | 배경·카메라·화면 고정 HP UI |
 | `config.py` | 이동 속도·중력·피해·넉백·스폰·애니메이션 조정값 |
 
-원본 주인공·적·HP·배경 PNG는 프로젝트 루트에 유지합니다. 리소스를 교체하면 개발 의존성을 설치한 후 `tools/prepare_assets.py`로 프레임 정보를 다시 생성합니다. 스프라이트 시트는 2048×1536, 8열×6행, 오른쪽을 보는 원본을 기준으로 합니다. 글꼴이 없는 환경에서도 게임과 이미지 HP바는 동작하며 텍스트만 생략됩니다.
+원본 PNG는 프로젝트 루트에 유지합니다. 주인공·적 기본 시트는 2048×1536의 8열×6행, BasicCombat은 2048×2304의 8열×9행입니다. 시트를 교체하면 `tools/prepare_assets.py`로 총 168개 프레임 클립 정보를 재생성합니다. blood_hit는 1024×512의 4열×2행이며 고정 셀을 순서대로 재생합니다. 캐릭터 원본은 오른쪽을 보며 왼쪽은 수평 반전합니다. 글꼴이 없는 환경에서도 게임과 HP바는 동작하며 텍스트만 생략됩니다.

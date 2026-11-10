@@ -4,6 +4,7 @@ import ctypes
 from pathlib import Path
 import sys
 from time import perf_counter
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -51,6 +52,7 @@ def check_input(game):
     push_key(pico2d.SDLK_SPACE)
     tick(game)
     assert game.world.player.jump_count == 2
+    assert game.world.player.vy > config.DOUBLE_JUMP_SPEED
 
     textures = dict(game.assets.images)
     push_key(pico2d.SDLK_r)
@@ -72,10 +74,123 @@ def check_input(game):
     print("PASS: SDL move/run/double-jump/key-repeat/restart; shared textures reused.")
 
 
+def check_movement_tuning(game):
+    game.world = World(spawn_schedule=())
+    game.world.player.x = 500
+    push_key(pico2d.SDLK_RIGHT)
+    tick(game, 20)
+    assert game.world.player.vx == 300
+    push_key(pico2d.SDLK_LSHIFT)
+    tick(game, 30)
+    assert game.world.player.vx == 720
+    start = game.world.player.x
+    push_key(pico2d.SDLK_RIGHT, down=False)
+    push_key(pico2d.SDLK_LEFT)
+    maximum_slide = 0.0
+    for _ in range(6):
+        tick(game)
+        maximum_slide = max(maximum_slide, game.world.player.x - start)
+    assert game.world.player.vx < 0
+    assert maximum_slide < 35
+    tick(game, 30)
+    assert game.world.player.vx == -720
+    push_key(pico2d.SDLK_LEFT, down=False)
+    tick(game, 6)
+    assert game.world.player.vx == 0
+    push_key(pico2d.SDLK_LSHIFT, down=False)
+    game.handle_events()
+    print(f"PASS: SDL walk 300/run 720px/s; direction reversal within 0.1s, "
+          f"forward slide {maximum_slide:.2f}px; released movement stops within 0.1s.")
+
+
+def running_jump_distance(game, record=False):
+    game.world = World(spawn_schedule=())
+    game.world.player.x = 350
+    push_key(pico2d.SDLK_RIGHT)
+    push_key(pico2d.SDLK_LSHIFT)
+    tick(game, 30)
+    start = game.world.player.x
+    push_key(pico2d.SDLK_SPACE)
+    tick(game, 30)
+    push_key(pico2d.SDLK_SPACE, down=False)
+    push_key(pico2d.SDLK_SPACE)
+    tick(game)
+    assert game.world.player.jump_count == 2
+    for frame in range(180):
+        tick(game)
+        if record and frame == 20:
+            capture(game, "running_double_jump")
+        if game.world.player.grounded:
+            break
+    assert game.world.player.grounded
+    assert game.world.player.x < config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH
+    distance = game.world.player.x - start
+    for key in (pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
+        push_key(key, down=False)
+    game.handle_events()
+    return distance
+
+
+def check_jump_range(game):
+    with patch.multiple(config, RUN_SPEED=360.0, WALK_SPEED=180.0,
+                        ACCELERATION=1000.0, FRICTION=1200.0,
+                        RUN_DOUBLE_JUMP_SPEED=600.0):
+        original = running_jump_distance(game)
+    with patch.object(config, "RUN_DOUBLE_JUMP_SPEED", config.DOUBLE_JUMP_SPEED):
+        unboosted = running_jump_distance(game)
+    improved = running_jump_distance(game, record=True)
+    assert improved > original * 2
+    assert improved - unboosted > 100
+    print(f"PASS: SDL running double jump {original:.1f}px -> {improved:.1f}px "
+          f"({improved / original:.2f}x), +{improved - unboosted:.1f}px over unboosted at 720px/s.")
+
+
+def ready_enemy(x, facing=1):
+    enemy = Enemy(x, facing)
+    enemy.animation.set_state("ATTACK")
+    enemy.animation.elapsed = 4 / config.ENEMY_ANIMATIONS["ATTACK"][1]
+    enemy.cooldown = config.ENEMY_ATTACK_INTERVAL
+    return enemy
+
+
+def check_crowd_damage(game):
+    game.world = World(spawn_schedule=())
+    game.world.enemies = [ready_enemy(config.START_X - 80),
+                          ready_enemy(config.START_X - 80),
+                          ready_enemy(config.START_X + 80, -1),
+                          ready_enemy(config.START_X + 80, -1)]
+    tick(game)
+    assert game.world.player.hp == 420
+    assert all(enemy.has_hit for enemy in game.world.enemies)
+    capture(game, "crowd_hit")
+    tick(game, 6)
+    assert game.world.player.hp == 420
+
+    game.world = World(spawn_schedule=())
+    game.world.enemies = [ready_enemy(config.START_X - 80)]
+    tick(game)
+    assert game.world.player.hp == 480
+    tick(game, 12)
+    elapsed = game.world.player.animation.elapsed
+    assert game.world.player.state == "HIT"
+    game.world.enemies.append(ready_enemy(config.START_X + 80, -1))
+    tick(game)
+    assert game.world.player.hp == 460
+    assert game.world.player.animation.elapsed > elapsed
+    capture(game, "staggered_hit")
+    push_key(pico2d.SDLK_r)
+    tick(game)
+    assert game.world.player.hp == 500 and not game.world.enemies
+    push_key(pico2d.SDLK_r, down=False)
+    game.handle_events()
+    print("PASS: four enemies deal 80; HIT accepts another enemy's 20 without "
+          "animation reset; spent swings do not repeat; R clears combat state.")
+
+
 def check_hp_pixels(game):
     game.world = World(spawn_schedule=())
     shots = {}
-    for hp in (500, 480, 250, 0):
+    for hp in (500, 480, 460, 420, 250, 0):
         game.world.player.hp = hp
         shots[hp] = capture(game, f"verified_hp_{hp}")
     for hp, image in shots.items():
@@ -91,7 +206,7 @@ def check_hp_pixels(game):
     game.world.camera.update(0.03, 100)
     shaken = capture(game, "verified_ui_fixed")
     assert shaken.crop((126, 58, 516, 77)).tobytes() == shots[250].crop((126, 58, 516, 77)).tobytes()
-    print("PASS: rendered HP fill 100%/96%/50%/0%; portrait and HUD position unchanged.")
+    print("PASS: rendered HP fill 100%/96%/92%/84%/50%/0%; portrait and HUD position unchanged.")
 
 
 def check_focus_loss(game):
@@ -147,6 +262,9 @@ def main():
         game = Game()
         game.handle_events()
         check_input(game)
+        check_movement_tuning(game)
+        check_jump_range(game)
+        check_crowd_damage(game)
         check_focus_loss(game)
         check_hp_pixels(game)
         check_natural_game(game)

@@ -7,7 +7,7 @@ from tests.helpers import advance
 
 class MovementTests(unittest.TestCase):
     def test_run_accelerates_and_release_stops_without_reversing(self):
-        world = World()
+        world = World(spawn_schedule=())
         world.controls.press("right")
         world.controls.press("left_shift")
         world.update(1 / 60)
@@ -21,7 +21,7 @@ class MovementTests(unittest.TestCase):
         self.assertEqual(world.player.state, "IDLE")
 
     def test_shift_release_slows_to_walk_and_reversal_is_gradual(self):
-        world = World()
+        world = World(spawn_schedule=())
         world.controls.press("right")
         world.controls.press("right_shift")
         advance(world, 0.5)
@@ -39,7 +39,7 @@ class MovementTests(unittest.TestCase):
         self.assertEqual(world.player.facing, -1)
 
     def test_opposite_keys_cancel_and_shift_alone_does_not_move(self):
-        world = World()
+        world = World(spawn_schedule=())
         for key in ("left", "right", "left_shift"):
             world.controls.press(key)
         advance(world, 0.5)
@@ -52,7 +52,7 @@ class MovementTests(unittest.TestCase):
     def test_frame_rates_produce_the_same_simulation(self):
         positions = []
         for fps in (30, 60, 120, 144):
-            world = World()
+            world = World(spawn_schedule=())
             world.controls.press("right")
             world.controls.press("left_shift")
             advance(world, 2, fps)
@@ -63,7 +63,7 @@ class MovementTests(unittest.TestCase):
     def test_world_boundaries_stop_the_player(self):
         for key, expected in (("left", config.PLAYER_HALF_WIDTH),
                               ("right", config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)):
-            world = World()
+            world = World(spawn_schedule=())
             world.controls.press(key)
             world.controls.press("left_shift")
             advance(world, 10)

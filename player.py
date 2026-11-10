@@ -2,12 +2,14 @@
 
 import config
 from animation import Animation
+from collision import Rect
 from physics import approach, clamp
 
 
 class Player:
     def __init__(self):
         self.x = config.START_X
+        self.previous_x = self.x
         self.y = config.GROUND_Y
         self.vx = 0.0
         self.vy = 0.0
@@ -23,6 +25,11 @@ class Player:
     def grounded(self):
         return self.y <= config.GROUND_Y and self.vy == 0
 
+    @property
+    def body(self):
+        return Rect(self.x - config.PLAYER_HALF_WIDTH, self.y,
+                    self.x + config.PLAYER_HALF_WIDTH, self.y + config.PLAYER_HEIGHT)
+
     def update_vertical(self, dt):
         if not self.grounded:
             self.vy -= config.GRAVITY * dt
@@ -33,6 +40,7 @@ class Player:
                 self.jump_count = 0
 
     def update(self, dt, controls):
+        self.previous_x = self.x
         if controls.take_press("jump") and self.jump_count < 2:
             self.vy = config.JUMP_SPEED if self.jump_count == 0 else config.DOUBLE_JUMP_SPEED
             self.jump_count += 1

@@ -23,6 +23,11 @@ FRICTION = 1200.0
 GRAVITY = 1800.0
 JUMP_SPEED = 650.0
 DOUBLE_JUMP_SPEED = 600.0
+ENEMY_HALF_WIDTH = 32.0
+ENEMY_HEIGHT = 145.0
+ENEMY_SPEED = 120.0
+ENEMY_ATTACK_DISTANCE = 88.0
+SPAWN_SCHEDULE = ((1.0, -1), (3.0, 1), (5.0, -1), (7.0, 1))
 
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
@@ -35,4 +40,8 @@ PLAYER_ANIMATIONS = {
     "WALK": (2, 10.0, True),
     "RUN": (3, 13.0, True),
     "JUMP": (4, 10.0, False),
+}
+ENEMY_ANIMATIONS = {
+    "IDLE": (1, 7.0, True),
+    "WALK": (2, 10.0, True),
 }

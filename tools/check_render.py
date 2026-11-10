@@ -15,6 +15,8 @@ from sdl2 import SDL_PIXELFORMAT_RGBA32, SDL_RenderReadPixels
 
 import config
 from game import Game
+from enemy import Enemy
+from world import World
 
 
 def capture(game, name):
@@ -38,6 +40,7 @@ def main():
     game = None
     try:
         game = Game()
+        game.world = World(spawn_schedule=())
         capture(game, "idle")
         game.world.controls.press("right")
         game.world.controls.press("left_shift")
@@ -48,6 +51,12 @@ def main():
         for _ in range(12):
             game.update(1 / 60)
         capture(game, "jump")
+        game.world = World(spawn_schedule=())
+        game.world.enemies = [Enemy(config.START_X - 180),
+                              Enemy(config.START_X + 180, facing=-1)]
+        for _ in range(30):
+            game.update(1 / 60)
+        capture(game, "enemies")
     finally:
         if game is not None:
             game.close()

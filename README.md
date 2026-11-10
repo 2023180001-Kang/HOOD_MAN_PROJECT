@@ -19,11 +19,20 @@ python -m venv .venv
 
 리소스는 소스 파일 위치를 기준으로 읽으므로 다른 작업 폴더에서 `main.py`의 전체 경로로 실행해도 됩니다.
 
+## 조작
+
+| 입력 | 동작 |
+| --- | --- |
+| 좌우 방향키 | 걷기 |
+| 왼쪽/오른쪽 Shift + 방향키 | 가속하여 달리기 |
+| 창 닫기 | 종료 |
+
 ## 개발 검증
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe tools/prepare_assets.py
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
 .\.venv\Scripts\python.exe main.py --smoke-test 120
 ```
 

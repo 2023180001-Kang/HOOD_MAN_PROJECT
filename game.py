@@ -7,29 +7,45 @@ import pico2d
 import config
 from assets import Assets
 from stage import Stage
+from world import World
+
+
+KEYS = {
+    pico2d.SDLK_LEFT: "left",
+    pico2d.SDLK_RIGHT: "right",
+    pico2d.SDLK_LSHIFT: "left_shift",
+    pico2d.SDLK_RSHIFT: "right_shift",
+}
 
 
 class Game:
     def __init__(self):
         self.assets = Assets()
         self.stage = Stage()
-        self.elapsed = 0.0
+        self.world = World()
         self.running = True
 
     def handle_events(self):
         for event in pico2d.get_events():
             if event.type == pico2d.SDL_QUIT:
                 self.running = False
+            elif event.key in KEYS:
+                if event.type == pico2d.SDL_KEYDOWN:
+                    self.world.controls.press(KEYS[event.key])
+                elif event.type == pico2d.SDL_KEYUP:
+                    self.world.controls.release(KEYS[event.key])
 
     def update(self, dt):
-        self.elapsed += dt
+        self.world.update(dt)
 
     def draw(self):
         pico2d.clear_canvas()
         camera_x = config.START_X - config.SCREEN_WIDTH / 2
         self.stage.draw(self.assets, camera_x)
-        self.assets.draw_sprite(config.PLAYER_IMAGE, 1, int(self.elapsed * 7) % 8,
-                                config.SCREEN_WIDTH / 2, config.GROUND_Y)
+        player = self.world.player
+        self.assets.draw_sprite(config.PLAYER_IMAGE, player.animation.row,
+                                player.animation.frame, player.x - camera_x,
+                                player.y, player.facing)
         pico2d.update_canvas()
 
     def run(self, max_frames=None):

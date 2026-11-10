@@ -74,7 +74,12 @@ class Player:
             return
 
         if jump_pressed and self.jump_count < 2:
-            self.vy = config.JUMP_SPEED if self.jump_count == 0 else config.DOUBLE_JUMP_SPEED
+            if self.jump_count == 0:
+                self.vy = config.JUMP_SPEED
+            elif controls.running and controls.direction:
+                self.vy = config.RUN_DOUBLE_JUMP_SPEED
+            else:
+                self.vy = config.DOUBLE_JUMP_SPEED
             self.jump_count += 1
             self.animation.set_state("JUMP")
             self.animation.elapsed = 0.0
@@ -82,8 +87,17 @@ class Player:
         direction = controls.direction
         speed = config.RUN_SPEED if controls.running else config.WALK_SPEED
         target = direction * speed
-        rate = config.ACCELERATION if direction else config.FRICTION
-        self.vx = approach(self.vx, target, rate * dt)
+        if direction and self.vx * direction < 0:
+            # Brake to zero first; only the remaining time accelerates the turn.
+            stop_time = abs(self.vx) / config.FRICTION
+            self.vx = approach(self.vx, 0.0, config.FRICTION * dt)
+            if stop_time < dt:
+                self.vx = approach(0.0, target, config.ACCELERATION * (dt - stop_time))
+        else:
+            # Releasing Shift must use the same strong braking as releasing a key.
+            slowing = not direction or abs(self.vx) > speed
+            rate = config.FRICTION if slowing else config.ACCELERATION
+            self.vx = approach(self.vx, target, rate * dt)
         self.x += self.vx * dt
         bounded = clamp(self.x, config.PLAYER_HALF_WIDTH,
                         config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)

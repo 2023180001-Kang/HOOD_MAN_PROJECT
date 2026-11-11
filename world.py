@@ -62,6 +62,7 @@ class World:
         self.elapsed += dt
         if self.controls.take_press("stage_exits") and self.player.alive:
             self.stage.arrows_visible = True
+        self.try_stage_transition()
         for effect in self.effects:
             effect.update(dt)
         self.effects = [effect for effect in self.effects if not effect.finished]
@@ -91,6 +92,29 @@ class World:
                         self.handle_death()
                         break
         self.camera.update(dt, self.player.x)
+
+    def try_stage_transition(self):
+        player = self.player
+        if (not player.alive or player.active_move is not None
+                or player.state in ("HIT", "DYING", "DEAD")):
+            return False
+        for side in self.stage.arrow_sides:
+            destination = self.stage.destination(side)
+            at_exit = (player.x <= config.STAGE_EXIT_MARGIN if side < 0 else
+                       player.x >= config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN)
+            outward = (player.vx * side > 0 or
+                       (player.vx == 0 and self.controls.direction == side))
+            if destination is None or not at_exit or not outward:
+                continue
+            # Enter far enough inside the new scene to avoid an immediate return.
+            # Keep the same player, physics, held input and animation clock.
+            self.stage_index = destination
+            player.x = (config.STAGE_ENTRY_MARGIN if side > 0 else
+                        config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
+            player.previous_x = player.x
+            self.camera = Camera(player.x)
+            return True
+        return False
 
     def handle_death(self):
         if not self.player.alive and not self.death_handled:

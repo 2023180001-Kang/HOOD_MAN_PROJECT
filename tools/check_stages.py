@@ -1,6 +1,8 @@
 """Verify stage markers, travel and state continuity through actual SDL input."""
 
+from copy import deepcopy
 from pathlib import Path
+import random
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,6 +67,124 @@ def check_markers(game):
           "distinct backgrounds, unavailable next-stage marker and shared textures verified.")
 
 
+def check_motion_continuity(game):
+    textures = dict(game.assets.images)
+    for side in (-1, 1):
+        for mode in ("walk", "run", "jump_up", "jump_down"):
+            game.world = World()
+            game.world.stage_index = 0 if side > 0 else 1
+            direction_key = pico2d.SDLK_RIGHT if side > 0 else pico2d.SDLK_LEFT
+            push_key(direction_key)
+            if mode != "walk":
+                push_key(pico2d.SDLK_LSHIFT)
+            tick(game, 30)
+            if mode.startswith("jump_"):
+                push_key(pico2d.SDLK_SPACE)
+                tick(game, 12)
+                push_key(pico2d.SDLK_SPACE, down=False)
+                push_key(pico2d.SDLK_SPACE)
+                tick(game, 6 if mode == "jump_up" else 42)
+                assert game.world.player.jump_count == 2
+                assert (game.world.player.vy > 0) == (mode == "jump_up")
+            player = game.world.player
+            player.hp = 420
+            player.x = (config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
+                        if side > 0 else config.STAGE_EXIT_MARGIN)
+            push_key(pico2d.SDLK_n)
+            game.handle_events()
+            reference = World()
+            reference.player = deepcopy(player)
+            reference.player.x = config.START_X
+            reference.controls = deepcopy(game.world.controls)
+            reference.elapsed = game.world.elapsed
+            game.update(1 / 60)
+            reference.update(1 / 60)
+            assert game.world.stage_index == (1 if side > 0 else 0)
+            assert game.world.player is player
+            for attribute in ("state", "vx", "vy", "y", "jump_count", "hp", "facing"):
+                assert getattr(player, attribute) == getattr(reference.player, attribute), (mode, attribute)
+            assert player.animation.elapsed == reference.player.animation.elapsed
+            assert game.world.controls.held == reference.controls.held
+            assert game.world.elapsed == reference.elapsed
+            assert not game.world.stage.arrows_visible
+            assert all(game.assets.images[name] is image for name, image in textures.items())
+            capture(game, f"stage_travel_{'next' if side > 0 else 'previous'}_{mode}")
+            assert abs(player.x - player.previous_x) <= config.RUN_SPEED * config.FIXED_DT + 1e-6
+            for key in (direction_key, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE, pico2d.SDLK_n):
+                push_key(key, down=False)
+            game.handle_events()
+    print("PASS: SDL next/previous travel preserves the same player, held direction/Shift/Space, "
+          "walk/run speed, rising/falling double jump, HP and animation clock.")
+
+
+def check_round_trip_and_last_exit(game):
+    game.world = World(rng=random.Random(1))
+    player = game.world.player
+    push_key(pico2d.SDLK_n)
+    push_key(pico2d.SDLK_1)
+    push_key(pico2d.SDLK_RIGHT)
+    push_key(pico2d.SDLK_LSHIFT)
+    for _ in range(240):
+        tick(game)
+        if game.world.stage_index == 1:
+            break
+    assert game.world.stage_index == 1 and game.world.player is player
+    assert player.state == "RUN" and player.vx == 720
+    assert not game.world.stage.arrows_visible  # Holding N must not reveal this map.
+    first = game.world.stages[0]
+    assert len(first.enemies) == 1
+    first.enemies[0].take_damage(20)
+    first_positions = [enemy.x for enemy in first.enemies]
+    push_key(pico2d.SDLK_RIGHT, down=False)
+    push_key(pico2d.SDLK_1, down=False)
+    push_key(pico2d.SDLK_2)
+    push_key(pico2d.SDLK_n, down=False)
+    push_key(pico2d.SDLK_n)
+    push_key(pico2d.SDLK_LEFT)
+    tick(game)
+    for index, enemy in enumerate(game.world.enemies):
+        enemy.x = config.START_X + index * 100
+    for _ in range(120):
+        tick(game)
+        if game.world.stage_index == 0:
+            break
+    assert game.world.stage_index == 0 and game.world.player is player
+    assert player.state == "RUN" and player.vx < 0
+    assert first.enemies[0].hp == 180 and first.spawner.spawned_count == 1
+    assert first.enemies[0].x == first_positions[0]
+    assert len(game.world.stages[1].enemies) == 2
+    assert game.world.stage.arrow_sides == (1,)
+    tick(game, 5)
+    assert game.world.stage_index == 0
+    assert player.vx == -720
+    capture(game, "stage_return_running")
+    for key in (pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT, pico2d.SDLK_2, pico2d.SDLK_n):
+        push_key(key, down=False)
+    game.handle_events()
+
+    game.world = World()
+    game.world.stage_index = 1
+    player = game.world.player
+    player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
+    player.vx = 720
+    push_key(pico2d.SDLK_n)
+    push_key(pico2d.SDLK_RIGHT)
+    push_key(pico2d.SDLK_LSHIFT)
+    tick(game, 30)
+    assert game.world.stage_index == 1
+    assert player.x == config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH
+    capture(game, "stage_2_next_pending")
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    assert game.world.stage_index == 0 and game.world.player.hp == 500
+    assert all(not stage.arrows_visible and not stage.enemies for stage in game.world.stages)
+    for key in (pico2d.SDLK_F5, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_n):
+        push_key(key, down=False)
+    game.handle_events()
+    print("PASS: SDL full sprint round trip keeps per-map enemies/HP/spawn counts, "
+          "avoids return loops, bounds the final exit, and F5 resets both stages.")
+
+
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()
@@ -73,6 +193,8 @@ def main():
         game = Game()
         game.handle_events()
         check_markers(game)
+        check_motion_continuity(game)
+        check_round_trip_and_last_exit(game)
     finally:
         if game is not None:
             game.close()

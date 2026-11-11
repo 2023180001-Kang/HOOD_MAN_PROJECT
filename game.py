@@ -9,7 +9,6 @@ from sdl2 import SDL_Event, SDL_PollEvent, SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCU
 
 import config
 from assets import Assets
-from stage import Stage
 from ui import UI
 from world import World
 
@@ -21,6 +20,7 @@ KEYS = {
     pico2d.SDLK_RSHIFT: "right_shift",
     pico2d.SDLK_SPACE: "jump",
     pico2d.SDLK_F5: "restart",
+    pico2d.SDLK_n: "stage_exits",
 }
 KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
              for key, *_ in config.COMBAT_MOVE_SPECS})
@@ -31,7 +31,6 @@ KEYS.update({getattr(pico2d, f"SDLK_{prefix}{count}"): f"spawn_{count}"
 class Game:
     def __init__(self):
         self.assets = Assets()
-        self.stage = Stage()
         self.ui = UI()
         self.world = World()
         self.running = True
@@ -62,7 +61,7 @@ class Game:
         pico2d.clear_canvas()
         camera_x = self.world.camera.render_x
         camera_y = self.world.camera.render_y
-        self.stage.draw(self.assets, camera_x, camera_y)
+        self.world.stage.draw(self.assets, camera_x, camera_y)
         for enemy in self.world.enemies:
             self.assets.draw_sprite(config.ENEMY_IMAGE, enemy.animation.row,
                                     enemy.animation.frame, enemy.x - camera_x,

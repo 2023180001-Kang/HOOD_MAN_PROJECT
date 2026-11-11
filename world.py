@@ -6,7 +6,7 @@ from collision import resolve_bodies
 from controls import Controls
 from effects import HitEffect
 from player import Player
-from spawn_manager import SpawnManager
+from stage import Stage
 
 
 class World:
@@ -19,12 +19,35 @@ class World:
         self.controls.reset_for_restart()
         self.player = Player()
         self.camera = Camera(self.player.x)
-        self.enemies = []
-        self.effects = []
-        self.spawner = SpawnManager(rng=self.spawn_rng)
+        self.stages = [Stage(index, rng=self.spawn_rng) for index in range(len(config.STAGE_IMAGES))]
+        self.stage_index = 0
         self.death_handled = False
         self.elapsed = 0.0
         self.accumulator = 0.0
+
+    @property
+    def stage(self):
+        return self.stages[self.stage_index]
+
+    @property
+    def enemies(self):
+        return self.stage.enemies
+
+    @enemies.setter
+    def enemies(self, enemies):
+        self.stage.enemies = enemies
+
+    @property
+    def effects(self):
+        return self.stage.effects
+
+    @effects.setter
+    def effects(self, effects):
+        self.stage.effects = effects
+
+    @property
+    def spawner(self):
+        return self.stage.spawner
 
     def update(self, dt):
         if self.controls.take_press("restart"):
@@ -37,6 +60,8 @@ class World:
 
     def step(self, dt):
         self.elapsed += dt
+        if self.controls.take_press("stage_exits") and self.player.alive:
+            self.stage.arrows_visible = True
         for effect in self.effects:
             effect.update(dt)
         self.effects = [effect for effect in self.effects if not effect.finished]

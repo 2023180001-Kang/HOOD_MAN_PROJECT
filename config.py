@@ -78,6 +78,12 @@ COMBAT_MOVE_SPECS = (
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "newStage.png"
+STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png")
+STAGE_ARROW_IMAGES = {-1: "arrow_left_yellow.png", 1: "arrow_right_yellow.png"}
+STAGE_ARROW_WIDTH = 96.0
+STAGE_ARROW_Y = GROUND_Y + 190.0
+STAGE_EXIT_MARGIN = 80.0
+STAGE_ENTRY_MARGIN = 128.0
 STAGE_SCALE = 1.0
 # Walking line measured upward from the source image's bottom edge (941 - 797).
 STAGE_GROUND_Y = 144.0

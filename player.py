@@ -20,7 +20,8 @@ class Player:
         self.active_move = None
         self.hit_enemies = set()
         definitions = dict(config.PLAYER_ANIMATIONS)
-        definitions.update({move.state: (move.row, config.COMBAT_FPS, False)
+        definitions.update({move.state: (move.row, config.BLOCK_FPS if move.blocking
+                                         else config.COMBAT_FPS, False)
                             for move in MOVES.values()})
         self.animation = Animation(definitions)
 
@@ -31,6 +32,11 @@ class Player:
     @property
     def alive(self):
         return self.hp > 0
+
+    @property
+    def blocking(self):
+        return (self.alive and self.active_move is not None
+                and self.active_move.blocking and self.state == "BLOCK")
 
     @property
     def sprite_image(self):
@@ -78,15 +84,12 @@ class Player:
     def take_damage(self, damage, *, source_x=None):
         if not self.alive:
             return False
-        blocked = (self.active_move is not None and self.active_move.blocking
-                   and self.state == "BLOCK" and self.animation.frame in config.BLOCK_ACTIVE_FRAMES
-                   and source_x is not None and (source_x - self.x) * self.facing >= 0)
-        if blocked:
-            damage = round(damage * config.BLOCK_DAMAGE_RATIO)
+        if (self.blocking and source_x is not None
+                and (source_x - self.x) * self.facing >= 0):
+            # The enemy consumes its swing, but no damage or blood effect occurs.
+            return False
         self.hp = max(0, self.hp - damage)
         self.vx = 0.0
-        if blocked and self.alive:
-            return True
         self.cancel_combat()
         # Every enemy swing applies damage. Re-entering HIT preserves the
         # current animation clock; a lethal hit always overrides it with DYING.
@@ -120,13 +123,23 @@ class Player:
                     self.animation.set_state("IDLE")
             return
 
-        if self.active_move is None and combat_pressed is not None:
-            self.start_move(MOVES[combat_pressed], controls.direction)
+        if self.blocking and "combat_h" not in controls.held:
+            self.cancel_combat()
+            self.animation.set_state("IDLE")
+        if self.active_move is None:
+            if "combat_h" in controls.held:
+                self.start_move(MOVES["combat_h"], controls.direction)
+            elif combat_pressed is not None and not MOVES[combat_pressed].blocking:
+                self.start_move(MOVES[combat_pressed], controls.direction)
         if self.active_move is not None:
             self.vx = 0.0
             self.update_vertical(dt)
             self.animation.update(dt)
-            if self.animation.finished:
+            if self.blocking:
+                # Reach a readable guard pose, then hold it until H is released.
+                self.animation.elapsed = min(self.animation.elapsed,
+                                             config.BLOCK_HOLD_FRAME / config.BLOCK_FPS)
+            elif self.animation.finished:
                 self.cancel_combat()
                 self.animation.set_state("IDLE")
             return

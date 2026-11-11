@@ -16,10 +16,29 @@ class PlayerActionTests(unittest.TestCase):
                 self.assertEqual(world.player.state, move.state)
                 self.assertEqual(world.player.animation.row, row)
                 self.assertEqual(world.player.sprite_image, config.COMBAT_IMAGE)
+                if move.blocking:
+                    advance(world, 1)
+                    self.assertEqual(world.player.state, "BLOCK")
+                    world.controls.release(key)
                 advance(world, 0.8)
                 self.assertEqual(world.player.state, "IDLE")
                 self.assertEqual(world.player.sprite_image, config.PLAYER_IMAGE)
                 self.assertIsNone(world.player.active_move)
+
+    def test_attacks_hit_earlier_and_finish_fifty_percent_faster(self):
+        for key in (key for key, move in MOVES.items() if not move.blocking):
+            with self.subTest(key=key):
+                world = World(spawn_schedule=())
+                world.controls.press(key)
+                advance(world, 0.15)
+                self.assertIsNone(world.player.attack_box)
+                advance(world, 0.025)
+                self.assertIsNotNone(world.player.attack_box)
+                advance(world, 0.25)
+                self.assertIsNotNone(world.player.active_move)
+                advance(world, 0.025)
+                self.assertIsNone(world.player.active_move)
+                self.assertEqual(world.player.state, "IDLE")
 
     def test_held_and_repeated_keys_do_not_loop_attacks(self):
         world = World(spawn_schedule=())

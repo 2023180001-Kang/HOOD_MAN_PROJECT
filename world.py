@@ -54,6 +54,7 @@ class World:
                     if self.player.try_hit(enemy):
                         self.effects.append(HitEffect.at_contact(player_box, enemy.body,
                                                                  self.player.facing))
+                        self.camera.shake()
             for enemy in self.enemies:
                 enemy_box = enemy.attack_box
                 if enemy_box is not None and enemy.try_hit(self.player):

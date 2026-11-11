@@ -22,7 +22,7 @@ class PlayerDamageTests(unittest.TestCase):
                 enemy = target(world)
                 self.assertEqual(enemy.hp, 200)
                 world.controls.press(f"combat_{key}")
-                advance(world, 0.2)
+                advance(world, 0.1)
                 self.assertEqual(enemy.hp, 200)  # Wind-up is not a hit.
                 advance(world, 0.4)
                 self.assertEqual(enemy.hp, 200 - damage)

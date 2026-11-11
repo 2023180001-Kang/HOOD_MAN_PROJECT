@@ -117,10 +117,14 @@ def check_player_action_inputs(game):
         capture(game, f"player_move_{move.key}")
         push_key(key, repeat=True)
         tick(game, 35)
-        assert player.state == "IDLE" and player.active_move is None
+        if move.blocking:
+            assert player.state == "BLOCK" and player.animation.frame == config.BLOCK_HOLD_FRAME
+        else:
+            assert player.state == "IDLE" and player.active_move is None
         push_key(key, down=False)
-        game.handle_events()
-    print("PASS: SDL Q/W/E/R/A/S/D/F/H map to rows 1-9; one-shot playback, "
+        tick(game)
+        assert player.state == "IDLE" and player.active_move is None
+    print("PASS: SDL Q/W/E/R/A/S/D/F/H map to rows 1-9; faster one-shot attacks, held guard, "
           "R attack and F5 restart have distinct actions.")
 
 
@@ -135,6 +139,7 @@ def check_player_damage_and_enemy_health(game):
         tick(game, 17)
         assert enemy.hp == 200 - damage and enemy.state == "HIT"
         assert len(game.world.effects) == 1
+        assert game.world.camera.shake_remaining > 0
         if key_name == "q":
             verify_blood_pixels(game, "blood_player_to_enemy")
         if key_name in "wdf":
@@ -187,7 +192,7 @@ def verify_blood_pixels(game, name):
     assert red_pixels > 20, (name, red_pixels)
 
 
-def check_timed_block_and_blood(game):
+def check_held_block_and_blood(game):
     game.world = World(spawn_schedule=())
     game.world.enemies = [ready_enemy(config.START_X - 80)]
     tick(game, 7)
@@ -198,17 +203,23 @@ def check_timed_block_and_blood(game):
     assert not game.world.effects
 
     game.world = World(spawn_schedule=())
+    push_key(pico2d.SDLK_LEFT)
     push_key(pico2d.SDLK_h)
-    tick(game, 12)
-    game.world.enemies = [ready_enemy(config.START_X + 80, -1)]
-    tick(game, 7)
-    assert game.world.player.hp == 490 and game.world.player.state == "BLOCK"
-    assert len(game.world.effects) == 1
-    verify_blood_pixels(game, "timed_block_half_damage")
-    push_key(pico2d.SDLK_h, repeat=True)
-    elapsed = game.world.player.animation.elapsed
     tick(game)
-    assert game.world.player.animation.elapsed > elapsed
+    push_key(pico2d.SDLK_LEFT, down=False)
+    game.world.enemies = [ready_enemy(config.START_X - 80) for _ in range(4)]
+    tick(game, 180)
+    assert game.world.player.hp == 500 and game.world.player.state == "BLOCK"
+    assert not game.world.effects and game.world.camera.shake_remaining == 0
+    capture(game, "held_block_no_damage")
+    push_key(pico2d.SDLK_h, repeat=True)
+    tick(game)
+    assert game.world.player.animation.frame == config.BLOCK_HOLD_FRAME
+    game.world.enemies.append(ready_enemy(config.START_X + 80, -1))
+    tick(game)
+    assert game.world.player.hp == 480 and game.world.player.state == "HIT"
+    assert len(game.world.effects) == 1
+    verify_blood_pixels(game, "block_rear_full_damage")
     push_key(pico2d.SDLK_F5)
     tick(game)
     assert not game.world.effects and not game.world.enemies
@@ -217,19 +228,22 @@ def check_timed_block_and_blood(game):
     push_key(pico2d.SDLK_h, down=False)
     game.handle_events()
 
-    for label, wait, side in (("late", 30, 1), ("rear", 12, -1)):
+    for label, wait in (("immediate", 0), ("long_hold", 180)):
         game.world = World(spawn_schedule=())
         push_key(pico2d.SDLK_h)
         tick(game, wait)
-        game.world.enemies = [ready_enemy(config.START_X + side * 80, -side)]
+        game.world.enemies = [ready_enemy(config.START_X + 80, -1)]
+        tick(game)
+        assert game.world.player.hp == 500 and game.world.player.state == "BLOCK"
+        assert not game.world.effects
+        capture(game, f"block_{label}_no_damage")
+        push_key(pico2d.SDLK_h, down=False)
+        game.world.enemies = [ready_enemy(config.START_X + 80, -1)]
         tick(game)
         assert game.world.player.hp == 480 and game.world.player.state == "HIT"
-        assert len(game.world.effects) == 1
-        capture(game, f"block_{label}_full_damage")
-        push_key(pico2d.SDLK_h, down=False)
         game.handle_events()
-    print("PASS: SDL H timed frontal block takes 10, late/rear hits take 20; "
-          "both attack directions add visible blood pixels; effects expire and F5 clears them.")
+    print("PASS: SDL held H blocks all frontal damage immediately and for 3s against four enemies; "
+          "rear/released guard takes 20; damaging hits show blood/shake, effects expire and F5 clears them.")
 
 
 def running_jump_distance(game, record=False):
@@ -480,7 +494,7 @@ def main():
         check_movement_tuning(game)
         check_player_action_inputs(game)
         check_player_damage_and_enemy_health(game)
-        check_timed_block_and_blood(game)
+        check_held_block_and_blood(game)
         check_jump_range(game)
         check_crowd_damage(game)
         check_enemy_run_chase(game)

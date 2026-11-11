@@ -8,7 +8,7 @@ from world import World
 
 class DeathRestartTests(unittest.TestCase):
     def test_twenty_fifth_valid_hit_kills_and_last_death_frame_is_held(self):
-        world = World(spawn_schedule=())
+        world = World()
         for _ in range(24):
             self.assertTrue(world.player.take_damage(20))
             advance(world, 0.8)
@@ -30,7 +30,7 @@ class DeathRestartTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 0)
 
     def test_knockback_is_outward_once_and_facing_does_not_change(self):
-        world = World(spawn_schedule=())
+        world = World()
         left = Enemy(config.START_X - 80, facing=1)
         right = Enemy(config.START_X + 80, facing=-1)
         world.enemies = [left, right]
@@ -48,7 +48,7 @@ class DeathRestartTests(unittest.TestCase):
         self.assertEqual((left.facing, right.facing), (1, -1))
 
     def test_same_x_knockback_uses_opposite_facing(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.enemies = [Enemy(config.START_X, 1)]
         world.player.take_damage(500)
         world.step(config.FIXED_DT)
@@ -60,7 +60,7 @@ class DeathRestartTests(unittest.TestCase):
             (config.WORLD_WIDTH - 80, config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH, -1),
         ):
             with self.subTest(player_x=player_x):
-                world = World(spawn_schedule=())
+                world = World()
                 world.player.x = player_x
                 enemy = Enemy(enemy_x, facing)
                 world.enemies = [enemy]
@@ -72,7 +72,7 @@ class DeathRestartTests(unittest.TestCase):
                 self.assertEqual(enemy.facing, facing)
 
     def test_death_only_knocks_back_nearby_enemies_and_stops_far_enemies(self):
-        world = World(spawn_schedule=())
+        world = World()
         near = Enemy(config.START_X - 80, 1)
         boundary = Enemy(config.START_X + config.KNOCKBACK_RADIUS, -1)
         outside = Enemy(config.START_X - config.KNOCKBACK_RADIUS - 1, 1)
@@ -97,7 +97,7 @@ class DeathRestartTests(unittest.TestCase):
         self.assertIsNone(far.attack_box)
 
     def test_knockback_radius_is_circular_and_includes_the_boundary(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.player.y += 128
         on_boundary = Enemy(config.START_X + 96)
         outside = Enemy(config.START_X + 96.01)
@@ -108,7 +108,7 @@ class DeathRestartTests(unittest.TestCase):
         self.assertFalse(outside.knockback_started)
 
     def test_airborne_death_does_not_later_knock_back_enemies_on_landing(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.player.y += config.KNOCKBACK_RADIUS + 20
         enemy = Enemy(world.player.x)
         world.enemies = [enemy]
@@ -122,7 +122,7 @@ class DeathRestartTests(unittest.TestCase):
         self.assertEqual(enemy.x, position)
 
     def test_death_with_only_far_enemies_does_not_knock_back_anyone(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.enemies = [Enemy(config.START_X - 500), Enemy(config.START_X + 500, -1)]
         positions = [enemy.x for enemy in world.enemies]
         world.player.take_damage(500)
@@ -131,7 +131,7 @@ class DeathRestartTests(unittest.TestCase):
         self.assertTrue(all(not enemy.knockback_started for enemy in world.enemies))
         self.assertEqual([enemy.x for enemy in world.enemies], positions)
 
-    def test_early_death_stops_pending_spawns_and_other_attacks(self):
+    def test_early_death_stops_numeric_spawns_and_other_attacks(self):
         world = World()
         world.player.hp = 20
         for x, facing in ((config.START_X - 80, 1), (config.START_X + 80, -1)):
@@ -143,6 +143,7 @@ class DeathRestartTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 0)
         self.assertTrue(world.death_handled)
         self.assertTrue(all(enemy.knockback_started for enemy in world.enemies))
+        world.controls.press("spawn_9")
         advance(world, 10)
         self.assertEqual(world.spawner.spawned_count, 0)
         self.assertEqual(len(world.enemies), 2)
@@ -152,7 +153,8 @@ class DeathRestartTests(unittest.TestCase):
         for state in ("IDLE", "WALK", "RUN", "JUMP", "HIT", "DYING", "DEAD"):
             with self.subTest(state=state):
                 world = World()
-                advance(world, 8)
+                world.controls.press("spawn_4")
+                world.update(1 / 60)
                 old_player = world.player
                 old_enemies = list(world.enemies)
                 world.player.animation.set_state(state)
@@ -183,7 +185,8 @@ class DeathRestartTests(unittest.TestCase):
                 self.assertEqual(world.controls.held, {"restart"})
                 self.assertEqual(world.controls.pressed, set())
                 self.assertFalse(world.death_handled)
-                advance(world, 1.1)
+                world.controls.press("spawn_1")
+                world.update(1 / 60)
                 self.assertEqual(len(world.enemies), 1)
                 self.assertNotIn(world.enemies[0], old_enemies)
 

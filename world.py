@@ -10,9 +10,9 @@ from spawn_manager import SpawnManager
 
 
 class World:
-    def __init__(self, *, spawn_schedule=None):
+    def __init__(self, *, rng=None):
         self.controls = Controls()
-        self.spawn_schedule = spawn_schedule
+        self.spawn_rng = rng
         self.reset()
 
     def reset(self):
@@ -21,7 +21,7 @@ class World:
         self.camera = Camera(self.player.x)
         self.enemies = []
         self.effects = []
-        self.spawner = SpawnManager(self.spawn_schedule)
+        self.spawner = SpawnManager(rng=self.spawn_rng)
         self.death_handled = False
         self.elapsed = 0.0
         self.accumulator = 0.0
@@ -40,8 +40,9 @@ class World:
         for effect in self.effects:
             effect.update(dt)
         self.effects = [effect for effect in self.effects if not effect.finished]
-        if self.player.alive:
-            self.enemies.extend(self.spawner.update(self.elapsed))
+        for count in config.SPAWN_COUNTS:
+            if self.controls.take_press(f"spawn_{count}") and self.player.alive:
+                self.enemies.extend(self.spawner.spawn(count, self.elapsed))
         self.player.update(dt, self.controls)
         self.handle_death()
         for enemy in self.enemies:

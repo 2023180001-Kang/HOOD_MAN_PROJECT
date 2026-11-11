@@ -7,7 +7,7 @@ from tests.helpers import advance
 
 class MovementTests(unittest.TestCase):
     def test_run_accelerates_and_release_stops_without_reversing(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("right")
         world.controls.press("left_shift")
         world.update(1 / 60)
@@ -21,7 +21,7 @@ class MovementTests(unittest.TestCase):
         self.assertEqual(world.player.state, "IDLE")
 
     def test_shift_release_slows_to_walk_and_reversal_is_gradual(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("right")
         world.controls.press("right_shift")
         advance(world, 0.5)
@@ -39,7 +39,7 @@ class MovementTests(unittest.TestCase):
         self.assertEqual(world.player.facing, -1)
 
     def test_opposite_keys_cancel_and_shift_alone_does_not_move(self):
-        world = World(spawn_schedule=())
+        world = World()
         for key in ("left", "right", "left_shift"):
             world.controls.press(key)
         advance(world, 0.5)
@@ -52,7 +52,7 @@ class MovementTests(unittest.TestCase):
     def test_frame_rates_produce_the_same_simulation(self):
         positions = []
         for fps in (30, 60, 120, 144):
-            world = World(spawn_schedule=())
+            world = World()
             world.controls.press("right")
             world.controls.press("left_shift")
             advance(world, 1, fps)
@@ -64,7 +64,7 @@ class MovementTests(unittest.TestCase):
     def test_requested_walk_and_double_run_speeds_are_reached(self):
         for running, expected in ((False, 300.0), (True, 720.0)):
             with self.subTest(running=running):
-                world = World(spawn_schedule=())
+                world = World()
                 world.controls.press("right")
                 if running:
                     world.controls.press("left_shift")
@@ -76,7 +76,7 @@ class MovementTests(unittest.TestCase):
     def test_full_speed_turn_stops_forward_slide_within_tenth_second(self):
         for direction, key, opposite in ((1, "right", "left"), (-1, "left", "right")):
             with self.subTest(direction=direction):
-                world = World(spawn_schedule=())
+                world = World()
                 world.controls.press(key)
                 world.controls.press("left_shift")
                 advance(world, 0.5)
@@ -91,7 +91,7 @@ class MovementTests(unittest.TestCase):
                 self.assertEqual(world.player.vx, -direction * 720)
 
     def test_full_speed_release_stops_quickly_without_drifting(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("right")
         world.controls.press("left_shift")
         advance(world, 0.5)
@@ -107,7 +107,7 @@ class MovementTests(unittest.TestCase):
     def test_world_boundaries_stop_the_player(self):
         for key, expected in (("left", config.PLAYER_HALF_WIDTH),
                               ("right", config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)):
-            world = World(spawn_schedule=())
+            world = World()
             world.controls.press(key)
             world.controls.press("left_shift")
             advance(world, 10)

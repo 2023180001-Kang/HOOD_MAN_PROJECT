@@ -2,6 +2,7 @@
 
 import ctypes
 from pathlib import Path
+import random
 import sys
 from time import perf_counter
 from unittest.mock import patch
@@ -37,7 +38,7 @@ def tick(game, frames=1):
 
 
 def check_input(game):
-    game.world = World(spawn_schedule=())
+    game.world = World()
     push_key(pico2d.SDLK_RIGHT)
     push_key(pico2d.SDLK_LSHIFT)
     tick(game, 30)
@@ -76,7 +77,7 @@ def check_input(game):
 
 
 def check_movement_tuning(game):
-    game.world = World(spawn_schedule=())
+    game.world = World()
     game.world.player.x = 500
     push_key(pico2d.SDLK_RIGHT)
     tick(game, 20)
@@ -104,9 +105,69 @@ def check_movement_tuning(game):
           f"forward slide {maximum_slide:.2f}px; released movement stops within 0.1s.")
 
 
+def check_numeric_spawns(game):
+    game.world = World()
+    tick(game, 600)
+    assert not game.world.enemies
+    for prefix in ("", "KP_"):
+        for count in range(1, 10):
+            game.world = World(rng=random.Random(42))
+            key = getattr(pico2d, f"SDLK_{prefix}{count}")
+            push_key(key)
+            tick(game)
+            assert len(game.world.enemies) == count
+            assert all(enemy.spawned_at == config.FIXED_DT for enemy in game.world.enemies)
+            edge_limit = config.ENEMY_HALF_WIDTH + max(config.ENEMY_RUN_SPEEDS) / 60 + 1e-6
+            assert all(enemy.x <= edge_limit or enemy.x >= config.WORLD_WIDTH - edge_limit
+                       for enemy in game.world.enemies)
+            push_key(key, repeat=True)
+            tick(game, 12)
+            assert len(game.world.enemies) == count
+            push_key(key, down=False)
+            push_key(key)
+            tick(game)
+            assert len(game.world.enemies) == count * 2
+            push_key(key, down=False)
+            game.handle_events()
+
+    game.world = World(rng=random.Random(42))
+    push_key(pico2d.SDLK_2)
+    push_key(pico2d.SDLK_5)
+    tick(game)
+    assert len(game.world.enemies) == 7
+    assert {enemy.facing for enemy in game.world.enemies} == {-1, 1}
+    for key in (pico2d.SDLK_2, pico2d.SDLK_5):
+        push_key(key, down=False)
+    push_key(pico2d.SDLK_0)
+    push_key(pico2d.SDLK_KP_0)
+    tick(game)
+    assert len(game.world.enemies) == 7
+    push_key(pico2d.SDLK_0, down=False)
+    push_key(pico2d.SDLK_KP_0, down=False)
+    game.world.player.take_damage(500)
+    push_key(pico2d.SDLK_9)
+    tick(game)
+    assert len(game.world.enemies) == 7
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    assert not game.world.enemies and game.world.spawner.spawned_count == 0
+    push_key(pico2d.SDLK_F5, down=False)
+    tick(game, 60)
+    assert not game.world.enemies
+    push_key(pico2d.SDLK_9, down=False)
+    push_key(pico2d.SDLK_9)
+    tick(game)
+    assert len(game.world.enemies) == 9
+    push_key(pico2d.SDLK_9, down=False)
+    tick(game, 120)
+    capture(game, "numeric_spawn_9")
+    print("PASS: SDL top-row/keypad 1-9 spawn exactly the requested count at random map sides; "
+          "held/repeated keys and 0 do not spawn; distinct digits add, death ignores, F5 resets.")
+
+
 def check_player_action_inputs(game):
     for action, move in MOVES.items():
-        game.world = World(spawn_schedule=())
+        game.world = World()
         player = game.world.player
         key = getattr(pico2d, f"SDLK_{move.key}")
         push_key(key)
@@ -130,7 +191,7 @@ def check_player_action_inputs(game):
 
 def check_player_damage_and_enemy_health(game):
     for key_name, damage in zip("qwerasdf", (20, 30, 20, 20, 20, 20, 50, 40)):
-        game.world = World(spawn_schedule=())
+        game.world = World()
         enemy = Enemy(config.START_X + 80, -1)
         enemy.cooldown = 100
         game.world.enemies = [enemy]
@@ -149,7 +210,7 @@ def check_player_damage_and_enemy_health(game):
         push_key(key, down=False)
         game.handle_events()
 
-    game.world = World(spawn_schedule=())
+    game.world = World()
     enemy = Enemy(config.START_X + 80, -1)
     game.world.enemies = [enemy]
     for hp, expected in ((200, 48), (100, 24), (0, 0)):
@@ -163,7 +224,7 @@ def check_player_damage_and_enemy_health(game):
         )
         assert abs(red_width - expected) <= 2, (hp, red_width)
 
-    game.world = World(spawn_schedule=())
+    game.world = World()
     enemy = Enemy(config.START_X + 80, -1)
     enemy.cooldown = 100
     game.world.enemies = [enemy]
@@ -193,7 +254,7 @@ def verify_blood_pixels(game, name):
 
 
 def check_held_block_and_blood(game):
-    game.world = World(spawn_schedule=())
+    game.world = World()
     game.world.enemies = [ready_enemy(config.START_X - 80)]
     tick(game, 7)
     assert game.world.player.hp == 480 and len(game.world.effects) == 1
@@ -202,7 +263,7 @@ def check_held_block_and_blood(game):
     tick(game, 30)
     assert not game.world.effects
 
-    game.world = World(spawn_schedule=())
+    game.world = World()
     push_key(pico2d.SDLK_LEFT)
     push_key(pico2d.SDLK_h)
     tick(game)
@@ -229,7 +290,7 @@ def check_held_block_and_blood(game):
     game.handle_events()
 
     for label, wait in (("immediate", 0), ("long_hold", 180)):
-        game.world = World(spawn_schedule=())
+        game.world = World()
         push_key(pico2d.SDLK_h)
         tick(game, wait)
         game.world.enemies = [ready_enemy(config.START_X + 80, -1)]
@@ -246,11 +307,12 @@ def check_held_block_and_blood(game):
           "rear/released guard takes 20; damaging hits show blood/shake, effects expire and F5 clears them.")
 
 
-def running_jump_distance(game, record=False):
-    game.world = World(spawn_schedule=())
+def running_jump_distance(game, record=False, running=True):
+    game.world = World()
     game.world.player.x = 350
     push_key(pico2d.SDLK_RIGHT)
-    push_key(pico2d.SDLK_LSHIFT)
+    if running:
+        push_key(pico2d.SDLK_LSHIFT)
     tick(game, 30)
     start = game.world.player.x
     push_key(pico2d.SDLK_SPACE)
@@ -275,17 +337,50 @@ def running_jump_distance(game, record=False):
 
 
 def check_jump_range(game):
-    with patch.multiple(config, RUN_SPEED=360.0, WALK_SPEED=180.0,
-                        ACCELERATION=1000.0, FRICTION=1200.0,
-                        RUN_DOUBLE_JUMP_SPEED=600.0):
-        original = running_jump_distance(game)
-    with patch.object(config, "RUN_DOUBLE_JUMP_SPEED", config.DOUBLE_JUMP_SPEED):
-        unboosted = running_jump_distance(game)
+    with patch.object(config, "RUN_DOUBLE_JUMP_SPEED", 780.0):
+        previous_run = running_jump_distance(game)
     improved = running_jump_distance(game, record=True)
-    assert improved > original * 2
-    assert improved - unboosted > 100
-    print(f"PASS: SDL running double jump {original:.1f}px -> {improved:.1f}px "
-          f"({improved / original:.2f}x), +{improved - unboosted:.1f}px over unboosted at 720px/s.")
+    with patch.object(config, "DOUBLE_JUMP_SPEED", 600.0):
+        previous_walk = running_jump_distance(game, running=False)
+    walking = running_jump_distance(game, running=False)
+    assert improved - previous_run > 150
+    assert walking - previous_walk > 60
+    print(f"PASS: SDL double jump walk {previous_walk:.1f}px -> {walking:.1f}px; "
+          f"run {previous_run:.1f}px -> {improved:.1f}px (+{improved - previous_run:.1f}px).")
+
+
+def check_crowd_escape(game):
+    for direction in (-1, 1):
+        for running in (False, True):
+            game.world = World()
+            game.world.enemies = [Enemy(config.START_X + side * gap, -side)
+                                  for side in (-1, 1) for gap in (61, 82, 103, 124)]
+            direction_key = pico2d.SDLK_RIGHT if direction > 0 else pico2d.SDLK_LEFT
+            push_key(direction_key)
+            if running:
+                push_key(pico2d.SDLK_LSHIFT)
+            push_key(pico2d.SDLK_SPACE)
+            tick(game, 3)
+            push_key(pico2d.SDLK_SPACE, down=False)
+            push_key(pico2d.SDLK_SPACE)
+            for frame in range(120):
+                tick(game)
+                assert game.world.player.hp == 500
+                assert all(not game.world.player.body.overlaps(enemy.body)
+                           for enemy in game.world.enemies)
+                assert game.world.player.y + config.PLAYER_HEIGHT < config.SCREEN_HEIGHT
+                if frame == 20:
+                    capture(game, f"crowd_escape_{direction}_{'run' if running else 'walk'}")
+                if game.world.player.grounded:
+                    break
+            assert game.world.player.grounded
+            assert all((game.world.player.x - enemy.x) * direction > 61
+                       for enemy in game.world.enemies)
+            for key in (direction_key, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
+                push_key(key, down=False)
+            game.handle_events()
+    print("PASS: SDL quick double jump escapes eight surrounding enemies left/right, "
+          "walking/running, without damage/body overlap or exceeding the screen top.")
 
 
 def ready_enemy(x, facing=1):
@@ -297,7 +392,7 @@ def ready_enemy(x, facing=1):
 
 
 def check_crowd_damage(game):
-    game.world = World(spawn_schedule=())
+    game.world = World()
     game.world.enemies = [ready_enemy(config.START_X - 80),
                           ready_enemy(config.START_X - 80),
                           ready_enemy(config.START_X + 80, -1),
@@ -309,7 +404,7 @@ def check_crowd_damage(game):
     tick(game, 6)
     assert game.world.player.hp == 420
 
-    game.world = World(spawn_schedule=())
+    game.world = World()
     game.world.enemies = [ready_enemy(config.START_X - 80)]
     tick(game)
     assert game.world.player.hp == 480
@@ -332,12 +427,13 @@ def check_crowd_damage(game):
 
 def check_enemy_run_chase(game):
     game.world = World()
-    # Fast-forward only the spawn schedule, then stage an escape at walking range.
-    game.world.enemies = game.world.spawner.update(7)
+    push_key(pico2d.SDLK_4)
+    tick(game)
+    push_key(pico2d.SDLK_4, down=False)
     old_enemies = list(game.world.enemies)
     assert [enemy.run_speed for enemy in old_enemies] == list(config.ENEMY_RUN_SPEEDS)
     for enemy in old_enemies:
-        enemy.x = config.START_X - 280
+        enemy.x = config.START_X - config.ENEMY_RUN_STOP_DISTANCE
     tick(game)
     assert all(enemy.state == "WALK" for enemy in old_enemies)
     for key in (pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
@@ -362,7 +458,10 @@ def check_enemy_run_chase(game):
     tick(game)
     assert not game.world.enemies and game.world.spawner.spawned_count == 0
     push_key(pico2d.SDLK_F5, down=False)
-    tick(game, 426)
+    push_key(pico2d.SDLK_4)
+    tick(game)
+    push_key(pico2d.SDLK_4, down=False)
+    game.handle_events()
     assert [enemy.run_speed for enemy in game.world.enemies] == list(config.ENEMY_RUN_SPEEDS)
     assert all(enemy.hp == 200 for enemy in game.world.enemies)
     assert all(enemy not in old_enemies for enemy in game.world.enemies)
@@ -371,7 +470,7 @@ def check_enemy_run_chase(game):
 
 
 def check_nearby_death_knockback(game):
-    game.world = World(spawn_schedule=())
+    game.world = World()
     game.world.player.hp = 20
     near_left = ready_enemy(config.START_X - 80)
     near_right = Enemy(config.START_X + 140, -1)
@@ -395,7 +494,7 @@ def check_nearby_death_knockback(game):
     assert game.world.player.state == "DEAD"
     capture(game, "nearby_death_settled")
 
-    game.world = World(spawn_schedule=())
+    game.world = World()
     game.world.player.hp = 20
     game.world.player.y += 140
     diagonal = ready_enemy(config.START_X + 88, -1)
@@ -413,7 +512,7 @@ def check_nearby_death_knockback(game):
 
 
 def check_hp_pixels(game):
-    game.world = World(spawn_schedule=())
+    game.world = World()
     shots = {}
     for hp in (500, 480, 460, 420, 250, 0):
         game.world.player.hp = hp
@@ -435,7 +534,7 @@ def check_hp_pixels(game):
 
 
 def check_focus_loss(game):
-    game.world = World(spawn_schedule=())
+    game.world = World()
     push_key(pico2d.SDLK_RIGHT)
     push_key(pico2d.SDLK_LSHIFT)
     tick(game, 30)
@@ -447,11 +546,23 @@ def check_focus_loss(game):
     assert not game.world.controls.held, "Focus loss left movement keys held"
     tick(game, 30)
     assert game.world.player.vx == 0
-    print("PASS: window focus loss clears held movement and pending inputs.")
+    push_key(pico2d.SDLK_h)
+    tick(game)
+    assert game.world.player.blocking
+    push_key(pico2d.SDLK_9)
+    assert SDL_PushEvent(ctypes.byref(event)) == 1
+    tick(game)
+    assert not game.world.player.blocking and not game.world.enemies
+    assert not game.world.controls.held and not game.world.controls.pressed
+    print("PASS: window focus loss clears movement, held guard and pending numeric spawns.")
 
 
 def check_natural_game(game):
-    game.world = World()
+    game.world = World(rng=random.Random(1))
+    push_key(pico2d.SDLK_4)
+    tick(game)
+    push_key(pico2d.SDLK_4, down=False)
+    game.handle_events()
     for frame in range(3600):
         game.update(1 / 60)
         if frame % 120 == 0:
@@ -464,11 +575,11 @@ def check_natural_game(game):
     assert any(enemy.knockback_started for enemy in game.world.enemies)
     assert all(enemy.vx == 0 and not enemy.running for enemy in game.world.enemies)
     capture(game, "natural_death")
-    print(f"PASS: natural spawn/chase/attack/death after {game.world.elapsed:.2f} simulated seconds.")
+    print(f"PASS: numeric spawn/chase/attack/death after {game.world.elapsed:.2f} simulated seconds.")
 
 
 def benchmark(game):
-    game.world = World(spawn_schedule=())
+    game.world = World()
     game.world.enemies = [
         Enemy(config.START_X + (-600 if index % 2 == 0 else 600),
               facing=1 if index % 2 == 0 else -1, run_speed=speed)
@@ -492,10 +603,12 @@ def main():
         game.handle_events()
         check_input(game)
         check_movement_tuning(game)
+        check_numeric_spawns(game)
         check_player_action_inputs(game)
         check_player_damage_and_enemy_health(game)
         check_held_block_and_blood(game)
         check_jump_range(game)
+        check_crowd_escape(game)
         check_crowd_damage(game)
         check_enemy_run_chase(game)
         check_nearby_death_knockback(game)

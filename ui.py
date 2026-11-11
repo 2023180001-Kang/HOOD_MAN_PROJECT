@@ -47,6 +47,7 @@ class UI:
             assets.font.draw(x + image.w * scale + 16, y + 56,
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
             assets.font.draw(22, 48, "Q W E R A S D F 공격   H 유지: 정면 완전 방어", (205, 218, 231))
+            assets.font.draw(740, 48, "숫자 1~9: 해당 수만큼 적 소환", (205, 218, 231))
             assets.font.draw(22, 25,
                              "← → 이동   Shift 달리기   Space 이단 점프   F5 다시 시작",
                              (205, 218, 231))

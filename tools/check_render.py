@@ -45,7 +45,7 @@ def main():
     game = None
     try:
         game = Game()
-        game.world = World(spawn_schedule=())
+        game.world = World()
         capture(game, "idle")
         game.world.controls.press("right")
         game.world.controls.press("left_shift")
@@ -56,7 +56,7 @@ def main():
         for _ in range(12):
             game.update(1 / 60)
         capture(game, "jump")
-        game.world = World(spawn_schedule=())
+        game.world = World()
         game.world.enemies = [Enemy(config.START_X - 180),
                               Enemy(config.START_X + 180, facing=-1)]
         for _ in range(30):
@@ -71,7 +71,7 @@ def main():
         for hp in (500, 480, 250, 0):
             game.world.player.hp = hp
             capture(game, f"hp_{hp}")
-        game.world = World(spawn_schedule=())
+        game.world = World()
         game.world.enemies = [Enemy(config.START_X - 80),
                               Enemy(config.START_X + 80, facing=-1)]
         game.world.player.take_damage(500)
@@ -87,7 +87,7 @@ def main():
         for name, x in (("stage_left", config.PLAYER_HALF_WIDTH),
                         ("stage_center", config.START_X),
                         ("stage_right", config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)):
-            game.world = World(spawn_schedule=())
+            game.world = World()
             game.world.player.x = x
             game.world.camera.update(0, x)
             capture(game, name)

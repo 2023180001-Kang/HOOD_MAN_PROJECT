@@ -16,7 +16,7 @@ def attacking_enemy(x, facing=1):
 
 class CombatTests(unittest.TestCase):
     def test_windup_does_not_damage_and_active_frames_deal_twenty(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.enemies = [Enemy(config.START_X - 80)]
         advance(world, 0.3)
         self.assertEqual(world.player.hp, 500)
@@ -26,7 +26,7 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(world.player.animation.row, 6)
 
     def test_each_swing_hits_only_once_throughout_hit_recovery(self):
-        world = World(spawn_schedule=())
+        world = World()
         enemy = attacking_enemy(config.START_X - 80)
         self.assertTrue(enemy.try_hit(world.player))
         for _ in range(100):
@@ -35,7 +35,7 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 480)
 
     def test_two_simultaneous_enemy_attacks_each_apply_damage(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.enemies = [attacking_enemy(config.START_X - 80),
                          attacking_enemy(config.START_X + 80, -1)]
         world.update(1 / 60)
@@ -48,7 +48,7 @@ class CombatTests(unittest.TestCase):
         self.assertLess(world.camera.shake_remaining, initial_shake)
 
     def test_four_simultaneous_enemy_attacks_deal_eighty_without_repeats(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.enemies = [attacking_enemy(config.START_X - 80),
                          attacking_enemy(config.START_X - 80),
                          attacking_enemy(config.START_X + 80, -1),
@@ -61,7 +61,7 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 420)
 
     def test_another_enemy_hits_during_hit_without_restarting_the_animation(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.enemies = [attacking_enemy(config.START_X - 80)]
         world.step(config.FIXED_DT)
         advance(world, 0.2)
@@ -78,7 +78,7 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(world.player.state, "IDLE")
 
     def test_each_enemy_can_damage_again_on_its_next_attack(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.enemies = [Enemy(config.START_X - 80), Enemy(config.START_X + 80, -1)]
         advance(world, 0.5)
         self.assertEqual(world.player.hp, 460)
@@ -86,7 +86,7 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 420)
 
     def test_lethal_crowd_attack_stops_at_zero_and_preserves_death_state(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.player.hp = 60
         world.enemies = [attacking_enemy(config.START_X - 80) for _ in range(4)]
         world.step(config.FIXED_DT)
@@ -100,7 +100,7 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(world.player.state, "DEAD")
 
     def test_attack_misses_outside_reach_behind_or_above(self):
-        world = World(spawn_schedule=())
+        world = World()
         for x, facing in ((config.START_X - 200, 1), (config.START_X - 80, -1)):
             self.assertFalse(attacking_enemy(x, facing).try_hit(world.player))
         world.player.y = config.GROUND_Y + config.ENEMY_HEIGHT + 1
@@ -108,7 +108,7 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 500)
 
     def test_hit_blocks_input_keeps_gravity_and_finishes_in_idle(self):
-        world = World(spawn_schedule=())
+        world = World()
         player = world.player
         player.y += 100
         player.vy = -100
@@ -128,7 +128,7 @@ class CombatTests(unittest.TestCase):
         self.assertFalse(world.controls.take_press("jump"))
 
     def test_attack_timers_are_independent_and_interval_is_respected(self):
-        world = World(spawn_schedule=())
+        world = World()
         first = Enemy(config.START_X - 80)
         first.update(config.FIXED_DT, world.player)
         second = Enemy(config.START_X + 80, -1)

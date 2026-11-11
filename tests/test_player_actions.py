@@ -10,7 +10,7 @@ class PlayerActionTests(unittest.TestCase):
     def test_nine_keys_start_the_corresponding_rows_and_return_to_idle(self):
         for row, (key, move) in enumerate(MOVES.items(), 1):
             with self.subTest(key=key):
-                world = World(spawn_schedule=())
+                world = World()
                 world.controls.press(key)
                 world.update(1 / 60)
                 self.assertEqual(world.player.state, move.state)
@@ -28,7 +28,7 @@ class PlayerActionTests(unittest.TestCase):
     def test_attacks_hit_earlier_and_finish_fifty_percent_faster(self):
         for key in (key for key, move in MOVES.items() if not move.blocking):
             with self.subTest(key=key):
-                world = World(spawn_schedule=())
+                world = World()
                 world.controls.press(key)
                 advance(world, 0.15)
                 self.assertIsNone(world.player.attack_box)
@@ -41,7 +41,7 @@ class PlayerActionTests(unittest.TestCase):
                 self.assertEqual(world.player.state, "IDLE")
 
     def test_held_and_repeated_keys_do_not_loop_attacks(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("combat_q")
         advance(world, 1)
         world.controls.press("combat_q")
@@ -52,7 +52,7 @@ class PlayerActionTests(unittest.TestCase):
         self.assertEqual(world.player.state, "ATTACK_Q")
 
     def test_busy_inputs_are_consumed_without_buffering_or_interrupting(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("combat_w")
         advance(world, 0.1)
         world.controls.press("combat_d")
@@ -66,7 +66,7 @@ class PlayerActionTests(unittest.TestCase):
         self.assertGreaterEqual(world.player.x, x)
 
     def test_airborne_action_stops_horizontal_movement_but_keeps_gravity(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("jump")
         advance(world, 0.2)
         height = world.player.y
@@ -80,7 +80,7 @@ class PlayerActionTests(unittest.TestCase):
         self.assertTrue(world.player.grounded)
 
     def test_damage_interrupts_an_action_and_death_keeps_original_sheet(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("combat_r")
         world.update(1 / 60)
         world.player.take_damage(20)
@@ -92,7 +92,7 @@ class PlayerActionTests(unittest.TestCase):
         self.assertEqual(world.player.animation.row, 5)
 
     def test_facing_is_selected_at_start_then_locked_during_action(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("left")
         world.controls.press("combat_e")
         world.update(1 / 60)
@@ -104,7 +104,7 @@ class PlayerActionTests(unittest.TestCase):
         self.assertEqual(world.player.x, config.START_X)
 
     def test_restart_discards_active_move_and_repeated_target_state(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("combat_q")
         world.update(1 / 60)
         world.player.hit_enemies.add(object())

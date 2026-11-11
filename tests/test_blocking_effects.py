@@ -27,7 +27,7 @@ class BlockingEffectTests(unittest.TestCase):
     def test_frontal_block_prevents_damage_and_consumes_the_enemy_swing(self):
         for facing in (-1, 1):
             with self.subTest(facing=facing):
-                world = World(spawn_schedule=())
+                world = World()
                 guard(world, facing=facing)
                 enemy = striker(world, facing)
                 elapsed = world.player.animation.elapsed
@@ -42,7 +42,7 @@ class BlockingEffectTests(unittest.TestCase):
     def test_rear_attacks_deal_full_damage_and_cancel_block(self):
         for facing in (-1, 1):
             with self.subTest(facing=facing):
-                world = World(spawn_schedule=())
+                world = World()
                 guard(world, facing=facing)
                 self.assertTrue(striker(world, -facing).try_hit(world.player))
                 self.assertEqual(world.player.hp, 480)
@@ -51,7 +51,7 @@ class BlockingEffectTests(unittest.TestCase):
 
     def test_guard_protects_immediately_and_after_long_holds(self):
         for duration in (0, 0.1, 0.5, 3):
-            world = World(spawn_schedule=())
+            world = World()
             world.controls.press("combat_h")
             world.step(config.FIXED_DT)
             advance(world, duration)
@@ -63,7 +63,7 @@ class BlockingEffectTests(unittest.TestCase):
             self.assertEqual(world.camera.shake_remaining, 0)
 
     def test_all_front_enemies_are_blocked_including_their_next_attacks(self):
-        world = World(spawn_schedule=())
+        world = World()
         guard(world)
         for _ in range(4):
             striker(world)
@@ -77,7 +77,7 @@ class BlockingEffectTests(unittest.TestCase):
         self.assertEqual(world.player.animation.frame, config.BLOCK_HOLD_FRAME)
 
     def test_releasing_h_ends_protection_and_a_new_press_restores_it(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("combat_h")
         advance(world, 0.5)
         world.controls.release("combat_h")
@@ -92,7 +92,7 @@ class BlockingEffectTests(unittest.TestCase):
         self.assertEqual(world.player.state, "BLOCK")
 
     def test_rear_lethal_damage_enters_death_and_cancels_guard(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.player.hp = 10
         guard(world)
         enemy = striker(world, -1)
@@ -105,7 +105,7 @@ class BlockingEffectTests(unittest.TestCase):
         self.assertEqual(len(world.effects), 1)
 
     def test_guard_direction_is_locked_and_held_h_resumes_after_rear_hit(self):
-        world = World(spawn_schedule=())
+        world = World()
         world.controls.press("left")
         world.controls.press("combat_h")
         world.step(config.FIXED_DT)
@@ -127,7 +127,7 @@ class BlockingEffectTests(unittest.TestCase):
 
     def test_player_hits_spawn_at_contact_and_effects_follow_world_coordinates(self):
         for facing in (-1, 1):
-            world = World(spawn_schedule=())
+            world = World()
             enemy = Enemy(config.START_X + facing * 80, -facing)
             enemy.cooldown = 100
             world.enemies = [enemy]
@@ -151,7 +151,7 @@ class BlockingEffectTests(unittest.TestCase):
 
     def test_enemy_hit_spawns_one_effect_with_the_incoming_direction(self):
         for side in (-1, 1):
-            world = World(spawn_schedule=())
+            world = World()
             striker(world, side)
             world.step(config.FIXED_DT)
             self.assertEqual(world.player.hp, 480)
@@ -171,7 +171,7 @@ class BlockingEffectTests(unittest.TestCase):
         self.assertTrue(effect.finished)
 
     def test_simultaneous_player_and_other_enemy_hits_spawn_both_effects(self):
-        world = World(spawn_schedule=())
+        world = World()
         victim = Enemy(config.START_X + 80, -1)
         victim.cooldown = 100
         world.enemies = [victim]
@@ -185,7 +185,7 @@ class BlockingEffectTests(unittest.TestCase):
 
     def test_misses_and_dead_targets_never_spawn_hit_effects(self):
         for offset, defeated in ((-80, False), (80, True), (500, False)):
-            world = World(spawn_schedule=())
+            world = World()
             enemy = Enemy(config.START_X + offset)
             enemy.cooldown = 100
             if defeated:
@@ -197,7 +197,7 @@ class BlockingEffectTests(unittest.TestCase):
             self.assertEqual(world.camera.shake_remaining, 0)
 
     def test_only_new_player_hits_restart_shake_and_it_expires(self):
-        world = World(spawn_schedule=())
+        world = World()
         enemy = Enemy(config.START_X + 80, -1)
         enemy.cooldown = 100
         world.enemies = [enemy]
@@ -213,7 +213,7 @@ class BlockingEffectTests(unittest.TestCase):
         self.assertEqual((world.camera.offset_x, world.camera.offset_y), (0, 0))
 
     def test_restart_clears_live_effects_and_guard(self):
-        world = World(spawn_schedule=())
+        world = World()
         guard(world)
         striker(world)
         world.step(config.FIXED_DT)
@@ -229,7 +229,7 @@ class BlockingEffectTests(unittest.TestCase):
     def test_attack_and_effect_state_are_identical_across_render_rates(self):
         outcomes = []
         for fps in (30, 60, 120, 144):
-            world = World(spawn_schedule=())
+            world = World()
             enemy = Enemy(config.START_X + 80, -1)
             enemy.cooldown = 100
             world.enemies = [enemy]

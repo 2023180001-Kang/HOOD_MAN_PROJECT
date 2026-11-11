@@ -18,7 +18,7 @@ class PlayerDamageTests(unittest.TestCase):
     def test_each_offensive_key_deals_its_requested_damage_once(self):
         for key, damage in zip("qwerasdf", (20, 30, 20, 20, 20, 20, 50, 40)):
             with self.subTest(key=key):
-                world = World(spawn_schedule=())
+                world = World()
                 enemy = target(world)
                 self.assertEqual(enemy.hp, 200)
                 world.controls.press(f"combat_{key}")
@@ -29,7 +29,7 @@ class PlayerDamageTests(unittest.TestCase):
                 self.assertEqual(enemy.state, "HIT")
 
     def test_one_swing_hits_each_overlapping_enemy_once_and_next_swing_can_hit_again(self):
-        world = World(spawn_schedule=())
+        world = World()
         first, second = target(world, 80), target(world, 100)
         world.controls.press("combat_q")
         advance(world, 1)
@@ -39,7 +39,7 @@ class PlayerDamageTests(unittest.TestCase):
         self.assertEqual((first.hp, second.hp), (160, 160))
 
     def test_block_has_no_attack_box_or_damage(self):
-        world = World(spawn_schedule=())
+        world = World()
         enemy = target(world)
         world.controls.press("combat_h")
         advance(world, 0.5)
@@ -49,7 +49,7 @@ class PlayerDamageTests(unittest.TestCase):
     def test_attack_misses_behind_outside_reach_and_above_the_hit_area(self):
         for offset, height in ((-80, 0), (500, 0), (80, 300)):
             with self.subTest(offset=offset, height=height):
-                world = World(spawn_schedule=())
+                world = World()
                 enemy = target(world, offset)
                 enemy.y += height
                 world.controls.press("combat_e")
@@ -57,14 +57,14 @@ class PlayerDamageTests(unittest.TestCase):
                 self.assertEqual(enemy.hp, 200)
 
     def test_left_attack_and_uppercut_vertical_reach(self):
-        world = World(spawn_schedule=())
+        world = World()
         enemy = target(world, -80)
         world.controls.press("left")
         world.controls.press("combat_d")
         advance(world, 0.5)
         self.assertEqual(enemy.hp, 150)
         for key, expected in (("combat_e", 200), ("combat_d", 150)):
-            world = World(spawn_schedule=())
+            world = World()
             enemy = target(world)
             enemy.y += 170
             world.controls.press(key)
@@ -72,7 +72,7 @@ class PlayerDamageTests(unittest.TestCase):
             self.assertEqual(enemy.hp, expected)
 
     def test_player_hit_interrupts_the_enemy_attack_in_the_same_step(self):
-        world = World(spawn_schedule=())
+        world = World()
         enemy = target(world)
         enemy.animation.set_state("ATTACK")
         enemy.animation.elapsed = 4 / config.ENEMY_ANIMATIONS["ATTACK"][1]
@@ -85,7 +85,7 @@ class PlayerDamageTests(unittest.TestCase):
         self.assertIsNone(enemy.attack_box)
 
     def test_four_uppercuts_kill_and_dead_enemy_cannot_block_or_resurrect(self):
-        world = World(spawn_schedule=())
+        world = World()
         enemy = target(world)
         for index in range(4):
             tap(world.controls, "combat_d")
@@ -106,7 +106,7 @@ class PlayerDamageTests(unittest.TestCase):
         self.assertFalse(enemy.knockback_started)
 
     def test_lethal_overkill_clamps_hp_and_restart_restores_two_hundred(self):
-        world = World(spawn_schedule=())
+        world = World()
         enemy = target(world)
         enemy.hp = 10
         world.controls.press("combat_d")

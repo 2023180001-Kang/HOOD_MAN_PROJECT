@@ -1,10 +1,24 @@
 """Screen-fixed HP image. Only the interior fill is masked as health falls."""
 
 import config
+from combat import MOVES
 from physics import clamp
 
 
 class UI:
+    def draw_attack_help(self, assets):
+        import pico2d
+
+        pico2d.draw_rectangle(688, 568, config.SCREEN_WIDTH - 20, 704,
+                              12, 21, 33, filled=True)
+        assets.font.draw(704, 686, "공격 키 · 피해량", (244, 204, 66))
+        attacks = [move for move in MOVES.values() if not move.blocking]
+        for index, move in enumerate(attacks):
+            x = 704 + index % 2 * 270
+            y = 659 - index // 2 * 24
+            assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
+                             (218, 228, 240))
+
     def draw_enemy_health(self, assets, world, camera_x, camera_y):
         import pico2d
 
@@ -44,9 +58,12 @@ class UI:
                 mask_bottom + height * scale - 1, 8, 15, 24, filled=True,
             )
         if assets.font is not None:
+            self.draw_attack_help(assets)
             assets.font.draw(x + image.w * scale + 16, y + 56,
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
-            assets.font.draw(22, 48, "Q W E R A S D F 공격   H 유지: 정면 완전 방어", (205, 218, 231))
+            assets.font.draw(22, 48,
+                             f"H 유지: 정면 방어 (피해 0)   적 공격 피해: {config.ENEMY_DAMAGE}",
+                             (205, 218, 231))
             assets.font.draw(740, 48, "숫자 1~9: 해당 수만큼 적 소환", (205, 218, 231))
             assets.font.draw(22, 25,
                              "← → 이동   Shift 달리기   Space 이단 점프   F5 다시 시작",

@@ -1,5 +1,7 @@
 # 테스트 방법 및 결과
 
+최신 적 집단 전투 검증은 **10장**에 기록한다. 현재 로직은 136개이며 이전 개발 단계의 결과는 각 절의 당시 사양을 따른다.
+
 ## 1. 검증 환경
 
 - Windows 64비트 / Python 3.13.15
@@ -20,6 +22,7 @@
 .\.venv\Scripts\python.exe tools/check_render.py
 .\.venv\Scripts\python.exe tools/check_runtime.py
 .\.venv\Scripts\python.exe tools/check_damage_numbers.py
+.\.venv\Scripts\python.exe tools/check_enemy_spacing.py
 .\.venv\Scripts\python.exe tools/check_stages.py
 ```
 
@@ -220,3 +223,53 @@ PRD 대응: AC-19(공격별 속도·유효 프레임), AC-20(지정 피해·중�
 5. 피격 중 공격 키를 누르고 모션이 끝날 때까지 기다린다. 예약 공격이 실행되면 안 되며, F5 후에는 새 입력부터 공격해야 한다.
 
 캡처: `artifacts/attack_switch_a_to_s.png`, `attack_switch_s_to_d.png`, `attack_switch_d_to_f.png`, `player_move_d.png`, `player_move_f.png`. 현재 H 입력에는 동작이 없다.
+
+## 10. 적 집단 Separation·깊이 레인 검증 (2026-11-12)
+
+### 실행 명령·범위
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+.\.venv\Scripts\python.exe tools/check_enemy_spacing.py
+.\.venv\Scripts\python.exe tools/check_runtime.py
+.\.venv\Scripts\python.exe tools/check_damage_numbers.py
+```
+
+- 로직: 기존 121개 + `test_enemy_spacing.py` 신규 15개 = **136개 통과**, 1.400초.
+- 실제 SDL: 세 SDL 검증 도구는 실제 pico2d 창·SDL 입력·렌더 타깃으로 실행했다. PNG 메타데이터의 표시 포락선은 **-78~86.25px / 폭 164.25px**로 확인했다.
+- `check_enemy_spacing.py`는 진영별 동일 출발점에서 서로 다른 속도로 8초 접근시키고 무적 ON에서 각 적의 유효 타격 소비를 확인한다. **전원 동시 피해 검증은 그 후 별도로 공격 유효 프레임을 동기화하고 무적을 해제**하여 수행한다. 자연 접근의 쿨다운과 공격 시점을 모두 같게 바꾸는 구현은 아니다.
+- 표시 깊이는 실제 y·공격 AABB와 별개이며, 일부 실루엣 겹침을 허용한다. 일반 8명은 58px 수평 간격 또는 32px 깊이 간격으로 구별하고, 벽의 한 열 8명은 깊이 간격을 16px로 압축한다.
+
+### 인원별 실제 실행 결과
+
+| 상황 | 자연 접근·전원 타격 참여 | 별도 동시 피해 검증 | 표시 검증 |
+| --- | --- | --- | --- |
+| 왼쪽 2명 / 오른쪽 2명 | 각각 전원 참여 | 각각 HP 500→460 | 서로 다른 위치·HP바 실제 픽셀 통과 |
+| 왼쪽 3명 / 오른쪽 3명 | 각각 전원 참여 | 각각 HP 500→440 | 통과 |
+| 왼쪽 5명 / 오른쪽 5명 | 각각 전원 참여 | 각각 HP 500→400 | 통과 |
+| 왼쪽 8명 / 오른쪽 8명 | 각각 전원 참여 | 각각 HP 500→340 | 네 깊이·두 열, 뒤 레인 우선 그리기·8개 HP바 통과 |
+| 양쪽 8+8명 | 16명 전원 참여 | HP 500→180 | 좌우 진영 유지·16개 HP바 통과 |
+| 왼쪽 벽 8명 / 오른쪽 벽 8명 | 각각 전원 참여 | 각각 HP 500→340 | 같은 쪽 한 열·서로 다른 8개 깊이, 경계 내 배치 통과 |
+
+같은 공격이 여러 유효 프레임에 걸쳐 있어도 이후 0.1초 동안 추가 피해가 없음을 확인했다. 한쪽 8명과 양쪽 상황에서 방향키+A 반격 후 해당 진영 전원의 HP 200→180, 적별 숫자 8개와 혈흔을 확인했다.
+
+### 부드러움·안정성·기존 기능
+
+- 이미 같은 x에서 공격 중인 적 8명: 공격 모션/방향/시간을 유지하며 수평 최대 **0.15px/120Hz 물리 갱신**, 실제 SDL에서는 **0.3px/60Hz 틱** 이하로 보정했다. 깊이도 64px/s 이하로 변하고, 모션 종료 후 정상 슬롯에 정착했다.
+- 정지한 8명 집단: 정착 후 4초 동안 x·깊이·슬롯이 동일해 공격/대기 전환 중 좌우 진동이나 순서 바뀜이 없었다.
+- 사망·정렬·추가: 목록 순서가 바뀌거나 한 명이 사망해도 생존자의 슬롯/목표는 유지하며 후속 적이 빈 슬롯을 사용했다.
+- 원래 실제 사거리 106px·유효 프레임·공격당 1회·양방향 합산, A/S/D/F 피해·연속 전환·24/18 FPS, 점프/포위 탈출·적별 속도·피격·넉백·사망·무적·HP/UI·포커스·F5·SDL_QUIT가 로직/기존 SDL 회귀에서 통과했다. 집단 공격 시작점은 65/123px 슬롯에 맞춘다.
+- 깊이를 바꾸어도 실제 몸체/타격 AABB는 동일하고 높이/거리 밖 공격은 적중하지 않았다. 피격 수평 정지·넉백 속도/방향·죽은 적 위치와 깊이, 비활성 맵의 상태 정지·F5 초기화도 확인했다.
+- 30/60/120/144 FPS 집단 시뮬레이션의 최종 위치·깊이·HP·모션·공격 소비 결과가 동일했다.
+- 성능: **16명 180프레임/3.000초 = 60.00 FPS**, 기존 4명 환경 **59.99 FPS**. 고정 시드의 기존 생성→추격→사망은 집단 분산 적용 후 시뮬레이션 10.37초였다.
+
+검증하지 않은 범위: 장시간 직접 키보드를 조작하는 수동 플레이와 16명 초과의 성능 측정. 실제 픽셀 전체의 완전 비겹침은 선택한 레인 방식의 목표가 아니며, 일부 실루엣 겹침과 벽에서의 깊이 압축을 허용한다.
+
+### 직접 확인·캡처
+
+1. `main.py`를 실행하고 P로 무적을 켠 뒤 숫자 8·9를 눌러 적들이 접근할 때와 공격 위치에 도착했을 때를 비교한다. 무작위 소환이므로 정확한 한쪽 인원 재현은 `check_enemy_spacing.py`를 사용한다.
+2. 각 적의 모자/상체·HP바가 서로 다른 x/깊이에서 보이는지, 공격 도중 갑자기 옆으로 옮겨가거나 모션을 재시작하지 않는지 확인한다.
+3. P를 끄고 여러 적의 피해를 확인한다. 뒤쪽 적도 타격하고 A로 같은 진영을 반격할 수 있어야 한다. 숫자로 추가 소환·주인공 전진·이단 점프·벽 접근도 확인한다.
+4. 적을 처치하거나 F5를 눌러 빈 슬롯과 초기화를 확인한다.
+
+대표 캡처: `artifacts/enemy_spacing_left_2.png`, `enemy_spacing_left_3.png`, `enemy_spacing_left_5.png`, `enemy_spacing_left_8.png`, 대응하는 `right_*`, `enemy_spacing_both_8.png`, `enemy_spacing_both_8_simultaneous_hit.png`, `enemy_spacing_left_8_counter.png`, `enemy_spacing_left_wall_8.png`, `enemy_spacing_overlap_before.png`, `enemy_spacing_overlap_easing.png`, `enemy_spacing_overlap_resolved.png`.

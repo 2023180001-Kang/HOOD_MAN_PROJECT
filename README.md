@@ -45,6 +45,7 @@ python -m venv .venv
 - 피격 중에는 이동·점프를 잠시 제한합니다. 점프 중 피격되어도 중력은 계속 적용됩니다.
 - 여러 적의 공격은 각각 20 피해를 줍니다. 2명이 동시에 맞히면 40, 4명이면 80이 감소하며 피격 모션 중에도 다른 공격의 피해가 적용됩니다. 같은 적의 같은 공격은 한 번만 피해를 줍니다.
 - 적은 수평 거리가 360px 이상 벌어지면 전체 생성 순서별 360·420·480·540px/s를 순환 배정한 속도로 달려옵니다. 220px 이내로 따라오면 120px/s 걷기로 돌아오며, 두 거리 사이에서는 기존 추격 모드를 유지합니다.
+- 여러 적이 가까워지면 주인공의 좌우별로 유지되는 공격 슬롯과 깊이 레인에 분산됩니다. 기본 두 열은 65px·123px이며 뒤쪽 적도 실제로 공격하고 A 잽에 반격받을 수 있습니다. 공격 중 심한 겹침은 천천히 보정하며, 깊이는 화면 표시용으로 점프·충돌의 실제 y와 구분됩니다. 일부 실루엣 겹침을 허용하는 방식이고 맵 끝에서는 한 열과 촘촘한 깊이로 배치됩니다.
 - 창 포커스를 잃으면 눌린 키를 해제하여 이동이 고정되는 현상을 방지합니다.
 - F5는 첫 스테이지로 돌아와 HP·위치·두 맵의 적·누적 소환 수·화살표·카메라·효과·무적·입력을 초기화합니다. 다시 숫자를 누르기 전에는 적이 나오지 않습니다. 사망 중에는 적을 소환할 수 없습니다.
 
@@ -78,6 +79,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe tools/check_render.py
 .\.venv\Scripts\python.exe tools/check_runtime.py
 .\.venv\Scripts\python.exe tools/check_damage_numbers.py
+.\.venv\Scripts\python.exe tools/check_enemy_spacing.py
 .\.venv\Scripts\python.exe tools/check_stages.py
 ```
 
@@ -94,6 +96,7 @@ python -m venv .venv
 | `player.py`, `controls.py`, `physics.py` | 이동·점프·공격 전환·피격·사망·입력 순서·물리 |
 | `combat.py`, `effects.py` | 공격 시트·행·피해·범위·재생 속도 정의, blood_hit·피해 숫자 수명 |
 | `enemy.py`, `spawn_manager.py`, `collision.py` | 적 HP·피격·사망·추적·공격·넉백·숫자별 무작위 좌우 생성·충돌 |
+| `enemy_spacing.py` | 실제 스프라이트 너비·좌우별 공격 슬롯·깊이 레인·공격 중 부드러운 분산 |
 | `assets.py`, `animation.py` | 이미지·Windows 기본 맑은 고딕 로딩, 프레임 재생 |
 | `stage.py`, `camera.py`, `ui.py` | 맵별 객체·배경·N 이동 화살표·카메라·공격 안내/HP UI |
 | `config.py` | 이동 속도·중력·피해·넉백·스폰·애니메이션 조정값 |
@@ -101,3 +104,5 @@ python -m venv .venv
 주인공·적 기본 시트는 2048×1536의 8열×6행, 새 `HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png`는 8열×4행입니다. 기존 9Moves 원본은 `before_sheets/HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png`에 보관합니다. 실행 시에는 이동·적·4Moves의 세 시트를 사용합니다.
 
 `tools/prepare_assets.py`는 이동 48·적 48·기본 공격 32, 총 **128프레임**을 생성합니다. blood_hit는 1024×512의 4열×2행이며 고정 셀을 순서대로 재생합니다. 캐릭터 원본은 오른쪽을 보며 왼쪽은 수평 반전합니다. 글꼴이 없는 환경에서도 게임과 HP바는 동작하며 텍스트만 생략됩니다.
+
+집단 전투 검증 도구 `tools/check_enemy_spacing.py`는 실제 게임 창에서 한쪽 2·3·5·8명, 양쪽 8+8명, 벽 압축과 공격 중 분산을 확인합니다. 독립 공격·같은 프레임의 피해 합산·뒤쪽 적 반격·HP바 픽셀·16명 성능을 검사하고 `artifacts/enemy_spacing_*.png`에 화면을 저장합니다. 실행 결과와 직접 확인 절차는 `TESTING.md` 10장을 참고하세요.

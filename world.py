@@ -5,6 +5,7 @@ from camera import Camera
 from collision import resolve_bodies
 from controls import Controls
 from effects import DamageNumber, HitEffect
+from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from player import Player
 from stage import Stage
 
@@ -82,19 +83,23 @@ class World:
                 self.enemies.extend(self.spawner.spawn(count, self.elapsed))
         self.player.update(dt, self.controls)
         self.handle_death()
+        prepare_enemy_spacing(self.player, self.enemies)
         for enemy in self.enemies:
             enemy.update(dt, self.player)
         if self.player.alive:
             resolve_bodies(self.player, self.enemies)
+            resolve_enemy_spacing(self.player, self.enemies, dt)
             player_box = self.player.attack_box
             if player_box is not None:
                 for enemy in self.enemies:
                     previous_hp = enemy.hp
                     if self.player.try_hit(enemy):
                         self.damage_numbers.append(
-                            DamageNumber.above_body(enemy.body, previous_hp - enemy.hp))
+                            DamageNumber.above_body(enemy.body, previous_hp - enemy.hp,
+                                                    depth=enemy.depth))
                         self.effects.append(HitEffect.at_contact(player_box, enemy.body,
-                                                                 self.player.facing))
+                                                                 self.player.facing,
+                                                                 depth=enemy.depth))
                         self.camera.shake()
             for enemy in self.enemies:
                 enemy_box = enemy.attack_box

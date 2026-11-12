@@ -95,7 +95,7 @@ class EnemyTests(unittest.TestCase):
         self.assertEqual(len(world.enemies), 1)
         self.assertEqual(world.enemies[0].run_speed, 360)
 
-    def test_enemies_overlap_each_other_without_separation(self):
+    def test_distant_enemies_keep_independent_ai_before_melee_spacing(self):
         world = World()
         world.enemies = [Enemy(500), Enemy(500)]
         advance(world, 0.5)

@@ -1,4 +1,4 @@
-"""World-space body and attack geometry; enemies never collide with each other."""
+"""World-space body and attack geometry; projected crowd spacing is separate."""
 
 from dataclasses import dataclass
 
@@ -26,6 +26,7 @@ def resolve_bodies(player, enemies):
     low = config.PLAYER_HALF_WIDTH
     high = config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH
     separation = config.PLAYER_HALF_WIDTH + config.ENEMY_HALF_WIDTH
+    room_low, room_high = low, high
     colliders = []
     for enemy in enemies:
         if not enemy.alive:
@@ -37,19 +38,27 @@ def resolve_bodies(player, enemies):
         colliders.append((enemy, side))
         if side < 0:
             low = max(low, enemy.previous_x + separation)
+            room_low = max(room_low, config.ENEMY_HALF_WIDTH + separation)
         else:
             high = min(high, enemy.previous_x - separation)
+            room_high = min(room_high, config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH - separation)
 
     original_x = player.x
+    low, high = max(low, room_low), min(high, room_high)
     if low <= high:
         player.x = clamp(player.x, low, high)
+    else:
+        # A crowded landing at a wall must leave space on the original sides.
+        # Moving the player just inside that feasible interval avoids flipping
+        # an enemy through the player to the opposite side.
+        player.x = clamp(player.x, room_low, room_high)
     # If a landing puts the player between overlapping enemies, move enemies
     # apart from the player instead of looping to resolve contradictory limits.
     for enemy, side in colliders:
+        enemy.x = clamp(enemy.x, config.ENEMY_HALF_WIDTH,
+                        config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
         if player.body.overlaps(enemy.body):
             position = player.x + side * separation
-            if not config.ENEMY_HALF_WIDTH <= position <= config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH:
-                position = player.x - side * separation
             enemy.x = clamp(position, config.ENEMY_HALF_WIDTH,
                             config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
     if player.x != original_x:

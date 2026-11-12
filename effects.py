@@ -13,9 +13,9 @@ class HitEffect:
     elapsed: float = 0.0
 
     @classmethod
-    def at_contact(cls, attack, body, facing):
+    def at_contact(cls, attack, body, facing, *, depth=0.0):
         return cls((max(attack.left, body.left) + min(attack.right, body.right)) / 2,
-                   (max(attack.bottom, body.bottom) + min(attack.top, body.top)) / 2,
+                   (max(attack.bottom, body.bottom) + min(attack.top, body.top)) / 2 + depth,
                    facing)
 
     def update(self, dt):
@@ -40,10 +40,10 @@ class DamageNumber:
     elapsed: float = 0.0
 
     @classmethod
-    def above_body(cls, body, damage):
+    def above_body(cls, body, damage, *, depth=0.0):
         return cls((body.left + body.right) / 2,
                    body.top + config.ENEMY_HP_BAR_GAP + config.ENEMY_HP_BAR_HEIGHT
-                   + config.DAMAGE_NUMBER_GAP, damage)
+                   + config.DAMAGE_NUMBER_GAP + depth, damage)
 
     def update(self, dt):
         self.elapsed += dt

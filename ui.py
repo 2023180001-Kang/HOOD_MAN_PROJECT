@@ -27,7 +27,7 @@ class UI:
             height = assets.frames[config.ENEMY_IMAGE][enemy.animation.row - 1][
                 enemy.animation.frame]["clip"][3] * config.SPRITE_SCALE
             left = enemy.x - camera_x - config.ENEMY_HP_BAR_WIDTH / 2
-            bottom = enemy.y - camera_y + height + config.ENEMY_HP_BAR_GAP
+            bottom = enemy.y + enemy.depth - camera_y + height + config.ENEMY_HP_BAR_GAP
             right = left + config.ENEMY_HP_BAR_WIDTH
             ratio = clamp(enemy.hp / config.ENEMY_MAX_HP, 0.0, 1.0)
             pico2d.draw_rectangle(left - 1, bottom - 1, right,

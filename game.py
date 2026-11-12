@@ -63,14 +63,12 @@ class Game:
         camera_x = self.world.camera.render_x
         camera_y = self.world.camera.render_y
         self.world.stage.draw(self.assets, camera_x, camera_y, elapsed=self.world.elapsed)
-        for enemy in self.world.enemies:
-            self.assets.draw_sprite(config.ENEMY_IMAGE, enemy.animation.row,
-                                    enemy.animation.frame, enemy.x - camera_x,
-                                    enemy.y - camera_y, enemy.facing)
         player = self.world.player
-        self.assets.draw_sprite(player.sprite_image, player.animation.row,
-                                player.animation.frame, player.x - camera_x,
-                                player.y - camera_y, player.facing)
+        sprites = [(enemy.depth, enemy, config.ENEMY_IMAGE) for enemy in self.world.enemies]
+        sprites.append((0.0, player, player.sprite_image))
+        for depth, actor, image in sorted(sprites, key=lambda entry: entry[0], reverse=True):
+            self.assets.draw_sprite(image, actor.animation.row, actor.animation.frame,
+                                    actor.x - camera_x, actor.y + depth - camera_y, actor.facing)
         for effect in self.world.effects:
             self.assets.draw_hit_effect(effect, camera_x, camera_y)
         self.ui.draw_enemy_health(self.assets, self.world, camera_x, camera_y)

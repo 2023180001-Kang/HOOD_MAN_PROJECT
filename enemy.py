@@ -21,6 +21,11 @@ class Enemy:
         self.running = False
         self.hp = config.ENEMY_MAX_HP
         self.animation = Animation(config.ENEMY_ANIMATIONS)
+        self.formation_side = None
+        self.formation_slot = None
+        self.target_x = None
+        self.depth = 0.0
+        self.target_depth = 0.0
 
     @property
     def state(self):
@@ -142,17 +147,31 @@ class Enemy:
             self.running = False
         self.vx = 0.0
         state = "IDLE"
-        if gap > config.ENEMY_ATTACK_DISTANCE:
+        target_distance = self.target_x - self.x if self.target_x is not None else distance
+        moving = (abs(target_distance) > config.ENEMY_SPACING_TOLERANCE
+                  if self.target_x is not None else gap > config.ENEMY_ATTACK_DISTANCE)
+        if (self.target_x is not None and player.vx * self.formation_side > 0
+                and target_distance * self.formation_side > 0
+                and gap < config.ENEMY_ATTACK_REACH + config.PLAYER_HALF_WIDTH):
+            # Stand and fight an advancing player instead of kiting away to
+            # maintain a slot. This also preserves running/double-jump escapes.
+            moving = False
+        if moving:
             speed = self.run_speed if self.running else config.ENEMY_SPEED
-            self.vx = self.facing * speed
+            direction = 1 if target_distance > 0 else -1
+            self.vx = direction * speed
             state = "RUN" if self.running else "WALK"
-        elif self.cooldown <= 0:
+        elif (self.cooldown <= 0
+              and gap < config.ENEMY_ATTACK_REACH + config.PLAYER_HALF_WIDTH):
             self.animation.set_state("ATTACK")
             self.has_hit = False
             self.cooldown = config.ENEMY_ATTACK_INTERVAL
             self.animation.update(dt)
             return
-        self.x = clamp(self.x + self.vx * dt, config.ENEMY_HALF_WIDTH,
+        travel = self.vx * dt
+        if self.target_x is not None and abs(travel) > abs(target_distance):
+            travel = target_distance
+        self.x = clamp(self.x + travel, config.ENEMY_HALF_WIDTH,
                        config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
         self.animation.set_state(state)
         self.animation.update(dt)

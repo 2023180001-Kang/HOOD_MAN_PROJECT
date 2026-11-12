@@ -1,6 +1,6 @@
 """Independent street scenes and world-space backgrounds/exit markers."""
 
-from math import ceil, floor
+from math import ceil, floor, sin, tau
 
 import config
 from spawn_manager import SpawnManager
@@ -30,7 +30,7 @@ class Stage:
             return target
         return None
 
-    def draw(self, assets, camera_x=0.0, camera_y=0.0):
+    def draw(self, assets, camera_x=0.0, camera_y=0.0, *, elapsed=0.0):
         # Keep the supplied character/building scale instead of enlarging the
         # artwork to the full world width. Mirrored tiles join without a cut.
         image = assets.images[self.image_name]
@@ -47,16 +47,11 @@ class Stage:
                 index * width + width / 2 - camera_x,
                 bottom + height / 2 - camera_y, width, height,
             )
+        sway = (sin(tau * elapsed / config.STAGE_ARROW_SWAY_PERIOD)
+                * config.STAGE_ARROW_SWAY_AMPLITUDE)
         for side in self.arrow_sides:
             arrow = assets.images[config.STAGE_ARROW_IMAGES[side]]
             x = (config.STAGE_EXIT_MARGIN if side < 0 else
                  config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN)
-            arrow.draw(x - camera_x, config.STAGE_ARROW_Y - camera_y,
+            arrow.draw(x + side * sway - camera_x, config.STAGE_ARROW_Y - camera_y,
                        config.STAGE_ARROW_WIDTH, config.STAGE_ARROW_WIDTH * arrow.h / arrow.w)
-            if assets.font is not None:
-                label = "이전 스테이지" if side < 0 else "다음 스테이지"
-                if self.destination(side) is None:
-                    label = "다음 스테이지 준비 중"
-                text_x = 24 if side < 0 else config.WORLD_WIDTH - 240
-                assets.font.draw(text_x - camera_x, config.STAGE_ARROW_Y + 50 - camera_y,
-                                 label, (244, 204, 66))

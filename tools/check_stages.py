@@ -40,7 +40,9 @@ def check_markers(game):
         for side in (-1, 1):
             view_edge(game, side)
             image = capture(game, f"stage_{index + 1}_{'left' if side < 0 else 'right'}_markers")
-            region = (0, 340, 190, 470) if side < 0 else (1090, 340, 1280, 470)
+            top = int(config.SCREEN_HEIGHT - config.STAGE_ARROW_Y - 40)
+            bottom = int(config.SCREEN_HEIGHT - config.STAGE_ARROW_Y + 40)
+            region = (0, top, 190, bottom) if side < 0 else (1090, top, 1280, bottom)
             before = baseline[side].crop(region)
             after = image.crop(region)
             if index == 0 and side < 0:

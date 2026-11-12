@@ -44,8 +44,6 @@ class UI:
                 mask_bottom + height * scale - 1, 8, 15, 24, filled=True,
             )
         if assets.font is not None:
-            assets.font.draw(config.SCREEN_WIDTH - 230, config.SCREEN_HEIGHT - 35,
-                             f"STAGE {world.stage_index + 1} / {len(world.stages)}", (244, 204, 66))
             assets.font.draw(x + image.w * scale + 16, y + 56,
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
             assets.font.draw(22, 48, "Q W E R A S D F 공격   H 유지: 정면 완전 방어", (205, 218, 231))

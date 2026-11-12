@@ -44,10 +44,91 @@ class BlockingEffectTests(unittest.TestCase):
             with self.subTest(facing=facing):
                 world = World()
                 guard(world, facing=facing)
+                self.assertFalse(striker(world, facing).try_hit(world.player))
                 self.assertTrue(striker(world, -facing).try_hit(world.player))
                 self.assertEqual(world.player.hp, 480)
                 self.assertEqual(world.player.state, "HIT")
                 self.assertIsNone(world.player.active_move)
+                self.assertEqual(world.player.vx, 0)
+
+    def test_blocked_hit_recoils_backwards_then_stops_with_guard_and_direction_held(self):
+        for facing in (-1, 1):
+            with self.subTest(facing=facing):
+                world = World()
+                guard(world, facing=facing)
+                enemy = striker(world, facing)
+                world.step(config.FIXED_DT)
+                start = world.player.x
+                advance(world, 0.05)
+                self.assertGreater((start - world.player.x) * facing, 0)
+                speed = world.player.vx
+                self.assertFalse(enemy.try_hit(world.player))
+                self.assertEqual(world.player.vx, speed)
+                advance(world, 0.2)
+                distance = (start - world.player.x) * facing
+                self.assertGreater(distance, 10)
+                self.assertLess(distance, 30)
+                self.assertEqual(world.player.vx, 0)
+                self.assertEqual(world.player.hp, 500)
+                self.assertEqual(world.player.state, "BLOCK")
+                self.assertEqual(world.player.facing, facing)
+                self.assertIn("combat_h", world.controls.held)
+                self.assertEqual(world.player.animation.frame, config.BLOCK_HOLD_FRAME)
+                self.assertEqual(world.effects, [])
+                self.assertEqual(world.camera.shake_remaining, 0)
+                striker(world, facing)
+                world.step(config.FIXED_DT)
+                advance(world, 0.2)
+                self.assertGreater((start - world.player.x) * facing, distance + 10)
+                self.assertEqual(world.player.hp, 500)
+                self.assertEqual(world.player.state, "BLOCK")
+
+    def test_simultaneous_blocks_do_not_stack_recoil_and_render_rates_match(self):
+        distances = []
+        for fps in (30, 60, 120, 144):
+            for count in (1, 4):
+                with self.subTest(fps=fps, count=count):
+                    world = World()
+                    guard(world)
+                    for _ in range(count):
+                        striker(world)
+                    world.step(config.FIXED_DT)
+                    advance(world, 0.5, fps)
+                    distances.append(config.START_X - world.player.x)
+                    self.assertEqual(world.player.hp, 500)
+                    self.assertEqual(world.player.state, "BLOCK")
+                    self.assertEqual(world.player.vx, 0)
+                    self.assertTrue(all(enemy.has_hit for enemy in world.enemies))
+        self.assertTrue(all(distance == distances[0] for distance in distances))
+        self.assertGreater(distances[0], 10)
+        self.assertLess(distances[0], 30)
+
+    def test_guard_recoil_stops_at_map_edges_and_rear_bodies(self):
+        for facing in (-1, 1):
+            for at_edge in (False, True):
+                with self.subTest(facing=facing, at_edge=at_edge):
+                    world = World()
+                    if at_edge:
+                        world.player.x = (config.PLAYER_HALF_WIDTH if facing > 0 else
+                                          config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)
+                    else:
+                        rear = Enemy(world.player.x - facing * 66, facing)
+                        rear.cooldown = 100
+                        world.enemies.append(rear)
+                    start = world.player.x
+                    guard(world, facing=facing)
+                    striker(world, facing)
+                    world.step(config.FIXED_DT)
+                    advance(world, 0.2)
+                    self.assertGreaterEqual(world.player.x, config.PLAYER_HALF_WIDTH)
+                    self.assertLessEqual(world.player.x,
+                                         config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)
+                    self.assertLessEqual(abs(world.player.x - start), 0 if at_edge else 5)
+                    self.assertEqual(world.player.vx, 0)
+                    self.assertEqual(world.player.hp, 500)
+                    self.assertEqual(world.player.state, "BLOCK")
+                    self.assertTrue(all(not world.player.body.overlaps(enemy.body)
+                                        for enemy in world.enemies))
 
     def test_guard_protects_immediately_and_after_long_holds(self):
         for duration in (0, 0.1, 0.5, 3):
@@ -80,7 +161,14 @@ class BlockingEffectTests(unittest.TestCase):
         world = World()
         world.controls.press("combat_h")
         advance(world, 0.5)
+        striker(world)
+        world.step(config.FIXED_DT)
+        advance(world, 0.05)
         world.controls.release("combat_h")
+        position = world.player.x
+        world.step(config.FIXED_DT)
+        self.assertEqual(world.player.x, position)
+        self.assertEqual(world.player.vx, 0)
         striker(world)
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.hp, 480)
@@ -224,6 +312,8 @@ class BlockingEffectTests(unittest.TestCase):
         self.assertEqual(world.effects, [])
         self.assertIsNone(world.player.active_move)
         self.assertEqual(world.player.hp, 500)
+        self.assertEqual(world.player.vx, 0)
+        self.assertEqual(world.player.x, config.START_X)
         self.assertEqual(world.enemies, [])
 
     def test_attack_and_effect_state_are_identical_across_render_rates(self):

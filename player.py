@@ -86,7 +86,8 @@ class Player:
             return False
         if (self.blocking and source_x is not None
                 and (source_x - self.x) * self.facing >= 0):
-            # The enemy consumes its swing, but no damage or blood effect occurs.
+            # Recoil refreshes without stacking or interrupting the held guard.
+            self.vx = -self.facing * config.BLOCK_KNOCKBACK_SPEED
             return False
         self.hp = max(0, self.hp - damage)
         self.vx = 0.0
@@ -124,6 +125,7 @@ class Player:
             return
 
         if self.blocking and "combat_h" not in controls.held:
+            self.vx = 0.0
             self.cancel_combat()
             self.animation.set_state("IDLE")
         if self.active_move is None:
@@ -132,7 +134,14 @@ class Player:
             elif combat_pressed is not None and not MOVES[combat_pressed].blocking:
                 self.start_move(MOVES[combat_pressed], controls.direction)
         if self.active_move is not None:
-            self.vx = 0.0
+            if self.blocking:
+                proposed = self.x + self.vx * dt
+                self.x = clamp(proposed, config.PLAYER_HALF_WIDTH,
+                               config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)
+                self.vx = (0.0 if proposed != self.x else
+                           approach(self.vx, 0.0, config.BLOCK_KNOCKBACK_FRICTION * dt))
+            else:
+                self.vx = 0.0
             self.update_vertical(dt)
             self.animation.update(dt)
             if self.blocking:

@@ -61,7 +61,7 @@ class Game:
         pico2d.clear_canvas()
         camera_x = self.world.camera.render_x
         camera_y = self.world.camera.render_y
-        self.world.stage.draw(self.assets, camera_x, camera_y)
+        self.world.stage.draw(self.assets, camera_x, camera_y, elapsed=self.world.elapsed)
         for enemy in self.world.enemies:
             self.assets.draw_sprite(config.ENEMY_IMAGE, enemy.animation.row,
                                     enemy.animation.frame, enemy.x - camera_x,

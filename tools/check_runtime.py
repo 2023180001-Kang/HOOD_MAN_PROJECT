@@ -263,6 +263,32 @@ def check_held_block_and_blood(game):
     tick(game, 30)
     assert not game.world.effects
 
+    for facing in (-1, 1):
+        game.world = World()
+        direction_key = pico2d.SDLK_LEFT if facing < 0 else pico2d.SDLK_RIGHT
+        push_key(direction_key)
+        push_key(pico2d.SDLK_h)
+        tick(game, 15)
+        push_key(direction_key, down=False)
+        start = game.world.player.x
+        game.world.enemies = [ready_enemy(start + facing * 80, -facing)]
+        tick(game, 4)
+        assert (start - game.world.player.x) * facing > 0
+        assert game.world.player.hp == 500 and game.world.player.state == "BLOCK"
+        assert game.world.player.facing == facing
+        assert "combat_h" in game.world.controls.held
+        capture(game, f"held_block_recoil_{'left' if facing < 0 else 'right'}")
+        tick(game, 12)
+        distance = (start - game.world.player.x) * facing
+        assert 10 < distance < 30 and game.world.player.vx == 0
+        assert game.world.player.hp == 500 and game.world.player.state == "BLOCK"
+        assert not game.world.effects and game.world.camera.shake_remaining == 0
+        push_key(pico2d.SDLK_h, down=False)
+        tick(game)
+        assert not game.world.player.blocking and game.world.player.vx == 0
+        print(f"PASS: SDL held guard facing {facing:+d} recoils {distance:.1f}px backwards "
+              "and stops without damage or releasing H.")
+
     game.world = World()
     push_key(pico2d.SDLK_LEFT)
     push_key(pico2d.SDLK_h)
@@ -276,7 +302,7 @@ def check_held_block_and_blood(game):
     push_key(pico2d.SDLK_h, repeat=True)
     tick(game)
     assert game.world.player.animation.frame == config.BLOCK_HOLD_FRAME
-    game.world.enemies.append(ready_enemy(config.START_X + 80, -1))
+    game.world.enemies.append(ready_enemy(game.world.player.x + 80, -1))
     tick(game)
     assert game.world.player.hp == 480 and game.world.player.state == "HIT"
     assert len(game.world.effects) == 1
@@ -293,13 +319,13 @@ def check_held_block_and_blood(game):
         game.world = World()
         push_key(pico2d.SDLK_h)
         tick(game, wait)
-        game.world.enemies = [ready_enemy(config.START_X + 80, -1)]
+        game.world.enemies = [ready_enemy(game.world.player.x + 80, -1)]
         tick(game)
         assert game.world.player.hp == 500 and game.world.player.state == "BLOCK"
         assert not game.world.effects
         capture(game, f"block_{label}_no_damage")
         push_key(pico2d.SDLK_h, down=False)
-        game.world.enemies = [ready_enemy(config.START_X + 80, -1)]
+        game.world.enemies = [ready_enemy(game.world.player.x + 80, -1)]
         tick(game)
         assert game.world.player.hp == 480 and game.world.player.state == "HIT"
         game.handle_events()

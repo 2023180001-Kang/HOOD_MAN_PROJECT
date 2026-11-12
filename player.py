@@ -1,7 +1,5 @@
 """Player state, movement and animation; graphics stay in the renderer."""
 
-from math import sin, tau
-
 import config
 from animation import Animation
 from collision import Rect
@@ -21,11 +19,9 @@ class Player:
         self.hp = config.MAX_HP
         self.invincible = False
         self.active_move = None
-        self.block_elapsed = 0.0
         self.hit_enemies = set()
         definitions = dict(config.PLAYER_ANIMATIONS)
-        definitions.update({move.state: (move.row, config.BLOCK_FPS if move.blocking
-                                         else config.COMBAT_FPS, False)
+        definitions.update({move.state: (move.row, config.COMBAT_FPS, False)
                             for move in MOVES.values()})
         self.animation = Animation(definitions)
 
@@ -38,31 +34,15 @@ class Player:
         return self.hp > 0
 
     @property
-    def blocking(self):
-        return (self.alive and self.active_move is not None
-                and self.active_move.blocking and self.state == "BLOCK")
-
-    @property
     def sprite_image(self):
-        return self.active_move.image if self.active_move is not None else config.PLAYER_IMAGE
-
-    @property
-    def sprite_offset_x(self):
-        """Subtle held-guard sway, applied only to the drawn sprite."""
-        if not self.blocking:
-            return 0.0
-        elapsed = max(0.0, self.block_elapsed - config.BLOCK_HOLD_FRAME / config.BLOCK_FPS)
-        return (sin(tau * elapsed / config.BLOCK_SWAY_PERIOD)
-                * config.BLOCK_SWAY_AMPLITUDE * self.facing)
+        return config.COMBAT_IMAGE if self.active_move is not None else config.PLAYER_IMAGE
 
     def cancel_combat(self):
         self.active_move = None
-        self.block_elapsed = 0.0
         self.hit_enemies.clear()
 
     def start_move(self, move, direction):
         self.active_move = move
-        self.block_elapsed = 0.0
         self.hit_enemies.clear()
         self.vx = 0.0
         if direction:
@@ -81,7 +61,7 @@ class Player:
     @property
     def attack_box(self):
         move = self.active_move
-        if (not self.alive or move is None or move.blocking or self.state != move.state
+        if (not self.alive or move is None or self.state != move.state
                 or self.animation.frame not in config.PLAYER_ACTIVE_FRAMES):
             return None
         near = self.x + self.facing * 10
@@ -96,13 +76,8 @@ class Player:
         self.hit_enemies.add(enemy)
         return enemy.take_damage(self.active_move.damage)
 
-    def take_damage(self, damage, *, source_x=None):
+    def take_damage(self, damage):
         if not self.alive or self.invincible:
-            return False
-        if (self.blocking and source_x is not None
-                and (source_x - self.x) * self.facing >= 0):
-            # Recoil refreshes without stacking or interrupting the held guard.
-            self.vx = -self.facing * config.BLOCK_KNOCKBACK_SPEED
             return False
         self.hp = max(0, self.hp - damage)
         self.vx = 0.0
@@ -141,32 +116,13 @@ class Player:
                     self.animation.set_state("IDLE")
             return
 
-        if self.blocking and "combat_h" not in controls.held:
-            self.vx = 0.0
-            self.cancel_combat()
-            self.animation.set_state("IDLE")
-        if self.active_move is None:
-            if "combat_h" in controls.held:
-                self.start_move(MOVES["combat_h"], controls.direction)
-            elif combat_pressed is not None and not MOVES[combat_pressed].blocking:
-                self.start_move(MOVES[combat_pressed], controls.direction)
+        if self.active_move is None and combat_pressed is not None:
+            self.start_move(MOVES[combat_pressed], controls.direction)
         if self.active_move is not None:
-            if self.blocking:
-                self.block_elapsed += dt
-                proposed = self.x + self.vx * dt
-                self.x = clamp(proposed, config.PLAYER_HALF_WIDTH,
-                               config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)
-                self.vx = (0.0 if proposed != self.x else
-                           approach(self.vx, 0.0, config.BLOCK_KNOCKBACK_FRICTION * dt))
-            else:
-                self.vx = 0.0
+            self.vx = 0.0
             self.update_vertical(dt)
             self.animation.update(dt)
-            if self.blocking:
-                # Reach a readable guard pose, then hold it until H is released.
-                self.animation.elapsed = min(self.animation.elapsed,
-                                             config.BLOCK_HOLD_FRAME / config.BLOCK_FPS)
-            elif self.animation.finished:
+            if self.animation.finished:
                 self.cancel_combat()
                 self.animation.set_state("IDLE")
             return

@@ -1,4 +1,4 @@
-"""ASDF basic attacks and a separate guard sheet, independent of graphics."""
+"""ASDF basic attack rows, damage and reach, independent of graphics."""
 
 from dataclasses import dataclass
 
@@ -15,16 +15,8 @@ class Move:
     height: float
 
     @property
-    def blocking(self):
-        return self.key == "h"
-
-    @property
     def state(self):
-        return "BLOCK" if self.blocking else f"ATTACK_{self.key.upper()}"
-
-    @property
-    def image(self):
-        return config.BLOCK_IMAGE if self.blocking else config.COMBAT_IMAGE
+        return f"ATTACK_{self.key.upper()}"
 
 
 MOVES = {

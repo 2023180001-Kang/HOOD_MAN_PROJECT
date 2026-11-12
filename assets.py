@@ -13,8 +13,8 @@ class Assets:
     def __init__(self):
         self.images = {
             name: pico2d.load_image(str(config.ROOT / name))
-            for name in (config.PLAYER_IMAGE, config.COMBAT_IMAGE, config.BLOCK_IMAGE,
-                         config.ENEMY_IMAGE, config.BLOOD_IMAGE, config.HP_IMAGE,
+            for name in (config.PLAYER_IMAGE, config.COMBAT_IMAGE, config.ENEMY_IMAGE,
+                         config.BLOOD_IMAGE, config.HP_IMAGE,
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:

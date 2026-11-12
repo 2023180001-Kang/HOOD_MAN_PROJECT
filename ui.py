@@ -12,8 +12,7 @@ class UI:
         pico2d.draw_rectangle(688, 616, config.SCREEN_WIDTH - 20, 704,
                               12, 21, 33, filled=True)
         assets.font.draw(704, 686, "기본 공격 · 피해량", (244, 204, 66))
-        attacks = [move for move in MOVES.values() if not move.blocking]
-        for index, move in enumerate(attacks):
+        for index, move in enumerate(MOVES.values()):
             x = 704 + index % 2 * 270
             y = 659 - index // 2 * 24
             assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
@@ -71,7 +70,7 @@ class UI:
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
             assets.font.draw(22, 48,
-                             f"H 유지: 정면 방어 (피해 0)   적 공격 피해: {config.ENEMY_DAMAGE}",
+                             f"적 공격 피해: {config.ENEMY_DAMAGE}",
                              (205, 218, 231))
             assets.font.draw(740, 48, "숫자 1~9: 해당 수만큼 적 소환", (205, 218, 231))
             assets.font.draw(22, 25,

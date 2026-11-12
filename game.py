@@ -69,7 +69,7 @@ class Game:
                                     enemy.y - camera_y, enemy.facing)
         player = self.world.player
         self.assets.draw_sprite(player.sprite_image, player.animation.row,
-                                player.animation.frame, player.x + player.sprite_offset_x - camera_x,
+                                player.animation.frame, player.x - camera_x,
                                 player.y - camera_y, player.facing)
         for effect in self.world.effects:
             self.assets.draw_hit_effect(effect, camera_x, camera_y)

@@ -38,13 +38,17 @@ class PlayerDamageTests(unittest.TestCase):
         advance(world, 0.5)
         self.assertEqual((first.hp, second.hp), (160, 160))
 
-    def test_block_has_no_attack_box_or_damage(self):
+    def test_retired_h_does_not_lock_movement_or_prevent_damage(self):
         world = World()
-        enemy = target(world)
         world.controls.press("combat_h")
-        advance(world, 0.5)
+        world.controls.press("right")
+        advance(world, 0.1)
+        self.assertGreater(world.player.x, config.START_X)
+        self.assertEqual(world.player.state, "WALK")
         self.assertIsNone(world.player.attack_box)
-        self.assertEqual(enemy.hp, 200)
+        self.assertTrue(world.player.take_damage(20))
+        self.assertEqual(world.player.hp, 480)
+        self.assertEqual(world.player.state, "HIT")
 
     def test_attack_misses_behind_outside_reach_and_above_the_hit_area(self):
         for offset, height in ((-80, 0), (500, 0), (80, 300)):

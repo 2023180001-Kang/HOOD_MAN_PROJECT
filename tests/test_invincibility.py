@@ -51,24 +51,23 @@ class InvincibilityTests(unittest.TestCase):
         self.assertEqual(len(world.effects), 1)
         self.assertGreater(world.camera.shake_remaining, 0)
 
-    def test_immune_hits_keep_player_attacks_and_guard_active(self):
-        for key, state in (("combat_a", "ATTACK_A"), ("combat_h", "BLOCK")):
+    def test_immune_hits_keep_all_player_attacks_active(self):
+        for key, damage in zip("asdf", (20, 30, 40, 50)):
             with self.subTest(key=key):
                 world = World()
                 world.controls.press("invincibility")
-                world.controls.press(key)
+                world.controls.press(f"combat_{key}")
                 front, rear = striker(world), striker(world, -1)
                 world.step(config.FIXED_DT)
-                self.assertEqual(world.player.state, state)
+                self.assertEqual(world.player.state, f"ATTACK_{key.upper()}")
                 self.assertEqual(world.player.hp, 500)
                 self.assertEqual(world.player.vx, 0)
                 self.assertTrue(front.has_hit and rear.has_hit)
                 self.assertEqual(world.effects, [])
-                if key == "combat_a":
-                    advance(world, 0.2)
-                    self.assertEqual(front.hp, 180)
-                    self.assertEqual(rear.hp, 200)
-                    self.assertEqual([number.damage for number in world.damage_numbers], [20])
+                advance(world, 0.2)
+                self.assertEqual(front.hp, 200 - damage)
+                self.assertEqual(rear.hp, 200)
+                self.assertEqual([number.damage for number in world.damage_numbers], [damage])
 
     def test_enabling_during_hit_does_not_heal_or_restart_the_existing_pose(self):
         world = World()

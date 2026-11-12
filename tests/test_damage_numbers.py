@@ -34,7 +34,7 @@ class DamageNumberTests(unittest.TestCase):
                 self.assertEqual([number.damage for number in world.damage_numbers], [damage])
                 self.assertIsNot(world.damage_numbers[0], first)
 
-    def test_misses_guard_dead_targets_and_enemy_attacks_do_not_report_numbers(self):
+    def test_misses_retired_h_dead_targets_and_enemy_attacks_do_not_report_numbers(self):
         cases = ((-80, 0, False, "a"), (500, 0, False, "a"),
                  (80, 300, False, "a"), (80, 0, True, "a"), (80, 0, False, "h"))
         for offset, height, dead, key in cases:

@@ -13,23 +13,14 @@ sys.path.insert(0, str(ROOT))
 import config
 
 
-ARCHIVED_COMBAT = ROOT / "before_sheets" / "HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png"
 SHEETS = {
     config.PLAYER_IMAGE: 6,
     config.ENEMY_IMAGE: 6,
     config.COMBAT_IMAGE: 4,
-    config.BLOCK_IMAGE: 1,
 }
 
 
 def main():
-    # Preserve H guarding without loading the archived nine-move sheet at runtime.
-    with Image.open(ARCHIVED_COMBAT) as image:
-        if image.size != (2048, 2304):
-            raise ValueError("The archived combat sheet must be 2048x2304")
-        block_path = ROOT / config.BLOCK_IMAGE
-        block_path.parent.mkdir(exist_ok=True)
-        image.crop((0, 8 * 256, 2048, 9 * 256)).save(block_path)
     metadata = {}
     for name, row_count in SHEETS.items():
         with Image.open(ROOT / name) as image:

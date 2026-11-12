@@ -61,7 +61,7 @@ class Enemy:
         if box is not None and box.overlaps(player.body):
             # Per-enemy swing consumption prevents repeated active-frame damage.
             self.has_hit = True
-            return player.take_damage(config.ENEMY_DAMAGE, source_x=self.x)
+            return player.take_damage(config.ENEMY_DAMAGE)
         return False
 
     def knockback(self, player_x):

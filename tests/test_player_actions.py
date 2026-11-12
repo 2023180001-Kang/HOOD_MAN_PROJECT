@@ -7,10 +7,9 @@ from world import World
 
 
 class PlayerActionTests(unittest.TestCase):
-    def test_asdf_use_the_correct_source_rows_and_h_uses_its_own_sheet(self):
+    def test_asdf_use_the_correct_source_rows_and_return_to_idle(self):
         expected = (("a", 3, config.COMBAT_IMAGE), ("s", 4, config.COMBAT_IMAGE),
-                    ("d", 1, config.COMBAT_IMAGE), ("f", 2, config.COMBAT_IMAGE),
-                    ("h", 1, config.BLOCK_IMAGE))
+                    ("d", 1, config.COMBAT_IMAGE), ("f", 2, config.COMBAT_IMAGE))
         self.assertEqual(set(MOVES), {f"combat_{key}" for key, _, _ in expected})
         for letter, row, image in expected:
             key = f"combat_{letter}"
@@ -22,17 +21,13 @@ class PlayerActionTests(unittest.TestCase):
                 self.assertEqual(world.player.state, move.state)
                 self.assertEqual(world.player.animation.row, row)
                 self.assertEqual(world.player.sprite_image, image)
-                if move.blocking:
-                    advance(world, 1)
-                    self.assertEqual(world.player.state, "BLOCK")
-                    world.controls.release(key)
                 advance(world, 0.8)
                 self.assertEqual(world.player.state, "IDLE")
                 self.assertEqual(world.player.sprite_image, config.PLAYER_IMAGE)
                 self.assertIsNone(world.player.active_move)
 
     def test_fast_attacks_have_short_windup_and_finish_in_one_third_second(self):
-        for key in (key for key, move in MOVES.items() if not move.blocking):
+        for key in MOVES:
             with self.subTest(key=key):
                 world = World()
                 world.controls.press(key)

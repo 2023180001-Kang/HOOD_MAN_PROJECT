@@ -12,7 +12,7 @@ class CombatIntegrationTests(unittest.TestCase):
         outcomes = []
         script = (
             ("combat_d", "right"), (), ("combat_s", "left"), (),
-            ("combat_h", "left"), (), ("combat_f", "right"), (),
+            ("combat_a", "left"), (), ("combat_f", "right"), (),
         )
         for fps in (30, 60, 120, 144):
             world = World()
@@ -35,7 +35,7 @@ class CombatIntegrationTests(unittest.TestCase):
         rng = random.Random(20482304)
         world = World(rng=random.Random(20482304))
         keys = ("left", "right", "left_shift", "jump",
-                *(f"combat_{key}" for key in "asdfh"))
+                *(f"combat_{key}" for key in "asdf"))
         for frame in range(2400):
             if frame % 17 == 0:
                 key = rng.choice(keys)

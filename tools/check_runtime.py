@@ -171,21 +171,18 @@ def check_player_action_inputs(game):
         player = game.world.player
         key = getattr(pico2d, f"SDLK_{move.key}")
         push_key(key)
-        tick(game, 16 if move.blocking else 10)
+        tick(game, 10)
         assert game.world.player is player
         assert player.active_move == move and player.animation.row == move.row
-        assert player.sprite_image == move.image
+        assert player.sprite_image == config.COMBAT_IMAGE
         capture(game, f"player_move_{move.key}")
         push_key(key, repeat=True)
         tick(game, 35)
-        if move.blocking:
-            assert player.state == "BLOCK" and player.animation.frame == config.BLOCK_HOLD_FRAME
-        else:
-            assert player.state == "IDLE" and player.active_move is None
+        assert player.state == "IDLE" and player.active_move is None
         push_key(key, down=False)
         tick(game)
         assert player.state == "IDLE" and player.active_move is None
-    for key_name in "qwer":
+    for key_name in "qwerh":
         game.world = World()
         push_key(getattr(pico2d, f"SDLK_{key_name}"))
         tick(game, 24)
@@ -193,7 +190,7 @@ def check_player_action_inputs(game):
         push_key(getattr(pico2d, f"SDLK_{key_name}"), down=False)
         game.handle_events()
     print("PASS: SDL A/S/D/F use source rows 3/4/1/2 at 24 FPS; "
-          "H uses the separate guard sheet, and retired Q/W/E/R inputs do not attack.")
+          "retired Q/W/E/R/H inputs have no action.")
 
 
 def check_player_damage_and_enemy_health(game):
@@ -260,7 +257,7 @@ def verify_blood_pixels(game, name):
     assert red_pixels > 20, (name, red_pixels)
 
 
-def check_held_block_and_blood(game):
+def check_received_damage_and_blood(game):
     game.world = World()
     game.world.enemies = [ready_enemy(config.START_X - 80)]
     tick(game, 7)
@@ -270,74 +267,34 @@ def check_held_block_and_blood(game):
     tick(game, 30)
     assert not game.world.effects
 
-    for facing in (-1, 1):
-        game.world = World()
-        direction_key = pico2d.SDLK_LEFT if facing < 0 else pico2d.SDLK_RIGHT
-        push_key(direction_key)
-        push_key(pico2d.SDLK_h)
-        tick(game, 15)
-        push_key(direction_key, down=False)
-        start = game.world.player.x
-        game.world.enemies = [ready_enemy(start + facing * 80, -facing)]
-        tick(game, 4)
-        assert (start - game.world.player.x) * facing > 0
-        assert game.world.player.hp == 500 and game.world.player.state == "BLOCK"
-        assert game.world.player.facing == facing
-        assert "combat_h" in game.world.controls.held
-        capture(game, f"held_block_recoil_{'left' if facing < 0 else 'right'}")
-        tick(game, 12)
-        distance = (start - game.world.player.x) * facing
-        assert 10 < distance < 30 and game.world.player.vx == 0
-        assert game.world.player.hp == 500 and game.world.player.state == "BLOCK"
-        assert not game.world.effects and game.world.camera.shake_remaining == 0
-        push_key(pico2d.SDLK_h, down=False)
-        tick(game)
-        assert not game.world.player.blocking and game.world.player.vx == 0
-        print(f"PASS: SDL held guard facing {facing:+d} recoils {distance:.1f}px backwards "
-              "and stops without damage or releasing H.")
-
-    game.world = World()
-    push_key(pico2d.SDLK_LEFT)
-    push_key(pico2d.SDLK_h)
-    tick(game)
-    push_key(pico2d.SDLK_LEFT, down=False)
-    game.world.enemies = [ready_enemy(config.START_X - 80) for _ in range(4)]
-    tick(game, 180)
-    assert game.world.player.hp == 500 and game.world.player.state == "BLOCK"
-    assert not game.world.effects and game.world.camera.shake_remaining == 0
-    capture(game, "held_block_no_damage")
-    push_key(pico2d.SDLK_h, repeat=True)
-    tick(game)
-    assert game.world.player.animation.frame == config.BLOCK_HOLD_FRAME
-    game.world.enemies.append(ready_enemy(game.world.player.x + 80, -1))
-    tick(game)
-    assert game.world.player.hp == 480 and game.world.player.state == "HIT"
-    assert len(game.world.effects) == 1
-    verify_blood_pixels(game, "block_rear_full_damage")
-    push_key(pico2d.SDLK_F5)
-    tick(game)
-    assert not game.world.effects and not game.world.enemies
-    assert game.world.player.hp == 500 and game.world.player.active_move is None
-    push_key(pico2d.SDLK_F5, down=False)
-    push_key(pico2d.SDLK_h, down=False)
-    game.handle_events()
-
-    for label, wait in (("immediate", 0), ("long_hold", 180)):
+    for side in (-1, 1):
         game.world = World()
         push_key(pico2d.SDLK_h)
-        tick(game, wait)
-        game.world.enemies = [ready_enemy(game.world.player.x + 80, -1)]
         tick(game)
-        assert game.world.player.hp == 500 and game.world.player.state == "BLOCK"
-        assert not game.world.effects
-        capture(game, f"block_{label}_no_damage")
-        push_key(pico2d.SDLK_h, down=False)
-        game.world.enemies = [ready_enemy(game.world.player.x + 80, -1)]
+        assert game.world.player.state == "IDLE" and game.world.player.active_move is None
+        game.world.enemies = [ready_enemy(game.world.player.x + side * 80, -side)]
         tick(game)
         assert game.world.player.hp == 480 and game.world.player.state == "HIT"
-        game.handle_events()
-    print("PASS: SDL held H blocks all frontal damage immediately and for 3s against four enemies; "
-          "rear/released guard takes 20; damaging hits show blood/shake, effects expire and F5 clears them.")
+        assert len(game.world.effects) == 1 and game.world.camera.shake_remaining > 0
+        verify_blood_pixels(game, f"retired_h_hit_{'left' if side < 0 else 'right'}")
+        push_key(pico2d.SDLK_h, down=False)
+        tick(game)
+
+    game.world = World()
+    push_key(pico2d.SDLK_h)
+    push_key(pico2d.SDLK_RIGHT)
+    push_key(pico2d.SDLK_LSHIFT)
+    tick(game, 30)
+    assert game.world.player.state == "RUN" and game.world.player.vx == config.RUN_SPEED
+    capture(game, "retired_h_running")
+    push_key(pico2d.SDLK_SPACE)
+    tick(game)
+    assert game.world.player.jump_count == 1
+    for key in (pico2d.SDLK_h, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
+        push_key(key, down=False)
+    game.handle_events()
+    print("PASS: SDL H has no action; running/jumping continue and attacks from both sides "
+          "deal 20 with blood/shake; hit effects expire normally.")
 
 
 def running_jump_distance(game, record=False, running=True):
@@ -579,15 +536,13 @@ def check_focus_loss(game):
     assert not game.world.controls.held, "Focus loss left movement keys held"
     tick(game, 30)
     assert game.world.player.vx == 0
-    push_key(pico2d.SDLK_h)
-    tick(game)
-    assert game.world.player.blocking
+    push_key(pico2d.SDLK_a)
     push_key(pico2d.SDLK_9)
     assert SDL_PushEvent(ctypes.byref(event)) == 1
     tick(game)
-    assert not game.world.player.blocking and not game.world.enemies
+    assert game.world.player.active_move is None and not game.world.enemies
     assert not game.world.controls.held and not game.world.controls.pressed
-    print("PASS: window focus loss clears movement, held guard and pending numeric spawns.")
+    print("PASS: window focus loss clears movement, pending attacks and numeric spawns.")
 
 
 def check_natural_game(game):
@@ -639,7 +594,7 @@ def main():
         check_numeric_spawns(game)
         check_player_action_inputs(game)
         check_player_damage_and_enemy_health(game)
-        check_held_block_and_blood(game)
+        check_received_damage_and_blood(game)
         check_jump_range(game)
         check_crowd_escape(game)
         check_crowd_damage(game)

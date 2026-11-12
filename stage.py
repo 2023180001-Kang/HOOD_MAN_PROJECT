@@ -8,14 +8,14 @@ from walkable import for_stage
 
 
 class Stage:
-    def __init__(self, index=0, *, rng=None):
+    def __init__(self, index=0, *, rng=None, attack_sequence=None):
         self.index = index
         self.arrows_visible = False
         self.enemies = []
         self.effects = []
         self.damage_numbers = []
         self.walkable = for_stage(index)
-        self.spawner = SpawnManager(rng=rng, walkable=self.walkable)
+        self.spawner = SpawnManager(rng=rng, walkable=self.walkable, attack_sequence=attack_sequence)
 
     def constrain_actor(self, actor):
         actor.walkable = self.walkable

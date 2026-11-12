@@ -12,7 +12,8 @@ from walkable import default_area
 class Enemy:
     boundary_padding = config.ENEMY_BOUNDARY_PADDING
 
-    def __init__(self, x, facing=1, spawned_at=0.0, *, run_speed=None, ground_y=None):
+    def __init__(self, x, facing=1, spawned_at=0.0, *, run_speed=None, ground_y=None,
+                 attack_speed=1.0):
         self.x = x
         self.previous_x = x
         self.ground_y = config.GROUND_Y if ground_y is None else ground_y
@@ -29,7 +30,13 @@ class Enemy:
         self.run_speed = config.ENEMY_RUN_SPEEDS[0] if run_speed is None else run_speed
         self.running = False
         self.hp = config.ENEMY_MAX_HP
-        self.animation = Animation(config.ENEMY_ANIMATIONS)
+        self.attack_speed = attack_speed
+        self.attack_interval = config.ENEMY_ATTACK_INTERVAL / attack_speed
+        definitions = dict(config.ENEMY_ANIMATIONS)
+        row, fps, loop = definitions["ATTACK"]
+        self.attack_fps = fps * attack_speed
+        definitions["ATTACK"] = (row, self.attack_fps, loop)
+        self.animation = Animation(definitions)
         self.formation_side = None
         self.formation_slot = None
         self.target_x = None
@@ -226,7 +233,7 @@ class Enemy:
         elif self.cooldown <= 0 and in_reach:
             self.animation.set_state("ATTACK")
             self.has_hit = False
-            self.cooldown = config.ENEMY_ATTACK_INTERVAL
+            self.cooldown = self.attack_interval
             self.animation.update(dt)
             return
         travel_x, travel_y = self.vx * dt, self.ground_vy * dt

@@ -1,5 +1,7 @@
 """Fixed-step simulation usable without pico2d or a display."""
 
+from itertools import count
+
 import config
 from camera import Camera
 from collision import resolve_bodies
@@ -20,7 +22,9 @@ class World:
         self.controls.reset_for_restart()
         self.player = Player()
         self.camera = Camera(self.player.x)
-        self.stages = [Stage(index, rng=self.spawn_rng) for index in range(len(config.STAGE_IMAGES))]
+        attack_sequence = count()
+        self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence)
+                       for index in range(len(config.STAGE_IMAGES))]
         self.stage_index = 0
         self.death_handled = False
         self.elapsed = 0.0

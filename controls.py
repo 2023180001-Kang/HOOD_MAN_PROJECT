@@ -1,5 +1,7 @@
 """Held keys and edge-triggered presses, independent of SDL key codes."""
 
+from math import hypot
+
 
 class Controls:
     def __init__(self):
@@ -38,6 +40,20 @@ class Controls:
     @property
     def direction(self):
         return int("right" in self.held) - int("left" in self.held)
+
+    @property
+    def depth_direction(self):
+        return int("up" in self.held) - int("down" in self.held)
+
+    @property
+    def movement(self):
+        x, y = self.direction, self.depth_direction
+        length = hypot(x, y)
+        return (x / length, y / length) if length else (0.0, 0.0)
+
+    @property
+    def moving(self):
+        return bool(self.direction or self.depth_direction)
 
     @property
     def running(self):

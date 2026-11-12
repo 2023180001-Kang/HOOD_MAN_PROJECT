@@ -1,6 +1,6 @@
 # 테스트 방법 및 결과
 
-최신 적 집단 전투 검증은 **10장**에 기록한다. 현재 로직은 136개이며 이전 개발 단계의 결과는 각 절의 당시 사양을 따른다.
+최신 2.5D 바닥 이동·경계 검증은 **11장**에 기록한다. 현재 로직은 159개이며 이전 개발 단계의 결과는 각 절의 당시 사양을 따른다.
 
 ## 1. 검증 환경
 
@@ -23,6 +23,7 @@
 .\.venv\Scripts\python.exe tools/check_runtime.py
 .\.venv\Scripts\python.exe tools/check_damage_numbers.py
 .\.venv\Scripts\python.exe tools/check_enemy_spacing.py
+.\.venv\Scripts\python.exe tools/check_belt_scroll.py
 .\.venv\Scripts\python.exe tools/check_stages.py
 ```
 
@@ -273,3 +274,59 @@ PRD 대응: AC-19(공격별 속도·유효 프레임), AC-20(지정 피해·중�
 4. 적을 처치하거나 F5를 눌러 빈 슬롯과 초기화를 확인한다.
 
 대표 캡처: `artifacts/enemy_spacing_left_2.png`, `enemy_spacing_left_3.png`, `enemy_spacing_left_5.png`, `enemy_spacing_left_8.png`, 대응하는 `right_*`, `enemy_spacing_both_8.png`, `enemy_spacing_both_8_simultaneous_hit.png`, `enemy_spacing_left_8_counter.png`, `enemy_spacing_left_wall_8.png`, `enemy_spacing_overlap_before.png`, `enemy_spacing_overlap_easing.png`, `enemy_spacing_overlap_resolved.png`.
+
+## 11. 2.5D 바닥 이동·점프 분리·맵 경계 최신 검증 (2026-11-12)
+
+### 실행 명령과 현재 수치
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+.\.venv\Scripts\python.exe tools/check_belt_scroll.py
+.\.venv\Scripts\python.exe tools/check_runtime.py
+.\.venv\Scripts\python.exe tools/check_damage_numbers.py
+.\.venv\Scripts\python.exe tools/check_stages.py
+.\.venv\Scripts\python.exe tools/check_enemy_spacing.py
+```
+
+- 로직: **159개 통과**, 7.314초. 기존 136개를 새 실제 깊이·경계 여백 기준으로 갱신하고 `test_belt_scroll.py` 23개를 추가했다.
+- 첫 맵 바닥 y=56~148, 두 번째 y=56~116. x 이동 범위는 주인공 68~2492, 적 88~2472다. 점프 높이는 이 바닥 경계에 포함하지 않는다.
+- 몸체 겹침은 바닥 깊이 차이 12px 미만, 공격은 32px 이내이며 방향·x 거리·점프 높이·유효 프레임도 별도로 검사한다. 집단 목표 깊이는 바닥과 주인공 ±28px 구간 안으로 압축한다.
+
+### 요청 시나리오별 결과
+
+| 요청 | 실행·검증 | 결과 |
+| --- | --- | --- |
+| 4방향·대각선·Shift | 로직에서 8방향의 걷기 300/달리기 720 전체 속도·축 전환을 검사. 실제 SDL은 8방향 걷기 300, 달리기 0.1초의 전체 가속 속도 240, 좌우 달리기 720 도달 확인 | 통과 |
+| 점프/이단 점프 | ↑+Shift 이동 중 바닥 상단에 닿아도 기준 점프와 매 틱 높이·속도·횟수가 동일. 3번째 입력 차단, ground_y=148에 착지 | 통과 |
+| 적 2·5·10명의 경계 | **두 맵×네 모서리×세 인원 = 24개 경우**를 로직과 실제 창에서 실행. 공격 Separation·HIT·바깥 방향 2D 넉백 뒤 매 갱신 경계 검사 | 통과 |
+| 유효 위치에서의 부드러움 | 별도 24개 자연 접근 로직 경우에서 주인공이 모서리에 그대로 있고 적 이동은 원래 속도, 공격 중 이동은 전체 18px/s 이하 | 통과 |
+| 좌우 다수 동시 타격 | 양쪽 10명씩 자연 접근 시 무적 ON에서 전원의 유효 공격 소비를 확인. 별도 유효 프레임 동기화·무적 해제 검증에서 HP 500→100 | 통과 |
+| 실제 바닥 깊이별 타격 | 로직 ±32px 경계 적중/초과 빗나감과 헛공격 미소비. 실제 SDL A는 깊이 +16 적 HP 200→180, -44 적은 200 유지. 적 공격도 가까운 한 명만 피해 20 | 통과 |
+| 카메라·맵 전환 | 실제 SDL 공중 N 왕복, 같은 Player·점프 유지·첫 맵 y=145가 두 번째에서 116으로 투영. 카메라 흔들림과 보행 경계 독립 | 통과 |
+| 바닥 정렬 | 실제 그리기 호출이 뒤쪽 ground_y=130 → 주인공 100 → 앞쪽 70. 주인공 jump_height=240에서도 동일 | 통과 |
+| 다각형 확장 | 볼록 다각형 내부·발 여백·최근접 투영·시계 방향 정점·잘못된 오목 입력 거부 및 다각형을 지정한 World 이동/넉백 순수 로직 | 통과 |
+| 모든 적 상태 | IDLE/WALK/RUN/ATTACK/HIT/KNOCKBACK/DYING/DEAD의 잘못된 초기 발 위치와 바깥 속도도 갱신 후 영역 안으로 제한 | 통과 |
+| FPS·재시작 | 30/60/120/144 FPS의 2D 위치·점프·HP·상태 동일, 맵별 정지와 F5 바닥/속도/점프/적 초기화 | 통과 |
+
+실제 창 검증은 SDL 이벤트 주입과 게임 갱신·렌더 타깃을 사용했다. 동시 공격의 프레임 동기화는 검증용 준비 과정이며 실제 AI의 독립적인 쿨다운을 동기화하는 기능은 추가하지 않았다.
+
+### 회귀·픽셀·성능
+
+- `check_runtime.py`: ASDF 20/30/40/50·24/18 FPS·빠른 전환·추적/소환·무피해 포위 탈출·피격·넉백·사망·HP 픽셀·무적 관련 동작·포커스·F5·SDL_QUIT 통과. 적 달리기 속도는 두 바닥 속도 성분의 벡터 크기로 검사한다. 고정 시드 자연 사망은 시뮬레이션 10.02초였다.
+- `check_damage_numbers.py`: 네 공격 숫자 문자열·실제 픽셀·상승/제거·마지막 일격·F5 통과.
+- `check_stages.py`: 기존 걷기/달리기/상승·하강 이단 점프 8상태 양방향 왕복, 맵별 객체·HP/소환·마지막 경계·F5 통과.
+- `check_enemy_spacing.py`: 한쪽 2/3/5/8명, 양쪽 8+8명, 벽 압축·A 반격·부드러운 기존 겹침 해소와 HP바 픽셀 통과. 소수 깊이와 카메라 흔들림의 SDL 행 반올림을 위해 세로 ±2px 범위에서 40px 이상의 실제 빨간 채움을 확인한다.
+- 성능: **10명 180프레임/3.000초 = 59.99 FPS**, 기존 4명 180프레임/3.001초·59.99 FPS, 16명 180프레임/3.000초·59.99 FPS.
+- 화면 캡처에서 건물/계단·전경 앞의 보행선, 좌우 스프라이트 여백, 바닥 경계 위의 공중 캐릭터, 깊이별 숫자와 그리기 순서를 검토했다. 녹색 바닥선은 검증 캡처 전용이다.
+
+### 직접 확인 절차·범위
+
+1. 방향키 4개와 대각선·Shift를 조합해 바닥 안쪽/바깥쪽까지 이동한다. 건물과 화면 아래로 발이 나가지 않아야 한다.
+2. ↑+Shift 중 Space를 빠르게 두 번 눌러 바닥 위치는 경계 안에 있고 캐릭터만 떠오른 뒤 이동한 바닥에 착지하는지 확인한다.
+3. P 무적과 숫자 키로 적을 모은 뒤 네 모서리로 이동한다. 적이 밀려도 내부에 남으며 밀집 시 간격을 줄여야 한다.
+4. 위아래로 위치를 바꿔 깊이 밖의 공격을 피하고 같은 레인에서 ASDF·다수 공격을 확인한다.
+5. N으로 공중/지상 왕복하고 F5로 초기화한다. 두 번째 맵의 낮은 상단 경계에서도 점프 높이가 초기화되면 안 된다.
+
+대표 캡처: `artifacts/belt_diagonal_walk.png`, `belt_jump_at_floor_boundary.png`, `belt_depth_player_attack.png`, `belt_depth_enemy_attack.png`, `belt_depth_order_jump.png`, `belt_stage_1_corner_1_1_10.png`, `belt_stage_2_corner_1_1_10.png`, `belt_twenty_simultaneous_hits.png`, `belt_transition_next.png`, `belt_transition_previous.png`.
+
+미실시: 장시간 직접 키보드를 조작하는 플레이와 20명 초과 성능 측정. 현재 배경은 직사각형 보행 구간이며 볼록 다각형은 순수 로직으로 검증했다. 일반 오목 다각형은 현재 지원하지 않는다. 인원이 많을 때 실루엣 전체의 비겹침 대신 바닥 내부의 안정적인 압축 배치를 사용한다.

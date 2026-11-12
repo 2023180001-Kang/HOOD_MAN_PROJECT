@@ -105,8 +105,8 @@ class MovementTests(unittest.TestCase):
         self.assertEqual(world.player.x, stopped)
 
     def test_world_boundaries_stop_the_player(self):
-        for key, expected in (("left", config.PLAYER_HALF_WIDTH),
-                              ("right", config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)):
+        for key, expected in (("left", config.PLAYER_BOUNDARY_PADDING),
+                               ("right", config.WORLD_WIDTH - config.PLAYER_BOUNDARY_PADDING)):
             world = World()
             world.controls.press(key)
             world.controls.press("left_shift")

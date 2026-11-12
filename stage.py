@@ -4,6 +4,7 @@ from math import ceil, floor, sin, tau
 
 import config
 from spawn_manager import SpawnManager
+from walkable import for_stage
 
 
 class Stage:
@@ -13,7 +14,13 @@ class Stage:
         self.enemies = []
         self.effects = []
         self.damage_numbers = []
-        self.spawner = SpawnManager(rng=rng)
+        self.walkable = for_stage(index)
+        self.spawner = SpawnManager(rng=rng, walkable=self.walkable)
+
+    def constrain_actor(self, actor):
+        actor.walkable = self.walkable
+        half_width = (actor.body.right - actor.body.left) / 2
+        self.walkable.constrain(actor, half_width)
 
     @property
     def image_name(self):

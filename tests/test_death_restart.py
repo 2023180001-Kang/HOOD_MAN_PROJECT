@@ -56,8 +56,9 @@ class DeathRestartTests(unittest.TestCase):
 
     def test_nearby_knockback_at_both_map_boundaries_is_clamped(self):
         for player_x, enemy_x, facing in (
-            (80, config.ENEMY_HALF_WIDTH, 1),
-            (config.WORLD_WIDTH - 80, config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH, -1),
+            (config.ENEMY_BOUNDARY_PADDING + 80, config.ENEMY_BOUNDARY_PADDING, 1),
+            (config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING - 80,
+             config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING, -1),
         ):
             with self.subTest(player_x=player_x):
                 world = World()

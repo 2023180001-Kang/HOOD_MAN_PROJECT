@@ -1,7 +1,8 @@
 import unittest
+from math import hypot
 
 import config
-from collision import resolve_bodies
+from collision import bodies_overlap, resolve_bodies
 from enemy import Enemy
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing, sprite_extents
 from tests.helpers import advance
@@ -29,10 +30,10 @@ class EnemySpacingTests(unittest.TestCase):
     def assert_distinguishable(self, enemies):
         for index, first in enumerate(enemies):
             for second in enemies[index + 1:]:
-                # At the normal melee position: >=50px horizontally or >=28px
-                # in projected feet/head height, not identical piled-up sprites.
+                # Real depth must fit both the floor and the melee depth band.
+                # Dense crowds compress instead of placing feet outside the map.
                 self.assertTrue(abs(first.x - second.x) >= 50
-                                or abs(first.depth - second.depth) >= 28,
+                                or abs(first.ground_y - second.ground_y) >= 8,
                                 (first.x, first.depth, second.x, second.depth))
 
     def test_one_sided_2_3_5_8_arrivals_spread_and_every_enemy_can_hit(self):
@@ -54,12 +55,12 @@ class EnemySpacingTests(unittest.TestCase):
                             maximum = max(config.ENEMY_SPEED, enemy.run_speed) * config.FIXED_DT
                             if state == enemy.state == "ATTACK":
                                 maximum = config.ENEMY_ATTACK_SEPARATION_SPEED * config.FIXED_DT
-                            self.assertLessEqual(abs(enemy.x - x), maximum + 1e-8)
-                            self.assertLessEqual(abs(enemy.depth - depth),
-                                                 config.ENEMY_DEPTH_SPEED * config.FIXED_DT + 1e-8)
+                            self.assertLessEqual(hypot(enemy.x - x, enemy.depth - depth), maximum + 1e-8)
                             self.assertGreaterEqual((enemy.x - world.player.x) * side, 61 - 1e-8)
-                            self.assertFalse(enemy.body.overlaps(world.player.body))
-                            self.assertEqual(enemy.y, config.GROUND_Y)
+                            self.assertFalse(bodies_overlap(enemy, world.player))
+                            self.assertEqual(enemy.jump_height, 0.0)
+                            self.assertTrue(world.stage.walkable.contains(enemy.x, enemy.ground_y,
+                                                                         config.ENEMY_HALF_WIDTH))
                     self.assertEqual(landed, set(enemies))
                     self.assertGreaterEqual(peak_attackers, 2)
                     self.assert_distinguishable(enemies)
@@ -106,7 +107,8 @@ class EnemySpacingTests(unittest.TestCase):
             world.step(config.FIXED_DT)
             for enemy, (x, depth, elapsed) in zip(enemies, before):
                 self.assertLessEqual(abs(enemy.x - x), 18 * config.FIXED_DT + 1e-8)
-                self.assertLessEqual(abs(enemy.depth - depth), 64 * config.FIXED_DT + 1e-8)
+                self.assertLessEqual(hypot(enemy.x - x, enemy.depth - depth),
+                                     18 * config.FIXED_DT + 1e-8)
                 self.assertAlmostEqual(enemy.animation.elapsed, elapsed + config.FIXED_DT)
                 self.assertEqual((enemy.state, enemy.facing), ("ATTACK", -1))
         advance(world, 4)
@@ -171,7 +173,8 @@ class EnemySpacingTests(unittest.TestCase):
                 self.assertEqual(len({round(enemy.depth, 6) for enemy in enemies}), 8)
                 self.assertTrue(all((enemy.x - world.player.x) * side >= 61 for enemy in enemies))
                 self.assertTrue(all(32 <= enemy.x <= 2528 for enemy in enemies))
-                self.assertTrue(all(abs(enemy.depth) <= 64 for enemy in enemies))
+                self.assertTrue(all(world.stage.walkable.contains(enemy.x, enemy.ground_y, 32)
+                                    for enemy in enemies))
                 world.player.invincible = False
                 ready_all(enemies)
                 world.step(config.FIXED_DT)
@@ -188,16 +191,18 @@ class EnemySpacingTests(unittest.TestCase):
         self.assertFalse(left.body.overlaps(world.player.body))
         self.assertFalse(right.body.overlaps(world.player.body))
 
-    def test_depth_does_not_change_jump_collision_or_attack_reach(self):
+    def test_floor_depth_is_separate_from_height_rectangles_and_attack_reach(self):
         world, enemies = crowd(8, 1)
         advance(world, 6)
         enemy = max(enemies, key=lambda actor: abs(actor.depth))
         ready_all([enemy])
         box = enemy.attack_box
         body = enemy.body
-        enemy.depth = -64
+        enemy.ground_y = 56
         self.assertEqual(enemy.body, body)
         self.assertEqual(enemy.attack_box, box)
+        self.assertFalse(enemy.try_hit(world.player))
+        enemy.ground_y = world.player.ground_y
         world.player.y += config.ENEMY_HEIGHT + 1
         self.assertFalse(enemy.try_hit(world.player))
         world.player.y = config.GROUND_Y

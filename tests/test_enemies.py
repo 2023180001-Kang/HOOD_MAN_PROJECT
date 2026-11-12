@@ -2,7 +2,7 @@ import random
 import unittest
 
 import config
-from collision import resolve_bodies
+from collision import bodies_overlap, resolve_bodies
 from enemy import Enemy
 from spawn_manager import SpawnManager
 from tests.helpers import advance, tap
@@ -13,7 +13,7 @@ class EnemyTests(unittest.TestCase):
     def test_requested_batches_spawn_randomly_at_both_map_boundaries(self):
         spawner = SpawnManager(rng=random.Random(42))
         spawned = spawner.spawn(9, 3)
-        boundaries = {config.ENEMY_HALF_WIDTH, config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH}
+        boundaries = {config.ENEMY_BOUNDARY_PADDING, config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING}
         self.assertEqual({enemy.x for enemy in spawned}, boundaries)
         self.assertEqual(len({id(enemy) for enemy in spawned}), 9)
         self.assertEqual(spawner.spawned_count, 9)
@@ -111,7 +111,7 @@ class EnemyTests(unittest.TestCase):
         world.controls.press("right")
         world.controls.press("left_shift")
         advance(world, 0.2)
-        self.assertFalse(world.player.body.overlaps(world.enemies[0].body))
+        self.assertFalse(bodies_overlap(world.player, world.enemies[0]))
         self.assertLess(world.player.x, world.enemies[0].x)
         world.player.y = config.GROUND_Y + config.ENEMY_HEIGHT + 40
         world.player.vy = 300
@@ -128,7 +128,7 @@ class EnemyTests(unittest.TestCase):
             self.assertGreaterEqual(world.player.x, config.PLAYER_HALF_WIDTH)
             self.assertLessEqual(world.player.x, config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)
             for enemy in world.enemies:
-                self.assertFalse(world.player.body.overlaps(enemy.body))
+                self.assertFalse(bodies_overlap(world.player, enemy))
                 self.assertGreaterEqual(enemy.x, config.ENEMY_HALF_WIDTH)
                 self.assertLessEqual(enemy.x, config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
 

@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 import config
+from collision import bodies_overlap
 from enemy import Enemy
 from tests.helpers import advance, tap
 from world import World
@@ -73,7 +74,7 @@ class JumpCameraTests(unittest.TestCase):
                         world.update(1 / 120)
                         self.assertEqual(world.player.hp, 500)
                         for enemy in world.enemies:
-                            self.assertFalse(world.player.body.overlaps(enemy.body))
+                            self.assertFalse(bodies_overlap(world.player, enemy))
                         if world.player.grounded:
                             break
                     self.assertTrue(world.player.grounded)

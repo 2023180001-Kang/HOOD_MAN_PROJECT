@@ -3,6 +3,7 @@ import random
 import unittest
 
 import config
+from collision import bodies_overlap
 from tests.helpers import advance, tap
 from world import World
 
@@ -69,7 +70,7 @@ class IntegrationTests(unittest.TestCase):
                 self.assertGreaterEqual(enemy.x, config.ENEMY_HALF_WIDTH)
                 self.assertLessEqual(enemy.x, config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
                 if world.player.alive:
-                    self.assertFalse(world.player.body.overlaps(enemy.body))
+                    self.assertFalse(bodies_overlap(world.player, enemy))
 
     def test_long_frame_is_bounded_and_does_not_repeat_numeric_spawns(self):
         world = World()

@@ -2,6 +2,7 @@ import random
 import unittest
 
 import config
+from collision import bodies_overlap
 from enemy import Enemy
 from tests.helpers import advance, tap
 from world import World
@@ -84,7 +85,7 @@ class CombatIntegrationTests(unittest.TestCase):
                 self.assertGreaterEqual(enemy.hp, 0)
                 self.assertLessEqual(enemy.hp, 200)
                 if enemy.alive and world.player.alive:
-                    self.assertFalse(world.player.body.overlaps(enemy.body))
+                    self.assertFalse(bodies_overlap(world.player, enemy))
                 if not enemy.alive:
                     self.assertIn(enemy.state, ("DYING", "DEAD"))
                     self.assertIsNone(enemy.attack_box)

@@ -16,6 +16,8 @@ from world import World
 KEYS = {
     pico2d.SDLK_LEFT: "left",
     pico2d.SDLK_RIGHT: "right",
+    pico2d.SDLK_UP: "up",
+    pico2d.SDLK_DOWN: "down",
     pico2d.SDLK_LSHIFT: "left_shift",
     pico2d.SDLK_RSHIFT: "right_shift",
     pico2d.SDLK_SPACE: "jump",
@@ -64,11 +66,11 @@ class Game:
         camera_y = self.world.camera.render_y
         self.world.stage.draw(self.assets, camera_x, camera_y, elapsed=self.world.elapsed)
         player = self.world.player
-        sprites = [(enemy.depth, enemy, config.ENEMY_IMAGE) for enemy in self.world.enemies]
-        sprites.append((0.0, player, player.sprite_image))
-        for depth, actor, image in sorted(sprites, key=lambda entry: entry[0], reverse=True):
+        sprites = [(enemy.ground_y, enemy, config.ENEMY_IMAGE) for enemy in self.world.enemies]
+        sprites.append((player.ground_y, player, player.sprite_image))
+        for _, actor, image in sorted(sprites, key=lambda entry: entry[0], reverse=True):
             self.assets.draw_sprite(image, actor.animation.row, actor.animation.frame,
-                                    actor.x - camera_x, actor.y + depth - camera_y, actor.facing)
+                                    actor.x - camera_x, actor.y - camera_y, actor.facing)
         for effect in self.world.effects:
             self.assets.draw_hit_effect(effect, camera_x, camera_y)
         self.ui.draw_enemy_health(self.assets, self.world, camera_x, camera_y)

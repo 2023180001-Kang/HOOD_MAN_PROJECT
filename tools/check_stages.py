@@ -174,7 +174,7 @@ def check_round_trip_and_last_exit(game):
     push_key(pico2d.SDLK_LSHIFT)
     tick(game, 30)
     assert game.world.stage_index == 1
-    assert player.x == config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH
+    assert player.x == config.WORLD_WIDTH - config.PLAYER_BOUNDARY_PADDING
     capture(game, "stage_2_next_pending")
     push_key(pico2d.SDLK_F5)
     tick(game)

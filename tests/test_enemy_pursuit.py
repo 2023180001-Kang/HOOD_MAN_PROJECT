@@ -1,6 +1,7 @@
 import unittest
 
 import config
+from collision import bodies_overlap
 from enemy import Enemy
 from tests.helpers import advance, tap
 from world import World
@@ -92,7 +93,7 @@ class EnemyPursuitTests(unittest.TestCase):
             world.step(config.FIXED_DT)
             if not states or states[-1] != enemy.state:
                 states.append(enemy.state)
-            self.assertFalse(world.player.body.overlaps(enemy.body))
+            self.assertFalse(bodies_overlap(world.player, enemy))
         self.assertEqual(states[:3], ["RUN", "WALK", "ATTACK"])
         self.assertEqual(world.player.hp, 480)
 

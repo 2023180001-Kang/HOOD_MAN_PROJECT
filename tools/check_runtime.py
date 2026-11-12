@@ -1,6 +1,7 @@
 """Exercise real SDL input, HP pixels, resource reuse, performance and quit."""
 
 import ctypes
+from math import hypot
 from pathlib import Path
 import random
 import sys
@@ -15,6 +16,7 @@ from sdl2 import SDL_Event, SDL_PushEvent
 from sdl2 import SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST
 
 import config
+from collision import bodies_overlap
 from combat import MOVES
 from enemy import Enemy
 from game import Game
@@ -117,7 +119,7 @@ def check_numeric_spawns(game):
             tick(game)
             assert len(game.world.enemies) == count
             assert all(enemy.spawned_at == config.FIXED_DT for enemy in game.world.enemies)
-            edge_limit = config.ENEMY_HALF_WIDTH + max(config.ENEMY_RUN_SPEEDS) / 60 + 1e-6
+            edge_limit = config.ENEMY_BOUNDARY_PADDING + max(config.ENEMY_RUN_SPEEDS) / 60 + 1e-6
             assert all(enemy.x <= edge_limit or enemy.x >= config.WORLD_WIDTH - edge_limit
                        for enemy in game.world.enemies)
             push_key(key, repeat=True)
@@ -421,7 +423,7 @@ def check_crowd_escape(game):
             for frame in range(120):
                 tick(game)
                 assert game.world.player.hp == 500
-                assert all(not game.world.player.body.overlaps(enemy.body)
+                assert all(not bodies_overlap(game.world.player, enemy)
                            for enemy in game.world.enemies)
                 assert game.world.player.y + config.PLAYER_HEIGHT < config.SCREEN_HEIGHT
                 if frame == 20:
@@ -489,6 +491,7 @@ def check_enemy_run_chase(game):
     assert [enemy.run_speed for enemy in old_enemies] == list(config.ENEMY_RUN_SPEEDS)
     for enemy in old_enemies:
         enemy.x = config.START_X - config.ENEMY_RUN_STOP_DISTANCE
+        enemy.ground_y = game.world.player.ground_y
     tick(game)
     assert all(enemy.state == "WALK" for enemy in old_enemies)
     for key in (pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
@@ -500,7 +503,8 @@ def check_enemy_run_chase(game):
     push_key(pico2d.SDLK_SPACE)
     tick(game, 42)
     assert all(enemy.state == "RUN" and enemy.animation.row == 3 for enemy in old_enemies)
-    assert [enemy.vx for enemy in old_enemies] == list(config.ENEMY_RUN_SPEEDS)
+    assert all(abs(hypot(enemy.vx, enemy.ground_vy) - speed) < 1e-8
+               for enemy, speed in zip(old_enemies, config.ENEMY_RUN_SPEEDS))
     assert len({enemy.x for enemy in old_enemies}) == 4
     capture(game, "enemy_run_chase")
     for key in (pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):

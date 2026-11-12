@@ -15,7 +15,10 @@ SPRITE_SCALE = 0.75
 START_X = WORLD_WIDTH / 2
 MAX_HP = 500
 PLAYER_HALF_WIDTH = 29.0
+PLAYER_BOUNDARY_PADDING = 68.0
 PLAYER_HEIGHT = 146.0
+BODY_DEPTH_TOLERANCE = 12.0
+ATTACK_DEPTH_TOLERANCE = 32.0
 WALK_SPEED = 300.0
 RUN_SPEED = 720.0
 ACCELERATION = 2400.0
@@ -25,6 +28,7 @@ JUMP_SPEED = 650.0
 DOUBLE_JUMP_SPEED = 850.0
 RUN_DOUBLE_JUMP_SPEED = 1000.0
 ENEMY_HALF_WIDTH = 32.0
+ENEMY_BOUNDARY_PADDING = 88.0  # Occupied sprite envelope reaches 86.25px from the feet.
 ENEMY_HEIGHT = 145.0
 ENEMY_MAX_HP = 200
 ENEMY_HP_BAR_WIDTH = 48
@@ -49,8 +53,6 @@ ENEMY_FORMATION_LANES = 4
 ENEMY_SPACING_MARGIN = 4.0
 ENEMY_SPACING_TOLERANCE = 1.0
 ENEMY_DEPTH_STEP = 32.0
-ENEMY_DEPTH_LIMIT = 64.0
-ENEMY_DEPTH_SPEED = 64.0
 ENEMY_ATTACK_SEPARATION_SPEED = 18.0
 ENEMY_ATTACK_SEPARATION_SLOP = 8.0
 ENEMY_SEPARATION_RATE = 10.0
@@ -98,6 +100,13 @@ STAGE_ENTRY_MARGIN = 128.0
 STAGE_SCALE = 1.0
 # Walking line measured upward from the source image's bottom edge (941 - 797).
 STAGE_GROUND_Y = 144.0
+# World-space foot regions, below the buildings/props and above the foreground.
+# Optional convex polygons override a stage's rectangle (counterclockwise vertices).
+STAGE_WALKABLE_BOUNDS = (
+    (0.0, 56.0, WORLD_WIDTH, 148.0),
+    (0.0, 56.0, WORLD_WIDTH, 116.0),
+)
+STAGE_WALKABLE_POLYGONS = {}
 
 # State: (one-based source row, frames per second, loop).
 PLAYER_ANIMATIONS = {

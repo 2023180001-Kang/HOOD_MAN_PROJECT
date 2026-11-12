@@ -1,12 +1,12 @@
-"""Stable, side-local attack slots and soft projected crowd separation."""
+"""Persistent, side-local 2D melee slots with bounded ground-plane separation."""
 
 from functools import lru_cache
 import json
-from math import exp
+from math import exp, hypot
 
 import config
 from combat import MOVES
-from physics import approach, clamp
+from physics import clamp
 
 
 @lru_cache(maxsize=1)
@@ -35,23 +35,25 @@ def slot_cell(slot, columns=2):
     return lane, column
 
 
-def prepare_enemy_spacing(player, enemies):
+def prepare_enemy_spacing(player, enemies, walkable=None):
     """Assign persistent slots from a snapshot before any enemy moves."""
+    walkable = player.walkable if walkable is None else walkable
     groups = {-1: [], 1: []}
     for enemy in enemies:
         enemy.target_x = None
-        enemy.target_depth = 0.0
+        enemy.target_ground_y = None
         if not player.alive or not enemy.alive or enemy.knockback_started:
             enemy.formation_slot = None
             continue
         difference = enemy.x - player.x
+        distance = hypot(difference, enemy.ground_y - player.ground_y)
         side = (1 if difference > 0 else -1) if difference else -enemy.facing
         limit = (config.ENEMY_FORMATION_RELEASE_DISTANCE if enemy.formation_slot is not None
                  else config.ENEMY_FORMATION_DISTANCE)
-        if side != enemy.formation_side or abs(difference) > limit:
+        if side != enemy.formation_side or distance > limit:
             enemy.formation_slot = None
         enemy.formation_side = side
-        if abs(difference) <= limit:
+        if distance <= limit:
             groups[side].append(enemy)
 
     left, right = sprite_extents()
@@ -62,18 +64,24 @@ def prepare_enemy_spacing(player, enemies):
     reach = min(config.ENEMY_ATTACK_REACH + config.PLAYER_HALF_WIDTH,
                 min(move.reach for move in MOVES.values()) + config.ENEMY_HALF_WIDTH)
     reach -= config.ENEMY_SPACING_MARGIN
+    floor = walkable.inset(config.ENEMY_BOUNDARY_PADDING)
+    band = max(0.0, config.ATTACK_DEPTH_TOLERANCE - config.ENEMY_SPACING_MARGIN)
+    bottom = max(min(y for _, y in floor), player.ground_y - band)
+    top = min(max(y for _, y in floor), player.ground_y + band)
     for side, group in groups.items():
-        room = (player.x - config.ENEMY_HALF_WIDTH if side < 0 else
-                config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH - player.x)
+        _, center_y = walkable.project(player.x, player.ground_y, config.ENEMY_BOUNDARY_PADDING)
+        limits = walkable.x_limits(center_y, config.ENEMY_BOUNDARY_PADDING)
+        room = player.x - limits[0] if side < 0 else limits[1] - player.x
         far = min(reach, room)
-        if len(group) < 2 or far < body_gap:
+        if len(group) < 2 or far < body_gap or bottom > top:
             for enemy in group:
                 enemy.formation_slot = None
             continue
         used = {enemy.formation_slot for enemy in group if enemy.formation_slot is not None}
         # Existing assignments survive overtaking, animation changes and deaths.
         # Stable sorting breaks exact-coordinate ties in spawn/list order.
-        for enemy in sorted(group, key=lambda actor: abs(actor.x - player.x)):
+        for enemy in sorted(group, key=lambda actor: hypot(actor.x - player.x,
+                                                         actor.ground_y - player.ground_y)):
             if enemy.formation_slot is None:
                 slot = 0
                 while slot in used:
@@ -83,26 +91,29 @@ def prepare_enemy_spacing(player, enemies):
         near = min(body_gap + config.ENEMY_SPACING_MARGIN, far)
         columns = 2 if far - near >= desired_gap * 0.3 else 1
         maximum_lane = max(slot_cell(slot, columns)[0] for slot in used)
-        levels = max(1, (maximum_lane + 1) // 2)
-        depth_step = min(config.ENEMY_DEPTH_STEP, config.ENEMY_DEPTH_LIMIT / levels)
-        # Full sprite width cannot fit twice in the melee strip. Depth lanes
-        # allow controlled silhouette overlap without extending attack reach.
+        offsets = [((lane + 1) // 2) * (1 if lane % 2 else -1)
+                   for lane in range(maximum_lane + 1)]
+        low, high = min(offsets), max(offsets)
+        depth_step = min(config.ENEMY_DEPTH_STEP, (top - bottom) / max(1, high - low))
+        origin = clamp(player.ground_y, bottom - low * depth_step, top - high * depth_step)
+        # Compress inside both the walkable floor and the real melee depth band.
+        # A crowded wall never pushes targets outside, even with many enemies.
         gap = min(desired_gap, far - near)
         for enemy in group:
             lane, column = slot_cell(enemy.formation_slot, columns)
-            level = (lane + 1) // 2
-            enemy.target_depth = level * depth_step * (1 if lane % 2 else -1)
-            enemy.target_x = player.x + side * (near + column * gap)
+            ground_y = origin + offsets[lane] * depth_step
+            target_x, target_y = walkable.project(player.x + side * (near + column * gap),
+                                                  ground_y, config.ENEMY_BOUNDARY_PADDING)
+            if (target_x - player.x) * side >= 0:
+                enemy.target_ground_y = target_y
+                enemy.target_x = target_x
 
 
-def resolve_enemy_spacing(player, enemies, dt):
-    """Ease depth and relieve severe attack overlap; never project/teleport x."""
-    if not player.alive:
-        return
-    active = [enemy for enemy in enemies if enemy.alive and not enemy.knockback_started]
-    for enemy in active:
-        enemy.depth = approach(enemy.depth, enemy.target_depth, config.ENEMY_DEPTH_SPEED * dt)
-
+def resolve_enemy_spacing(player, enemies, dt, walkable=None):
+    """Ease severe overlap on the floor, then constrain every state and path."""
+    walkable = player.walkable if walkable is None else walkable
+    active = [enemy for enemy in enemies
+              if player.alive and enemy.alive and not enemy.knockback_started]
     left, right = sprite_extents()
     width = right - left + config.ENEMY_SPACING_MARGIN
     crowded = set()
@@ -116,8 +127,10 @@ def resolve_enemy_spacing(player, enemies, dt):
             if gap <= config.ENEMY_SPACING_TOLERANCE:
                 gap = min(width, config.ENEMY_ATTACK_REACH - config.ENEMY_HALF_WIDTH
                           - 2 * config.ENEMY_SPACING_MARGIN)
+            depth_gap = abs(first.target_ground_y - second.target_ground_y)
+            depth_gap = max(config.BODY_DEPTH_TOLERANCE, depth_gap)
             if (abs(first.x - second.x) < gap - config.ENEMY_ATTACK_SEPARATION_SLOP
-                    and abs(first.depth - second.depth) < config.ENEMY_DEPTH_STEP * 0.75):
+                    and abs(first.ground_y - second.ground_y) < depth_gap * 0.75):
                 crowded.update((first, second))
 
     damping = 1 - exp(-config.ENEMY_SEPARATION_RATE * dt)
@@ -126,16 +139,21 @@ def resolve_enemy_spacing(player, enemies, dt):
         # HIT and knockback keep their movement rules; only ATTACK needs relief.
         if enemy.state != "ATTACK":
             continue
-        error = enemy.target_x - enemy.x
+        error_x = (enemy.target_x - enemy.x) * damping
+        error_y = (enemy.target_ground_y - enemy.ground_y) * damping
         maximum = config.ENEMY_ATTACK_SEPARATION_SPEED * dt
-        correction = clamp(error * damping, -maximum, maximum)
+        length = hypot(error_x, error_y)
+        if length > maximum:
+            error_x, error_y = error_x / length * maximum, error_y / length * maximum
         side = enemy.formation_side
         # A moving/jumping player may pass an attacker. Do not pull that enemy
         # across the player, or move farther than the remaining map space.
         distance = (enemy.x - player.x) * side
         minimum = config.PLAYER_HALF_WIDTH + config.ENEMY_HALF_WIDTH
-        if side * correction < 0:
-            correction = side * max(side * correction, min(0.0, minimum - distance))
-        proposed = enemy.x + correction
-        if config.ENEMY_HALF_WIDTH <= proposed <= config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH:
-            enemy.x = proposed
+        if (side * error_x < 0
+                and abs(enemy.ground_y - player.ground_y) < config.BODY_DEPTH_TOLERANCE):
+            error_x = side * max(side * error_x, min(0.0, minimum - distance))
+        enemy.x += error_x
+        enemy.ground_y += error_y
+    for enemy in enemies:
+        walkable.constrain(enemy, config.ENEMY_HALF_WIDTH)

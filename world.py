@@ -71,6 +71,7 @@ class World:
         self.elapsed += dt
         if self.controls.take_press("stage_exits") and self.player.alive:
             self.stage.arrows_visible = True
+        self.stage.constrain_actor(self.player)
         self.try_stage_transition()
         for effect in self.effects:
             effect.update(dt)
@@ -81,14 +82,16 @@ class World:
         for count in config.SPAWN_COUNTS:
             if self.controls.take_press(f"spawn_{count}") and self.player.alive:
                 self.enemies.extend(self.spawner.spawn(count, self.elapsed))
-        self.player.update(dt, self.controls)
-        self.handle_death()
-        prepare_enemy_spacing(self.player, self.enemies)
         for enemy in self.enemies:
-            enemy.update(dt, self.player)
+            self.stage.constrain_actor(enemy)
+        self.player.update(dt, self.controls, self.stage.walkable)
+        self.handle_death()
+        prepare_enemy_spacing(self.player, self.enemies, self.stage.walkable)
+        for enemy in self.enemies:
+            enemy.update(dt, self.player, self.stage.walkable)
         if self.player.alive:
-            resolve_bodies(self.player, self.enemies)
-            resolve_enemy_spacing(self.player, self.enemies, dt)
+            resolve_bodies(self.player, self.enemies, self.stage.walkable)
+            resolve_enemy_spacing(self.player, self.enemies, dt, self.stage.walkable)
             player_box = self.player.attack_box
             if player_box is not None:
                 for enemy in self.enemies:
@@ -96,20 +99,24 @@ class World:
                     if self.player.try_hit(enemy):
                         self.damage_numbers.append(
                             DamageNumber.above_body(enemy.body, previous_hp - enemy.hp,
-                                                    depth=enemy.depth))
+                                                     depth=enemy.ground_y - config.GROUND_Y))
                         self.effects.append(HitEffect.at_contact(player_box, enemy.body,
                                                                  self.player.facing,
-                                                                 depth=enemy.depth))
+                                                                  depth=enemy.ground_y - config.GROUND_Y))
                         self.camera.shake()
             for enemy in self.enemies:
                 enemy_box = enemy.attack_box
                 if enemy_box is not None and enemy.try_hit(self.player):
                     self.effects.append(HitEffect.at_contact(enemy_box, self.player.body,
-                                                             enemy.facing))
+                                                             enemy.facing,
+                                                             depth=self.player.ground_y - config.GROUND_Y))
                     self.camera.shake()
                     if not self.player.alive:
                         self.handle_death()
                         break
+        self.stage.constrain_actor(self.player)
+        for enemy in self.enemies:
+            self.stage.constrain_actor(enemy)
         self.camera.update(dt, self.player.x)
 
     def try_stage_transition(self):
@@ -131,6 +138,9 @@ class World:
             player.x = (config.STAGE_ENTRY_MARGIN if side > 0 else
                         config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
             player.previous_x = player.x
+            self.stage.constrain_actor(player)
+            player.previous_x = player.x
+            player.previous_ground_y = player.ground_y
             self.camera = Camera(player.x)
             return True
         return False
@@ -142,8 +152,9 @@ class World:
                 if not enemy.alive:
                     continue
                 dx = enemy.x - self.player.x
-                dy = enemy.y - self.player.y
-                if dx * dx + dy * dy <= config.KNOCKBACK_RADIUS ** 2:
-                    enemy.knockback(self.player.x)
+                dy = enemy.ground_y - self.player.ground_y
+                height = enemy.jump_height - self.player.jump_height
+                if dx * dx + dy * dy + height * height <= config.KNOCKBACK_RADIUS ** 2:
+                    enemy.knockback(self.player.x, self.player.ground_y)
                 else:
                     enemy.stop()

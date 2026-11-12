@@ -171,13 +171,24 @@ def check_player_action_inputs(game):
         player = game.world.player
         key = getattr(pico2d, f"SDLK_{move.key}")
         push_key(key)
-        tick(game, 10)
+        tick(game, 9)
+        if move.key in "df":
+            assert player.attack_box is None
+        tick(game, 3)
         assert game.world.player is player
         assert player.active_move == move and player.animation.row == move.row
         assert player.sprite_image == config.COMBAT_IMAGE
+        assert player.attack_box is not None
         capture(game, f"player_move_{move.key}")
         push_key(key, repeat=True)
-        tick(game, 35)
+        tick(game, 8)
+        if move.key in "df":
+            assert player.active_move == move
+            tick(game, 6)
+            assert player.active_move == move
+            tick(game)
+        assert player.state == "IDLE" and player.active_move is None
+        tick(game, 30)
         assert player.state == "IDLE" and player.active_move is None
         push_key(key, down=False)
         tick(game)
@@ -189,8 +200,62 @@ def check_player_action_inputs(game):
         assert game.world.player.state == "IDLE" and game.world.player.active_move is None
         push_key(getattr(pico2d, f"SDLK_{key_name}"), down=False)
         game.handle_events()
-    print("PASS: SDL A/S/D/F use source rows 3/4/1/2 at 24 FPS; "
+    print("PASS: SDL A/S punches finish in 0.333s at 24 FPS; "
+          "D/F kicks remain active at 0.433s and finish by 0.450s at 18 FPS; "
           "retired Q/W/E/R/H inputs have no action.")
+
+
+def check_player_attack_switches(game):
+    for first in "asdf":
+        for second in "asdf":
+            if first == second:
+                continue
+            keys = [getattr(pico2d, f"SDLK_{letter}") for letter in (first, second)]
+            game.world = World()
+            push_key(keys[0])
+            tick(game)
+            push_key(keys[1])
+            tick(game)
+            player = game.world.player
+            assert player.state == f"ATTACK_{second.upper()}" and player.animation.frame == 0
+            push_key(keys[0], repeat=True)
+            tick(game)
+            assert player.state == f"ATTACK_{second.upper()}"
+            for sequence in ((keys[0], keys[1]), (keys[0], keys[1], keys[0])):
+                game.world = World()
+                for key in sequence:
+                    push_key(key, down=False)
+                    push_key(key)
+                tick(game)
+                expected = second if len(sequence) == 2 else first
+                assert game.world.player.state == f"ATTACK_{expected.upper()}"
+                assert not game.world.controls.pressed
+            for key in keys:
+                push_key(key, down=False)
+            game.handle_events()
+
+    game.world = World()
+    enemy = Enemy(config.START_X + 80, -1)
+    enemy.cooldown = 100
+    game.world.enemies = [enemy]
+    push_key(pico2d.SDLK_a)
+    tick(game, 6)
+    for previous, key_name, hp in (("a", "s", 170), ("s", "d", 130), ("d", "f", 80)):
+        push_key(getattr(pico2d, f"SDLK_{key_name}"))
+        tick(game)
+        assert game.world.player.state == f"ATTACK_{key_name.upper()}"
+        assert game.world.player.animation.frame == 0
+        tick(game, 11)
+        assert enemy.hp == hp
+        capture(game, f"attack_switch_{previous}_to_{key_name}")
+    tick(game, 40)
+    assert game.world.player.state == "IDLE" and enemy.hp == 80
+    for key_name in "asdf":
+        push_key(getattr(pico2d, f"SDLK_{key_name}"), down=False)
+    game.handle_events()
+    print("PASS: SDL all 12 attack switches respond on the next tick; "
+          "same-tick inputs select the latest fresh press, including release/repress; "
+          "A windup cancels into S/D/F with HP 200->170->130->80 and no held-key loops.")
 
 
 def check_player_damage_and_enemy_health(game):
@@ -593,6 +658,7 @@ def main():
         check_movement_tuning(game)
         check_numeric_spawns(game)
         check_player_action_inputs(game)
+        check_player_attack_switches(game)
         check_player_damage_and_enemy_health(game)
         check_received_damage_and_blood(game)
         check_jump_range(game)

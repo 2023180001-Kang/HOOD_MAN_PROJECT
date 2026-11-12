@@ -1,4 +1,4 @@
-"""ASDF basic attack rows, damage and reach, independent of graphics."""
+"""ASDF basic attack rows, damage, reach and speed, independent of graphics."""
 
 from dataclasses import dataclass
 
@@ -13,6 +13,7 @@ class Move:
     damage: int
     reach: float
     height: float
+    fps: float
 
     @property
     def state(self):
@@ -20,6 +21,6 @@ class Move:
 
 
 MOVES = {
-    f"combat_{key}": Move(key, name, row, damage, reach, height)
-    for key, name, row, damage, reach, height in config.COMBAT_MOVE_SPECS
+    f"combat_{key}": Move(key, name, row, damage, reach, height, fps)
+    for key, name, row, damage, reach, height, fps in config.COMBAT_MOVE_SPECS
 }

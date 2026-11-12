@@ -63,7 +63,7 @@ class EnemyTests(unittest.TestCase):
         world.update(1 / 60)
         self.assertEqual(len(world.enemies), 7)
         self.assertEqual(world.spawner.spawned_count, 7)
-        self.assertEqual(world.controls.pressed, set())
+        self.assertFalse(world.controls.pressed)
 
     def test_numeric_spawns_work_while_attacking_or_hit(self):
         for action in (None, "combat_a", "hit"):

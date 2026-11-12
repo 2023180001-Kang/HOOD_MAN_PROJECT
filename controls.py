@@ -4,11 +4,12 @@
 class Controls:
     def __init__(self):
         self.held = set()
-        self.pressed = set()
+        self.pressed = {}  # Insertion order preserves the latest fresh input.
 
     def press(self, key):
         if key not in self.held:
-            self.pressed.add(key)
+            self.pressed.pop(key, None)
+            self.pressed[key] = None
         self.held.add(key)
 
     def release(self, key):
@@ -16,14 +17,16 @@ class Controls:
 
     def take_press(self, key):
         if key in self.pressed:
-            self.pressed.remove(key)
+            del self.pressed[key]
             return True
         return False
 
-    def take_first_press(self, keys):
+    def take_latest_press(self, keys):
+        """Consume matching presses and select the newest, without buffering."""
         selected = None
-        for key in keys:
-            if self.take_press(key) and selected is None:
+        for key in tuple(self.pressed):
+            if key in keys:
+                del self.pressed[key]
                 selected = key
         return selected
 

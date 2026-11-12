@@ -21,7 +21,7 @@ class Player:
         self.active_move = None
         self.hit_enemies = set()
         definitions = dict(config.PLAYER_ANIMATIONS)
-        definitions.update({move.state: (move.row, config.COMBAT_FPS, False)
+        definitions.update({move.state: (move.row, move.fps, False)
                             for move in MOVES.values()})
         self.animation = Animation(definitions)
 
@@ -101,7 +101,7 @@ class Player:
         if controls.take_press("invincibility") and self.alive:
             self.invincible = not self.invincible
         jump_pressed = controls.take_press("jump")
-        combat_pressed = controls.take_first_press(MOVES)
+        combat_pressed = controls.take_latest_press(MOVES)
         if self.state in ("HIT", "DYING", "DEAD"):
             self.vx = 0.0
             self.update_vertical(dt)
@@ -116,8 +116,10 @@ class Player:
                     self.animation.set_state("IDLE")
             return
 
-        if self.active_move is None and combat_pressed is not None:
-            self.start_move(MOVES[combat_pressed], controls.direction)
+        if combat_pressed is not None:
+            move = MOVES[combat_pressed]
+            if move != self.active_move:
+                self.start_move(move, controls.direction)
         if self.active_move is not None:
             self.vx = 0.0
             self.update_vertical(dt)

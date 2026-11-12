@@ -38,6 +38,37 @@ class PlayerDamageTests(unittest.TestCase):
         advance(world, 0.5)
         self.assertEqual((first.hp, second.hp), (160, 160))
 
+    def test_switch_before_hit_cancels_the_previous_attack_damage(self):
+        world = World()
+        enemy = target(world)
+        world.controls.press("combat_a")
+        advance(world, 0.1)
+        world.controls.press("combat_s")
+        world.update(config.FIXED_DT)
+        self.assertEqual(world.player.state, "ATTACK_S")
+        advance(world, 0.1)
+        self.assertEqual(enemy.hp, 200)
+        advance(world, 0.1)
+        self.assertEqual(enemy.hp, 170)
+        self.assertEqual([number.damage for number in world.damage_numbers], [30])
+        advance(world, 0.5)
+        self.assertEqual(enemy.hp, 170)
+
+    def test_switch_after_hit_allows_new_damage_once_on_the_same_targets(self):
+        world = World()
+        enemies = (target(world, 80), target(world, 100))
+        world.controls.press("combat_a")
+        advance(world, 0.2)
+        self.assertEqual([enemy.hp for enemy in enemies], [180, 180])
+        world.controls.press("combat_s")
+        world.update(config.FIXED_DT)
+        self.assertEqual([enemy.hp for enemy in enemies], [180, 180])
+        advance(world, 0.2)
+        self.assertEqual([enemy.hp for enemy in enemies], [150, 150])
+        self.assertEqual([number.damage for number in world.damage_numbers], [20, 20, 30, 30])
+        advance(world, 0.3)
+        self.assertEqual([enemy.hp for enemy in enemies], [150, 150])
+
     def test_retired_h_does_not_lock_movement_or_prevent_damage(self):
         world = World()
         world.controls.press("combat_h")

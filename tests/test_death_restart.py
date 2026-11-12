@@ -183,7 +183,7 @@ class DeathRestartTests(unittest.TestCase):
                 self.assertEqual(world.camera.shake_remaining, 0)
                 self.assertEqual(world.camera.render_y, 0)
                 self.assertEqual(world.controls.held, {"restart"})
-                self.assertEqual(world.controls.pressed, set())
+                self.assertFalse(world.controls.pressed)
                 self.assertFalse(world.death_handled)
                 world.controls.press("spawn_1")
                 world.update(1 / 60)

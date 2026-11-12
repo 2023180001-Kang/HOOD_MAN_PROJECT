@@ -57,6 +57,7 @@ SPAWN_COUNTS = tuple(range(1, 10))
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 COMBAT_IMAGE = "HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png"
 COMBAT_FPS = 24.0
+COMBAT_KICK_FPS = 18.0
 PLAYER_ACTIVE_FRAMES = (3, 4)
 BLOOD_IMAGE = "Hood_man_blood_hit_effect_4x2.png"
 HIT_EFFECT_FPS = 20.0
@@ -65,12 +66,12 @@ HIT_EFFECT_ROWS = 2
 HIT_EFFECT_SCALE = 0.5
 HIT_EFFECT_ANCHOR_X = 80.0
 HIT_EFFECT_ANCHOR_Y = 128.0
-# Key, name, one-based source row, damage, horizontal reach, attack height.
+# Key, name, one-based source row, damage, horizontal reach, attack height, FPS.
 COMBAT_MOVE_SPECS = (
-    ("a", "왼손 잽", 3, 20, 95.0, 146.0),
-    ("s", "오른손 스트레이트", 4, 30, 105.0, 146.0),
-    ("d", "왼발 차기", 1, 40, 115.0, 146.0),
-    ("f", "오른발 차기", 2, 50, 130.0, 146.0),
+    ("a", "왼손 잽", 3, 20, 95.0, 146.0, COMBAT_FPS),
+    ("s", "오른손 스트레이트", 4, 30, 105.0, 146.0, COMBAT_FPS),
+    ("d", "왼발 차기", 1, 40, 115.0, 146.0, COMBAT_KICK_FPS),
+    ("f", "오른발 차기", 2, 50, 130.0, 146.0, COMBAT_KICK_FPS),
 )
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 HP_IMAGE = "HoodMan_HP_pico2d.png"

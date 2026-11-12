@@ -8,6 +8,28 @@ from world import World
 
 
 class CombatIntegrationTests(unittest.TestCase):
+    def test_rapid_attack_switches_have_the_same_result_at_different_render_rates(self):
+        outcomes = []
+        script = (("a", 0.05), ("s", 0.2), ("d", 0.2), ("f", 0.2), ("a", 0.2))
+        for fps in (30, 60, 120, 144):
+            world = World()
+            enemy = Enemy(config.START_X + 80, -1)
+            enemy.cooldown = 100
+            world.enemies = [enemy]
+            health = []
+            for key, duration in script:
+                tap(world.controls, f"combat_{key}")
+                remaining = duration
+                while remaining > 1e-12:
+                    dt = min(1 / fps, remaining)
+                    world.update(dt)
+                    remaining -= dt
+                self.assertEqual(world.player.state, f"ATTACK_{key.upper()}")
+                health.append(enemy.hp)
+            self.assertEqual(health, [200, 170, 130, 80, 60])
+            outcomes.append((world.player.state, world.player.animation.elapsed, health))
+        self.assertTrue(all(outcome == outcomes[0] for outcome in outcomes))
+
     def test_scripted_two_sided_combat_is_independent_of_render_frame_rate(self):
         outcomes = []
         script = (

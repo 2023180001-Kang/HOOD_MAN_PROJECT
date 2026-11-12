@@ -106,7 +106,8 @@ class InvincibilityTests(unittest.TestCase):
         self.assertEqual(world.stage_index, 0)
         self.assertFalse(world.player.invincible)
         self.assertEqual(world.player.hp, 500)
-        self.assertNotIn("invincibility", world.controls.held | world.controls.pressed)
+        self.assertNotIn("invincibility", world.controls.held)
+        self.assertNotIn("invincibility", world.controls.pressed)
 
     def test_p_is_consumed_during_death_without_reviving_the_player(self):
         world = World()

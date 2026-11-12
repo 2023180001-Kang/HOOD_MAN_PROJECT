@@ -68,6 +68,8 @@ class UI:
             self.draw_attack_help(assets)
             assets.font.draw(x + image.w * scale + 16, y + 56,
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
+            if world.player.invincible:
+                assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
             assets.font.draw(22, 48,
                              f"H 유지: 정면 방어 (피해 0)   적 공격 피해: {config.ENEMY_DAMAGE}",
                              (205, 218, 231))
@@ -75,7 +77,9 @@ class UI:
             assets.font.draw(22, 25,
                              "← → 이동   Shift 달리기   Space 이단 점프   F5 다시 시작",
                              (205, 218, 231))
-            assets.font.draw(740, 25, "N 스테이지 이동 화살표 표시", (205, 218, 231))
+            mode = "ON" if world.player.invincible else "OFF"
+            assets.font.draw(740, 25, f"N 스테이지 이동 화살표 표시   P 무적 전환: {mode}",
+                             (205, 218, 231))
             if world.player.state in ("DYING", "DEAD"):
                 center = config.SCREEN_WIDTH / 2
                 pico2d.draw_rectangle(center - 240, 322, center + 240, 400,

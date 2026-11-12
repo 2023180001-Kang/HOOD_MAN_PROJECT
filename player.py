@@ -1,5 +1,7 @@
 """Player state, movement and animation; graphics stay in the renderer."""
 
+from math import sin, tau
+
 import config
 from animation import Animation
 from collision import Rect
@@ -17,7 +19,9 @@ class Player:
         self.jump_count = 0
         self.facing = 1
         self.hp = config.MAX_HP
+        self.invincible = False
         self.active_move = None
+        self.block_elapsed = 0.0
         self.hit_enemies = set()
         definitions = dict(config.PLAYER_ANIMATIONS)
         definitions.update({move.state: (move.row, config.BLOCK_FPS if move.blocking
@@ -42,12 +46,23 @@ class Player:
     def sprite_image(self):
         return config.COMBAT_IMAGE if self.active_move is not None else config.PLAYER_IMAGE
 
+    @property
+    def sprite_offset_x(self):
+        """Subtle held-guard sway, applied only to the drawn sprite."""
+        if not self.blocking:
+            return 0.0
+        elapsed = max(0.0, self.block_elapsed - config.BLOCK_HOLD_FRAME / config.BLOCK_FPS)
+        return (sin(tau * elapsed / config.BLOCK_SWAY_PERIOD)
+                * config.BLOCK_SWAY_AMPLITUDE * self.facing)
+
     def cancel_combat(self):
         self.active_move = None
+        self.block_elapsed = 0.0
         self.hit_enemies.clear()
 
     def start_move(self, move, direction):
         self.active_move = move
+        self.block_elapsed = 0.0
         self.hit_enemies.clear()
         self.vx = 0.0
         if direction:
@@ -82,7 +97,7 @@ class Player:
         return enemy.take_damage(self.active_move.damage)
 
     def take_damage(self, damage, *, source_x=None):
-        if not self.alive:
+        if not self.alive or self.invincible:
             return False
         if (self.blocking and source_x is not None
                 and (source_x - self.x) * self.facing >= 0):
@@ -108,6 +123,8 @@ class Player:
 
     def update(self, dt, controls):
         self.previous_x = self.x
+        if controls.take_press("invincibility") and self.alive:
+            self.invincible = not self.invincible
         jump_pressed = controls.take_press("jump")
         combat_pressed = controls.take_first_press(MOVES)
         if self.state in ("HIT", "DYING", "DEAD"):
@@ -135,6 +152,7 @@ class Player:
                 self.start_move(MOVES[combat_pressed], controls.direction)
         if self.active_move is not None:
             if self.blocking:
+                self.block_elapsed += dt
                 proposed = self.x + self.vx * dt
                 self.x = clamp(proposed, config.PLAYER_HALF_WIDTH,
                                config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)

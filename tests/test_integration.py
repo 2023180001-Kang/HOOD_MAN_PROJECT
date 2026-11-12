@@ -86,7 +86,8 @@ class IntegrationTests(unittest.TestCase):
     def test_generated_clips_stay_inside_original_sprite_sheets(self):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             metadata = json.load(file)
-        row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.COMBAT_IMAGE: 9}
+        row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6,
+                      config.COMBAT_IMAGE: 4, config.BLOCK_IMAGE: 1}
         self.assertEqual(set(metadata), set(row_counts))
         for name, rows in metadata.items():
             self.assertTrue((config.ROOT / name).is_file())
@@ -101,6 +102,17 @@ class IntegrationTests(unittest.TestCase):
                     self.assertLessEqual(left + width, (col_index + 1) * 256)
                     self.assertGreaterEqual(bottom, (row_counts[name] - 1 - row_index) * 256)
                     self.assertLessEqual(bottom + height, (row_counts[name] - row_index) * 256)
+
+    def test_guard_sheet_preserves_the_archived_ninth_row_pixels(self):
+        from PIL import Image
+
+        name = "HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png"
+        self.assertFalse((config.ROOT / name).exists())
+        with Image.open(config.ROOT / "before_sheets" / name) as archive:
+            with Image.open(config.ROOT / config.BLOCK_IMAGE) as guard:
+                self.assertEqual(guard.size, (2048, 256))
+                self.assertEqual(guard.mode, archive.mode)
+                self.assertEqual(guard.tobytes(), archive.crop((0, 2048, 2048, 2304)).tobytes())
 
 
 if __name__ == "__main__":

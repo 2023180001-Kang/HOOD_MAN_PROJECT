@@ -220,7 +220,7 @@ class BlockingEffectTests(unittest.TestCase):
             enemy.cooldown = 100
             world.enemies = [enemy]
             world.controls.press("left" if facing < 0 else "right")
-            world.controls.press("combat_q")
+            world.controls.press("combat_a")
             advance(world, 0.3)
             self.assertEqual(enemy.hp, 180)
             self.assertEqual(len(world.effects), 1)
@@ -264,7 +264,7 @@ class BlockingEffectTests(unittest.TestCase):
         victim.cooldown = 100
         world.enemies = [victim]
         striker(world, -1)
-        world.player.start_move(MOVES["combat_q"], 1)
+        world.player.start_move(MOVES["combat_a"], 1)
         world.player.animation.elapsed = 3 / config.COMBAT_FPS
         world.step(config.FIXED_DT)
         self.assertEqual((victim.hp, world.player.hp), (180, 480))
@@ -279,7 +279,7 @@ class BlockingEffectTests(unittest.TestCase):
             if defeated:
                 enemy.take_damage(200)
             world.enemies = [enemy]
-            world.controls.press("combat_q")
+            world.controls.press("combat_a")
             advance(world, 0.3)
             self.assertEqual(world.effects, [])
             self.assertEqual(world.camera.shake_remaining, 0)
@@ -289,7 +289,7 @@ class BlockingEffectTests(unittest.TestCase):
         enemy = Enemy(config.START_X + 80, -1)
         enemy.cooldown = 100
         world.enemies = [enemy]
-        world.controls.press("combat_q")
+        world.controls.press("combat_a")
         advance(world, 0.175)
         remaining = world.camera.shake_remaining
         self.assertGreater(remaining, 0)
@@ -323,7 +323,7 @@ class BlockingEffectTests(unittest.TestCase):
             enemy = Enemy(config.START_X + 80, -1)
             enemy.cooldown = 100
             world.enemies = [enemy]
-            world.controls.press("combat_q")
+            world.controls.press("combat_a")
             advance(world, 0.5, fps)
             outcomes.append((enemy.hp, world.player.state,
                              [(effect.x, effect.y, effect.frame) for effect in world.effects]))

@@ -11,7 +11,7 @@ class CombatIntegrationTests(unittest.TestCase):
     def test_scripted_two_sided_combat_is_independent_of_render_frame_rate(self):
         outcomes = []
         script = (
-            ("combat_d", "right"), (), ("combat_w", "left"), (),
+            ("combat_d", "right"), (), ("combat_s", "left"), (),
             ("combat_h", "left"), (), ("combat_f", "right"), (),
         )
         for fps in (30, 60, 120, 144):
@@ -35,7 +35,7 @@ class CombatIntegrationTests(unittest.TestCase):
         rng = random.Random(20482304)
         world = World(rng=random.Random(20482304))
         keys = ("left", "right", "left_shift", "jump",
-                *(f"combat_{key}" for key in "qwerasdfh"))
+                *(f"combat_{key}" for key in "asdfh"))
         for frame in range(2400):
             if frame % 17 == 0:
                 key = rng.choice(keys)

@@ -44,7 +44,7 @@ class Player:
 
     @property
     def sprite_image(self):
-        return config.COMBAT_IMAGE if self.active_move is not None else config.PLAYER_IMAGE
+        return self.active_move.image if self.active_move is not None else config.PLAYER_IMAGE
 
     @property
     def sprite_offset_x(self):

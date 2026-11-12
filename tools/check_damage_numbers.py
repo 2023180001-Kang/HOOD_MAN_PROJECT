@@ -59,7 +59,7 @@ def capture_number(game, name):
 def check_damage_numbers(game):
     font = game.assets.damage_font
     assert font is not None
-    cases = [(key, 200) for key in "qwerasdf"] + [("d", 10)]
+    cases = [(key, 200) for key in "asdf"] + [("f", 10)]
     for index, (key, hp) in enumerate(cases):
         enemy = attack(game, key, hp, side=-1 if index % 2 else 1)
         expected = min(hp, MOVES[f"combat_{key}"].damage)
@@ -67,7 +67,7 @@ def check_damage_numbers(game):
         assert [number.damage for number in game.world.damage_numbers] == [expected]
         label = key if hp == 200 else "lethal"
         bounds = capture_number(game, f"damage_number_{label}")
-        if key == "q":
+        if key == "a":
             tick(game, 6)
             later = capture_number(game, "damage_number_rising")
             assert later[1] <= bounds[1] - 3, (bounds, later)
@@ -78,7 +78,7 @@ def check_damage_numbers(game):
         with patch.object(font, "draw", wraps=font.draw) as draw:
             render_image(game)
             assert not draw.called
-    attack(game, "w")
+    attack(game, "s")
     assert game.world.damage_numbers
     push_key(pico2d.SDLK_F5)
     tick(game)
@@ -87,7 +87,7 @@ def check_damage_numbers(game):
     push_key(pico2d.SDLK_F5, down=False)
     game.handle_events()
     capture(game, "damage_number_restarted")
-    print("PASS: SDL eight attacks show exact HP loss near enemy bars; text rises, "
+    print("PASS: SDL four basic attacks show exact HP loss near enemy bars; text rises, "
           "does not repeat per swing, expires quickly, survives the lethal hit, "
           "and F5 clears numbers while reusing the font.")
 

@@ -1,4 +1,4 @@
-"""Ordered BasicCombat rows and move data, independent of graphics."""
+"""ASDF basic attacks and a separate guard sheet, independent of graphics."""
 
 from dataclasses import dataclass
 
@@ -22,8 +22,12 @@ class Move:
     def state(self):
         return "BLOCK" if self.blocking else f"ATTACK_{self.key.upper()}"
 
+    @property
+    def image(self):
+        return config.BLOCK_IMAGE if self.blocking else config.COMBAT_IMAGE
+
 
 MOVES = {
     f"combat_{key}": Move(key, name, row, damage, reach, height)
-    for row, (key, name, damage, reach, height) in enumerate(config.COMBAT_MOVE_SPECS, 1)
+    for key, name, row, damage, reach, height in config.COMBAT_MOVE_SPECS
 }

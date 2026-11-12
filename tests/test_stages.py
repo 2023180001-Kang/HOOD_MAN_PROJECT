@@ -223,7 +223,7 @@ class StageTests(unittest.TestCase):
         self.assertEqual(second.spawner.spawned_count, 2)
 
     def test_attacks_guard_recoil_hit_and_death_cannot_trigger_travel(self):
-        for action in ("combat_q", "combat_h", "HIT", "DYING", "DEAD"):
+        for action in ("combat_a", "combat_h", "HIT", "DYING", "DEAD"):
             with self.subTest(action=action):
                 world = World()
                 world.stage.arrows_visible = True

@@ -7,15 +7,21 @@ from world import World
 
 
 class PlayerActionTests(unittest.TestCase):
-    def test_nine_keys_start_the_corresponding_rows_and_return_to_idle(self):
-        for row, (key, move) in enumerate(MOVES.items(), 1):
+    def test_asdf_use_the_correct_source_rows_and_h_uses_its_own_sheet(self):
+        expected = (("a", 3, config.COMBAT_IMAGE), ("s", 4, config.COMBAT_IMAGE),
+                    ("d", 1, config.COMBAT_IMAGE), ("f", 2, config.COMBAT_IMAGE),
+                    ("h", 1, config.BLOCK_IMAGE))
+        self.assertEqual(set(MOVES), {f"combat_{key}" for key, _, _ in expected})
+        for letter, row, image in expected:
+            key = f"combat_{letter}"
+            move = MOVES[key]
             with self.subTest(key=key):
                 world = World()
                 world.controls.press(key)
                 world.update(1 / 60)
                 self.assertEqual(world.player.state, move.state)
                 self.assertEqual(world.player.animation.row, row)
-                self.assertEqual(world.player.sprite_image, config.COMBAT_IMAGE)
+                self.assertEqual(world.player.sprite_image, image)
                 if move.blocking:
                     advance(world, 1)
                     self.assertEqual(world.player.state, "BLOCK")
@@ -25,35 +31,35 @@ class PlayerActionTests(unittest.TestCase):
                 self.assertEqual(world.player.sprite_image, config.PLAYER_IMAGE)
                 self.assertIsNone(world.player.active_move)
 
-    def test_attacks_hit_earlier_and_finish_fifty_percent_faster(self):
+    def test_fast_attacks_have_short_windup_and_finish_in_one_third_second(self):
         for key in (key for key, move in MOVES.items() if not move.blocking):
             with self.subTest(key=key):
                 world = World()
                 world.controls.press(key)
-                advance(world, 0.15)
+                advance(world, 0.1)
                 self.assertIsNone(world.player.attack_box)
-                advance(world, 0.025)
+                advance(world, 0.05)
                 self.assertIsNotNone(world.player.attack_box)
-                advance(world, 0.25)
+                advance(world, 0.15)
                 self.assertIsNotNone(world.player.active_move)
-                advance(world, 0.025)
+                advance(world, 1 / 30)
                 self.assertIsNone(world.player.active_move)
                 self.assertEqual(world.player.state, "IDLE")
 
     def test_held_and_repeated_keys_do_not_loop_attacks(self):
         world = World()
-        world.controls.press("combat_q")
+        world.controls.press("combat_a")
         advance(world, 1)
-        world.controls.press("combat_q")
+        world.controls.press("combat_a")
         advance(world, 0.1)
         self.assertEqual(world.player.state, "IDLE")
-        tap(world.controls, "combat_q")
+        tap(world.controls, "combat_a")
         world.update(1 / 60)
-        self.assertEqual(world.player.state, "ATTACK_Q")
+        self.assertEqual(world.player.state, "ATTACK_A")
 
     def test_busy_inputs_are_consumed_without_buffering_or_interrupting(self):
         world = World()
-        world.controls.press("combat_w")
+        world.controls.press("combat_s")
         advance(world, 0.1)
         world.controls.press("combat_d")
         world.controls.press("jump")
@@ -81,7 +87,7 @@ class PlayerActionTests(unittest.TestCase):
 
     def test_damage_interrupts_an_action_and_death_keeps_original_sheet(self):
         world = World()
-        world.controls.press("combat_r")
+        world.controls.press("combat_s")
         world.update(1 / 60)
         world.player.take_damage(20)
         self.assertIsNone(world.player.active_move)
@@ -94,7 +100,7 @@ class PlayerActionTests(unittest.TestCase):
     def test_facing_is_selected_at_start_then_locked_during_action(self):
         world = World()
         world.controls.press("left")
-        world.controls.press("combat_e")
+        world.controls.press("combat_a")
         world.update(1 / 60)
         self.assertEqual(world.player.facing, -1)
         world.controls.release("left")
@@ -105,7 +111,7 @@ class PlayerActionTests(unittest.TestCase):
 
     def test_restart_discards_active_move_and_repeated_target_state(self):
         world = World()
-        world.controls.press("combat_q")
+        world.controls.press("combat_a")
         world.update(1 / 60)
         world.player.hit_enemies.add(object())
         world.controls.press("restart")

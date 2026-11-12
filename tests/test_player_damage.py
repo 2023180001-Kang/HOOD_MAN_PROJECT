@@ -16,7 +16,7 @@ def target(world, offset=80):
 
 class PlayerDamageTests(unittest.TestCase):
     def test_each_offensive_key_deals_its_requested_damage_once(self):
-        for key, damage in zip("qwerasdf", (20, 30, 20, 20, 20, 20, 50, 40)):
+        for key, damage in zip("asdf", (20, 30, 40, 50)):
             with self.subTest(key=key):
                 world = World()
                 enemy = target(world)
@@ -31,10 +31,10 @@ class PlayerDamageTests(unittest.TestCase):
     def test_one_swing_hits_each_overlapping_enemy_once_and_next_swing_can_hit_again(self):
         world = World()
         first, second = target(world, 80), target(world, 100)
-        world.controls.press("combat_q")
+        world.controls.press("combat_a")
         advance(world, 1)
         self.assertEqual((first.hp, second.hp), (180, 180))
-        tap(world.controls, "combat_q")
+        tap(world.controls, "combat_a")
         advance(world, 0.5)
         self.assertEqual((first.hp, second.hp), (160, 160))
 
@@ -52,31 +52,31 @@ class PlayerDamageTests(unittest.TestCase):
                 world = World()
                 enemy = target(world, offset)
                 enemy.y += height
-                world.controls.press("combat_e")
+                world.controls.press("combat_a")
                 advance(world, 0.5)
                 self.assertEqual(enemy.hp, 200)
 
-    def test_left_attack_and_uppercut_vertical_reach(self):
+    def test_left_kick_and_all_basic_attacks_respect_normal_vertical_reach(self):
         world = World()
         enemy = target(world, -80)
         world.controls.press("left")
         world.controls.press("combat_d")
         advance(world, 0.5)
-        self.assertEqual(enemy.hp, 150)
-        for key, expected in (("combat_e", 200), ("combat_d", 150)):
+        self.assertEqual(enemy.hp, 160)
+        for key in ("combat_a", "combat_s", "combat_d", "combat_f"):
             world = World()
             enemy = target(world)
             enemy.y += 170
             world.controls.press(key)
             advance(world, 0.5)
-            self.assertEqual(enemy.hp, expected)
+            self.assertEqual(enemy.hp, 200)
 
     def test_player_hit_interrupts_the_enemy_attack_in_the_same_step(self):
         world = World()
         enemy = target(world)
         enemy.animation.set_state("ATTACK")
         enemy.animation.elapsed = 4 / config.ENEMY_ANIMATIONS["ATTACK"][1]
-        world.player.start_move(MOVES["combat_q"], 1)
+        world.player.start_move(MOVES["combat_a"], 1)
         world.player.animation.elapsed = 3 / config.COMBAT_FPS
         world.step(config.FIXED_DT)
         self.assertEqual(enemy.hp, 180)
@@ -84,11 +84,11 @@ class PlayerDamageTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 500)
         self.assertIsNone(enemy.attack_box)
 
-    def test_four_uppercuts_kill_and_dead_enemy_cannot_block_or_resurrect(self):
+    def test_four_right_kicks_kill_and_dead_enemy_cannot_block_or_resurrect(self):
         world = World()
         enemy = target(world)
         for index in range(4):
-            tap(world.controls, "combat_d")
+            tap(world.controls, "combat_f")
             advance(world, 0.8)
             self.assertEqual(enemy.hp, max(0, 200 - (index + 1) * 50))
         self.assertEqual(enemy.state, "DYING")
@@ -109,7 +109,7 @@ class PlayerDamageTests(unittest.TestCase):
         world = World()
         enemy = target(world)
         enemy.hp = 10
-        world.controls.press("combat_d")
+        world.controls.press("combat_f")
         advance(world, 0.5)
         self.assertEqual(enemy.hp, 0)
         self.assertEqual(enemy.state, "DYING")

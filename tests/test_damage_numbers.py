@@ -15,7 +15,7 @@ def target(world, offset=80):
 
 class DamageNumberTests(unittest.TestCase):
     def test_each_attack_reports_hp_loss_once_and_a_new_swing_can_report_again(self):
-        for key, damage in zip("qwerasdf", (20, 30, 20, 20, 20, 20, 50, 40)):
+        for key, damage in zip("asdf", (20, 30, 40, 50)):
             with self.subTest(key=key):
                 world = World()
                 enemy = target(world)
@@ -35,8 +35,8 @@ class DamageNumberTests(unittest.TestCase):
                 self.assertIsNot(world.damage_numbers[0], first)
 
     def test_misses_guard_dead_targets_and_enemy_attacks_do_not_report_numbers(self):
-        cases = ((-80, 0, False, "e"), (500, 0, False, "e"),
-                 (80, 300, False, "e"), (80, 0, True, "e"), (80, 0, False, "h"))
+        cases = ((-80, 0, False, "a"), (500, 0, False, "a"),
+                 (80, 300, False, "a"), (80, 0, True, "a"), (80, 0, False, "h"))
         for offset, height, dead, key in cases:
             with self.subTest(offset=offset, height=height, dead=dead, key=key):
                 world = World()
@@ -58,7 +58,7 @@ class DamageNumberTests(unittest.TestCase):
     def test_multi_target_attack_keeps_independent_numbers_at_each_enemy(self):
         world = World()
         enemies = [target(world, offset) for offset in (80, 95, 110)]
-        world.controls.press("combat_w")
+        world.controls.press("combat_s")
         advance(world, 0.175)
         self.assertEqual([enemy.hp for enemy in enemies], [170, 170, 170])
         self.assertEqual([number.damage for number in world.damage_numbers], [30, 30, 30])
@@ -69,7 +69,7 @@ class DamageNumberTests(unittest.TestCase):
         world = World()
         enemy = target(world)
         enemy.hp = 10
-        world.controls.press("combat_d")
+        world.controls.press("combat_f")
         advance(world, 0.175)
         self.assertFalse(enemy.alive)
         self.assertEqual([number.damage for number in world.damage_numbers], [10])
@@ -82,7 +82,7 @@ class DamageNumberTests(unittest.TestCase):
     def test_numbers_pause_on_inactive_maps_and_restart_clears_both_maps(self):
         world = World()
         target(world)
-        world.controls.press("combat_q")
+        world.controls.press("combat_a")
         advance(world, 0.175)
         first = world.damage_numbers[0]
         elapsed = first.elapsed
@@ -91,7 +91,7 @@ class DamageNumberTests(unittest.TestCase):
         self.assertEqual(world.damage_numbers, [])
         self.assertEqual(first.elapsed, elapsed)
         target(world)
-        world.controls.press("combat_f")
+        world.controls.press("combat_d")
         advance(world, 0.175)
         self.assertEqual([number.damage for number in world.damage_numbers], [40])
         self.assertEqual(first.elapsed, elapsed)
@@ -108,7 +108,7 @@ class DamageNumberTests(unittest.TestCase):
         for fps in (30, 60, 120, 144):
             world = World()
             enemy = target(world)
-            world.controls.press("combat_w")
+            world.controls.press("combat_s")
             advance(world, 0.5, fps)
             self.assertEqual(len(world.damage_numbers), 1)
             number = world.damage_numbers[0]
@@ -121,7 +121,7 @@ class DamageNumberTests(unittest.TestCase):
     def test_number_stays_at_hit_position_when_actor_or_camera_moves(self):
         world = World()
         enemy = target(world)
-        world.controls.press("combat_q")
+        world.controls.press("combat_a")
         advance(world, 0.175)
         number = world.damage_numbers[0]
         origin = (number.x, number.y)

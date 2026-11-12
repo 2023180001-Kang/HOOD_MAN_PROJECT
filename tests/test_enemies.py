@@ -66,7 +66,7 @@ class EnemyTests(unittest.TestCase):
         self.assertEqual(world.controls.pressed, set())
 
     def test_numeric_spawns_work_while_blocking_attacking_or_hit(self):
-        for action in (None, "combat_h", "combat_q", "hit"):
+        for action in (None, "combat_h", "combat_a", "hit"):
             with self.subTest(action=action):
                 world = World()
                 if action == "hit":

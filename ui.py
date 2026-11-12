@@ -9,9 +9,9 @@ class UI:
     def draw_attack_help(self, assets):
         import pico2d
 
-        pico2d.draw_rectangle(688, 568, config.SCREEN_WIDTH - 20, 704,
+        pico2d.draw_rectangle(688, 616, config.SCREEN_WIDTH - 20, 704,
                               12, 21, 33, filled=True)
-        assets.font.draw(704, 686, "공격 키 · 피해량", (244, 204, 66))
+        assets.font.draw(704, 686, "기본 공격 · 피해량", (244, 204, 66))
         attacks = [move for move in MOVES.values() if not move.blocking]
         for index, move in enumerate(attacks):
             x = 704 + index % 2 * 270

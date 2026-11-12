@@ -52,7 +52,7 @@ class InvincibilityTests(unittest.TestCase):
         self.assertGreater(world.camera.shake_remaining, 0)
 
     def test_immune_hits_keep_player_attacks_and_guard_active(self):
-        for key, state in (("combat_q", "ATTACK_Q"), ("combat_h", "BLOCK")):
+        for key, state in (("combat_a", "ATTACK_A"), ("combat_h", "BLOCK")):
             with self.subTest(key=key):
                 world = World()
                 world.controls.press("invincibility")
@@ -64,7 +64,7 @@ class InvincibilityTests(unittest.TestCase):
                 self.assertEqual(world.player.vx, 0)
                 self.assertTrue(front.has_hit and rear.has_hit)
                 self.assertEqual(world.effects, [])
-                if key == "combat_q":
+                if key == "combat_a":
                     advance(world, 0.2)
                     self.assertEqual(front.hp, 180)
                     self.assertEqual(rear.hp, 200)

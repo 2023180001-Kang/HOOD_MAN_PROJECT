@@ -2,22 +2,39 @@
 
 import json
 from pathlib import Path
+import sys
 
 from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+import config
+
+
+ARCHIVED_COMBAT = ROOT / "before_sheets" / "HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png"
 SHEETS = {
-    "HoodMan_Sprite.png": 6,
-    "HoodMan_StreetThug_FINAL_2048x1536.png": 6,
-    "HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png": 9,
+    config.PLAYER_IMAGE: 6,
+    config.ENEMY_IMAGE: 6,
+    config.COMBAT_IMAGE: 4,
+    config.BLOCK_IMAGE: 1,
 }
 
 
 def main():
+    # Preserve H guarding without loading the archived nine-move sheet at runtime.
+    with Image.open(ARCHIVED_COMBAT) as image:
+        if image.size != (2048, 2304):
+            raise ValueError("The archived combat sheet must be 2048x2304")
+        block_path = ROOT / config.BLOCK_IMAGE
+        block_path.parent.mkdir(exist_ok=True)
+        image.crop((0, 8 * 256, 2048, 9 * 256)).save(block_path)
     metadata = {}
     for name, row_count in SHEETS.items():
         with Image.open(ROOT / name) as image:
+            if image.size != (2048, row_count * 256):
+                raise ValueError(f"Unexpected sprite grid: {name} {image.size}")
             rows = []
             for row in range(row_count):
                 frames = []
@@ -37,7 +54,8 @@ def main():
     (destination / "frames.json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
     )
-    print("Prepared sprite clips: 3 sheets, 168 frames; source PNGs unchanged.")
+    print(f"Prepared sprite clips: {len(SHEETS)} sheets, {sum(SHEETS.values()) * 8} frames; "
+          "source PNGs unchanged.")
 
 
 if __name__ == "__main__":

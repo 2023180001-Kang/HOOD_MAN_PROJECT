@@ -171,10 +171,10 @@ def check_player_action_inputs(game):
         player = game.world.player
         key = getattr(pico2d, f"SDLK_{move.key}")
         push_key(key)
-        tick(game, 16)
-        assert game.world.player is player  # In particular R must not restart.
+        tick(game, 16 if move.blocking else 10)
+        assert game.world.player is player
         assert player.active_move == move and player.animation.row == move.row
-        assert player.sprite_image == config.COMBAT_IMAGE
+        assert player.sprite_image == move.image
         capture(game, f"player_move_{move.key}")
         push_key(key, repeat=True)
         tick(game, 35)
@@ -185,25 +185,32 @@ def check_player_action_inputs(game):
         push_key(key, down=False)
         tick(game)
         assert player.state == "IDLE" and player.active_move is None
-    print("PASS: SDL Q/W/E/R/A/S/D/F/H map to rows 1-9; faster one-shot attacks, held guard, "
-          "R attack and F5 restart have distinct actions.")
+    for key_name in "qwer":
+        game.world = World()
+        push_key(getattr(pico2d, f"SDLK_{key_name}"))
+        tick(game, 24)
+        assert game.world.player.state == "IDLE" and game.world.player.active_move is None
+        push_key(getattr(pico2d, f"SDLK_{key_name}"), down=False)
+        game.handle_events()
+    print("PASS: SDL A/S/D/F use source rows 3/4/1/2 at 24 FPS; "
+          "H uses the separate guard sheet, and retired Q/W/E/R inputs do not attack.")
 
 
 def check_player_damage_and_enemy_health(game):
-    for key_name, damage in zip("qwerasdf", (20, 30, 20, 20, 20, 20, 50, 40)):
+    for key_name, damage in zip("asdf", (20, 30, 40, 50)):
         game.world = World()
         enemy = Enemy(config.START_X + 80, -1)
         enemy.cooldown = 100
         game.world.enemies = [enemy]
         key = getattr(pico2d, f"SDLK_{key_name}")
         push_key(key)
-        tick(game, 17)
+        tick(game, 11)
         assert enemy.hp == 200 - damage and enemy.state == "HIT"
         assert len(game.world.effects) == 1
         assert game.world.camera.shake_remaining > 0
-        if key_name == "q":
+        if key_name == "a":
             verify_blood_pixels(game, "blood_player_to_enemy")
-        if key_name in "wdf":
+        if key_name in "sdf":
             capture(game, f"player_damage_{key_name}")
         tick(game, 20)
         assert enemy.hp == 200 - damage
@@ -229,15 +236,15 @@ def check_player_damage_and_enemy_health(game):
     enemy.cooldown = 100
     game.world.enemies = [enemy]
     for _ in range(4):
-        push_key(pico2d.SDLK_d)
+        push_key(pico2d.SDLK_f)
         tick(game, 48)
-        push_key(pico2d.SDLK_d, down=False)
+        push_key(pico2d.SDLK_f, down=False)
         game.handle_events()
     tick(game, 60)
     assert enemy.hp == 0 and enemy.state == "DEAD" and enemy.animation.frame == 7
     capture(game, "enemy_defeated")
-    print("PASS: SDL 8 attacks deal 20/30/20/20/20/20/50/40 once; red enemy HP bars "
-          "are full/half/hidden at 200/100/0; four uppercuts defeat an enemy.")
+    print("PASS: SDL A/S/D/F deal 20/30/40/50 once; red enemy HP bars "
+          "are full/half/hidden at 200/100/0; four right kicks defeat an enemy.")
 
 
 def verify_blood_pixels(game, name):

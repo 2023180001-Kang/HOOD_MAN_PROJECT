@@ -20,6 +20,8 @@ class Assets:
             self.frames = json.load(file)
         font_path = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "malgun.ttf"
         self.font = pico2d.load_font(str(font_path), 17) if font_path.is_file() else None
+        self.damage_font = (pico2d.load_font(str(font_path), config.DAMAGE_NUMBER_FONT_SIZE)
+                            if font_path.is_file() else None)
 
     def draw_sprite(self, name, row, frame, x, feet_y, facing=1):
         tile = self.frames[name][row - 1][frame]
@@ -34,9 +36,10 @@ class Assets:
     def release(self):
         # Destroy textures before pico2d destroys the renderer.
         self.images.clear()
-        if self.font is not None:
-            pico2d.TTF_CloseFont(self.font.font)
-            self.font = None
+        for font in (self.font, self.damage_font):
+            if font is not None:
+                pico2d.TTF_CloseFont(font.font)
+        self.font = self.damage_font = None
 
     def draw_hit_effect(self, effect, camera_x, camera_y):
         image = self.images[config.BLOOD_IMAGE]

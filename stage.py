@@ -12,6 +12,7 @@ class Stage:
         self.arrows_visible = False
         self.enemies = []
         self.effects = []
+        self.damage_numbers = []
         self.spawner = SpawnManager(rng=rng)
 
     @property

@@ -4,7 +4,7 @@ import config
 from camera import Camera
 from collision import resolve_bodies
 from controls import Controls
-from effects import HitEffect
+from effects import DamageNumber, HitEffect
 from player import Player
 from stage import Stage
 
@@ -46,6 +46,14 @@ class World:
         self.stage.effects = effects
 
     @property
+    def damage_numbers(self):
+        return self.stage.damage_numbers
+
+    @damage_numbers.setter
+    def damage_numbers(self, numbers):
+        self.stage.damage_numbers = numbers
+
+    @property
     def spawner(self):
         return self.stage.spawner
 
@@ -66,6 +74,9 @@ class World:
         for effect in self.effects:
             effect.update(dt)
         self.effects = [effect for effect in self.effects if not effect.finished]
+        for number in self.damage_numbers:
+            number.update(dt)
+        self.damage_numbers = [number for number in self.damage_numbers if not number.finished]
         for count in config.SPAWN_COUNTS:
             if self.controls.take_press(f"spawn_{count}") and self.player.alive:
                 self.enemies.extend(self.spawner.spawn(count, self.elapsed))
@@ -78,7 +89,10 @@ class World:
             player_box = self.player.attack_box
             if player_box is not None:
                 for enemy in self.enemies:
+                    previous_hp = enemy.hp
                     if self.player.try_hit(enemy):
+                        self.damage_numbers.append(
+                            DamageNumber.above_body(enemy.body, previous_hp - enemy.hp))
                         self.effects.append(HitEffect.at_contact(player_box, enemy.body,
                                                                  self.player.facing))
                         self.camera.shake()

@@ -1,4 +1,4 @@
-"""Screen-fixed HP image. Only the interior fill is masked as health falls."""
+"""Screen-fixed controls/HP and world-space enemy health/damage feedback."""
 
 import config
 from combat import MOVES
@@ -39,6 +39,13 @@ class UI:
                 pico2d.draw_rectangle(left, bottom, left + config.ENEMY_HP_BAR_WIDTH * ratio - 1,
                                       bottom + config.ENEMY_HP_BAR_HEIGHT - 1,
                                       215, 38, 45, filled=True)
+        if assets.damage_font is not None:
+            for number in world.damage_numbers:
+                text = f"-{number.damage}"
+                x = number.x - camera_x - len(text) * config.DAMAGE_NUMBER_FONT_SIZE / 4
+                y = number.display_y - camera_y
+                assets.damage_font.draw(x + 1, y - 1, text, (12, 15, 20))
+                assets.damage_font.draw(x, y, text, (255, 224, 110))
 
     def draw(self, assets, world):
         import pico2d

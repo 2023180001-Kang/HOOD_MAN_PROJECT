@@ -137,7 +137,7 @@ class World:
                     self.effects.append(HitEffect.at_contact(enemy_box, self.player.body,
                                                              enemy.facing,
                                                              depth=self.player.ground_y - config.GROUND_Y))
-                    self.camera.shake()
+                    self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
                     if not self.player.alive:
                         self.handle_death()
                         break

@@ -10,21 +10,23 @@ class Camera:
     def __init__(self, player_x):
         self.x = 0.0
         self.shake_remaining = 0.0
+        self.shake_strength = config.SHAKE_STRENGTH
         self.offset_x = 0.0
         self.offset_y = 0.0
         self.update(0, player_x)
 
-    def shake(self):
+    def shake(self, strength=None):
+        self.shake_strength = config.SHAKE_STRENGTH if strength is None else strength
         self.shake_remaining = config.SHAKE_DURATION
-        self.offset_x = config.SHAKE_STRENGTH
-        self.offset_y = config.SHAKE_STRENGTH / 2
+        self.offset_x = self.shake_strength
+        self.offset_y = self.shake_strength / 2
 
     def update(self, dt, player_x):
         self.x = clamp(player_x - config.SCREEN_WIDTH / 2, 0,
                        config.WORLD_WIDTH - config.SCREEN_WIDTH)
         self.shake_remaining = max(0.0, self.shake_remaining - dt)
         if self.shake_remaining:
-            strength = config.SHAKE_STRENGTH * self.shake_remaining / config.SHAKE_DURATION
+            strength = self.shake_strength * self.shake_remaining / config.SHAKE_DURATION
             phase = (config.SHAKE_DURATION - self.shake_remaining) * 95
             self.offset_x = cos(phase) * strength
             self.offset_y = sin(phase * 1.3) * strength / 2

@@ -22,6 +22,10 @@ class World:
     def reset(self):
         if getattr(self, "counter", None) is not None:
             self.counter.finish()
+        for stage in getattr(self, "stages", ()):
+            for enemy in stage.enemies:
+                if enemy.counter_move is not None:
+                    enemy.finish_counter()
         self.controls.reset_for_restart()
         self.counter = None
         self.player = Player()

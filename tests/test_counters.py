@@ -30,24 +30,31 @@ class CounterTests(unittest.TestCase):
         return world, enemy
 
     def finish(self, world):
-        while world.counter is not None:
+        while world.counter is not None or any(enemy.counter_move is not None for enemy in world.enemies):
             world.step(config.FIXED_DT)
 
-    def test_counter_stays_synchronized_for_a_full_second_at_the_slower_speed(self):
+    def test_player_finishes_in_one_second_while_the_slower_enemy_reaction_continues(self):
         for key in "hjkl":
             with self.subTest(key=key):
                 world, enemy = self.begin(key)
                 advance(world, 0.75)
                 self.assertIsNotNone(world.counter)
-                self.assertEqual(world.player.animation.frame, enemy.animation.frame)
+                self.assertEqual((world.player.animation.frame, enemy.animation.frame), (6, 4))
                 self.assertEqual(enemy.hp, 120)
                 advance(world, 0.2)
                 self.assertIsNotNone(world.counter)
                 advance(world, 0.05)
                 self.assertIsNone(world.counter)
+                self.assertEqual(world.player.state, "IDLE")
+                self.assertIsNotNone(enemy.counter_move)
+                self.assertFalse(enemy.counter_linked)
+                self.assertEqual(enemy.animation.frame, 6)
+                advance(world, 0.2)
+                self.assertIsNotNone(enemy.counter_move)
+                advance(world, 0.15)
                 self.assertEqual((world.player.state, enemy.state), ("IDLE", "IDLE"))
 
-    def test_all_four_keys_use_matching_rows_and_one_shared_animation_clock(self):
+    def test_all_four_keys_use_matching_rows_with_slower_enemy_playback(self):
         for key, row in zip("hjkl", (1, 2, 3, 4)):
             for side in (-1, 1):
                 with self.subTest(key=key, side=side):
@@ -58,13 +65,18 @@ class CounterTests(unittest.TestCase):
                     frames = set()
                     while world.counter is not None:
                         self.assertEqual((world.player.animation.row, enemy.animation.row), (row, row))
-                        self.assertEqual(world.player.animation.frame, enemy.animation.frame)
+                        self.assertLessEqual(enemy.animation.frame, world.player.animation.frame)
                         self.assertEqual(world.player.animation.elapsed, enemy.animation.elapsed)
                         self.assertEqual((world.player.facing, enemy.facing), (side, -side))
                         frames.add(enemy.animation.frame)
                         expected_hp = 120 if world.counter.damage_applied else 200
                         self.assertEqual(enemy.hp, expected_hp)
                         self.assertEqual(world.player.hp, 500)
+                        world.step(config.FIXED_DT)
+                    self.assertEqual(world.player.state, "IDLE")
+                    self.assertIs(enemy.counter_move, move)
+                    while enemy.counter_move is not None:
+                        frames.add(enemy.animation.frame)
                         world.step(config.FIXED_DT)
                     self.assertEqual(frames, set(range(8)))
                     self.assertEqual(enemy.hp, 200 - move.damage)
@@ -284,7 +296,9 @@ class CounterTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 500)
         self.assertFalse(world.player.invincible)
         self.assertTrue(other.has_hit)
-        self.finish(world)
+        while world.counter is not None:
+            world.step(config.FIXED_DT)
+        self.assertIsNotNone(target.counter_move)
         attacker(world, -1, frame=4)
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.hp, 480)
@@ -364,10 +378,81 @@ class CounterTests(unittest.TestCase):
             world = World()
             enemy = attacker(world, attack_speed=1.4)
             world.controls.press("counter_k")
-            advance(world, 1, fps)
+            advance(world, 1.5, fps)
             outcomes.append((world.player.hp, enemy.hp, world.player.state, enemy.state,
                              enemy.animation.elapsed, enemy.cooldown, world.counter))
         self.assertTrue(all(outcome == outcomes[0] for outcome in outcomes))
+
+    def test_player_can_move_and_take_damage_while_the_enemy_finishes_reacting(self):
+        world, enemy = self.begin()
+        advance(world, 1.05)
+        self.assertIsNone(world.counter)
+        self.assertEqual(world.player.state, "IDLE")
+        self.assertIsNotNone(enemy.counter_move)
+        enemy_position = enemy.x, enemy.ground_y
+        player_x = world.player.x
+        world.controls.press("left")
+        advance(world, 0.1)
+        self.assertLess(world.player.x, player_x)
+        self.assertEqual((enemy.x, enemy.ground_y), enemy_position)
+        self.assertTrue(world.player.take_damage(20))
+        self.assertEqual(world.player.hp, 480)
+        self.finish(world)
+        self.assertIsNone(enemy.counter_move)
+
+    def test_restart_releases_independent_enemy_reactions_in_inactive_stages(self):
+        world, enemy = self.begin()
+        advance(world, 1.05)
+        self.assertIsNone(world.counter)
+        self.assertIsNotNone(enemy.counter_move)
+        world.stage_index = 1
+        world.controls.press("restart")
+        world.update(config.FIXED_DT)
+        self.assertIsNone(enemy.counter_move)
+        self.assertFalse(enemy.counter_linked)
+        self.assertEqual(enemy.boundary_padding, config.ENEMY_BOUNDARY_PADDING)
+        self.assertTrue(all(not stage.enemies for stage in world.stages))
+
+    def test_enemy_reaction_pauses_off_stage_then_finishes_after_returning(self):
+        world, enemy = self.begin()
+        advance(world, 1.05)
+        elapsed = enemy.animation.elapsed
+        world.stage_index = 1
+        advance(world, 2)
+        self.assertEqual(enemy.animation.elapsed, elapsed)
+        self.assertIsNotNone(enemy.counter_move)
+        world.stage_index = 0
+        advance(world, 0.3)
+        self.assertIsNone(enemy.counter_move)
+        self.assertEqual(enemy.state, "IDLE")
+
+    def test_normal_attack_during_the_slow_reaction_does_not_cut_off_a_lethal_pose(self):
+        world, enemy = self.begin(hp=120)
+        advance(world, 1.05)
+        self.assertEqual(enemy.hp, 40)
+        world.player.start_move(MOVES["combat_f"], 1)
+        world.player.animation.elapsed = 3 / MOVES["combat_f"].fps
+        world.step(config.FIXED_DT)
+        self.assertEqual(enemy.hp, 0)
+        self.assertEqual(enemy.state, COUNTERS["counter_h"].enemy_state)
+        self.assertEqual(enemy.corpse_elapsed, 0)
+        while enemy.counter_move is not None:
+            world.step(config.FIXED_DT)
+        self.assertEqual((enemy.state, enemy.animation.frame, enemy.corpse_elapsed), ("DEAD", 7, 0))
+
+    def test_another_counter_can_start_while_the_previous_enemy_reaction_finishes(self):
+        world, first = self.begin()
+        advance(world, 1.05)
+        second = attacker(world, -1)
+        tap(world.controls, "counter_h")
+        world.step(config.FIXED_DT)
+        self.assertIs(world.counter.enemy, second)
+        self.assertFalse(first.counter_linked)
+        self.assertTrue(second.counter_linked)
+        self.finish(world)
+        self.assertEqual((first.hp, second.hp), (120, 120))
+        self.assertIsNone(first.counter_move)
+        self.assertIsNone(second.counter_move)
 
 
 if __name__ == "__main__":

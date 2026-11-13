@@ -33,6 +33,8 @@ class Enemy:
         self.hp = config.ENEMY_MAX_HP
         self.corpse_elapsed = 0.0
         self.counter_move = None
+        self.counter_linked = False
+        self.counter_padding = self.boundary_padding
         self.counter_death = None
         self.attack_speed = attack_speed
         self.attack_interval = config.ENEMY_ATTACK_INTERVAL / attack_speed
@@ -40,7 +42,7 @@ class Enemy:
         row, fps, loop = definitions["ATTACK"]
         self.attack_fps = fps * attack_speed
         definitions["ATTACK"] = (row, self.attack_fps, loop)
-        definitions.update({move.enemy_state: (move.row, move.fps, False)
+        definitions.update({move.enemy_state: (move.row, move.enemy_fps, False)
                             for move in COUNTERS.values()})
         self.animation = Animation(definitions)
         self.formation_side = None
@@ -112,6 +114,9 @@ class Enemy:
 
     def start_counter(self, move, facing):
         self.counter_move = move
+        self.counter_linked = True
+        self.counter_padding = self.boundary_padding
+        self.boundary_padding = max(self.boundary_padding, config.COUNTER_BOUNDARY_PADDING)
         self.vx = self.ground_vy = 0.0
         self.running = False
         self.has_hit = True
@@ -120,19 +125,27 @@ class Enemy:
         self.target_x = self.target_ground_y = None
         self.animation.set_state(move.enemy_state)
 
+    def release_counter(self):
+        """Continue the slower reaction after the player is free to act."""
+        self.counter_linked = False
+        if self.animation.elapsed + 1e-9 >= self.counter_move.enemy_duration:
+            self.finish_counter()
+
     def finish_counter(self):
         move = self.counter_move
         self.counter_move = None
+        self.counter_linked = False
         self.cooldown = self.attack_interval
         if self.alive:
+            self.boundary_padding = self.counter_padding
             self.animation.set_state("IDLE")
         else:
             # The supplied last pose already shows the defeated enemy on the
             # floor; keep it instead of replaying the standard death sheet.
             self.counter_death = move
-            self.animation.definitions["DEAD"] = (move.row, move.fps, False)
+            self.animation.definitions["DEAD"] = (move.row, move.enemy_fps, False)
             self.animation.set_state("DEAD")
-            self.animation.elapsed = move.duration
+            self.animation.elapsed = move.enemy_duration
             self.corpse_elapsed = 0.0
 
     @property
@@ -217,7 +230,11 @@ class Enemy:
         if self.counter_move is not None:
             self.vx = self.ground_vy = 0.0
             self.running = False
-            return  # Even a lethal counter finishes its matched reaction first.
+            if not self.counter_linked:
+                self.animation.update(dt)
+                if self.animation.elapsed + 1e-9 >= self.counter_move.enemy_duration:
+                    self.finish_counter()
+            return  # Even a lethal counter finishes its reaction before corpse timing.
         if not self.alive:
             self.vx = 0.0
             self.ground_vy = 0.0

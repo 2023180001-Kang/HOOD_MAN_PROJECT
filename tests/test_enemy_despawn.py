@@ -57,7 +57,7 @@ class EnemyDespawnTests(unittest.TestCase):
                     world.step(config.FIXED_DT)
                 self.assertIsNotNone(world.counter)
                 self.assertEqual((enemy.corpse_elapsed, enemy.opacity), (0, 1))
-                while world.counter is not None:
+                while world.counter is not None or enemy.counter_move is not None:
                     world.step(config.FIXED_DT)
                     self.assertEqual((enemy.corpse_elapsed, enemy.opacity), (0, 1))
                 self.assertEqual((enemy.state, enemy.animation.frame), ("DEAD", 7))
@@ -74,7 +74,7 @@ class EnemyDespawnTests(unittest.TestCase):
         enemy = attacker(world)
         world.controls.press("counter_j")
         world.step(config.FIXED_DT)
-        while world.counter is not None:
+        while world.counter is not None or enemy.counter_move is not None:
             world.step(config.FIXED_DT)
         self.assertEqual((enemy.hp, enemy.state), (120, "IDLE"))
         world.player.x += 500

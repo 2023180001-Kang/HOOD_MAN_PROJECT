@@ -42,7 +42,7 @@ def assert_pair(game, enemy, move):
     assert (player.sprite_image, enemy.sprite_image) == (
         config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE)
     assert player.animation.row == enemy.animation.row == move.row
-    assert player.animation.frame == enemy.animation.frame
+    assert enemy.animation.frame <= player.animation.frame
     assert player.animation.elapsed == enemy.animation.elapsed
     assert player.hp == 500 and enemy.has_hit
 
@@ -80,6 +80,12 @@ def check_rows_damage_and_recovery(game):
             while game.world.counter is not None:
                 assert_pair(game, enemy, move)
                 tick(game)
+            assert game.world.player.state == "IDLE"
+            assert enemy.counter_move is move and not enemy.counter_linked
+            assert move.duration - 1e-9 <= game.world.elapsed < move.enemy_duration
+            capture(game, f"counter_{move.key}_{side}_enemy_reaction")
+            while enemy.counter_move is not None:
+                tick(game)
             assert enemy.hp == 120 and enemy.state == "IDLE"
             assert enemy.sprite_image == config.ENEMY_IMAGE
             assert game.world.player.state == "IDLE"
@@ -93,7 +99,7 @@ def check_rows_damage_and_recovery(game):
             release(game, key)
     assert all(game.assets.images[name] is image for name, image in textures.items())
     print("PASS: SDL H/J/K/L match rows 1-4 on both sides, deal 80 once, show four HUD hints, "
-          "complete synchronized reactions, and restore surviving enemies to IDLE/chase.")
+          "release the player at 1s, finish slower enemy reactions, and restore IDLE/chase.")
 
 
 def check_lethal_counters(game):
@@ -107,7 +113,7 @@ def check_lethal_counters(game):
             tick(game)
         assert game.world.counter is not None and enemy.counter_move is move
         assert [number.damage for number in game.world.damage_numbers] == [40]
-        while game.world.counter is not None:
+        while game.world.counter is not None or enemy.counter_move is not None:
             tick(game)
         assert enemy.state == "DEAD" and enemy.sprite_image == config.COUNTER_ENEMY_IMAGE
         assert (enemy.animation.row, enemy.animation.frame) == (move.row, 7)
@@ -158,7 +164,7 @@ def check_corpse_fade(game):
             corpse = attacker(game, hp=40)
             push_key(pico2d.SDLK_h)
             tick(game)
-            while game.world.counter is not None:
+            while game.world.counter is not None or corpse.counter_move is not None:
                 tick(game)
             release(game, pico2d.SDLK_h)
         else:
@@ -173,7 +179,7 @@ def check_corpse_fade(game):
         if style == "counter":
             # Keep a live pose on the same shared texture to catch alpha leakage.
             live.start_counter(COUNTERS["counter_h"], 1)
-            live.animation.elapsed = 4 / COUNTERS["counter_h"].fps
+            live.animation.elapsed = 4 / COUNTERS["counter_h"].enemy_fps
         game.world.enemies.append(live)
         game.world.camera.update(config.SHAKE_DURATION, game.world.player.x)
         game.world.enemies.remove(corpse)

@@ -1,4 +1,4 @@
-"""Matching player/enemy counter rows and their shared playback timing."""
+"""Matching counter rows with a slower, independently completing enemy reaction."""
 
 from dataclasses import dataclass
 
@@ -13,6 +13,7 @@ class CounterMove:
     row: int
     damage: int
     fps: float
+    enemy_fps: float
     impact_frame: int
 
     @property
@@ -27,10 +28,14 @@ class CounterMove:
     def duration(self):
         return 8 / self.fps
 
+    @property
+    def enemy_duration(self):
+        return 8 / self.enemy_fps
+
 
 COUNTERS = {
     f"counter_{key}": CounterMove(key, name, row, config.COUNTER_DAMAGE,
-                                 config.COUNTER_FPS, impact_frame)
+                                 config.COUNTER_FPS, config.COUNTER_ENEMY_FPS, impact_frame)
     for key, name, row, impact_frame in config.COUNTER_MOVE_SPECS
 }
 
@@ -46,7 +51,7 @@ def can_counter(player, enemy):
 
 
 class CounterSequence:
-    """One shared clock keeps the selected attacker and player in the same pose."""
+    """Start both actions together; let the enemy finish after the player recovers."""
 
     @classmethod
     def start(cls, player, enemy, move, walkable):
@@ -71,9 +76,7 @@ class CounterSequence:
         self.damage_applied = False
         self.finished = False
         self.player_padding = player.boundary_padding
-        self.enemy_padding = enemy.boundary_padding
         player.boundary_padding = max(self.player_padding, config.COUNTER_BOUNDARY_PADDING)
-        enemy.boundary_padding = max(self.enemy_padding, config.COUNTER_BOUNDARY_PADDING)
         player.x = player.previous_x = player_x
         enemy.x = enemy.previous_x = enemy_x
         enemy.ground_y = enemy.previous_ground_y = player.ground_y
@@ -88,6 +91,8 @@ class CounterSequence:
 
     def update(self, dt):
         self.elapsed = min(self.move.duration, self.elapsed + dt)
+        if self.elapsed + 1e-9 >= self.move.duration:
+            self.elapsed = self.move.duration
         self.player.animation.elapsed = self.enemy.animation.elapsed = self.elapsed
         damage = 0
         if not self.damage_applied and self.elapsed + 1e-9 >= self.move.impact_frame / self.move.fps:
@@ -96,19 +101,23 @@ class CounterSequence:
             damage = previous_hp - self.enemy.hp
             self.damage_applied = True
         if self.elapsed + 1e-9 >= self.move.duration:
-            self.finish()
+            self.finished = True
+            self._release_player()
+            self.enemy.release_counter()
         return damage
 
-    def finish(self):
-        if self.finished:
-            return
-        self.finished = True
+    def _release_player(self):
         if self.player.counter_move is self.move:
             self.player.counter_move = None
             self.player.boundary_padding = self.player_padding
             if self.player.state == self.move.state:
                 self.player.animation.set_state("IDLE" if self.player.alive else "DYING")
+
+    def finish(self):
+        """Cancel an interrupted pair, including a restart before player recovery."""
+        if self.finished:
+            return
+        self.finished = True
+        self._release_player()
         if self.enemy.counter_move is self.move:
             self.enemy.finish_counter()
-            if self.enemy.alive:
-                self.enemy.boundary_padding = self.enemy_padding

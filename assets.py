@@ -15,6 +15,7 @@ class Assets:
             name: pico2d.load_image(str(config.ROOT / name))
             for name in (config.TITLE_IMAGE, config.STAGE_LOADING_IMAGE,
                          config.PLAYER_IMAGE, config.COMBAT_IMAGE,
+                         config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
                          config.ENEMY_IMAGE, config.BLOOD_IMAGE, config.HP_IMAGE,
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
@@ -32,7 +33,8 @@ class Assets:
         self.images[name].clip_composite_draw(
             left, bottom, width, height, 0, "h" if facing < 0 else "",
             x + tile["offset_x"] * scale * facing,
-            feet_y + height * scale / 2, width * scale, height * scale,
+            feet_y + (height / 2 + tile.get("offset_y", 0)) * scale,
+            width * scale, height * scale,
         )
 
     def release(self):

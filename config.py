@@ -91,6 +91,22 @@ COMBAT_MOVE_SPECS = (
     ("d", "왼발 차기", 1, 50, 115.0, 146.0, COMBAT_KICK_FPS),
     ("f", "오른발 차기", 2, 60, 130.0, 146.0, COMBAT_KICK_FPS),
 )
+COUNTER_PLAYER_IMAGE = "HoodMan_Counter_Player_2048x1024.png"
+COUNTER_ENEMY_IMAGE = "HoodMan_Counter_Enemy_2048x1024.png"
+COUNTER_DAMAGE = 80
+COUNTER_FPS = 12.0
+COUNTER_RANGE = 140.0
+COUNTER_DEPTH_TOLERANCE = 32.0
+COUNTER_TRIGGER_FRAMES = (1, 2, 3, 4, 5)
+COUNTER_PAIR_DISTANCE = 80.0
+COUNTER_BOUNDARY_PADDING = 90.0
+# Key, technique, matching one-based player/enemy row, zero-based impact frame.
+COUNTER_MOVE_SPECS = (
+    ("h", "쳐내고 연타", 1, 4),
+    ("j", "잡아 메치기", 2, 6),
+    ("k", "단검 반격", 3, 4),
+    ("l", "회전 발차기", 4, 5),
+)
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "newStage.png"

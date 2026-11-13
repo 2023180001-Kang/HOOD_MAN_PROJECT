@@ -87,7 +87,8 @@ class IntegrationTests(unittest.TestCase):
     def test_generated_clips_stay_inside_original_sprite_sheets(self):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             metadata = json.load(file)
-        row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.COMBAT_IMAGE: 4}
+        row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.COMBAT_IMAGE: 4,
+                      config.COUNTER_PLAYER_IMAGE: 4, config.COUNTER_ENEMY_IMAGE: 4}
         self.assertEqual(set(metadata), set(row_counts))
         for name, rows in metadata.items():
             self.assertTrue((config.ROOT / name).is_file())
@@ -102,6 +103,18 @@ class IntegrationTests(unittest.TestCase):
                     self.assertLessEqual(left + width, (col_index + 1) * 256)
                     self.assertGreaterEqual(bottom, (row_counts[name] - 1 - row_index) * 256)
                     self.assertLessEqual(bottom + height, (row_counts[name] - row_index) * 256)
+
+    def test_counter_clips_preserve_the_shared_ground_anchor_and_airborne_poses(self):
+        with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
+            metadata = json.load(file)
+        for name in (config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE):
+            for row_index, row in enumerate(metadata[name]):
+                row_bottom = (3 - row_index) * 256
+                anchors = {256 - (tile["clip"][1] - row_bottom) + tile["offset_y"]
+                           for tile in row}
+                self.assertEqual(len(anchors), 1)
+                self.assertTrue(all(tile["offset_y"] >= 0 for tile in row))
+        self.assertGreaterEqual(metadata[config.COUNTER_ENEMY_IMAGE][3][2]["offset_y"], 50)
 
 
 if __name__ == "__main__":

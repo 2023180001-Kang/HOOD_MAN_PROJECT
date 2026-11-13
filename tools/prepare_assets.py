@@ -17,6 +17,8 @@ SHEETS = {
     config.PLAYER_IMAGE: 6,
     config.ENEMY_IMAGE: 6,
     config.COMBAT_IMAGE: 4,
+    config.COUNTER_PLAYER_IMAGE: 4,
+    config.COUNTER_ENEMY_IMAGE: 4,
 }
 
 
@@ -29,15 +31,21 @@ def main():
             rows = []
             for row in range(row_count):
                 frames = []
-                for col in range(8):
-                    tile = image.crop((col * 256, row * 256,
-                                       (col + 1) * 256, (row + 1) * 256))
-                    left, top, right, bottom = tile.getbbox()
-                    frames.append({
+                bounds = [image.crop((col * 256, row * 256,
+                                      (col + 1) * 256, (row + 1) * 256)).getbbox()
+                          for col in range(8)]
+                ground_anchor = max(box[3] for box in bounds)
+                for col, (left, top, right, bottom) in enumerate(bounds):
+                    frame = {
                         "clip": [col * 256 + left, image.height - row * 256 - bottom,
                                  right - left, bottom - top],
                         "offset_x": (left + right) / 2 - 128,
-                    })
+                    }
+                    if name in (config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE):
+                        # Keep airborne throws above the floor instead of moving
+                        # every cropped frame's bottom down to the same feet y.
+                        frame["offset_y"] = ground_anchor - bottom
+                    frames.append(frame)
                 rows.append(frames)
             metadata[name] = rows
     destination = ROOT / "assets"

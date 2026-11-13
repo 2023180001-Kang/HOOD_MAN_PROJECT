@@ -31,6 +31,7 @@ class Enemy:
         self.run_speed = config.ENEMY_RUN_SPEEDS[0] if run_speed is None else run_speed
         self.running = False
         self.hp = config.ENEMY_MAX_HP
+        self.corpse_elapsed = 0.0
         self.counter_move = None
         self.counter_death = None
         self.attack_speed = attack_speed
@@ -54,6 +55,20 @@ class Enemy:
     @property
     def alive(self):
         return self.hp > 0
+
+    @property
+    def opacity(self):
+        if self.faded_out:
+            return 0.0
+        if self.alive or self.state != "DEAD" or self.corpse_elapsed <= config.ENEMY_CORPSE_DELAY + 1e-9:
+            return 1.0
+        return max(0.0, 1.0 - (self.corpse_elapsed - config.ENEMY_CORPSE_DELAY)
+                   / config.ENEMY_FADE_DURATION)
+
+    @property
+    def faded_out(self):
+        return (not self.alive and self.state == "DEAD"
+                and self.corpse_elapsed + 1e-9 >= config.ENEMY_CORPSE_DELAY + config.ENEMY_FADE_DURATION)
 
     @property
     def sprite_image(self):
@@ -118,6 +133,7 @@ class Enemy:
             self.animation.definitions["DEAD"] = (move.row, move.fps, False)
             self.animation.set_state("DEAD")
             self.animation.elapsed = move.duration
+            self.corpse_elapsed = 0.0
 
     @property
     def body(self):
@@ -206,11 +222,14 @@ class Enemy:
             self.vx = 0.0
             self.ground_vy = 0.0
             self.running = False
-            if self.state != "DEAD":
+            if self.state == "DEAD":
+                self.corpse_elapsed += dt
+            else:
                 self.animation.update(dt)
                 if self.animation.finished:
                     self.animation.set_state("DEAD")
                     self.animation.elapsed = 8 / config.ENEMY_ANIMATIONS["DEAD"][1]
+                    self.corpse_elapsed = 0.0
             return
         if self.knockback_started:
             self.update_knockback(dt)

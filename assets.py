@@ -26,16 +26,25 @@ class Assets:
         self.damage_font = (pico2d.load_font(str(font_path), config.DAMAGE_NUMBER_FONT_SIZE)
                             if font_path.is_file() else None)
 
-    def draw_sprite(self, name, row, frame, x, feet_y, facing=1):
+    def draw_sprite(self, name, row, frame, x, feet_y, facing=1, opacity=1.0):
         tile = self.frames[name][row - 1][frame]
         left, bottom, width, height = tile["clip"]
         scale = config.SPRITE_SCALE
-        self.images[name].clip_composite_draw(
-            left, bottom, width, height, 0, "h" if facing < 0 else "",
-            x + tile["offset_x"] * scale * facing,
-            feet_y + (height / 2 + tile.get("offset_y", 0)) * scale,
-            width * scale, height * scale,
-        )
+        image = self.images[name]
+        fading = opacity < 1.0
+        if fading:
+            image.opacify(opacity)
+        try:
+            image.clip_composite_draw(
+                left, bottom, width, height, 0, "h" if facing < 0 else "",
+                x + tile["offset_x"] * scale * facing,
+                feet_y + (height / 2 + tile.get("offset_y", 0)) * scale,
+                width * scale, height * scale,
+            )
+        finally:
+            if fading:
+                # Enemy instances share textures; never dim the next actor.
+                image.opacify(1.0)
 
     def release(self):
         # Destroy textures before pico2d destroys the renderer.

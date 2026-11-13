@@ -33,6 +33,20 @@ class CounterTests(unittest.TestCase):
         while world.counter is not None:
             world.step(config.FIXED_DT)
 
+    def test_counter_stays_synchronized_for_a_full_second_at_the_slower_speed(self):
+        for key in "hjkl":
+            with self.subTest(key=key):
+                world, enemy = self.begin(key)
+                advance(world, 0.75)
+                self.assertIsNotNone(world.counter)
+                self.assertEqual(world.player.animation.frame, enemy.animation.frame)
+                self.assertEqual(enemy.hp, 120)
+                advance(world, 0.2)
+                self.assertIsNotNone(world.counter)
+                advance(world, 0.05)
+                self.assertIsNone(world.counter)
+                self.assertEqual((world.player.state, enemy.state), ("IDLE", "IDLE"))
+
     def test_all_four_keys_use_matching_rows_and_one_shared_animation_clock(self):
         for key, row in zip("hjkl", (1, 2, 3, 4)):
             for side in (-1, 1):

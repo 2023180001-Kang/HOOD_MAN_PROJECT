@@ -59,6 +59,7 @@ class CombatIntegrationTests(unittest.TestCase):
         world = World(rng=random.Random(20482304))
         keys = ("left", "right", "left_shift", "jump",
                 *(f"combat_{key}" for key in "asdf"))
+        removed_count = 0
         for frame in range(2400):
             if frame % 17 == 0:
                 key = rng.choice(keys)
@@ -68,15 +69,21 @@ class CombatIntegrationTests(unittest.TestCase):
                     world.controls.press(key)
             if frame % 600 == 599:
                 tap(world.controls, "restart")
+                removed_count = 0
             elif frame % 120 == 0:
                 tap(world.controls, "spawn_3")
+            previous_enemies = set(world.enemies)
             world.update(1 / 60)
+            if frame % 600 != 599:
+                removed = previous_enemies.difference(world.enemies)
+                self.assertTrue(all(enemy.faded_out for enemy in removed))
+                removed_count += len(removed)
             self.assertGreaterEqual(world.player.hp, 0)
             self.assertLessEqual(world.player.hp, 500)
             self.assertGreaterEqual(world.player.x, config.PLAYER_HALF_WIDTH)
             self.assertLessEqual(world.player.x, config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)
             self.assertGreaterEqual(world.player.y, config.GROUND_Y)
-            self.assertEqual(len(world.enemies), world.spawner.spawned_count)
+            self.assertEqual(len(world.enemies) + removed_count, world.spawner.spawned_count)
             self.assertLessEqual(len(world.effects), len(world.enemies) * 2)
             for effect in world.effects:
                 self.assertIn(effect.frame, range(8))

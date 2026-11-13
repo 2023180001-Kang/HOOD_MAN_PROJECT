@@ -4,6 +4,8 @@ from pathlib import Path
 import sys
 from unittest.mock import patch
 
+from PIL import ImageChops
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
@@ -13,7 +15,7 @@ import config
 from counter import COUNTERS
 from enemy import Enemy
 from game import Game
-from tools.check_render import capture
+from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, tick
 from world import World
 
@@ -149,6 +151,61 @@ def check_windows_held_input_and_restart(game):
           "fresh re-press and F5 release/reset/resource reuse.")
 
 
+def check_corpse_fade(game):
+    for style in ("normal", "counter"):
+        game.world = World()
+        if style == "counter":
+            corpse = attacker(game, hp=40)
+            push_key(pico2d.SDLK_h)
+            tick(game)
+            while game.world.counter is not None:
+                tick(game)
+            release(game, pico2d.SDLK_h)
+        else:
+            corpse = Enemy(game.world.player.x + 180, -1)
+            game.world.enemies.append(corpse)
+            corpse.take_damage(200)
+            while corpse.state != "DEAD":
+                tick(game)
+        corpse.x = game.world.player.x + 180
+        corpse.ground_y = 120
+        live = Enemy(game.world.player.x - 220)
+        if style == "counter":
+            # Keep a live pose on the same shared texture to catch alpha leakage.
+            live.start_counter(COUNTERS["counter_h"], 1)
+            live.animation.elapsed = 4 / COUNTERS["counter_h"].fps
+        game.world.enemies.append(live)
+        game.world.camera.update(config.SHAKE_DURATION, game.world.player.x)
+        game.world.enemies.remove(corpse)
+        background = render_image(game)
+        game.world.enemies.insert(0, corpse)
+        corpse_region = (700, 400, 940, 625)
+        live_region = (300, 360, 540, 625)
+        energy = []
+        live_pixels = None
+        for elapsed, label in ((0, "settled"), (3, "hold_3s"),
+                               (3.5, "fade_half"), (4, "fade_end")):
+            corpse.corpse_elapsed = elapsed
+            image = capture(game, f"{style}_corpse_{label}")
+            difference = ImageChops.difference(image.crop(corpse_region).convert("RGB"),
+                                              background.crop(corpse_region).convert("RGB"))
+            energy.append(sum(sum(pixel) for pixel in difference.get_flattened_data()))
+            pixels = image.crop(live_region).tobytes()
+            if live_pixels is None:
+                live_pixels = pixels
+            assert pixels == live_pixels, "Fading changed another actor sharing the texture"
+        assert energy[0] > 0 and energy[1] == energy[0]
+        assert 0.35 < energy[2] / energy[0] < 0.65
+        assert energy[3] == 0
+        if live.counter_move is not None:
+            live.finish_counter()
+        game.update(1 / 60)
+        assert corpse not in game.world.enemies and live in game.world.enemies
+        assert live.alive and live.opacity == 1
+        print(f"PASS: {style} corpse stays opaque through 3s, half-fade pixel ratio "
+              f"{energy[2] / energy[0]:.3f}, disappears at 4s; shared live texture stays opaque.")
+
+
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()
@@ -159,6 +216,7 @@ def main():
         check_rows_damage_and_recovery(game)
         check_lethal_counters(game)
         check_windows_held_input_and_restart(game)
+        check_corpse_fade(game)
     finally:
         if game is not None:
             game.close()

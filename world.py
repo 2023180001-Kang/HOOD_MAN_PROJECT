@@ -126,6 +126,7 @@ class World:
         prepare_enemy_spacing(self.player, self.enemies, self.stage.walkable)
         for enemy in self.enemies:
             enemy.update(dt, self.player, self.stage.walkable)
+        self.enemies[:] = [enemy for enemy in self.enemies if not enemy.faded_out]
         if self.player.alive:
             resolve_bodies(self.player, self.enemies, self.stage.walkable)
             resolve_enemy_spacing(self.player, self.enemies, dt, self.stage.walkable)

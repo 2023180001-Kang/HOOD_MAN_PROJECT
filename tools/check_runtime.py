@@ -1,7 +1,7 @@
 """Exercise real SDL input, HP pixels, resource reuse, performance and quit."""
 
 import ctypes
-from math import hypot
+from math import ceil, hypot
 from pathlib import Path
 import random
 import sys
@@ -173,22 +173,21 @@ def check_player_action_inputs(game):
         player = game.world.player
         key = getattr(pico2d, f"SDLK_{move.key}")
         push_key(key)
-        tick(game, 9)
-        if move.key in "df":
-            assert player.attack_box is None
-        tick(game, 3)
+        windup_frames = ceil(2 / move.fps * 60)
+        impact_frames = ceil(4 / move.fps * 60)
+        last_active_frame = ceil(8 / move.fps * 60) - 1
+        tick(game, windup_frames)
+        assert player.attack_box is None
+        tick(game, impact_frames - windup_frames)
         assert game.world.player is player
         assert player.active_move == move and player.animation.row == move.row
         assert player.sprite_image == config.COMBAT_IMAGE
         assert player.attack_box is not None
         capture(game, f"player_move_{move.key}")
         push_key(key, repeat=True)
-        tick(game, 8)
-        if move.key in "df":
-            assert player.active_move == move
-            tick(game, 6)
-            assert player.active_move == move
-            tick(game)
+        tick(game, last_active_frame - impact_frames)
+        assert player.active_move == move
+        tick(game, 2)
         assert player.state == "IDLE" and player.active_move is None
         tick(game, 30)
         assert player.state == "IDLE" and player.active_move is None
@@ -202,8 +201,8 @@ def check_player_action_inputs(game):
         assert game.world.player.state == "IDLE" and game.world.player.active_move is None
         push_key(getattr(pico2d, f"SDLK_{key_name}"), down=False)
         game.handle_events()
-    print("PASS: SDL A/S punches finish in 0.333s at 24 FPS; "
-          "D/F kicks remain active at 0.433s and finish by 0.450s at 18 FPS; "
+    print("PASS: SDL A jab 32 FPS/~0.250s, S straight 20 FPS/~0.400s, "
+          "D/F kicks 14 FPS/~0.571s; windup/active/recovery and held-key limits verified; "
           "retired Q/W/E/R/H inputs have no action.")
 
 
@@ -241,34 +240,34 @@ def check_player_attack_switches(game):
     enemy.cooldown = 100
     game.world.enemies = [enemy]
     push_key(pico2d.SDLK_a)
-    tick(game, 6)
-    for previous, key_name, hp in (("a", "s", 170), ("s", "d", 130), ("d", "f", 80)):
+    tick(game, 4)
+    for previous, key_name, hp in (("a", "s", 160), ("s", "d", 110), ("d", "f", 50)):
         push_key(getattr(pico2d, f"SDLK_{key_name}"))
         tick(game)
         assert game.world.player.state == f"ATTACK_{key_name.upper()}"
         assert game.world.player.animation.frame == 0
-        tick(game, 11)
+        tick(game, ceil(4 / MOVES[f"combat_{key_name}"].fps * 60) - 1)
         assert enemy.hp == hp
         capture(game, f"attack_switch_{previous}_to_{key_name}")
     tick(game, 40)
-    assert game.world.player.state == "IDLE" and enemy.hp == 80
+    assert game.world.player.state == "IDLE" and enemy.hp == 50
     for key_name in "asdf":
         push_key(getattr(pico2d, f"SDLK_{key_name}"), down=False)
     game.handle_events()
     print("PASS: SDL all 12 attack switches respond on the next tick; "
           "same-tick inputs select the latest fresh press, including release/repress; "
-          "A windup cancels into S/D/F with HP 200->170->130->80 and no held-key loops.")
+          "A windup cancels into S/D/F with HP 200->160->110->50 and no held-key loops.")
 
 
 def check_player_damage_and_enemy_health(game):
-    for key_name, damage in zip("asdf", (20, 30, 40, 50)):
+    for key_name, damage in zip("asdf", (10, 40, 50, 60)):
         game.world = World()
         enemy = Enemy(config.START_X + 80, -1)
         enemy.cooldown = 100
         game.world.enemies = [enemy]
         key = getattr(pico2d, f"SDLK_{key_name}")
         push_key(key)
-        tick(game, 11)
+        tick(game, ceil(4 / MOVES[f"combat_{key_name}"].fps * 60))
         assert enemy.hp == 200 - damage and enemy.state == "HIT"
         assert len(game.world.effects) == 1
         assert game.world.camera.shake_remaining > 0
@@ -307,7 +306,7 @@ def check_player_damage_and_enemy_health(game):
     tick(game, 60)
     assert enemy.hp == 0 and enemy.state == "DEAD" and enemy.animation.frame == 7
     capture(game, "enemy_defeated")
-    print("PASS: SDL A/S/D/F deal 20/30/40/50 once; red enemy HP bars "
+    print("PASS: SDL A/S/D/F deal 10/40/50/60 once; red enemy HP bars "
           "are full/half/hidden at 200/100/0; four right kicks defeat an enemy.")
 
 

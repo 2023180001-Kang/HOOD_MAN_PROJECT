@@ -122,7 +122,7 @@ def check_depth_and_order(game):
         enemy.animation.set_state("HIT")  # Hold fixtures still to isolate depth, not AI approach.
     push_key(pico2d.SDLK_a)
     tick(game, 9)
-    assert (near.hp, far.hp) == (180, 200)
+    assert (near.hp, far.hp) == (190, 200)
     assert len(game.world.damage_numbers) == 1
     shot(game, "belt_depth_player_attack")
     release((pico2d.SDLK_a,))

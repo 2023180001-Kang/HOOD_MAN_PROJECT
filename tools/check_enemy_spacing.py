@@ -105,7 +105,7 @@ def check_case(game, counts, label, *, wall=False):
         push_key(pico2d.SDLK_a)
         tick(game, 11)
         enemies = groups[0][1]
-        assert all(enemy.hp == 180 for enemy in enemies), "Every slot must be counterable by A"
+        assert all(enemy.hp == 190 for enemy in enemies), "Every slot must be counterable by A"
         assert len(game.world.damage_numbers) == len(enemies)
         capture(game, f"enemy_spacing_{label}_counter")
         push_key(direction, down=False)

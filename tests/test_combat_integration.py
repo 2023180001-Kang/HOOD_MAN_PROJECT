@@ -11,7 +11,7 @@ from world import World
 class CombatIntegrationTests(unittest.TestCase):
     def test_rapid_attack_switches_have_the_same_result_at_different_render_rates(self):
         outcomes = []
-        script = (("a", 0.05), ("s", 0.2), ("d", 0.2), ("f", 0.2), ("a", 0.2))
+        script = (("a", 0.05), ("s", 0.2), ("d", 0.3), ("f", 0.3), ("a", 0.2))
         for fps in (30, 60, 120, 144):
             world = World()
             enemy = Enemy(config.START_X + 80, -1)
@@ -27,7 +27,7 @@ class CombatIntegrationTests(unittest.TestCase):
                     remaining -= dt
                 self.assertEqual(world.player.state, f"ATTACK_{key.upper()}")
                 health.append(enemy.hp)
-            self.assertEqual(health, [200, 170, 130, 80, 60])
+            self.assertEqual(health, [200, 160, 110, 50, 40])
             outcomes.append((world.player.state, world.player.animation.elapsed, health))
         self.assertTrue(all(outcome == outcomes[0] for outcome in outcomes))
 

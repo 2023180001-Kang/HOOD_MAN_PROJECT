@@ -39,9 +39,10 @@ class Game:
         self.running = True
         pico2d.SDL_SetWindowTitle(backend.window, b"HOOD_MAN_PROJECT")
 
-    def handle_events(self):
+    def handle_events(self, *, title_screen=False):
         # pico2d.get_events filters out focus events, so poll its SDL event queue
         # directly to prevent stuck keys after Alt+Tab or clicking another window.
+        start_requested = False
         event = SDL_Event()
         while SDL_PollEvent(ctypes.byref(event)):
             if event.type == pico2d.SDL_QUIT:
@@ -49,6 +50,10 @@ class Game:
             elif event.type == SDL_WINDOWEVENT and event.window.event == SDL_WINDOWEVENT_FOCUS_LOST:
                 self.world.controls.held.clear()
                 self.world.controls.pressed.clear()
+            elif title_screen:
+                if (event.type == pico2d.SDL_KEYDOWN
+                        and event.key.keysym.sym == pico2d.SDLK_SPACE and not event.key.repeat):
+                    start_requested = True
             elif event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if key is not None:
@@ -56,6 +61,25 @@ class Game:
                         self.world.controls.press(key)
                     elif event.type == pico2d.SDL_KEYUP:
                         self.world.controls.release(key)
+        return start_requested
+
+    def draw_title_screen(self, present=True):
+        pico2d.clear_canvas()
+        self.assets.images[config.TITLE_IMAGE].draw(
+            config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2,
+            config.SCREEN_WIDTH, config.SCREEN_HEIGHT,
+        )
+        self.ui.draw_title_help(self.assets)
+        if present:
+            pico2d.update_canvas()
+
+    def show_title_screen(self):
+        while self.running:
+            self.draw_title_screen()
+            # Consume title inputs so starting with Space cannot also jump.
+            if self.handle_events(title_screen=True) or not self.running:
+                break
+            sleep(1 / config.TARGET_FPS)
 
     def update(self, dt):
         self.world.update(dt)

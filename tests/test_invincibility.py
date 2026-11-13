@@ -1,6 +1,7 @@
 import unittest
 
 import config
+from combat import MOVES
 from enemy import Enemy
 from tests.helpers import advance, tap
 from world import World
@@ -52,7 +53,7 @@ class InvincibilityTests(unittest.TestCase):
         self.assertGreater(world.camera.shake_remaining, 0)
 
     def test_immune_hits_keep_all_player_attacks_active(self):
-        for key, damage in zip("asdf", (20, 30, 40, 50)):
+        for key, damage in zip("asdf", (10, 40, 50, 60)):
             with self.subTest(key=key):
                 world = World()
                 world.controls.press("invincibility")
@@ -64,7 +65,7 @@ class InvincibilityTests(unittest.TestCase):
                 self.assertEqual(world.player.vx, 0)
                 self.assertTrue(front.has_hit and rear.has_hit)
                 self.assertEqual(world.effects, [])
-                advance(world, 0.2)
+                advance(world, 4 / MOVES[f"combat_{key}"].fps)
                 self.assertEqual(front.hp, 200 - damage)
                 self.assertEqual(rear.hp, 200)
                 self.assertEqual([number.damage for number in world.damage_numbers], [damage])

@@ -122,10 +122,10 @@ class EnemySpacingTests(unittest.TestCase):
                 world.controls.press("left" if side < 0 else "right")
                 world.controls.press("combat_a")
                 advance(world, 0.175)
-                self.assertEqual([enemy.hp for enemy in enemies], [180] * 8)
+                self.assertEqual([enemy.hp for enemy in enemies], [190] * 8)
                 self.assertEqual(len(world.damage_numbers), 8)
                 for enemy, number in zip(enemies, world.damage_numbers):
-                    self.assertEqual(number.damage, 20)
+                    self.assertEqual(number.damage, 10)
                     self.assertAlmostEqual(number.y - enemy.depth,
                                            enemy.body.top + config.ENEMY_HP_BAR_GAP
                                            + config.ENEMY_HP_BAR_HEIGHT + config.DAMAGE_NUMBER_GAP)

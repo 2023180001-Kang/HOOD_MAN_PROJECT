@@ -1,5 +1,6 @@
 """Verify short damage text near enemy HP bars through SDL input and pixels."""
 
+from math import ceil
 from pathlib import Path
 import sys
 from unittest.mock import patch
@@ -29,7 +30,7 @@ def attack(game, key, hp=200, side=1):
     direction = pico2d.SDLK_LEFT if side < 0 else pico2d.SDLK_RIGHT
     push_key(direction)
     push_key(getattr(pico2d, f"SDLK_{key}"))
-    tick(game, 11)
+    tick(game, ceil(4 / MOVES[f"combat_{key}"].fps * 60))
     push_key(direction, down=False)
     push_key(getattr(pico2d, f"SDLK_{key}"), down=False)
     game.handle_events()

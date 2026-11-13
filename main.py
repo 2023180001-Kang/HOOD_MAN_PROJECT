@@ -26,6 +26,8 @@ def main():
     pico2d.hide_lattice()
     try:
         game = Game()
+        if args.smoke_test is None:
+            game.show_title_screen()
         frames = game.run(args.smoke_test)
         if args.smoke_test:
             print(f"Smoke test complete: {frames} frames.")

@@ -1,6 +1,7 @@
 import unittest
 
 import config
+from combat import MOVES
 from enemy import Enemy
 from tests.helpers import advance, tap
 from world import World
@@ -15,12 +16,12 @@ def target(world, offset=80):
 
 class DamageNumberTests(unittest.TestCase):
     def test_each_attack_reports_hp_loss_once_and_a_new_swing_can_report_again(self):
-        for key, damage in zip("asdf", (20, 30, 40, 50)):
+        for key, damage in zip("asdf", (10, 40, 50, 60)):
             with self.subTest(key=key):
                 world = World()
                 enemy = target(world)
                 world.controls.press(f"combat_{key}")
-                advance(world, 0.175)
+                advance(world, 4 / MOVES[f"combat_{key}"].fps)
                 self.assertEqual(enemy.hp, 200 - damage)
                 self.assertEqual([number.damage for number in world.damage_numbers], [damage])
                 first = world.damage_numbers[0]
@@ -29,7 +30,7 @@ class DamageNumberTests(unittest.TestCase):
                 advance(world, 0.35)
                 self.assertEqual(world.damage_numbers, [])
                 tap(world.controls, f"combat_{key}")
-                advance(world, 0.175)
+                advance(world, 4 / MOVES[f"combat_{key}"].fps)
                 self.assertEqual(enemy.hp, 200 - damage * 2)
                 self.assertEqual([number.damage for number in world.damage_numbers], [damage])
                 self.assertIsNot(world.damage_numbers[0], first)
@@ -60,8 +61,8 @@ class DamageNumberTests(unittest.TestCase):
         enemies = [target(world, offset) for offset in (80, 95, 110)]
         world.controls.press("combat_s")
         advance(world, 0.175)
-        self.assertEqual([enemy.hp for enemy in enemies], [170, 170, 170])
-        self.assertEqual([number.damage for number in world.damage_numbers], [30, 30, 30])
+        self.assertEqual([enemy.hp for enemy in enemies], [160, 160, 160])
+        self.assertEqual([number.damage for number in world.damage_numbers], [40, 40, 40])
         self.assertEqual([number.x for number in world.damage_numbers],
                          [enemy.x for enemy in enemies])
 
@@ -70,7 +71,7 @@ class DamageNumberTests(unittest.TestCase):
         enemy = target(world)
         enemy.hp = 10
         world.controls.press("combat_f")
-        advance(world, 0.175)
+        advance(world, 4 / MOVES["combat_f"].fps)
         self.assertFalse(enemy.alive)
         self.assertEqual([number.damage for number in world.damage_numbers], [10])
         advance(world, 0.3)
@@ -92,8 +93,8 @@ class DamageNumberTests(unittest.TestCase):
         self.assertEqual(first.elapsed, elapsed)
         target(world)
         world.controls.press("combat_d")
-        advance(world, 0.175)
-        self.assertEqual([number.damage for number in world.damage_numbers], [40])
+        advance(world, 4 / MOVES["combat_d"].fps)
+        self.assertEqual([number.damage for number in world.damage_numbers], [50])
         self.assertEqual(first.elapsed, elapsed)
         world.stage_index = 0
         self.assertIs(world.damage_numbers[0], first)

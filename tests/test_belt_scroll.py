@@ -166,7 +166,7 @@ class BeltScrollTests(unittest.TestCase):
                     player.start_move(MOVES["combat_a"], side)
                     player.animation.elapsed = 3 / MOVES["combat_a"].fps
                     self.assertEqual(player.try_hit(enemy), expected)
-                    self.assertEqual(enemy.hp, 180 if expected else 200)
+                    self.assertEqual(enemy.hp, 190 if expected else 200)
                     ready([enemy])
                     self.assertEqual(enemy.try_hit(player), expected)
                     self.assertEqual(player.hp, 480 if expected else 500)

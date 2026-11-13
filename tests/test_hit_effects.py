@@ -26,8 +26,8 @@ class HitEffectTests(unittest.TestCase):
             world.enemies = [enemy]
             world.controls.press("left" if facing < 0 else "right")
             world.controls.press("combat_a")
-            advance(world, 0.3)
-            self.assertEqual(enemy.hp, 180)
+            advance(world, 0.2)
+            self.assertEqual(enemy.hp, 190)
             self.assertEqual(len(world.effects), 1)
             self.assertGreater(world.camera.shake_remaining, 0)
             effect = world.effects[0]
@@ -70,9 +70,9 @@ class HitEffectTests(unittest.TestCase):
         world.enemies = [victim]
         striker(world, -1)
         world.player.start_move(MOVES["combat_a"], 1)
-        world.player.animation.elapsed = 3 / config.COMBAT_FPS
+        world.player.animation.elapsed = 3 / MOVES["combat_a"].fps
         world.step(config.FIXED_DT)
-        self.assertEqual((victim.hp, world.player.hp), (180, 480))
+        self.assertEqual((victim.hp, world.player.hp), (190, 480))
         self.assertEqual(len(world.effects), 2)
         self.assertNotEqual(world.effects[0].x, world.effects[1].x)
 
@@ -100,7 +100,7 @@ class HitEffectTests(unittest.TestCase):
         self.assertGreater(remaining, 0)
         advance(world, 0.05)
         self.assertLess(world.camera.shake_remaining, remaining)
-        self.assertEqual(enemy.hp, 180)
+        self.assertEqual(enemy.hp, 190)
         advance(world, 0.2)
         self.assertEqual(world.camera.shake_remaining, 0)
         self.assertEqual((world.camera.offset_x, world.camera.offset_y), (0, 0))

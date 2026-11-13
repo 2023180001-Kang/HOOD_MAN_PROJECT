@@ -26,38 +26,38 @@ class PlayerActionTests(unittest.TestCase):
                 self.assertEqual(world.player.sprite_image, config.PLAYER_IMAGE)
                 self.assertIsNone(world.player.active_move)
 
-    def test_punches_have_short_windup_and_finish_in_one_third_second(self):
-        for key in ("combat_a", "combat_s"):
-            with self.subTest(key=key):
-                world = World()
-                world.controls.press(key)
-                advance(world, 0.1)
-                self.assertIsNone(world.player.attack_box)
-                advance(world, 0.05)
-                self.assertIsNotNone(world.player.attack_box)
-                advance(world, 0.15)
-                self.assertIsNotNone(world.player.active_move)
-                advance(world, 1 / 30)
-                self.assertIsNone(world.player.active_move)
-                self.assertEqual(world.player.state, "IDLE")
+    def assert_attack_timing(self, key, fps, windup, active_end, duration):
+        world = World()
+        self.assertEqual(MOVES[key].fps, fps)
+        world.controls.press(key)
+        active_times = []
+        for step in range(120):
+            world.step(config.FIXED_DT)
+            elapsed = (step + 1) * config.FIXED_DT
+            if world.player.attack_box is not None:
+                active_times.append(elapsed)
+            if world.player.active_move is None:
+                break
+        self.assertTrue(active_times)
+        self.assertGreaterEqual(active_times[0] + 1e-9, windup)
+        self.assertLessEqual(active_times[0], windup + config.FIXED_DT + 1e-9)
+        self.assertLessEqual(active_times[-1], active_end + 1e-9)
+        self.assertGreaterEqual(active_times[-1], active_end - config.FIXED_DT - 1e-9)
+        self.assertGreaterEqual(elapsed + 1e-9, duration)
+        self.assertLessEqual(elapsed, duration + config.FIXED_DT + 1e-9)
+        self.assertEqual(world.player.state, "IDLE")
 
-    def test_kicks_have_slower_windup_and_finish_after_four_ninths_second(self):
+    def test_jab_is_faster_and_straight_is_slower_with_independent_playback(self):
+        for key, fps, windup, active_end, duration in (
+                ("combat_a", 32, 0.09375, 0.15625, 0.25),
+                ("combat_s", 20, 0.15, 0.25, 0.4)):
+            with self.subTest(key=key):
+                self.assert_attack_timing(key, fps, windup, active_end, duration)
+
+    def test_both_kicks_use_slower_fourteen_fps_playback(self):
         for key in ("combat_d", "combat_f"):
             with self.subTest(key=key):
-                world = World()
-                world.controls.press(key)
-                advance(world, 0.15)
-                self.assertIsNone(world.player.attack_box)
-                advance(world, 0.05)
-                self.assertIsNotNone(world.player.attack_box)
-                advance(world, 0.1)
-                self.assertIsNone(world.player.attack_box)
-                self.assertIsNotNone(world.player.active_move)
-                advance(world, 2 / 15)
-                self.assertIsNotNone(world.player.active_move)
-                advance(world, 1 / 60)
-                self.assertIsNone(world.player.active_move)
-                self.assertEqual(world.player.state, "IDLE")
+                self.assert_attack_timing(key, 14, 3 / 14, 5 / 14, 8 / 14)
 
     def test_held_and_repeated_keys_do_not_loop_attacks(self):
         world = World()
@@ -75,11 +75,12 @@ class PlayerActionTests(unittest.TestCase):
             for second, move in MOVES.items():
                 if first == second:
                     continue
-                for elapsed in (config.FIXED_DT, 0.2, 0.3):
+                for elapsed in (1 / MOVES[first].fps, 4 / MOVES[first].fps, 7 / MOVES[first].fps):
                     with self.subTest(first=first, second=second, elapsed=elapsed):
                         world = World()
                         world.controls.press(first)
                         advance(world, elapsed, fps=120)
+                        self.assertEqual(world.player.active_move, MOVES[first])
                         world.controls.press(second)
                         world.update(config.FIXED_DT)
                         self.assertEqual(world.player.active_move, move)

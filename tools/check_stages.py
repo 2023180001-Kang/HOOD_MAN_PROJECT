@@ -4,6 +4,10 @@ from copy import deepcopy
 from pathlib import Path
 import random
 import sys
+from time import perf_counter
+from unittest.mock import patch
+
+from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -11,6 +15,8 @@ sys.path.insert(0, str(ROOT))
 import pico2d
 
 import config
+from effects import HitEffect
+from enemy import Enemy
 from game import Game
 from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, tick
@@ -26,7 +32,7 @@ def view_edge(game, side):
 def check_markers(game):
     textures = dict(game.assets.images)
     backgrounds = []
-    for index in range(2):
+    for index in range(len(config.STAGE_IMAGES)):
         game.world = World()
         game.world.stage_index = index
         baseline = {}
@@ -56,8 +62,7 @@ def check_markers(game):
         assert game.world.stage.arrows_visible
         push_key(pico2d.SDLK_n, down=False)
         game.handle_events()
-    assert backgrounds[0].crop((250, 200, 1000, 500)).tobytes() != backgrounds[1].crop(
-        (250, 200, 1000, 500)).tobytes()
+    assert len({image.crop((250, 200, 1000, 500)).tobytes() for image in backgrounds}) == 4
     push_key(pico2d.SDLK_F5)
     tick(game)
     assert game.world.stage_index == 0
@@ -65,8 +70,8 @@ def check_markers(game):
     assert all(game.assets.images[name] is image for name, image in textures.items())
     push_key(pico2d.SDLK_F5, down=False)
     game.handle_events()
-    print("PASS: SDL N reveals stage 1 right / stage 2 left+right yellow arrows; "
-          "distinct backgrounds, unavailable next-stage marker and shared textures verified.")
+    print("PASS: SDL N reveals the first stage right / remaining stages left+right arrows; "
+          "four distinct backgrounds and shared textures verified.")
 
 
 def check_motion_continuity(game):
@@ -165,7 +170,7 @@ def check_round_trip_and_last_exit(game):
     game.handle_events()
 
     game.world = World()
-    game.world.stage_index = 1
+    game.world.stage_index = len(config.STAGE_IMAGES) - 1
     player = game.world.player
     player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
     player.vx = 720
@@ -173,9 +178,9 @@ def check_round_trip_and_last_exit(game):
     push_key(pico2d.SDLK_RIGHT)
     push_key(pico2d.SDLK_LSHIFT)
     tick(game, 30)
-    assert game.world.stage_index == 1
+    assert game.world.stage_index == len(config.STAGE_IMAGES) - 1
     assert player.x == config.WORLD_WIDTH - config.PLAYER_BOUNDARY_PADDING
-    capture(game, "stage_2_next_pending")
+    capture(game, "city_stage_2_last_boundary")
     push_key(pico2d.SDLK_F5)
     tick(game)
     assert game.world.stage_index == 0 and game.world.player.hp == 500
@@ -184,7 +189,104 @@ def check_round_trip_and_last_exit(game):
         push_key(key, down=False)
     game.handle_events()
     print("PASS: SDL full sprint round trip keeps per-map enemies/HP/spawn counts, "
-          "avoids return loops, bounds the final exit, and F5 resets both stages.")
+          "avoids return loops, bounds the final city exit, and F5 resets all four stages.")
+
+
+def check_city_loading(game):
+    game.world = World()
+    player = game.world.player
+    textures = dict(game.assets.images)
+    player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
+    player.hp, player.invincible = 420, True
+    for key in (pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_n):
+        push_key(key)
+    tick(game)
+    assert game.world.stage_index == 1 and not game.world.stage_loading
+    source = game.world.stage
+    source.enemies.append(Enemy(1200))
+    source.effects.append(HitEffect(1200, 180, 1))
+    player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
+    push_key(pico2d.SDLK_n, down=False)
+    push_key(pico2d.SDLK_n)
+    timing = {}
+    frozen = []
+    original_draw = game.draw
+
+    def observe(present=True):
+        original_draw(present)
+        world = game.world
+        if world.stage_loading:
+            snapshot = (world.elapsed, player.x, player.ground_y, player.hp,
+                        player.jump_height, player.animation.elapsed,
+                        source.enemies[0].x, source.enemies[0].animation.elapsed,
+                        source.effects[0].elapsed)
+            if not frozen:
+                frozen.append(snapshot)
+                with patch.object(game, "draw", original_draw):
+                    image = capture(game, "stage_loading_to_city")
+                with Image.open(config.ROOT / config.STAGE_LOADING_IMAGE) as supplied:
+                    assert ImageChops.difference(image.convert("RGB"),
+                                                supplied.convert("RGB")).getbbox() is None
+                timing["start"] = perf_counter()
+                for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_9, pico2d.SDLK_p):
+                    push_key(key)
+                push_key(pico2d.SDLK_n, down=False)
+                push_key(pico2d.SDLK_n)
+            assert snapshot == frozen[0]
+        elif world.stage_index == 2:
+            timing.setdefault("end", perf_counter())
+
+    with patch.object(game, "draw", side_effect=observe):
+        assert game.run(max_frames=150) == 150
+    duration = timing["end"] - timing["start"]
+    assert 2.0 <= duration < 2.25, duration
+    assert game.world.stage_index == 2 and not game.world.stage_loading
+    assert game.world.player is player and player.hp == 420 and player.invincible
+    assert player.jump_count == 0 and player.active_move is None
+    assert not game.world.enemies and not game.world.stage.arrows_visible
+    assert all(game.assets.images[name] is image for name, image in textures.items())
+    capture(game, "city_stage_1_entered")
+    push_key(pico2d.SDLK_1)
+    tick(game)
+    city_first = game.world.stage
+    city_enemy = city_first.enemies[0]
+    city_enemy.take_damage(40)
+    push_key(pico2d.SDLK_n, down=False)
+    push_key(pico2d.SDLK_n)
+    player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
+    tick(game)
+    assert game.world.stage_index == 3 and not game.world.stage_loading
+    assert game.world.player is player and player.hp == 420
+    capture(game, "city_stage_2_entered")
+    push_key(pico2d.SDLK_RIGHT, down=False)
+    push_key(pico2d.SDLK_LEFT)
+    push_key(pico2d.SDLK_n, down=False)
+    push_key(pico2d.SDLK_n)
+    player.x, player.vx = config.STAGE_EXIT_MARGIN, -config.RUN_SPEED
+    tick(game)
+    assert game.world.stage is city_first and not game.world.stage_loading
+    assert city_first.enemies[0] is city_enemy and city_enemy.hp == 160
+    player.x, player.vx = config.STAGE_EXIT_MARGIN, -config.RUN_SPEED
+    tick(game)
+    assert game.world.stage_loading and game.world.pending_stage_index == 1
+    capture(game, "stage_loading_return_from_city")
+    game.update(config.STAGE_LOADING_DURATION)
+    assert game.world.stage is source and game.world.player is player
+    assert player.x == config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN
+    player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
+    assert game.world.try_stage_transition()
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    assert not game.world.stage_loading and game.world.stage_loading_remaining == 0
+    assert game.world.stage_index == 0 and game.world.player.hp == 500
+    assert all(not stage.enemies and not stage.arrows_visible for stage in game.world.stages)
+    for key in (pico2d.SDLK_F5, pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT, pico2d.SDLK_n,
+                pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_9, pico2d.SDLK_p, pico2d.SDLK_1):
+        push_key(key, down=False)
+    game.handle_events()
+    print(f"PASS: supplied loading image stays visible for {duration:.3f}s with gameplay frozen; "
+          "newStage -> newStage-2 -> cityStage-1 -> cityStage-2, ignored loading actions, "
+          "HP/motion/resource reuse, city return and F5 cancellation verified.")
 
 
 def main():
@@ -197,6 +299,7 @@ def main():
         check_markers(game)
         check_motion_continuity(game)
         check_round_trip_and_last_exit(game)
+        check_city_loading(game)
     finally:
         if game is not None:
             game.close()

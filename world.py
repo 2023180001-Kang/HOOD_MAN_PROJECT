@@ -26,6 +26,8 @@ class World:
         self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence)
                        for index in range(len(config.STAGE_IMAGES))]
         self.stage_index = 0
+        self.pending_stage_index = None
+        self.stage_loading_remaining = 0.0
         self.death_handled = False
         self.elapsed = 0.0
         self.accumulator = 0.0
@@ -33,6 +35,10 @@ class World:
     @property
     def stage(self):
         return self.stages[self.stage_index]
+
+    @property
+    def stage_loading(self):
+        return self.pending_stage_index is not None
 
     @property
     def enemies(self):
@@ -66,17 +72,34 @@ class World:
         if self.controls.take_press("restart"):
             self.reset()
             return
+        if self.stage_loading:
+            # Loading uses real elapsed time, independent of the physics dt cap.
+            self.controls.pressed.clear()
+            self.stage_loading_remaining = max(0.0, self.stage_loading_remaining - max(0.0, dt))
+            if self.stage_loading_remaining <= 1e-9:
+                self._enter_stage(self.pending_stage_index)
+                self.pending_stage_index = None
+                self.stage_loading_remaining = 0.0
+            return
         self.accumulator += min(max(dt, 0.0), config.MAX_FRAME_DT)
         while self.accumulator + 1e-12 >= config.FIXED_DT:
             self.step(config.FIXED_DT)
             self.accumulator = max(0.0, self.accumulator - config.FIXED_DT)
+            if self.stage_loading:
+                self.accumulator = 0.0
+                break
 
     def step(self, dt):
+        if self.stage_loading:
+            self.controls.pressed.clear()
+            return
         self.elapsed += dt
         if self.controls.take_press("stage_exits") and self.player.alive:
             self.stage.arrows_visible = True
         self.stage.constrain_actor(self.player)
         self.try_stage_transition()
+        if self.stage_loading:
+            return
         for effect in self.effects:
             effect.update(dt)
         self.effects = [effect for effect in self.effects if not effect.finished]
@@ -125,7 +148,7 @@ class World:
 
     def try_stage_transition(self):
         player = self.player
-        if (not player.alive or player.active_move is not None
+        if (self.stage_loading or not player.alive or player.active_move is not None
                 or player.state in ("HIT", "DYING", "DEAD")):
             return False
         for side in self.stage.arrow_sides:
@@ -136,18 +159,27 @@ class World:
                        (player.vx == 0 and self.controls.direction == side))
             if destination is None or not at_exit or not outward:
                 continue
-            # Enter far enough inside the new scene to avoid an immediate return.
-            # Keep the same player, physics, held input and animation clock.
-            self.stage_index = destination
-            player.x = (config.STAGE_ENTRY_MARGIN if side > 0 else
-                        config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
-            player.previous_x = player.x
-            self.stage.constrain_actor(player)
-            player.previous_x = player.x
-            player.previous_ground_y = player.ground_y
-            self.camera = Camera(player.x)
+            if (self.stage_index, destination) in config.STAGE_LOADING_TRANSITIONS:
+                self.pending_stage_index = destination
+                self.stage_loading_remaining = config.STAGE_LOADING_DURATION
+                self.controls.pressed.clear()
+            else:
+                self._enter_stage(destination)
             return True
         return False
+
+    def _enter_stage(self, destination):
+        # Keep the same player, physics, held input and animation clock, and
+        # enter far enough inside the next scene to avoid an immediate return.
+        side = 1 if destination > self.stage_index else -1
+        self.stage_index = destination
+        player = self.player
+        player.x = (config.STAGE_ENTRY_MARGIN if side > 0 else
+                    config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
+        self.stage.constrain_actor(player)
+        player.previous_x = player.x
+        player.previous_ground_y = player.ground_y
+        self.camera = Camera(player.x)
 
     def handle_death(self):
         if not self.player.alive and not self.death_handled:

@@ -92,7 +92,10 @@ COMBAT_MOVE_SPECS = (
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "newStage.png"
-STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png")
+STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png", "cityStage-1.png", "cityStage-2.png")
+STAGE_LOADING_IMAGE = "HOOD_MAN_STAGE_LOADING_1280x720.png"
+STAGE_LOADING_DURATION = 2.0
+STAGE_LOADING_TRANSITIONS = ((1, 2), (2, 1))
 STAGE_ARROW_IMAGES = {-1: "arrow_left_yellow.png", 1: "arrow_right_yellow.png"}
 STAGE_ARROW_WIDTH = 96.0
 STAGE_ARROW_Y = GROUND_Y
@@ -106,6 +109,8 @@ STAGE_GROUND_Y = 144.0
 # World-space foot regions, below the buildings/props and above the foreground.
 # Optional convex polygons override a stage's rectangle (counterclockwise vertices).
 STAGE_WALKABLE_BOUNDS = (
+    (0.0, 56.0, WORLD_WIDTH, 148.0),
+    (0.0, 56.0, WORLD_WIDTH, 116.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
 )

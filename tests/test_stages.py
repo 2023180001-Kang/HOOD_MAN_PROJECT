@@ -30,7 +30,7 @@ class StageTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         self.assertEqual(world.stage.arrow_sides, (1,))
 
-    def test_second_stage_has_both_markers_and_an_unavailable_next_destination(self):
+    def test_second_stage_has_both_markers_and_connects_to_the_city(self):
         world = World()
         world.stage_index = 1
         self.assertEqual(world.stage.image_name, "newStage-2.png")
@@ -39,7 +39,7 @@ class StageTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         self.assertEqual(world.stage.arrow_sides, (-1, 1))
         self.assertEqual(world.stage.destination(-1), 0)
-        self.assertIsNone(world.stage.destination(1))
+        self.assertEqual(world.stage.destination(1), 2)
 
     def test_held_n_does_not_reveal_another_stage_without_a_new_press(self):
         world = World()
@@ -75,9 +75,9 @@ class StageTests(unittest.TestCase):
         self.assertIs(world.effects[0], effect)
         self.assertEqual(world.spawner.spawned_count, 3)
 
-    def test_dead_n_is_consumed_and_restart_resets_both_scenes(self):
+    def test_dead_n_is_consumed_and_restart_resets_all_scenes(self):
         world = World()
-        for index in range(2):
+        for index in range(len(config.STAGE_IMAGES)):
             world.stage_index = index
             tap(world.controls, "stage_exits")
             tap(world.controls, "spawn_2")
@@ -141,11 +141,12 @@ class StageTests(unittest.TestCase):
                     self.assertEqual(world.elapsed, reference.elapsed)
 
     def test_travel_requires_visible_markers_and_last_right_edge_stays_in_bounds(self):
-        for index, side in ((0, -1), (0, 1), (1, 1)):
+        last = len(config.STAGE_IMAGES) - 1
+        for index, side in ((0, -1), (0, 1), (last, 1)):
             with self.subTest(index=index, side=side):
                 world = World()
                 world.stage_index = index
-                world.stage.arrows_visible = index == 1 or side < 0
+                world.stage.arrows_visible = index == last or side < 0
                 world.player.x = (config.PLAYER_HALF_WIDTH if side < 0 else
                                   config.WORLD_WIDTH - config.PLAYER_HALF_WIDTH)
                 world.controls.press("left" if side < 0 else "right")

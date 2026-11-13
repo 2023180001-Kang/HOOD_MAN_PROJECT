@@ -139,8 +139,8 @@ class BeltScrollTests(unittest.TestCase):
                 self.assertEqual((world.player.x, world.player.ground_y), point)
                 self.assertEqual((world.player.vx, world.player.ground_vy), (0, 0))
 
-    def test_world_player_bounds_cover_all_four_floor_corners_in_both_stages(self):
-        for stage_index in (0, 1):
+    def test_world_player_bounds_cover_all_four_floor_corners_in_all_stages(self):
+        for stage_index in range(len(config.STAGE_IMAGES)):
             for horizontal in ("left", "right"):
                 for vertical in ("up", "down"):
                     with self.subTest(stage=stage_index, horizontal=horizontal, vertical=vertical):
@@ -231,7 +231,7 @@ class BeltScrollTests(unittest.TestCase):
             self.assertEqual(enemy.state, "RUN")
 
     def test_every_enemy_state_constrains_invalid_or_outward_floor_positions(self):
-        for stage_index in (0, 1):
+        for stage_index in range(len(config.STAGE_IMAGES)):
             area = World().stages[stage_index].walkable
             left, bottom, right, top = area.bounds
             for state in config.ENEMY_ANIMATIONS:
@@ -251,7 +251,7 @@ class BeltScrollTests(unittest.TestCase):
                         self.assertTrue(area.contains(enemy.x, enemy.ground_y, enemy.boundary_padding))
 
     def test_2_5_10_enemies_at_all_corners_stay_inside_after_attack_separation_and_knockback(self):
-        for stage_index in (0, 1):
+        for stage_index in range(len(config.STAGE_IMAGES)):
             for count in (2, 5, 10):
                 for corner in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
                     with self.subTest(stage=stage_index, count=count, corner=corner):
@@ -274,7 +274,7 @@ class BeltScrollTests(unittest.TestCase):
                         self.assertEqual(world.stage_index, stage_index)
 
     def test_ten_per_side_all_reach_attack_depth_and_twenty_can_hit_in_one_step(self):
-        for stage_index in (0, 1):
+        for stage_index in range(len(config.STAGE_IMAGES)):
             world = World()
             world.stage_index = stage_index
             world.player.invincible = True
@@ -299,7 +299,7 @@ class BeltScrollTests(unittest.TestCase):
             self.assertTrue(all(enemy.has_hit for enemy in world.enemies))
 
     def test_valid_corner_arrivals_never_teleport_the_player_or_attacking_enemies(self):
-        for stage_index in (0, 1):
+        for stage_index in range(len(config.STAGE_IMAGES)):
             for count in (2, 5, 10):
                 for sx, sy in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
                     world = World()
@@ -325,7 +325,7 @@ class BeltScrollTests(unittest.TestCase):
                             self.assertLessEqual(hypot(enemy.x - x, enemy.ground_y - y), maximum + 1e-8)
 
     def test_slot_targets_fit_floor_and_melee_depth_before_any_actor_moves(self):
-        for stage_index in (0, 1):
+        for stage_index in range(len(config.STAGE_IMAGES)):
             for count in (2, 5, 10):
                 for ground_y in (56, 100, config.STAGE_WALKABLE_BOUNDS[stage_index][3]):
                     world = World()

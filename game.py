@@ -84,7 +84,19 @@ class Game:
     def update(self, dt):
         self.world.update(dt)
 
+    def draw_stage_loading_screen(self, present=True):
+        pico2d.clear_canvas()
+        self.assets.images[config.STAGE_LOADING_IMAGE].draw(
+            config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2,
+            config.SCREEN_WIDTH, config.SCREEN_HEIGHT,
+        )
+        if present:
+            pico2d.update_canvas()
+
     def draw(self, present=True):
+        if self.world.stage_loading:
+            self.draw_stage_loading_screen(present)
+            return
         pico2d.clear_canvas()
         camera_x = self.world.camera.render_x
         camera_y = self.world.camera.render_y
@@ -108,13 +120,17 @@ class Game:
         frames = 0
         while self.running and (max_frames is None or frames < max_frames):
             start = perf_counter()
-            dt = min(start - previous, config.MAX_FRAME_DT)
+            dt = start - previous
             previous = start
             self.handle_events()
             if not self.running:
                 break
+            was_loading = self.world.stage_loading
             self.update(dt)
             self.draw()
+            if self.world.stage_loading and not was_loading:
+                # Start the two-second wait after its first image is presented.
+                previous = perf_counter()
             frames += 1
             # Absolute deadlines avoid accumulating Windows sleep overshoot.
             deadline += 1 / config.TARGET_FPS

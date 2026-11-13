@@ -8,16 +8,18 @@ from world import World
 
 
 class EnemyAttackSpeedTests(unittest.TestCase):
-    def test_spawn_rates_are_unique_across_batches_and_both_stages(self):
+    def test_spawn_rates_are_unique_across_batches_and_all_stages(self):
         world = World(rng=random.Random(17))
         enemies = []
-        for index in (0, 1, 0, 1):
-            enemies.extend(world.stages[index].spawner.spawn(100, 0))
+        for _ in range(2):
+            for stage in world.stages:
+                enemies.extend(stage.spawner.spawn(100, 0))
         speeds = [enemy.attack_speed for enemy in enemies]
-        self.assertEqual(len(set(speeds)), 400)
+        self.assertEqual(len(set(speeds)), 200 * len(world.stages))
         low, high = config.ENEMY_ATTACK_SPEED_RANGE
         self.assertTrue(all(low < speed < high for speed in speeds))
-        self.assertEqual([stage.spawner.spawned_count for stage in world.stages], [200, 200])
+        self.assertEqual([stage.spawner.spawned_count for stage in world.stages],
+                         [200] * len(world.stages))
         for enemy in enemies:
             self.assertAlmostEqual(enemy.attack_fps, 12 * enemy.attack_speed)
             self.assertAlmostEqual(enemy.attack_interval, 1 / enemy.attack_speed)

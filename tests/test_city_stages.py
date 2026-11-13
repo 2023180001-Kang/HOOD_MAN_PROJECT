@@ -1,0 +1,215 @@
+import unittest
+
+import config
+from combat import MOVES
+from effects import DamageNumber, HitEffect
+from enemy import Enemy
+from tests.helpers import advance, tap
+from world import World
+
+
+class CityStageTests(unittest.TestCase):
+    def at_exit(self, index=1, side=1):
+        world = World()
+        world.stage_index = index
+        world.stage.arrows_visible = True
+        world.player.x = (config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
+                          if side > 0 else config.STAGE_EXIT_MARGIN)
+        world.player.vx = side * config.RUN_SPEED
+        world.controls.press("right" if side > 0 else "left")
+        world.controls.press("left_shift")
+        return world
+
+    def test_four_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
+        world = World()
+        self.assertEqual([stage.image_name for stage in world.stages],
+                         ["newStage.png", "newStage-2.png", "cityStage-1.png", "cityStage-2.png"])
+        for index, stage in enumerate(world.stages):
+            stage.arrows_visible = True
+            self.assertEqual(stage.destination(-1), index - 1 if index else None)
+            self.assertEqual(stage.destination(1), index + 1 if index < 3 else None)
+
+    def test_travel_inside_each_pair_preserves_motion_without_loading(self):
+        for first in (0, 2):
+            for side in (-1, 1):
+                with self.subTest(first=first, side=side):
+                    world = self.at_exit(first if side > 0 else first + 1, side)
+                    player = world.player
+                    player.hp, player.invincible = 420, True
+                    player.jump_height, player.vy, player.jump_count = 150, 300, 2
+                    player.animation.set_state("JUMP")
+                    player.animation.elapsed = 0.2
+                    self.assertTrue(world.try_stage_transition())
+                    self.assertFalse(world.stage_loading)
+                    self.assertEqual(world.stage_index, first + 1 if side > 0 else first)
+                    self.assertIs(world.player, player)
+                    self.assertEqual((player.hp, player.invincible, player.jump_height,
+                                      player.vy, player.jump_count, player.vx),
+                                     (420, True, 150, 300, 2, side * config.RUN_SPEED))
+                    self.assertEqual(player.animation.elapsed, 0.2)
+
+    def test_city_loading_requires_an_open_exit_outward_motion_and_a_mobile_player(self):
+        for blocked in ("hidden", "inward", "not_at_exit", "attack", "HIT", "DYING", "DEAD"):
+            with self.subTest(blocked=blocked):
+                world = self.at_exit()
+                if blocked == "hidden":
+                    world.stage.arrows_visible = False
+                elif blocked == "inward":
+                    world.player.vx = -config.RUN_SPEED
+                elif blocked == "not_at_exit":
+                    world.player.x = config.START_X
+                elif blocked == "attack":
+                    world.player.start_move(MOVES["combat_a"], 1)
+                else:
+                    world.player.animation.set_state(blocked)
+                    if blocked in ("DYING", "DEAD"):
+                        world.player.hp = 0
+                self.assertFalse(world.try_stage_transition())
+                self.assertFalse(world.stage_loading)
+                self.assertEqual(world.stage_index, 1)
+
+    def test_loading_freezes_all_gameplay_and_discards_one_shot_inputs(self):
+        world = self.at_exit()
+        player = world.player
+        player.hp, player.invincible = 440, True
+        player.jump_height, player.vy, player.jump_count = 120, 300, 2
+        player.animation.set_state("JUMP")
+        player.animation.elapsed = 0.2
+        source = world.stage
+        source.enemies.append(Enemy(1200))
+        source.effects.append(HitEffect(1200, 180, 1))
+        source.damage_numbers.append(DamageNumber(1200, 250, 10))
+        destination = world.stages[2]
+        destination.enemies.append(Enemy(1800))
+        destination.effects.append(HitEffect(1800, 180, 1))
+        world.camera.shake()
+        before = (player.x, player.ground_y, player.jump_height, player.vy,
+                  player.animation.elapsed, world.camera.shake_remaining)
+        self.assertTrue(world.try_stage_transition())
+        for key in ("jump", "combat_f", "spawn_9", "invincibility", "stage_exits"):
+            world.controls.press(key)
+        advance(world, 1.9)
+        self.assertTrue(world.stage_loading)
+        self.assertEqual(world.stage_index, 1)
+        self.assertEqual(world.elapsed, 0)
+        self.assertEqual(before, (player.x, player.ground_y, player.jump_height, player.vy,
+                                  player.animation.elapsed, world.camera.shake_remaining))
+        for stage in (source, destination):
+            self.assertEqual(stage.enemies[0].animation.elapsed, 0)
+            self.assertEqual(stage.effects[0].elapsed, 0)
+        self.assertEqual(source.damage_numbers[0].elapsed, 0)
+        self.assertEqual(world.controls.pressed, {})
+        world.update(0.1)
+        self.assertFalse(world.stage_loading)
+        self.assertEqual(world.stage_index, 2)
+        self.assertIs(world.player, player)
+        self.assertEqual((player.hp, player.invincible, player.jump_count, player.vy),
+                         (440, True, 2, 300))
+        self.assertEqual(len(destination.enemies), 1)
+        self.assertFalse(destination.arrows_visible)
+        world.update(1 / 60)
+        self.assertIsNone(player.active_move)
+        self.assertEqual(len(destination.enemies), 1)
+        self.assertTrue(player.invincible)
+        self.assertEqual(player.jump_count, 2)
+        self.assertFalse(destination.arrows_visible)
+
+    def test_loading_waits_two_seconds_of_real_dt_without_simulation_catchup(self):
+        world = self.at_exit()
+        world.update(config.MAX_FRAME_DT)
+        self.assertTrue(world.stage_loading)
+        self.assertEqual(world.accumulator, 0)
+        self.assertEqual(world.elapsed, config.FIXED_DT)
+        world.update(1.75)
+        self.assertEqual(world.stage_loading_remaining, 0.25)
+        world.update(0.249)
+        self.assertEqual(world.stage_index, 1)
+        self.assertTrue(world.stage_loading)
+        world.update(0.001)
+        self.assertEqual(world.stage_index, 2)
+        self.assertFalse(world.stage_loading)
+        self.assertEqual(world.player.x, config.STAGE_ENTRY_MARGIN)
+        self.assertEqual(world.elapsed, config.FIXED_DT)
+        self.assertEqual(world.accumulator, 0)
+        world.update(1 / 60)
+        self.assertAlmostEqual(world.player.x, config.STAGE_ENTRY_MARGIN + config.RUN_SPEED / 60)
+
+    def test_loading_in_both_directions_preserves_jump_and_projects_destination_floor(self):
+        for index, side, target in ((1, 1, 2), (2, -1, 1)):
+            with self.subTest(index=index):
+                world = self.at_exit(index, side)
+                player = world.player
+                player.ground_y = 116 if index == 1 else 145
+                player.jump_height, player.vy, player.jump_count = 150, -100, 2
+                player.animation.set_state("JUMP")
+                player.animation.elapsed = 0.25
+                self.assertTrue(world.try_stage_transition())
+                self.assertEqual(world.pending_stage_index, target)
+                world.update(config.STAGE_LOADING_DURATION)
+                self.assertEqual(world.stage_index, target)
+                self.assertEqual(player.x, config.STAGE_ENTRY_MARGIN if side > 0 else
+                                 config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
+                self.assertEqual(player.ground_y, 116)
+                self.assertEqual((player.jump_height, player.vy, player.jump_count,
+                                  player.animation.elapsed), (150, -100, 2, 0.25))
+                self.assertEqual(player.previous_ground_y, 116)
+                self.assertEqual(player.previous_x, player.x)
+                self.assertFalse(world.try_stage_transition())
+
+    def test_f5_cancels_loading_and_resets_all_four_stages(self):
+        world = self.at_exit()
+        for stage in world.stages:
+            stage.arrows_visible = True
+            stage.enemies.extend(stage.spawner.spawn(2, 0))
+            stage.effects.append(HitEffect(500, 180, 1))
+            stage.damage_numbers.append(DamageNumber(500, 250, 10))
+        self.assertTrue(world.try_stage_transition())
+        world.update(1)
+        tap(world.controls, "restart")
+        world.update(1 / 60)
+        self.assertFalse(world.stage_loading)
+        self.assertIsNone(world.pending_stage_index)
+        self.assertEqual(world.stage_loading_remaining, 0)
+        self.assertEqual(world.stage_index, 0)
+        self.assertEqual(world.player.hp, 500)
+        self.assertEqual(world.player.x, config.START_X)
+        for stage in world.stages:
+            self.assertFalse(stage.arrows_visible)
+            self.assertEqual((stage.enemies, stage.effects, stage.damage_numbers), ([], [], []))
+            self.assertEqual(stage.spawner.spawned_count, 0)
+        advance(world, 2.5)
+        self.assertEqual(world.stage_index, 0)
+
+    def test_new_city_maps_keep_feet_and_spawned_enemies_inside_their_floor(self):
+        world = World()
+        for index in (2, 3):
+            world.stage_index = index
+            area = world.stage.walkable
+            for key in ("spawn_9", "right", "up", "left_shift"):
+                tap(world.controls, key)
+            world.player.invincible = True
+            advance(world, 1)
+            for actor in (world.player, *world.enemies):
+                self.assertTrue(area.contains(actor.x, actor.ground_y, actor.boundary_padding))
+            self.assertEqual(len(world.enemies), 9)
+        rates = [enemy.attack_speed for stage in world.stages for enemy in stage.enemies]
+        self.assertEqual(len(set(rates)), len(rates))
+
+    def test_loading_finishes_at_the_same_time_at_different_render_rates(self):
+        results = []
+        for fps in (30, 60, 120, 144):
+            world = self.at_exit()
+            world.try_stage_transition()
+            for _ in range(2 * fps - 1):
+                world.update(1 / fps)
+            self.assertTrue(world.stage_loading)
+            self.assertEqual(world.stage_index, 1)
+            world.update(1 / fps)
+            self.assertFalse(world.stage_loading)
+            results.append((world.stage_index, world.player.x, world.player.vx,
+                            world.player.jump_height, world.elapsed, world.accumulator))
+        self.assertTrue(all(result == results[0] for result in results))
+
+
+if __name__ == "__main__":
+    unittest.main()

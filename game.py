@@ -27,6 +27,8 @@ KEYS = {
 }
 KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
              for key, *_ in config.COMBAT_MOVE_SPECS})
+KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"counter_{key}"
+             for key, *_ in config.COUNTER_MOVE_SPECS})
 KEYS.update({getattr(pico2d, f"SDLK_{prefix}{count}"): f"spawn_{count}"
              for count in config.SPAWN_COUNTS for prefix in ("", "KP_")})
 
@@ -101,7 +103,7 @@ class Game:
         camera_y = self.world.camera.render_y
         self.world.stage.draw(self.assets, camera_x, camera_y, elapsed=self.world.elapsed)
         player = self.world.player
-        sprites = [(enemy.ground_y, enemy, config.ENEMY_IMAGE) for enemy in self.world.enemies]
+        sprites = [(enemy.ground_y, enemy, enemy.sprite_image) for enemy in self.world.enemies]
         sprites.append((player.ground_y, player, player.sprite_image))
         for _, actor, image in sorted(sprites, key=lambda entry: entry[0], reverse=True):
             self.assets.draw_sprite(image, actor.animation.row, actor.animation.frame,

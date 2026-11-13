@@ -6,6 +6,7 @@ import config
 from animation import Animation
 from collision import Rect
 from combat import MOVES
+from counter import COUNTERS
 from physics import approach_vector
 from walkable import default_area
 
@@ -28,10 +29,13 @@ class Player:
         self.hp = config.MAX_HP
         self.invincible = False
         self.active_move = None
+        self.counter_move = None
         self.hit_enemies = set()
         definitions = dict(config.PLAYER_ANIMATIONS)
         definitions.update({move.state: (move.row, move.fps, False)
                             for move in MOVES.values()})
+        definitions.update({move.state: (move.row, move.fps, False)
+                            for move in COUNTERS.values()})
         self.animation = Animation(definitions)
 
     @property
@@ -53,6 +57,8 @@ class Player:
 
     @property
     def sprite_image(self):
+        if self.counter_move is not None:
+            return config.COUNTER_PLAYER_IMAGE
         return config.COMBAT_IMAGE if self.active_move is not None else config.PLAYER_IMAGE
 
     def cancel_combat(self):
@@ -66,6 +72,13 @@ class Player:
         self.ground_vy = 0.0
         if direction:
             self.facing = direction
+        self.animation.set_state(move.state)
+
+    def start_counter(self, move, facing):
+        self.cancel_combat()
+        self.counter_move = move
+        self.vx = self.ground_vy = 0.0
+        self.facing = facing
         self.animation.set_state(move.state)
 
     @property
@@ -100,7 +113,7 @@ class Player:
         return enemy.take_damage(self.active_move.damage)
 
     def take_damage(self, damage):
-        if not self.alive or self.invincible:
+        if not self.alive or self.invincible or self.counter_move is not None:
             return False
         self.hp = max(0, self.hp - damage)
         self.vx = 0.0
@@ -134,6 +147,9 @@ class Player:
             self.invincible = not self.invincible
         jump_pressed = controls.take_press("jump")
         combat_pressed = controls.take_latest_press(MOVES)
+        if self.counter_move is not None:
+            self.vx = self.ground_vy = 0.0
+            return  # The paired counter owns both animation clocks.
         if self.state in ("HIT", "DYING", "DEAD"):
             self.vx = 0.0
             self.ground_vy = 0.0

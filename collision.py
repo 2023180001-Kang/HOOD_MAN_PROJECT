@@ -32,6 +32,16 @@ def resolve_bodies(player, enemies, walkable=None):
     walkable.constrain(player, config.PLAYER_HALF_WIDTH)
     for enemy in enemies:
         walkable.constrain(enemy, config.ENEMY_HALF_WIDTH)
+    if player.counter_move is not None:
+        # Keep the choreographed pair fixed; other actors yield to the player.
+        separation = config.PLAYER_HALF_WIDTH + config.ENEMY_HALF_WIDTH
+        for enemy in enemies:
+            if not enemy.alive or enemy.counter_move is not None or not bodies_overlap(player, enemy):
+                continue
+            side = (1 if enemy.x > player.x else -1) if enemy.x != player.x else -enemy.facing
+            enemy.x = player.x + side * separation
+            walkable.constrain(enemy, config.ENEMY_HALF_WIDTH)
+        return
     # A vertical approach should stop at the footprint edge, rather than turn
     # into a horizontal wall or allow walking through a different floor lane.
     for enemy in enemies:

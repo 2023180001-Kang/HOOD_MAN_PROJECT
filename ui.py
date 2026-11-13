@@ -2,6 +2,7 @@
 
 import config
 from combat import MOVES
+from counter import COUNTERS
 from physics import clamp
 
 
@@ -24,8 +25,8 @@ class UI:
         for enemy in world.enemies:
             if not enemy.alive:
                 continue
-            height = assets.frames[config.ENEMY_IMAGE][enemy.animation.row - 1][
-                enemy.animation.frame]["clip"][3] * config.SPRITE_SCALE
+            tile = assets.frames[enemy.sprite_image][enemy.animation.row - 1][enemy.animation.frame]
+            height = (tile["clip"][3] + tile.get("offset_y", 0)) * config.SPRITE_SCALE
             left = enemy.x - camera_x - config.ENEMY_HP_BAR_WIDTH / 2
             bottom = enemy.y - camera_y + height + config.ENEMY_HP_BAR_GAP
             right = left + config.ENEMY_HP_BAR_WIDTH
@@ -69,8 +70,11 @@ class UI:
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
+            for index, move in enumerate(COUNTERS.values()):
+                assets.font.draw(22 + index * 310, 74,
+                                 f"{move.key.upper()} {move.name} ({move.damage})", (244, 204, 66))
             assets.font.draw(22, 48,
-                             f"적 공격 피해: {config.ENEMY_DAMAGE}",
+                             f"적 공격 피해: {config.ENEMY_DAMAGE}   반격: 쇠파이프 공격 중 {config.COUNTER_RANGE:g}px 내",
                              (205, 218, 231))
             assets.font.draw(740, 48, "숫자 1~9: 해당 수만큼 적 소환", (205, 218, 231))
             assets.font.draw(22, 25,

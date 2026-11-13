@@ -6,6 +6,7 @@ import config
 from camera import Camera
 from collision import resolve_bodies
 from controls import Controls
+from counter import COUNTERS, CounterSequence, can_counter
 from effects import DamageNumber, HitEffect
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from player import Player
@@ -19,7 +20,10 @@ class World:
         self.reset()
 
     def reset(self):
+        if getattr(self, "counter", None) is not None:
+            self.counter.finish()
         self.controls.reset_for_restart()
+        self.counter = None
         self.player = Player()
         self.camera = Camera(self.player.x)
         attack_sequence = count()
@@ -94,6 +98,12 @@ class World:
             self.controls.pressed.clear()
             return
         self.elapsed += dt
+        if self.counter is not None and (not self.counter.valid or self.counter.enemy not in self.enemies):
+            self.counter.finish()
+            self.counter = None
+        counter_pressed = self.controls.take_latest_press(COUNTERS)
+        if counter_pressed is not None:
+            self.try_start_counter(counter_pressed)
         if self.controls.take_press("stage_exits") and self.player.alive:
             self.stage.arrows_visible = True
         self.stage.constrain_actor(self.player)
@@ -119,6 +129,18 @@ class World:
         if self.player.alive:
             resolve_bodies(self.player, self.enemies, self.stage.walkable)
             resolve_enemy_spacing(self.player, self.enemies, dt, self.stage.walkable)
+            if self.counter is not None:
+                sequence = self.counter
+                damage = sequence.update(dt)
+                if damage:
+                    enemy = sequence.enemy
+                    self.damage_numbers.append(DamageNumber.above_body(
+                        enemy.body, damage, depth=enemy.ground_y - config.GROUND_Y))
+                    self.effects.append(HitEffect(enemy.x, enemy.y + config.ENEMY_HEIGHT * 0.6,
+                                                  self.player.facing))
+                    self.camera.shake()
+                if sequence.finished:
+                    self.counter = None
             player_box = self.player.attack_box
             if player_box is not None:
                 for enemy in self.enemies:
@@ -146,9 +168,25 @@ class World:
             self.stage.constrain_actor(enemy)
         self.camera.update(dt, self.player.x)
 
+    def try_start_counter(self, action):
+        player = self.player
+        if (self.counter is not None or self.stage_loading or not player.alive or not player.grounded
+                or player.state in ("HIT", "DYING", "DEAD")):
+            return False
+        candidates = [enemy for enemy in self.enemies if can_counter(player, enemy)]
+        candidates.sort(key=lambda enemy: (abs(enemy.x - player.x),
+                                           abs(enemy.ground_y - player.ground_y)))
+        for enemy in candidates:
+            sequence = CounterSequence.start(player, enemy, COUNTERS[action], self.stage.walkable)
+            if sequence is not None:
+                self.counter = sequence
+                return True
+        return False
+
     def try_stage_transition(self):
         player = self.player
         if (self.stage_loading or not player.alive or player.active_move is not None
+                or player.counter_move is not None
                 or player.state in ("HIT", "DYING", "DEAD")):
             return False
         for side in self.stage.arrow_sides:

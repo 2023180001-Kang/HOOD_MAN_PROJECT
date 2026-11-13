@@ -194,7 +194,7 @@ def check_player_action_inputs(game):
         push_key(key, down=False)
         tick(game)
         assert player.state == "IDLE" and player.active_move is None
-    for key_name in "qwerh":
+    for key_name in "qwerhjkl":
         game.world = World()
         push_key(getattr(pico2d, f"SDLK_{key_name}"))
         tick(game, 24)
@@ -203,7 +203,7 @@ def check_player_action_inputs(game):
         game.handle_events()
     print("PASS: SDL A jab 32 FPS/~0.250s, S straight 20 FPS/~0.400s, "
           "D/F kicks 14 FPS/~0.571s; windup/active/recovery and held-key limits verified; "
-          "retired Q/W/E/R/H inputs have no action.")
+          "Q/W/E/R and counters without an eligible attacker do not start an action.")
 
 
 def check_player_attack_switches(game):
@@ -342,7 +342,7 @@ def check_received_damage_and_blood(game):
         tick(game)
         assert game.world.player.hp == 480 and game.world.player.state == "HIT"
         assert len(game.world.effects) == 1 and game.world.camera.shake_remaining > 0
-        verify_blood_pixels(game, f"retired_h_hit_{'left' if side < 0 else 'right'}")
+        verify_blood_pixels(game, f"failed_counter_h_hit_{'left' if side < 0 else 'right'}")
         push_key(pico2d.SDLK_h, down=False)
         tick(game)
 
@@ -352,14 +352,14 @@ def check_received_damage_and_blood(game):
     push_key(pico2d.SDLK_LSHIFT)
     tick(game, 30)
     assert game.world.player.state == "RUN" and game.world.player.vx == config.RUN_SPEED
-    capture(game, "retired_h_running")
+    capture(game, "failed_counter_h_running")
     push_key(pico2d.SDLK_SPACE)
     tick(game)
     assert game.world.player.jump_count == 1
     for key in (pico2d.SDLK_h, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
         push_key(key, down=False)
     game.handle_events()
-    print("PASS: SDL H has no action; running/jumping continue and attacks from both sides "
+    print("PASS: SDL H without a timed attacker does not block; running/jumping and both-side attacks "
           "deal 20 with blood/shake; hit effects expire normally.")
 
 

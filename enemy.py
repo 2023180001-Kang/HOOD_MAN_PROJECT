@@ -5,6 +5,7 @@ from math import hypot
 import config
 from animation import Animation
 from collision import Rect
+from counter import COUNTERS
 from physics import approach_vector
 from walkable import default_area
 
@@ -30,12 +31,16 @@ class Enemy:
         self.run_speed = config.ENEMY_RUN_SPEEDS[0] if run_speed is None else run_speed
         self.running = False
         self.hp = config.ENEMY_MAX_HP
+        self.counter_move = None
+        self.counter_death = None
         self.attack_speed = attack_speed
         self.attack_interval = config.ENEMY_ATTACK_INTERVAL / attack_speed
         definitions = dict(config.ENEMY_ANIMATIONS)
         row, fps, loop = definitions["ATTACK"]
         self.attack_fps = fps * attack_speed
         definitions["ATTACK"] = (row, self.attack_fps, loop)
+        definitions.update({move.enemy_state: (move.row, move.fps, False)
+                            for move in COUNTERS.values()})
         self.animation = Animation(definitions)
         self.formation_side = None
         self.formation_slot = None
@@ -49,6 +54,11 @@ class Enemy:
     @property
     def alive(self):
         return self.hp > 0
+
+    @property
+    def sprite_image(self):
+        return (config.COUNTER_ENEMY_IMAGE if self.counter_move is not None
+                or self.counter_death is not None else config.ENEMY_IMAGE)
 
     @property
     def y(self):
@@ -81,8 +91,33 @@ class Enemy:
         self.running = False
         self.has_hit = True
         self.knockback_started = False
-        self.animation.set_state("HIT" if self.alive else "DYING")
+        if self.counter_move is None:
+            self.animation.set_state("HIT" if self.alive else "DYING")
         return True
+
+    def start_counter(self, move, facing):
+        self.counter_move = move
+        self.vx = self.ground_vy = 0.0
+        self.running = False
+        self.has_hit = True
+        self.facing = facing
+        self.formation_slot = None
+        self.target_x = self.target_ground_y = None
+        self.animation.set_state(move.enemy_state)
+
+    def finish_counter(self):
+        move = self.counter_move
+        self.counter_move = None
+        self.cooldown = self.attack_interval
+        if self.alive:
+            self.animation.set_state("IDLE")
+        else:
+            # The supplied last pose already shows the defeated enemy on the
+            # floor; keep it instead of replaying the standard death sheet.
+            self.counter_death = move
+            self.animation.definitions["DEAD"] = (move.row, move.fps, False)
+            self.animation.set_state("DEAD")
+            self.animation.elapsed = move.duration
 
     @property
     def body(self):
@@ -110,7 +145,7 @@ class Enemy:
         return False
 
     def knockback(self, player_x, player_ground_y=None):
-        if not self.alive or self.knockback_started:
+        if not self.alive or self.knockback_started or self.counter_move is not None:
             return
         self.knockback_started = True
         self.running = False
@@ -163,6 +198,10 @@ class Enemy:
         self.walkable.constrain(self, config.ENEMY_HALF_WIDTH)
 
     def _update_ai(self, dt, player):
+        if self.counter_move is not None:
+            self.vx = self.ground_vy = 0.0
+            self.running = False
+            return  # Even a lethal counter finishes its matched reaction first.
         if not self.alive:
             self.vx = 0.0
             self.ground_vy = 0.0

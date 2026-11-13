@@ -1,6 +1,6 @@
 # 테스트 방법 및 결과
 
-최신 2.5D 바닥 이동·경계 검증은 **11장**에 기록한다. 현재 로직은 159개이며 이전 개발 단계의 결과는 각 절의 당시 사양을 따른다.
+최신 H/J/K/L 반격 검증은 **12장**에 기록한다. 현재 로직은 194개이며 이전 개발 단계의 결과는 각 절의 당시 사양을 따른다.
 
 ## 1. 검증 환경
 
@@ -25,12 +25,13 @@
 .\.venv\Scripts\python.exe tools/check_enemy_spacing.py
 .\.venv\Scripts\python.exe tools/check_belt_scroll.py
 .\.venv\Scripts\python.exe tools/check_stages.py
+.\.venv\Scripts\python.exe tools/check_counters.py
 ```
 
 - 순수 로직 테스트는 그래픽 창 없이 실행한다.
 - 스모크·화면 캡처·런타임 검증은 실제 SDL/pico2d 창을 사용하며 지정된 작업 후 자동 종료한다.
 - 런타임 검증 중 입력 이벤트를 자동 주입하므로 검증 창을 조작하지 않고 결과를 확인한다.
-- `tools/prepare_assets.py`는 원본 PNG를 보존하면서 구 시트의 H 행을 별도 방어 PNG로 추출하고 4개 시트·136프레임의 `assets/frames.json`을 재생성한다.
+- `tools/prepare_assets.py`는 원본 PNG를 보존하면서 이동·적·4Moves·반격/제압의 5개 시트·192프레임을 생성한다. 반격의 공중 높이를 위한 수직 오프셋도 기록하며 구 H 방어 시트는 추출하지 않는다.
 - `artifacts/`의 캡처 결과는 Git에서 제외한다.
 
 ## 3. 최종 실행 결과
@@ -330,3 +331,40 @@ PRD 대응: AC-19(공격별 속도·유효 프레임), AC-20(지정 피해·중�
 대표 캡처: `artifacts/belt_diagonal_walk.png`, `belt_jump_at_floor_boundary.png`, `belt_depth_player_attack.png`, `belt_depth_enemy_attack.png`, `belt_depth_order_jump.png`, `belt_stage_1_corner_1_1_10.png`, `belt_stage_2_corner_1_1_10.png`, `belt_twenty_simultaneous_hits.png`, `belt_transition_next.png`, `belt_transition_previous.png`.
 
 미실시: 장시간 직접 키보드를 조작하는 플레이와 20명 초과 성능 측정. 현재 배경은 직사각형 보행 구간이며 볼록 다각형은 순수 로직으로 검증했다. 일반 오목 다각형은 현재 지원하지 않는다. 인원이 많을 때 실루엣 전체의 비겹침 대신 바닥 내부의 안정적인 압축 배치를 사용한다.
+
+## 12. H/J/K/L 반격·제압·AI 복귀 검증 (2026-11-13)
+
+```powershell
+.\.venv\Scripts\python.exe tools/prepare_assets.py
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+.\.venv\Scripts\python.exe tools/check_counters.py
+.\.venv\Scripts\python.exe tools/check_runtime.py
+.\.venv\Scripts\python.exe tools/check_stages.py
+```
+
+- 로직: 기존 174개에 바닥 기준/공중 오프셋 검증 1개와 반격 검증 19개를 더해 **194개 통과**(13.515초).
+- 리소스: 두 신규 시트는 각각 2048×1024·8열×4행이다. H/J/K/L은 양쪽 원본 1/2/3/4행, 12 FPS·약 0.667초이며 피해는 모두 80이다. H/K는 4번, J는 6번, L은 5번 프레임에서 한 번만 피해를 준다.
+
+| 검증 | 결과 |
+| --- | --- |
+| 거리·깊이·공격 창 | 가로 140/깊이 ±32 경계 성공·초과 실패, ATTACK 1~5번·미소비·주인공 방향만 허용 |
+| 입력 | H/J/K/L 새 입력·동일 갱신 최신 입력, 유지/반복·실패·공중/HIT/사망·진행 중 입력 예약 없음 |
+| 짝 애니메이션 | 네 기술×좌우 SDL 행·프레임·시트 일치, 한 시계로 재생·공중 회전 높이 보존 |
+| 피해·효과 | 각 기술 HP 200→120·80 숫자, 1회 혈흔/흔들림·연타 중복 없음, 3회 200→120→40→0 |
+| 생존 복귀 | 제압 완료 시 동일 적 객체 IDLE, 이동하면 원래 달리기 속도·공격 배율로 추적 재개 |
+| 치명타 | HP 40에 80 타격 시 실제 감소량 40 표시, 제압 완료 후 해당 시트 마지막 프레임 DEAD·추가 공격/부활 없음 |
+| 연출 보호 | 다른 적 공격은 한 번 소비·주인공 HP 500 유지, P 무적과 별도·완료 후 새 일반 공격은 피해 20 |
+| 경계·충돌 | 네 맵 모서리 집단에서도 짝 고정·90px 여백·발 경계 내부, 좁은 영역 거부·기본 공격 취소 |
+| 재시작·시간 | F5 양쪽 참조/임시 상태 해제·이미지 재사용, 30/60/120/144 FPS 결과 동일 |
+| 하단 안내 | 실제 렌더링에서 네 키·기술명·80의 노란 픽셀과 쇠파이프 공격 중 140px 조건 표시 확인 |
+
+주요 캡처는 `artifacts/counter_h_1_impact.png`, `counter_j_1_impact.png`, `counter_k_1_impact.png`, `counter_l_1_airborne.png`, 각 `counter_*_recovered.png`·`counter_*_defeated.png`다.
+
+기존 `check_runtime.py`의 전투·소환·점프/포위 탈출·피격·HP/UI·포커스·F5·종료와 `check_stages.py`의 네 맵·8가지 이동 상태 왕복·도시 로딩(2.005초)·객체 보존도 통과했다. 적 4명은 180프레임/3.001초·59.98 FPS였고, 다른 작업 폴더의 전체 경로 `main.py --smoke-test 60` 실행·종료도 통과했다.
+
+직접 확인:
+
+1. 숫자 1로 적을 소환하고 지상에서 접근을 기다린다. 적이 쇠파이프를 들어 공격하는 중 H/J/K/L을 **새로** 눌러 각 반격과 피해 80을 확인한다. 키를 미리 유지하면 자동 반격하지 않아야 한다.
+2. 양쪽 방향과 조금 다른 바닥 깊이에서 시도한다. 멀리 있거나 다른 깊이·공중·피격 중 입력은 성공하지 않아야 한다.
+3. 생존 적의 제압이 끝난 뒤 거리를 벌리면 다시 따라오는지 확인하고, 세 번째 반격으로 처치하면 마지막 제압 자세가 유지되는지 확인한다.
+4. 숫자로 여러 적을 불러 반격 중 보호·고정된 짝, 완료 후 일반 피격을 확인한다. 반격 중 F5를 눌러 초기화한다.

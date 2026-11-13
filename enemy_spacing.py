@@ -42,7 +42,8 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
     for enemy in enemies:
         enemy.target_x = None
         enemy.target_ground_y = None
-        if not player.alive or not enemy.alive or enemy.knockback_started:
+        if (not player.alive or not enemy.alive or enemy.knockback_started
+                or enemy.counter_move is not None):
             enemy.formation_slot = None
             continue
         difference = enemy.x - player.x
@@ -113,7 +114,8 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
     """Ease severe overlap on the floor, then constrain every state and path."""
     walkable = player.walkable if walkable is None else walkable
     active = [enemy for enemy in enemies
-              if player.alive and enemy.alive and not enemy.knockback_started]
+              if player.alive and enemy.alive and not enemy.knockback_started
+              and enemy.counter_move is None]
     left, right = sprite_extents()
     width = right - left + config.ENEMY_SPACING_MARGIN
     crowded = set()

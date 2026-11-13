@@ -6,15 +6,6 @@ from physics import clamp
 
 
 class UI:
-    def draw_title_help(self, assets):
-        import pico2d
-
-        if assets.font is not None:
-            center = config.SCREEN_WIDTH * 0.75
-            pico2d.draw_rectangle(center - 180, 116, center + 180, 164,
-                                  12, 21, 33, filled=True)
-            assets.font.draw(center - 130, 140, "SPACE BAR를 눌러 게임 시작", (244, 204, 66))
-
     def draw_attack_help(self, assets):
         import pico2d
 

@@ -42,7 +42,6 @@ class Game:
     def handle_events(self, *, title_screen=False):
         # pico2d.get_events filters out focus events, so poll its SDL event queue
         # directly to prevent stuck keys after Alt+Tab or clicking another window.
-        start_requested = False
         event = SDL_Event()
         while SDL_PollEvent(ctypes.byref(event)):
             if event.type == pico2d.SDL_QUIT:
@@ -50,18 +49,13 @@ class Game:
             elif event.type == SDL_WINDOWEVENT and event.window.event == SDL_WINDOWEVENT_FOCUS_LOST:
                 self.world.controls.held.clear()
                 self.world.controls.pressed.clear()
-            elif title_screen:
-                if (event.type == pico2d.SDL_KEYDOWN
-                        and event.key.keysym.sym == pico2d.SDLK_SPACE and not event.key.repeat):
-                    start_requested = True
-            elif event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
+            elif not title_screen and event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if key is not None:
                     if event.type == pico2d.SDL_KEYDOWN and not event.key.repeat:
                         self.world.controls.press(key)
                     elif event.type == pico2d.SDL_KEYUP:
                         self.world.controls.release(key)
-        return start_requested
 
     def draw_title_screen(self, present=True):
         pico2d.clear_canvas()
@@ -69,17 +63,22 @@ class Game:
             config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2,
             config.SCREEN_WIDTH, config.SCREEN_HEIGHT,
         )
-        self.ui.draw_title_help(self.assets)
         if present:
             pico2d.update_canvas()
 
     def show_title_screen(self):
+        if not self.running:
+            return
+        self.draw_title_screen()
+        deadline = perf_counter() + config.TITLE_SCREEN_DURATION
         while self.running:
-            self.draw_title_screen()
-            # Consume title inputs so starting with Space cannot also jump.
-            if self.handle_events(title_screen=True) or not self.running:
+            # Consume title inputs without advancing gameplay or skipping the wait.
+            self.handle_events(title_screen=True)
+            remaining = deadline - perf_counter()
+            if not self.running or remaining <= 0:
                 break
-            sleep(1 / config.TARGET_FPS)
+            self.draw_title_screen()
+            sleep(min(1 / config.TARGET_FPS, remaining))
 
     def update(self, dt):
         self.world.update(dt)

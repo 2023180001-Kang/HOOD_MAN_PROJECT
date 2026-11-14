@@ -30,7 +30,9 @@ def city(game, *, ground_y=148):
     return game.world
 
 
-def car_at(world, x, direction=1, speed=720):
+def car_at(world, x, direction=1, speed=None):
+    if speed is None:
+        speed = sum(config.CAR_SPEED_RANGE) / 2
     car = Car(x, direction, speed)
     world.stage.traffic.car = car
     return car
@@ -149,7 +151,7 @@ def check_road_input_jump_and_restart(game):
     assert all(game.assets.images[name] is image for name, image in textures.items())
     release(game, pico2d.SDLK_F5)
     world = city(game, ground_y=config.CAR_GROUND_Y)
-    car_at(world, world.player.x - 450, speed=840)
+    car_at(world, world.player.x - 450, speed=config.CAR_SPEED_RANGE[1])
     push_key(pico2d.SDLK_SPACE)
     tick(game, 6)
     release(game, pico2d.SDLK_SPACE)

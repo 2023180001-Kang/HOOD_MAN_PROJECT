@@ -312,6 +312,7 @@ class CounterTests(unittest.TestCase):
                     with self.subTest(stage=index, side=side, at_top=at_top):
                         world = World()
                         world.stage_index = index
+                        world.stage.traffic = None  # Isolate counter placement from fatal road traffic.
                         _, bottom, _, top = world.stage.walkable.bounds
                         world.player.x = (config.PLAYER_BOUNDARY_PADDING if side > 0 else
                                           config.WORLD_WIDTH - config.PLAYER_BOUNDARY_PADDING)

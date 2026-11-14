@@ -78,7 +78,7 @@ class FactoryStageTests(unittest.TestCase):
         self.assertEqual(world.player.jump_count, 0)
         self.assertFalse(world.player.invincible)
 
-    def test_f5_during_factory_loading_cancels_the_destination_and_clears_all_five_maps(self):
+    def test_f5_during_factory_loading_cancels_the_destination_and_clears_all_six_maps(self):
         for side in (-1, 1):
             world = at_factory_boundary(side)
             for stage in world.stages:
@@ -88,7 +88,7 @@ class FactoryStageTests(unittest.TestCase):
             world.update(1)
             world.controls.press("restart")
             world.update(1 / 60)
-            self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 5))
+            self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 6))
             self.assertIsNone(world.pending_stage_index)
             self.assertTrue(all(not stage.enemies and not stage.arrows_visible for stage in world.stages))
             advance(world, 2.5)
@@ -124,6 +124,44 @@ class FactoryStageTests(unittest.TestCase):
             results.append((world.stage_index, world.player.x, world.player.vx,
                             world.player.ground_y, world.elapsed, world.accumulator))
         self.assertTrue(all(result == results[0] for result in results))
+
+    def test_factory_exterior_round_trip_preserves_objects_and_projects_only_the_ground(self):
+        world = World()
+        world.stage_index = 4
+        source = world.stage
+        source.arrows_visible = True
+        enemy = Enemy(1400)
+        enemy.take_damage(40)
+        source.enemies.append(enemy)
+        player = world.player
+        player.hp, player.invincible = 420, True
+        player.ground_y = 116
+        player.jump_height, player.vy, player.jump_count = 140, 300, 2
+        player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
+        world.controls.press("right")
+        world.controls.press("left_shift")
+        self.assertTrue(world.try_stage_transition())
+        self.assertFalse(world.stage_loading)
+        self.assertEqual(world.stage.image_name, config.FACTORY_EXTERIOR_IMAGE)
+        self.assertIs(world.player, player)
+        self.assertEqual((player.hp, player.invincible, player.ground_y, player.jump_height,
+                          player.vy, player.jump_count, player.vx),
+                         (420, True, 100, 140, 300, 2, config.RUN_SPEED))
+        exterior = world.stage
+        exterior.arrows_visible = True
+        self.assertIsNone(exterior.destination(1))
+        exterior.enemies.extend(exterior.spawner.spawn(2, 0))
+        world.controls.release("right")
+        world.controls.press("left")
+        player.x, player.vx = config.STAGE_EXIT_MARGIN, -config.RUN_SPEED
+        self.assertTrue(world.try_stage_transition())
+        self.assertFalse(world.stage_loading)
+        self.assertIs(world.stage, source)
+        self.assertIs(source.enemies[0], enemy)
+        self.assertEqual(enemy.hp, 160)
+        self.assertEqual(exterior.spawner.spawned_count, 2)
+        self.assertEqual((player.ground_y, player.jump_height, player.vy, player.jump_count),
+                         (100, 140, 300, 2))
 
 
 if __name__ == "__main__":

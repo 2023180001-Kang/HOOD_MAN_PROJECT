@@ -71,15 +71,15 @@ def check_markers(game):
     push_key(pico2d.SDLK_F5, down=False)
     game.handle_events()
     print("PASS: SDL N reveals the first stage right / remaining stages left+right arrows; "
-          "five distinct backgrounds and shared textures verified.")
+          "six distinct backgrounds and shared textures verified.")
 
 
-def check_motion_continuity(game):
+def check_motion_continuity(game, first=0):
     textures = dict(game.assets.images)
     for side in (-1, 1):
         for mode in ("walk", "run", "jump_up", "jump_down"):
             game.world = World()
-            game.world.stage_index = 0 if side > 0 else 1
+            game.world.stage_index = first if side > 0 else first + 1
             direction_key = pico2d.SDLK_RIGHT if side > 0 else pico2d.SDLK_LEFT
             push_key(direction_key)
             if mode != "walk":
@@ -106,7 +106,7 @@ def check_motion_continuity(game):
             reference.elapsed = game.world.elapsed
             game.update(1 / 60)
             reference.update(1 / 60)
-            assert game.world.stage_index == (1 if side > 0 else 0)
+            assert game.world.stage_index == (first + 1 if side > 0 else first)
             assert game.world.player is player
             for attribute in ("state", "vx", "vy", "y", "jump_count", "hp", "facing"):
                 assert getattr(player, attribute) == getattr(reference.player, attribute), (mode, attribute)
@@ -115,7 +115,8 @@ def check_motion_continuity(game):
             assert game.world.elapsed == reference.elapsed
             assert not game.world.stage.arrows_visible
             assert all(game.assets.images[name] is image for name, image in textures.items())
-            capture(game, f"stage_travel_{'next' if side > 0 else 'previous'}_{mode}")
+            prefix = "factory_travel" if first == 4 else "stage_travel"
+            capture(game, f"{prefix}_{'next' if side > 0 else 'previous'}_{mode}")
             assert abs(player.x - player.previous_x) <= config.RUN_SPEED * config.FIXED_DT + 1e-6
             for key in (direction_key, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE, pico2d.SDLK_n):
                 push_key(key, down=False)
@@ -189,7 +190,7 @@ def check_round_trip_and_last_exit(game):
         push_key(key, down=False)
     game.handle_events()
     print("PASS: SDL full sprint round trip keeps per-map enemies/HP/spawn counts, "
-          "avoids return loops, bounds the final factory exit, and F5 resets all five stages.")
+          "avoids return loops, bounds the final factory exit, and F5 resets all six stages.")
 
 
 def check_city_loading(game):
@@ -398,7 +399,61 @@ def check_factory_loading(game):
     for key in (pico2d.SDLK_n, pico2d.SDLK_F5):
         push_key(key, down=False)
     game.handle_events()
-    print("PASS: SDL F5 cancels pending factory entry and resets all five scenes.")
+    print("PASS: SDL F5 cancels pending factory entry and resets all six scenes.")
+
+
+def check_factory_exterior(game):
+    game.world = World()
+    game.world.stage_index = 5
+    with Image.open(config.ROOT / config.FACTORY_EXTERIOR_IMAGE) as source:
+        assert source.size == (1672, 941)
+        supplied = source.convert("RGB")
+    tiled = Image.new("RGB", (supplied.width * 2, supplied.height))
+    tiled.paste(supplied, (0, 0))
+    tiled.paste(supplied.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (supplied.width, 0))
+    for camera_x in (0, config.WORLD_WIDTH - config.SCREEN_WIDTH):
+        game.world.camera.x = camera_x
+        game.world.camera.offset_x = game.world.camera.offset_y = 0
+        expected = tiled.crop((camera_x, supplied.height - config.SCREEN_HEIGHT,
+                               camera_x + config.SCREEN_WIDTH, supplied.height))
+        with (patch.object(game.assets, "draw_sprite"), patch.object(game.ui, "draw"),
+              patch.object(game.ui, "draw_enemy_health")):
+            image = capture(game, f"factory_exterior_background_{camera_x}")
+        assert ImageChops.difference(image.convert("RGB"), expected).getbbox() is None
+    game.world = World()
+    game.world.stage_index = 4
+    player = game.world.player
+    source = game.world.stage
+    source.enemies.append(Enemy(1400))
+    source.enemies[0].take_damage(40)
+    player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
+    player.ground_y = 116
+    player.hp, player.invincible = 420, True
+    for key in (pico2d.SDLK_n, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT):
+        push_key(key)
+    tick(game)
+    assert game.world.stage_index == 5 and not game.world.stage_loading
+    assert game.world.player is player and player.hp == 420 and player.ground_y == 100
+    capture(game, "factory_exterior_entered")
+    push_key(pico2d.SDLK_2)
+    tick(game)
+    exterior = game.world.stage
+    assert len(exterior.enemies) == 2
+    push_key(pico2d.SDLK_RIGHT, down=False)
+    push_key(pico2d.SDLK_LEFT)
+    push_key(pico2d.SDLK_n, down=False)
+    push_key(pico2d.SDLK_n)
+    player.x, player.vx = config.STAGE_EXIT_MARGIN, -config.RUN_SPEED
+    tick(game)
+    assert game.world.stage is source and not game.world.stage_loading
+    assert source.enemies[0].hp == 160 and exterior.spawner.spawned_count == 2
+    assert player.hp == 420 and player.invincible
+    capture(game, "factory_outside_returned_from_exterior")
+    for key in (pico2d.SDLK_n, pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT, pico2d.SDLK_2):
+        push_key(key, down=False)
+    game.handle_events()
+    print("PASS: HOOD_MAN_Factory_Exterior original-size pixels/tiling, SDL factory-to-factory "
+          "travel, ground projection and saved enemy HP/spawn objects survive the round trip.")
 
 
 def main():
@@ -410,10 +465,12 @@ def main():
         game.handle_events()
         check_markers(game)
         check_motion_continuity(game)
+        check_motion_continuity(game, first=4)
         check_round_trip_and_last_exit(game)
         check_city_loading(game)
         check_factory_background(game)
         check_factory_loading(game)
+        check_factory_exterior(game)
     finally:
         if game is not None:
             game.close()

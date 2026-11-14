@@ -39,6 +39,8 @@ class Player:
                             for move in MOVES.values()})
         definitions.update({move.state: (move.row, move.fps, False)
                             for move in COUNTERS.values()})
+        definitions.update({move.hold_state: (move.row, move.fps, False)
+                            for move in COUNTERS.values()})
         self.animation = Animation(definitions)
 
     @property
@@ -91,6 +93,10 @@ class Player:
         return self.jump_height <= 0.0 and self.vy == 0
 
     @property
+    def counter_holding(self):
+        return self.counter_move is not None and self.state == self.counter_move.hold_state
+
+    @property
     def body(self):
         """x/height-plane AABB; ground-depth proximity is a separate condition."""
         base = config.GROUND_Y + self.jump_height
@@ -118,7 +124,8 @@ class Player:
         return enemy.take_damage(self.active_move.damage)
 
     def take_damage(self, damage):
-        if not self.alive or self.invincible or self.counter_move is not None:
+        if (not self.alive or self.invincible
+                or (self.counter_move is not None and not self.counter_holding)):
             return False
         self.hp = max(0, self.hp - damage)
         self.vx = 0.0
@@ -166,7 +173,10 @@ class Player:
             update_car_hit(self, dt)
             return
         if self.counter_move is not None:
-            self.vx = self.ground_vy = 0.0
+            if self.counter_holding:
+                self.move_on_ground(dt, controls, config.COUNTER_CARRY_SPEED, turn=False)
+            else:
+                self.vx = self.ground_vy = 0.0
             return  # The paired counter owns both animation clocks.
         if self.state in ("HIT", "DYING", "DEAD"):
             self.vx = 0.0
@@ -208,9 +218,20 @@ class Player:
             self.animation.set_state("JUMP")
             self.animation.elapsed = 0.0
 
-        direction = controls.direction
-        move_x, move_y = controls.movement
         speed = config.RUN_SPEED if controls.running else config.WALK_SPEED
+        self.move_on_ground(dt, controls, speed)
+        self.update_vertical(dt)
+
+        state = "IDLE"
+        if hypot(self.vx, self.ground_vy) > 0.1:
+            state = "RUN" if controls.running else "WALK"
+        if not self.grounded:
+            state = "JUMP"
+        self.animation.set_state(state)
+        self.animation.update(dt)
+
+    def move_on_ground(self, dt, controls, speed, *, turn=True):
+        move_x, move_y = controls.movement
         target_x, target_y = move_x * speed, move_y * speed
         magnitude = hypot(self.vx, self.ground_vy)
         if controls.moving and self.vx * move_x + self.ground_vy * move_y < 0:
@@ -230,14 +251,5 @@ class Player:
         self.x += self.vx * dt
         self.ground_y += self.ground_vy * dt
         self.walkable.constrain(self, config.PLAYER_HALF_WIDTH)
-        if direction:
-            self.facing = direction
-        self.update_vertical(dt)
-
-        state = "IDLE"
-        if hypot(self.vx, self.ground_vy) > 0.1:
-            state = "RUN" if controls.running else "WALK"
-        if not self.grounded:
-            state = "JUMP"
-        self.animation.set_state(state)
-        self.animation.update(dt)
+        if turn and controls.direction:
+            self.facing = controls.direction

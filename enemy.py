@@ -47,6 +47,8 @@ class Enemy:
         definitions["ATTACK"] = (row, self.attack_fps, loop)
         definitions.update({move.enemy_state: (move.row, move.enemy_fps, False)
                             for move in COUNTERS.values()})
+        definitions.update({move.enemy_hold_state: (move.row, move.enemy_fps, False)
+                            for move in COUNTERS.values()})
         self.animation = Animation(definitions)
         self.formation_side = None
         self.formation_slot = None
@@ -154,8 +156,11 @@ class Enemy:
 
     def finish_counter(self):
         move = self.counter_move
+        if move is None:
+            return
         self.counter_move = None
         self.counter_linked = False
+        self.jump_height = 0.0
         self.cooldown = self.attack_interval
         if self.alive:
             self.boundary_padding = self.counter_padding

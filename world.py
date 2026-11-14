@@ -104,12 +104,13 @@ class World:
             self.controls.pressed.clear()
             return
         self.elapsed += dt
-        if self.counter is not None and (not self.counter.valid or self.counter.enemy not in self.enemies):
-            self.counter.finish()
-            self.counter = None
+        self.cancel_invalid_counter()
         counter_pressed = self.controls.take_latest_press(COUNTERS)
         if counter_pressed is not None:
             self.try_start_counter(counter_pressed)
+        if (self.counter is not None and self.counter.holding
+                and self.controls.take_press("combat_a")):
+            self.counter.start_follow_up()
         if self.controls.take_press("stage_exits") and self.player.alive:
             self.stage.arrows_visible = True
         self.stage.constrain_actor(self.player)
@@ -128,10 +129,13 @@ class World:
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         self.player.update(dt, self.controls, self.stage.walkable)
+        self.cancel_invalid_counter()
         self.handle_death()
         prepare_enemy_spacing(self.player, self.enemies, self.stage.walkable)
         for enemy in self.enemies:
             enemy.update(dt, self.player, self.stage.walkable)
+        if self.counter is not None:
+            self.counter.sync_pair()
         self.enemies[:] = [enemy for enemy in self.enemies if not enemy.faded_out]
         if self.player.alive:
             resolve_bodies(self.player, self.enemies, self.stage.walkable)
@@ -166,6 +170,7 @@ class World:
             for enemy in self.enemies:
                 enemy_box = enemy.attack_box
                 if enemy_box is not None and enemy.try_hit(self.player):
+                    self.cancel_invalid_counter()
                     self.effects.append(HitEffect.at_contact(enemy_box, self.player.body,
                                                              enemy.facing,
                                                              depth=self.player.ground_y - config.GROUND_Y))
@@ -177,6 +182,11 @@ class World:
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         self.camera.update(dt, self.player.x)
+
+    def cancel_invalid_counter(self):
+        if self.counter is not None and (not self.counter.valid or self.counter.enemy not in self.enemies):
+            self.counter.finish()
+            self.counter = None
 
     def update_traffic(self, dt):
         if self.stage.traffic is None:

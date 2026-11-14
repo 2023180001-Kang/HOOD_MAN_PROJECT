@@ -103,6 +103,10 @@ COUNTER_DEPTH_TOLERANCE = 32.0
 COUNTER_TRIGGER_FRAMES = (1, 2, 3, 4, 5)
 COUNTER_PAIR_DISTANCE = 80.0
 COUNTER_BOUNDARY_PADDING = 90.0
+COUNTER_CARRY_SPEED = 180.0
+COUNTER_CARRY_HEIGHT = 24.0
+# Zero-based player/enemy poses held before the A-triggered follow-up.
+COUNTER_HOLD_FRAMES = {"h": (1, 1), "j": (2, 2), "k": (1, 1), "l": (1, 0)}
 # Key, technique, matching one-based player/enemy row, zero-based impact frame.
 COUNTER_MOVE_SPECS = (
     ("h", "쳐내고 연타", 1, 4),

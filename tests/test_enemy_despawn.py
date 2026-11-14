@@ -2,7 +2,7 @@ import unittest
 
 import config
 from tests.helpers import advance
-from tests.test_counters import attacker
+from tests.test_counters import attacker, follow_up
 from world import World
 
 
@@ -53,6 +53,7 @@ class EnemyDespawnTests(unittest.TestCase):
                 enemy.hp = 40
                 world.controls.press(f"counter_{key}")
                 world.step(config.FIXED_DT)
+                follow_up(world)
                 while enemy.hp:
                     world.step(config.FIXED_DT)
                 self.assertIsNotNone(world.counter)
@@ -74,6 +75,7 @@ class EnemyDespawnTests(unittest.TestCase):
         enemy = attacker(world)
         world.controls.press("counter_j")
         world.step(config.FIXED_DT)
+        follow_up(world)
         while world.counter is not None or enemy.counter_move is not None:
             world.step(config.FIXED_DT)
         self.assertEqual((enemy.hp, enemy.state), (120, "IDLE"))

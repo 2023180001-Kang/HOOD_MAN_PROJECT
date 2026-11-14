@@ -194,6 +194,7 @@ def check_round_trip_and_last_exit(game):
 
 def check_city_loading(game):
     game.world = World()
+    game.world.stages[2].traffic = None  # Isolate saved enemy HP from random road deaths.
     player = game.world.player
     textures = dict(game.assets.images)
     player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED

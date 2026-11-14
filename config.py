@@ -135,10 +135,12 @@ CAR_HIT_SPEED = 360.0
 CAR_HIT_FRICTION = 600.0
 HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "newStage.png"
-STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png", "cityStage-1.png", "cityStage-2.png")
+FACTORY_OUTSIDE_IMAGE = "factoryOutside-1_pico2d_1280x720.png"
+STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png", "cityStage-1.png", "cityStage-2.png",
+                FACTORY_OUTSIDE_IMAGE)
 STAGE_LOADING_IMAGE = "HOOD_MAN_STAGE_LOADING_1280x720.png"
 STAGE_LOADING_DURATION = 2.0
-STAGE_LOADING_TRANSITIONS = ((1, 2), (2, 1))
+STAGE_LOADING_TRANSITIONS = ((1, 2), (2, 1), (3, 4), (4, 3))
 STAGE_ARROW_IMAGES = {-1: "arrow_left_yellow.png", 1: "arrow_right_yellow.png"}
 STAGE_ARROW_WIDTH = 96.0
 STAGE_ARROW_Y = GROUND_Y
@@ -149,12 +151,14 @@ STAGE_ENTRY_MARGIN = 128.0
 STAGE_SCALE = 1.0
 # Walking line measured upward from the source image's bottom edge (941 - 797).
 STAGE_GROUND_Y = 144.0
+STAGE_GROUND_ANCHORS = {FACTORY_OUTSIDE_IMAGE: 100.0}
 # World-space foot regions, below the buildings/props and above the foreground.
 # Optional convex polygons override a stage's rectangle (counterclockwise vertices).
 STAGE_WALKABLE_BOUNDS = (
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
+    (0.0, 56.0, WORLD_WIDTH, 116.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
 )
 STAGE_WALKABLE_POLYGONS = {}

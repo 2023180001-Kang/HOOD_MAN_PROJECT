@@ -1,0 +1,130 @@
+from types import SimpleNamespace
+import unittest
+from unittest.mock import Mock
+
+import config
+from effects import DamageNumber, HitEffect
+from enemy import Enemy
+from tests.helpers import advance
+from world import World
+
+
+def at_factory_boundary(side=1):
+    world = World()
+    world.stage_index = 3 if side > 0 else 4
+    world.stage.arrows_visible = True
+    world.player.x = (config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN if side > 0
+                      else config.STAGE_EXIT_MARGIN)
+    world.player.vx = side * config.RUN_SPEED
+    world.controls.press("right" if side > 0 else "left")
+    world.controls.press("left_shift")
+    return world
+
+
+class FactoryStageTests(unittest.TestCase):
+    def test_city_factory_boundary_waits_two_seconds_and_preserves_the_same_player_both_ways(self):
+        for side in (-1, 1):
+            with self.subTest(side=side):
+                world = at_factory_boundary(side)
+                source = world.stage_index
+                player = world.player
+                player.hp, player.invincible = 420, True
+                player.jump_height, player.vy, player.jump_count = 140, 300, 2
+                player.animation.set_state("JUMP")
+                player.animation.elapsed = 0.2
+                self.assertTrue(world.try_stage_transition())
+                self.assertEqual(world.pending_stage_index, source + side)
+                world.update(1.999)
+                self.assertTrue(world.stage_loading)
+                self.assertEqual(world.stage_index, source)
+                world.update(0.001)
+                self.assertFalse(world.stage_loading)
+                self.assertEqual(world.stage_index, source + side)
+                self.assertIs(world.player, player)
+                self.assertEqual((player.hp, player.invincible, player.jump_height,
+                                  player.vy, player.jump_count, player.vx, player.animation.elapsed),
+                                 (420, True, 140, 300, 2, side * config.RUN_SPEED, 0.2))
+                self.assertEqual(player.x, config.STAGE_ENTRY_MARGIN if side > 0 else
+                                 config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
+                self.assertFalse(world.try_stage_transition())
+
+    def test_factory_loading_freezes_both_maps_and_discards_actions_without_losing_held_movement(self):
+        world = at_factory_boundary()
+        city, factory = world.stages[3:5]
+        for stage in (city, factory):
+            stage.enemies.append(Enemy(1500))
+            stage.effects.append(HitEffect(1500, 180, 1))
+            stage.damage_numbers.append(DamageNumber(1500, 250, 40))
+        self.assertTrue(world.try_stage_transition())
+        for action in ("jump", "combat_a", "counter_j", "spawn_9", "invincibility", "stage_exits"):
+            world.controls.press(action)
+        advance(world, 1.9)
+        self.assertEqual(world.elapsed, 0)
+        for stage in (city, factory):
+            self.assertEqual(stage.enemies[0].x, 1500)
+            self.assertEqual(stage.enemies[0].animation.elapsed, 0)
+            self.assertEqual(stage.effects[0].elapsed, 0)
+            self.assertEqual(stage.damage_numbers[0].elapsed, 0)
+        self.assertFalse(world.controls.pressed)
+        world.update(0.1)
+        self.assertIs(world.stage, factory)
+        self.assertIn("right", world.controls.held)
+        self.assertIn("left_shift", world.controls.held)
+        self.assertFalse(factory.arrows_visible)
+        world.update(config.FIXED_DT)
+        self.assertIsNone(world.player.active_move)
+        self.assertIsNone(world.counter)
+        self.assertEqual(len(world.enemies), 1)
+        self.assertEqual(world.player.jump_count, 0)
+        self.assertFalse(world.player.invincible)
+
+    def test_f5_during_factory_loading_cancels_the_destination_and_clears_all_five_maps(self):
+        for side in (-1, 1):
+            world = at_factory_boundary(side)
+            for stage in world.stages:
+                stage.arrows_visible = True
+                stage.enemies.extend(stage.spawner.spawn(2, 0))
+            self.assertTrue(world.try_stage_transition())
+            world.update(1)
+            world.controls.press("restart")
+            world.update(1 / 60)
+            self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 5))
+            self.assertIsNone(world.pending_stage_index)
+            self.assertTrue(all(not stage.enemies and not stage.arrows_visible for stage in world.stages))
+            advance(world, 2.5)
+            self.assertEqual(world.stage_index, 0)
+
+    def test_factory_background_covers_the_viewport_at_both_edges_and_during_vertical_shake(self):
+        stage = World().stages[4]
+        image = SimpleNamespace(w=1280, h=720, composite_draw=Mock())
+        assets = SimpleNamespace(images={config.FACTORY_OUTSIDE_IMAGE: image})
+        for camera_x in (0, 640, 1280):
+            for camera_y in (-8, 0, 8):
+                image.composite_draw.reset_mock()
+                stage.draw(assets, camera_x, camera_y)
+                rectangles = []
+                for call in image.composite_draw.call_args_list:
+                    _, _, x, y, width, height = call.args
+                    self.assertLessEqual(y - height / 2, 0)
+                    self.assertGreaterEqual(y + height / 2, config.SCREEN_HEIGHT)
+                    rectangles.append((x - width / 2, x + width / 2))
+                self.assertLessEqual(min(left for left, _ in rectangles), 0)
+                self.assertGreaterEqual(max(right for _, right in rectangles), config.SCREEN_WIDTH)
+
+    def test_factory_loading_completion_is_identical_at_different_render_rates(self):
+        results = []
+        for fps in (30, 60, 120, 144):
+            world = at_factory_boundary()
+            world.try_stage_transition()
+            for _ in range(2 * fps - 1):
+                world.update(1 / fps)
+            self.assertTrue(world.stage_loading)
+            world.update(1 / fps)
+            self.assertFalse(world.stage_loading)
+            results.append((world.stage_index, world.player.x, world.player.vx,
+                            world.player.ground_y, world.elapsed, world.accumulator))
+        self.assertTrue(all(result == results[0] for result in results))
+
+
+if __name__ == "__main__":
+    unittest.main()

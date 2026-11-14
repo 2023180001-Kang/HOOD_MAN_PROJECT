@@ -22,14 +22,15 @@ class CityStageTests(unittest.TestCase):
         world.controls.press("left_shift")
         return world
 
-    def test_four_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
+    def test_five_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
         world = World()
         self.assertEqual([stage.image_name for stage in world.stages],
-                         ["newStage.png", "newStage-2.png", "cityStage-1.png", "cityStage-2.png"])
+                         ["newStage.png", "newStage-2.png", "cityStage-1.png", "cityStage-2.png",
+                          config.FACTORY_OUTSIDE_IMAGE])
         for index, stage in enumerate(world.stages):
             stage.arrows_visible = True
             self.assertEqual(stage.destination(-1), index - 1 if index else None)
-            self.assertEqual(stage.destination(1), index + 1 if index < 3 else None)
+            self.assertEqual(stage.destination(1), index + 1 if index < len(world.stages) - 1 else None)
 
     def test_travel_inside_each_pair_preserves_motion_without_loading(self):
         for first in (0, 2):
@@ -158,7 +159,7 @@ class CityStageTests(unittest.TestCase):
                 self.assertEqual(player.previous_x, player.x)
                 self.assertFalse(world.try_stage_transition())
 
-    def test_f5_cancels_loading_and_resets_all_four_stages(self):
+    def test_f5_cancels_loading_and_resets_all_five_stages(self):
         world = self.at_exit()
         for stage in world.stages:
             stage.arrows_visible = True
@@ -212,7 +213,7 @@ class CityStageTests(unittest.TestCase):
                 self.assertGreater(enemy.ground_y - config.CAR_GROUND_Y, config.CAR_DEPTH_TOLERANCE)
                 self.assertIs(enemy.walkable, stage.walkable)
                 self.assertEqual(enemy.hp, config.ENEMY_MAX_HP)
-            for index in (0, 1, 3):
+            for index in (0, 1, 3, 4):
                 self.assertIs(world.stages[index].spawn_area, world.stages[index].walkable)
             world.reset()
 

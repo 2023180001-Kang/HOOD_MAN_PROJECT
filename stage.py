@@ -51,7 +51,11 @@ class Stage:
         scale = config.STAGE_SCALE
         width = image.w * scale
         height = image.h * scale
-        bottom = config.GROUND_Y - config.STAGE_GROUND_Y * scale
+        anchor = config.STAGE_GROUND_ANCHORS.get(self.image_name, config.STAGE_GROUND_Y)
+        bottom = config.GROUND_Y - anchor * scale - camera_y
+        # The factory artwork exactly fills the viewport: clamp vertical shake
+        # at image edges so it never exposes a blank strip above or below it.
+        bottom = min(0.0, max(config.SCREEN_HEIGHT - height, bottom))
         first = max(0, floor(camera_x / width))
         last = min(ceil(config.WORLD_WIDTH / width),
                    ceil((camera_x + config.SCREEN_WIDTH) / width))
@@ -59,7 +63,7 @@ class Stage:
             image.composite_draw(
                 0, "h" if index % 2 else "",
                 index * width + width / 2 - camera_x,
-                bottom + height / 2 - camera_y, width, height,
+                bottom + height / 2, width, height,
             )
         sway = (sin(tau * elapsed / config.STAGE_ARROW_SWAY_PERIOD)
                 * config.STAGE_ARROW_SWAY_AMPLITUDE)

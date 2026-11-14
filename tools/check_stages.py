@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 import pico2d
 
 import config
-from effects import HitEffect
+from effects import DamageNumber, HitEffect
 from enemy import Enemy
 from game import Game
 from tools.check_render import capture, render_image
@@ -62,7 +62,7 @@ def check_markers(game):
         assert game.world.stage.arrows_visible
         push_key(pico2d.SDLK_n, down=False)
         game.handle_events()
-    assert len({image.crop((250, 200, 1000, 500)).tobytes() for image in backgrounds}) == 4
+    assert len({image.crop((250, 200, 1000, 500)).tobytes() for image in backgrounds}) == len(config.STAGE_IMAGES)
     push_key(pico2d.SDLK_F5)
     tick(game)
     assert game.world.stage_index == 0
@@ -71,7 +71,7 @@ def check_markers(game):
     push_key(pico2d.SDLK_F5, down=False)
     game.handle_events()
     print("PASS: SDL N reveals the first stage right / remaining stages left+right arrows; "
-          "four distinct backgrounds and shared textures verified.")
+          "five distinct backgrounds and shared textures verified.")
 
 
 def check_motion_continuity(game):
@@ -180,7 +180,7 @@ def check_round_trip_and_last_exit(game):
     tick(game, 30)
     assert game.world.stage_index == len(config.STAGE_IMAGES) - 1
     assert player.x == config.WORLD_WIDTH - config.PLAYER_BOUNDARY_PADDING
-    capture(game, "city_stage_2_last_boundary")
+    capture(game, "factory_outside_last_boundary")
     push_key(pico2d.SDLK_F5)
     tick(game)
     assert game.world.stage_index == 0 and game.world.player.hp == 500
@@ -189,7 +189,7 @@ def check_round_trip_and_last_exit(game):
         push_key(key, down=False)
     game.handle_events()
     print("PASS: SDL full sprint round trip keeps per-map enemies/HP/spawn counts, "
-          "avoids return loops, bounds the final city exit, and F5 resets all four stages.")
+          "avoids return loops, bounds the final factory exit, and F5 resets all five stages.")
 
 
 def check_city_loading(game):
@@ -290,6 +290,117 @@ def check_city_loading(game):
           "HP/motion/resource reuse, city return and F5 cancellation verified.")
 
 
+def check_factory_background(game):
+    game.world = World()
+    game.world.stage_index = 4
+    with Image.open(config.ROOT / config.FACTORY_OUTSIDE_IMAGE) as source:
+        assert source.size == (1280, 720)
+        supplied = source.convert("RGB")
+    for side, camera_x in ((-1, 0), (1, config.WORLD_WIDTH - config.SCREEN_WIDTH)):
+        game.world.camera.x = camera_x
+        game.world.camera.offset_x = 0
+        expected = supplied if side < 0 else supplied.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        for shake_y in (-8, 0, 8):
+            game.world.camera.offset_y = shake_y
+            with (patch.object(game.assets, "draw_sprite"),
+                  patch.object(game.ui, "draw"), patch.object(game.ui, "draw_enemy_health")):
+                image = capture(game, f"factory_background_{side}_{shake_y}")
+            assert ImageChops.difference(image.convert("RGB"), expected).getbbox() is None
+    print("PASS: factory 1280x720 original/mirrored backgrounds fill the viewport at both "
+          "edges, including vertical shake, with exact source pixels and no blank strip.")
+
+
+def check_factory_loading(game):
+    textures = dict(game.assets.images)
+    for side in (1, -1):
+        game.world = World()
+        world = game.world
+        source_index = 3 if side > 0 else 4
+        destination = source_index + side
+        world.stage_index = source_index
+        source, target = world.stage, world.stages[destination]
+        player = world.player
+        player.x = (config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN if side > 0
+                    else config.STAGE_EXIT_MARGIN)
+        player.vx = side * config.RUN_SPEED
+        player.hp, player.invincible = 420, True
+        player.ground_y = 116
+        player.jump_height, player.vy, player.jump_count = 140, 300, 2
+        player.animation.set_state("JUMP")
+        player.animation.elapsed = 0.2
+        for stage, hp in ((source, 160), (target, 120)):
+            enemy = Enemy(1800, ground_y=100)
+            enemy.hp = hp
+            stage.enemies.append(enemy)
+            stage.effects.append(HitEffect(1500, 180, 1))
+            stage.damage_numbers.append(DamageNumber(1500, 250, 40))
+        direction = pico2d.SDLK_RIGHT if side > 0 else pico2d.SDLK_LEFT
+        for key in (direction, pico2d.SDLK_LSHIFT, pico2d.SDLK_n):
+            push_key(key)
+        timing, frozen = {}, []
+        original_draw = game.draw
+
+        def observe(present=True):
+            original_draw(present)
+            if world.stage_loading:
+                snapshot = (world.elapsed, player.x, player.ground_y, player.hp,
+                            player.jump_height, player.vy, player.animation.elapsed,
+                            tuple((stage.enemies[0].x, stage.enemies[0].animation.elapsed,
+                                   stage.effects[0].elapsed, stage.damage_numbers[0].elapsed)
+                                  for stage in (source, target)))
+                if not frozen:
+                    frozen.append(snapshot)
+                    with patch.object(game, "draw", original_draw):
+                        image = capture(game, "stage_loading_to_factory" if side > 0
+                                        else "stage_loading_return_from_factory")
+                    with Image.open(config.ROOT / config.STAGE_LOADING_IMAGE) as supplied:
+                        assert ImageChops.difference(image.convert("RGB"),
+                                                    supplied.convert("RGB")).getbbox() is None
+                    timing["start"] = perf_counter()
+                    for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_9, pico2d.SDLK_p):
+                        push_key(key)
+                assert snapshot == frozen[0]
+            elif world.stage_index == destination and "end" not in timing:
+                timing["end"] = perf_counter()
+                assert world.player is player and (player.hp, player.invincible) == (420, True)
+                assert (player.jump_height, player.vy, player.jump_count) == (140, 300, 2)
+                assert player.vx == side * config.RUN_SPEED and player.animation.elapsed == 0.2
+                assert not target.arrows_visible and len(target.enemies) == 1
+                assert target.enemies[0].hp == 120 and source.enemies[0].hp == 160
+                with patch.object(game, "draw", original_draw):
+                    capture(game, "factory_outside_entered" if side > 0 else "city_returned_from_factory")
+
+        with patch.object(game, "draw", side_effect=observe):
+            assert game.run(max_frames=150) == 150
+        duration = timing["end"] - timing["start"]
+        assert 2.0 <= duration < 2.25, duration
+        assert world.stage_index == destination and len(target.enemies) == 1
+        assert player.active_move is None and player.hp == 420 and player.invincible
+        assert all(game.assets.images[name] is image for name, image in textures.items())
+        for key in (direction, pico2d.SDLK_LSHIFT, pico2d.SDLK_n, pico2d.SDLK_SPACE,
+                    pico2d.SDLK_a, pico2d.SDLK_9, pico2d.SDLK_p):
+            push_key(key, down=False)
+        game.handle_events()
+        print(f"PASS: cityStage-2 {'-> factoryOutside-1' if side > 0 else '<- factoryOutside-1'} "
+              f"uses the exact STAGE_LOADING image for {duration:.3f}s; "
+              "player/jump/HP/input and both scenes' objects survive the frozen transition.")
+    game.world = World()
+    game.world.stage_index = 3
+    game.world.player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
+    game.world.player.vx = config.RUN_SPEED
+    push_key(pico2d.SDLK_n)
+    tick(game)
+    assert game.world.stage_loading and game.world.pending_stage_index == 4
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    assert game.world.stage_index == 0 and not game.world.stage_loading
+    assert all(not stage.enemies and not stage.arrows_visible for stage in game.world.stages)
+    for key in (pico2d.SDLK_n, pico2d.SDLK_F5):
+        push_key(key, down=False)
+    game.handle_events()
+    print("PASS: SDL F5 cancels pending factory entry and resets all five scenes.")
+
+
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()
@@ -301,6 +412,8 @@ def main():
         check_motion_continuity(game)
         check_round_trip_and_last_exit(game)
         check_city_loading(game)
+        check_factory_background(game)
+        check_factory_loading(game)
     finally:
         if game is not None:
             game.close()

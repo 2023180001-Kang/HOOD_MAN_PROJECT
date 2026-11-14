@@ -88,7 +88,8 @@ class IntegrationTests(unittest.TestCase):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             metadata = json.load(file)
         row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.COMBAT_IMAGE: 4,
-                      config.COUNTER_PLAYER_IMAGE: 4, config.COUNTER_ENEMY_IMAGE: 4}
+                      config.COUNTER_PLAYER_IMAGE: 4, config.COUNTER_ENEMY_IMAGE: 4,
+                      config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1}
         self.assertEqual(set(metadata), set(row_counts))
         for name, rows in metadata.items():
             self.assertTrue((config.ROOT / name).is_file())

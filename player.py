@@ -8,6 +8,7 @@ from collision import Rect
 from combat import MOVES
 from counter import COUNTERS
 from physics import approach_vector
+from traffic import start_car_hit, update_car_hit
 from walkable import default_area
 
 
@@ -20,6 +21,7 @@ class Player:
         self.ground_y = config.GROUND_Y
         self.previous_ground_y = self.ground_y
         self.jump_height = 0.0
+        self.previous_jump_height = 0.0
         self.ground_vy = 0.0
         self.walkable = default_area()
         self.vx = 0.0
@@ -28,6 +30,7 @@ class Player:
         self.facing = 1
         self.hp = config.MAX_HP
         self.invincible = False
+        self.car_hit = False
         self.active_move = None
         self.counter_move = None
         self.hit_enemies = set()
@@ -57,6 +60,8 @@ class Player:
 
     @property
     def sprite_image(self):
+        if self.car_hit:
+            return config.PLAYER_CAR_HIT_IMAGE
         if self.counter_move is not None:
             return config.COUNTER_PLAYER_IMAGE
         return config.COMBAT_IMAGE if self.active_move is not None else config.PLAYER_IMAGE
@@ -124,6 +129,15 @@ class Player:
         self.animation.set_state("HIT" if self.hp else "DYING")
         return True
 
+    def hit_by_car(self, direction):
+        if not self.alive:
+            return False
+        self.cancel_combat()
+        self.counter_move = None
+        self.invincible = False
+        start_car_hit(self, direction)
+        return True
+
     def update_vertical(self, dt):
         if not self.grounded:
             self.vy -= config.GRAVITY * dt
@@ -139,6 +153,7 @@ class Player:
         self.walkable.constrain(self, config.PLAYER_HALF_WIDTH)
         self.previous_x = self.x
         self.previous_ground_y = self.ground_y
+        self.previous_jump_height = self.jump_height
         self._update(dt, controls)
         self.walkable.constrain(self, config.PLAYER_HALF_WIDTH)
 
@@ -147,6 +162,9 @@ class Player:
             self.invincible = not self.invincible
         jump_pressed = controls.take_press("jump")
         combat_pressed = controls.take_latest_press(MOVES)
+        if self.state == "CAR_HIT":
+            update_car_hit(self, dt)
+            return
         if self.counter_move is not None:
             self.vx = self.ground_vy = 0.0
             return  # The paired counter owns both animation clocks.

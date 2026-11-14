@@ -16,6 +16,7 @@ class Assets:
             for name in (config.TITLE_IMAGE, config.STAGE_LOADING_IMAGE,
                          config.PLAYER_IMAGE, config.COMBAT_IMAGE,
                          config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
+                         config.CAR_IMAGE, config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.BLOOD_IMAGE, config.HP_IMAGE,
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
@@ -53,6 +54,19 @@ class Assets:
             if font is not None:
                 pico2d.TTF_CloseFont(font.font)
         self.font = self.damage_font = None
+
+    def draw_car(self, car, camera_x, camera_y):
+        image = self.images[config.CAR_IMAGE]
+        width, height = image.w // 4, image.h // 2
+        column, row = car.animation.frame % 4, car.animation.frame // 4
+        scale = config.CAR_SCALE
+        image.clip_composite_draw(
+            column * width, image.h - (row + 1) * height, width, height,
+            0, "h" if car.facing < 0 else "",
+            car.x - camera_x,
+            car.ground_y - camera_y + (config.CAR_GROUND_ANCHOR - height / 2) * scale,
+            width * scale, height * scale,
+        )
 
     def draw_hit_effect(self, effect, camera_x, camera_y):
         image = self.images[config.BLOOD_IMAGE]

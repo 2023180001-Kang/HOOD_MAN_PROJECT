@@ -111,6 +111,24 @@ COUNTER_MOVE_SPECS = (
     ("l", "회전 발차기", 4, 5),
 )
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
+CAR_IMAGE = "HOOD_MAN_car_attached_wheels_8f_pico2d.png"
+PLAYER_CAR_HIT_IMAGE = "hoodman_car_hit_8frames_2048x256.png"
+ENEMY_CAR_HIT_IMAGE = "street_thug_car_hit_8frames_2048x256.png"
+CAR_STAGE_IMAGE = "cityStage-1.png"
+CAR_SCALE = 0.75
+CAR_FPS = 16.0
+CAR_GROUND_Y = 64.0
+CAR_GROUND_ANCHOR = 198.0  # Wheel contact measured from the top of a 512x256 cell.
+CAR_HALF_WIDTH = 164.0  # Solid body only; exclude the exhaust trail.
+CAR_HEIGHT = 90.0
+CAR_DEPTH_TOLERANCE = 24.0
+CAR_SPEED_RANGE = (560.0, 840.0)
+CAR_INITIAL_DELAY = 1.0
+CAR_PASS_DELAY = (1.5, 3.5)
+CAR_SPAWN_MARGIN = 220.0
+CAR_HIT_FPS = 12.0
+CAR_HIT_SPEED = 360.0
+CAR_HIT_FRICTION = 600.0
 HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "newStage.png"
 STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png", "cityStage-1.png", "cityStage-2.png")
@@ -144,6 +162,7 @@ PLAYER_ANIMATIONS = {
     "RUN": (3, 13.0, True),
     "JUMP": (4, 10.0, False),
     "HIT": (6, 12.0, False),
+    "CAR_HIT": (1, CAR_HIT_FPS, False),
     "DYING": (5, 10.0, False),
     "DEAD": (5, 10.0, False),
 }
@@ -153,6 +172,7 @@ ENEMY_ANIMATIONS = {
     "RUN": (3, 13.0, True),
     "ATTACK": (4, 12.0, False),
     "HIT": (5, 12.0, False),
+    "CAR_HIT": (1, CAR_HIT_FPS, False),
     "KNOCKBACK": (5, 12.0, False),
     "DYING": (6, 10.0, False),
     "DEAD": (6, 10.0, False),

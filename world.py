@@ -14,9 +14,10 @@ from stage import Stage
 
 
 class World:
-    def __init__(self, *, rng=None):
+    def __init__(self, *, rng=None, traffic_rng=None):
         self.controls = Controls()
         self.spawn_rng = rng
+        self.traffic_rng = traffic_rng
         self.reset()
 
     def reset(self):
@@ -31,7 +32,8 @@ class World:
         self.player = Player()
         self.camera = Camera(self.player.x)
         attack_sequence = count()
-        self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence)
+        self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,
+                             traffic_rng=self.traffic_rng)
                        for index in range(len(config.STAGE_IMAGES))]
         self.stage_index = 0
         self.pending_stage_index = None
@@ -134,6 +136,9 @@ class World:
         if self.player.alive:
             resolve_bodies(self.player, self.enemies, self.stage.walkable)
             resolve_enemy_spacing(self.player, self.enemies, dt, self.stage.walkable)
+        self.update_traffic(dt)
+        self.handle_death()
+        if self.player.alive:
             if self.counter is not None:
                 sequence = self.counter
                 damage = sequence.update(dt)
@@ -172,6 +177,30 @@ class World:
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         self.camera.update(dt, self.player.x)
+
+    def update_traffic(self, dt):
+        if self.stage.traffic is None:
+            return
+        car = self.stage.traffic.update(dt)
+        if car is None:
+            return
+        hit_player = car.hits(self.player)
+        hit_enemies = [enemy for enemy in self.enemies if car.hits(enemy)]
+        if self.counter is not None and (hit_player or self.counter.enemy in hit_enemies):
+            self.counter.finish()
+            self.counter = None
+        for enemy in hit_enemies:
+            previous_hp = enemy.hp
+            enemy.hit_by_car(car.facing)
+            self.damage_numbers.append(DamageNumber.above_body(
+                enemy.body, previous_hp, depth=enemy.ground_y - config.GROUND_Y))
+            self.effects.append(HitEffect(enemy.x, enemy.y + config.ENEMY_HEIGHT * 0.5, car.facing))
+        if hit_player:
+            self.player.hit_by_car(car.facing)
+            self.effects.append(HitEffect(self.player.x, self.player.y + config.PLAYER_HEIGHT * 0.5,
+                                          car.facing))
+        if hit_player or hit_enemies:
+            self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
 
     def try_start_counter(self, action):
         player = self.player

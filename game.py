@@ -106,10 +106,16 @@ class Game:
         sprites = [(enemy.ground_y, enemy, enemy.sprite_image, enemy.opacity)
                    for enemy in self.world.enemies]
         sprites.append((player.ground_y, player, player.sprite_image, 1.0))
+        traffic = self.world.stage.traffic
+        if traffic is not None and traffic.car is not None:
+            sprites.append((traffic.car.ground_y, traffic.car, config.CAR_IMAGE, 1.0))
         for _, actor, image, opacity in sorted(sprites, key=lambda entry: entry[0], reverse=True):
-            self.assets.draw_sprite(image, actor.animation.row, actor.animation.frame,
-                                    actor.x - camera_x, actor.y - camera_y, actor.facing,
-                                    opacity=opacity)
+            if image == config.CAR_IMAGE:
+                self.assets.draw_car(actor, camera_x, camera_y)
+            else:
+                self.assets.draw_sprite(image, actor.animation.row, actor.animation.frame,
+                                        actor.x - camera_x, actor.y - camera_y, actor.facing,
+                                        opacity=opacity)
         for effect in self.world.effects:
             self.assets.draw_hit_effect(effect, camera_x, camera_y)
         self.ui.draw_enemy_health(self.assets, self.world, camera_x, camera_y)

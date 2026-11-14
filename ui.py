@@ -83,7 +83,9 @@ class UI:
             mode = "ON" if world.player.invincible else "OFF"
             assets.font.draw(740, 25, f"N 스테이지 이동 화살표 표시   P 무적 전환: {mode}",
                              (205, 218, 231))
-            if world.player.state in ("DYING", "DEAD"):
+            if world.stage.traffic is not None:
+                assets.font.draw(22, 107, "도로 주의! 차량에 부딪히면 즉사합니다.", (255, 183, 100))
+            if world.player.state in ("CAR_HIT", "DYING", "DEAD"):
                 center = config.SCREEN_WIDTH / 2
                 pico2d.draw_rectangle(center - 240, 322, center + 240, 400,
                                       12, 21, 33, filled=True)

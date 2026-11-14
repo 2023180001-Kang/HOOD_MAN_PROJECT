@@ -146,6 +146,7 @@ class BeltScrollTests(unittest.TestCase):
                     with self.subTest(stage=stage_index, horizontal=horizontal, vertical=vertical):
                         world = World()
                         world.stage_index = stage_index
+                        world.stage.traffic = None  # Isolate walking limits from lethal road hazards.
                         for key in (horizontal, vertical, "left_shift"):
                             world.controls.press(key)
                         for _ in range(5 * 120):
@@ -277,6 +278,7 @@ class BeltScrollTests(unittest.TestCase):
         for stage_index in range(len(config.STAGE_IMAGES)):
             world = World()
             world.stage_index = stage_index
+            world.stage.traffic = None  # All twenty must survive to exercise their melee attacks.
             world.player.invincible = True
             world.enemies = [Enemy(world.player.x + side * 500, -side, ground_y=56,
                                    run_speed=config.ENEMY_RUN_SPEEDS[index % 4])
@@ -304,6 +306,7 @@ class BeltScrollTests(unittest.TestCase):
                 for sx, sy in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
                     world = World()
                     world.stage_index = stage_index
+                    world.stage.traffic = None  # Measure AI movement without vehicle knockback.
                     _, bottom, right, top = world.stage.walkable.bounds
                     player = world.player
                     player.x = player.boundary_padding if sx < 0 else right - player.boundary_padding

@@ -1,3 +1,4 @@
+import random
 import unittest
 
 import config
@@ -5,6 +6,7 @@ from combat import MOVES
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
 from tests.helpers import advance, tap
+from traffic import Car
 from world import World
 
 
@@ -194,6 +196,47 @@ class CityStageTests(unittest.TestCase):
             self.assertEqual(len(world.enemies), 9)
         rates = [enemy.attack_speed for stage in world.stages for enemy in stage.enemies]
         self.assertEqual(len(set(rates)), len(rates))
+
+    def test_city_one_spawns_only_on_sidewalk_at_both_edges_including_after_restart(self):
+        world = World(rng=random.Random(42))
+        for _ in range(2):
+            stage = world.stages[2]
+            enemies = stage.spawner.spawn(200, 0)
+            self.assertEqual({enemy.x for enemy in enemies},
+                             {config.ENEMY_BOUNDARY_PADDING,
+                              config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING})
+            for enemy in enemies:
+                self.assertTrue(stage.spawn_area.contains(enemy.x, enemy.ground_y,
+                                                          enemy.boundary_padding))
+                self.assertGreaterEqual(enemy.ground_y, config.GROUND_Y)
+                self.assertGreater(enemy.ground_y - config.CAR_GROUND_Y, config.CAR_DEPTH_TOLERANCE)
+                self.assertIs(enemy.walkable, stage.walkable)
+                self.assertEqual(enemy.hp, config.ENEMY_MAX_HP)
+            for index in (0, 1, 3):
+                self.assertIs(world.stages[index].spawn_area, world.stages[index].walkable)
+            world.reset()
+
+    def test_cars_at_spawn_edges_do_not_run_over_newly_summoned_sidewalk_enemies(self):
+        for side in (-1, 1):
+            with self.subTest(side=side):
+                world = World(rng=random.Random(42))
+                world.stage_index = 2
+                world.player.ground_y = 124
+                edge = (config.ENEMY_BOUNDARY_PADDING if side < 0 else
+                        config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING)
+                car = Car(edge, -side, config.CAR_SPEED_RANGE[1])
+                world.stage.traffic.car = car
+                world.controls.press("spawn_9")
+                world.step(config.FIXED_DT)
+                self.assertEqual(len(world.enemies), 9)
+                self.assertTrue(any(abs(enemy.x - car.x) < config.CAR_HALF_WIDTH
+                                    for enemy in world.enemies))
+                self.assertTrue(all(enemy.hp == config.ENEMY_MAX_HP and not enemy.car_hit
+                                    for enemy in world.enemies))
+                # Only spawning is restricted: enemies may still pursue onto the road.
+                for enemy in world.enemies:
+                    self.assertTrue(enemy.walkable.contains(enemy.x, config.CAR_GROUND_Y,
+                                                            enemy.boundary_padding))
 
     def test_loading_finishes_at_the_same_time_at_different_render_rates(self):
         results = []

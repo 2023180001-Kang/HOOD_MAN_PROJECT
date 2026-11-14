@@ -80,6 +80,26 @@ def check_driving_frames(game):
           "and seeded natural traffic in both directions; sidewalk remains safe.")
 
 
+def check_sidewalk_spawns(game):
+    for side in (-1, 1):
+        world = city(game, ground_y=124)
+        world.player.x = 300 if side < 0 else config.WORLD_WIDTH - 300
+        edge = (config.ENEMY_BOUNDARY_PADDING if side < 0 else
+                config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING)
+        car = car_at(world, edge, -side, speed=config.CAR_SPEED_RANGE[1])
+        push_key(pico2d.SDLK_9)
+        tick(game)
+        release(game, pico2d.SDLK_9)
+        assert len(world.enemies) == 9
+        assert all(enemy.hp == config.ENEMY_MAX_HP and not enemy.car_hit for enemy in world.enemies)
+        assert all(enemy.ground_y - car.ground_y > config.CAR_DEPTH_TOLERANCE
+                   for enemy in world.enemies)
+        assert any(abs(enemy.x - car.x) < config.CAR_HALF_WIDTH for enemy in world.enemies)
+        capture(game, "traffic_sidewalk_spawn_left" if side < 0 else "traffic_sidewalk_spawn_right")
+    print("PASS: SDL numeric summons spawn on the city sidewalk and survive cars already "
+          "passing through either spawn edge.")
+
+
 def check_impacts_and_fade(game):
     for direction in (-1, 1):
         world = city(game, ground_y=config.CAR_GROUND_Y)
@@ -189,6 +209,7 @@ def main():
         game = Game()
         game.handle_events()
         check_driving_frames(game)
+        check_sidewalk_spawns(game)
         check_impacts_and_fade(game)
         check_road_input_jump_and_restart(game)
         benchmark(game)

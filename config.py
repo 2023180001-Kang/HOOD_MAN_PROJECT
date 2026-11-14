@@ -158,6 +158,10 @@ STAGE_WALKABLE_BOUNDS = (
     (0.0, 56.0, WORLD_WIDTH, 116.0),
 )
 STAGE_WALKABLE_POLYGONS = {}
+# Spawn on the sidewalk, while pursuit can still use the full city floor.
+STAGE_ENEMY_SPAWN_BOUNDS = {
+    "cityStage-1.png": (0.0, GROUND_Y, WORLD_WIDTH, 148.0),
+}
 
 # State: (one-based source row, frames per second, loop).
 PLAYER_ANIMATIONS = {

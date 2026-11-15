@@ -1,6 +1,7 @@
 """Independent street-thug AI and animation state."""
 
 from math import hypot
+import random
 
 import config
 from animation import Animation
@@ -13,9 +14,12 @@ from walkable import default_area
 
 class Enemy:
     boundary_padding = config.ENEMY_BOUNDARY_PADDING
+    image_name = config.ENEMY_IMAGE
+    animations = config.ENEMY_ANIMATIONS
 
     def __init__(self, x, facing=1, spawned_at=0.0, *, run_speed=None, ground_y=None,
-                 attack_speed=1.0):
+                 attack_speed=1.0, rng=None):
+        self.rng = random.Random() if rng is None else rng
         self.x = x
         self.previous_x = x
         self.ground_y = config.GROUND_Y if ground_y is None else ground_y
@@ -41,7 +45,7 @@ class Enemy:
         self.counter_death = None
         self.attack_speed = attack_speed
         self.attack_interval = config.ENEMY_ATTACK_INTERVAL / attack_speed
-        definitions = dict(config.ENEMY_ANIMATIONS)
+        definitions = dict(self.animations)
         row, fps, loop = definitions["ATTACK"]
         self.attack_fps = fps * attack_speed
         definitions["ATTACK"] = (row, self.attack_fps, loop)
@@ -82,7 +86,7 @@ class Enemy:
         if self.car_hit:
             return config.ENEMY_CAR_HIT_IMAGE
         return (config.COUNTER_ENEMY_IMAGE if self.counter_move is not None
-                or self.counter_death is not None else config.ENEMY_IMAGE)
+                or self.counter_death is not None else self.image_name)
 
     @property
     def y(self):
@@ -181,9 +185,23 @@ class Enemy:
                     self.x + config.ENEMY_HALF_WIDTH, base + config.ENEMY_HEIGHT)
 
     @property
+    def attack_damage(self):
+        return config.ENEMY_DAMAGE
+
+    @property
+    def attack_active_frames(self):
+        return config.ENEMY_ACTIVE_FRAMES
+
+    def start_attack(self):
+        self.animation.set_state("ATTACK")
+        self.animation.elapsed = 0.0
+        self.has_hit = False
+        self.cooldown = self.attack_interval
+
+    @property
     def attack_box(self):
         if (not self.alive or self.state != "ATTACK" or self.has_hit
-                or self.animation.frame not in config.ENEMY_ACTIVE_FRAMES):
+                or self.animation.frame not in self.attack_active_frames):
             return None
         near = self.x + self.facing * 12
         far = self.x + self.facing * config.ENEMY_ATTACK_REACH
@@ -196,7 +214,7 @@ class Enemy:
                 and box.overlaps(player.body)):
             # Per-enemy swing consumption prevents repeated active-frame damage.
             self.has_hit = True
-            return player.take_damage(config.ENEMY_DAMAGE)
+            return player.take_damage(self.attack_damage)
         return False
 
     def knockback(self, player_x, player_ground_y=None):
@@ -275,7 +293,7 @@ class Enemy:
                 self.animation.update(dt)
                 if self.animation.finished:
                     self.animation.set_state("DEAD")
-                    self.animation.elapsed = 8 / config.ENEMY_ANIMATIONS["DEAD"][1]
+                    self.animation.elapsed = 8 / self.animation.definitions["DEAD"][1]
                     self.corpse_elapsed = 0.0
             return
         if self.knockback_started:
@@ -336,9 +354,7 @@ class Enemy:
                 self.ground_vy = target_y / length * speed
             state = "RUN" if self.running else "WALK"
         elif self.cooldown <= 0 and in_reach:
-            self.animation.set_state("ATTACK")
-            self.has_hit = False
-            self.cooldown = self.attack_interval
+            self.start_attack()
             self.animation.update(dt)
             return
         travel_x, travel_y = self.vx * dt, self.ground_vy * dt

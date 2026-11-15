@@ -73,9 +73,15 @@ class UI:
             for index, move in enumerate(COUNTERS.values()):
                 assets.font.draw(22 + index * 310, 74,
                                  f"{move.key.upper()} {move.name} ({move.damage})", (244, 204, 66))
-            counter_help = ("제압 유지: 방향키로 적을 들고 이동 / A 새 입력으로 후속 공격"
-                            if world.player.counter_holding else
-                            f"적 공격 피해: {config.ENEMY_DAMAGE}   반격: 쇠파이프 공격 중 {config.COUNTER_RANGE:g}px 내")
+            if world.player.counter_holding:
+                counter_help = "제압 유지: 방향키로 적을 들고 이동 / A 새 입력으로 후속 공격"
+            elif world.stage.image_name in config.ENEMY02_STAGE_IMAGES:
+                clubs, slam = config.ENEMY02_ATTACKS["clubs"][1], config.ENEMY02_ATTACKS["slam"][1]
+                counter_help = (f"적 공격: 몽둥이 {clubs} / 착지 {slam}   "
+                                f"반격: 지상 공격 중 {config.COUNTER_RANGE:g}px 내")
+            else:
+                counter_help = (f"적 공격 피해: {config.ENEMY_DAMAGE}   "
+                                f"반격: 쇠파이프 공격 중 {config.COUNTER_RANGE:g}px 내")
             assets.font.draw(22, 48, counter_help, (205, 218, 231))
             assets.font.draw(740, 48, "1~9: 해당 스테이지 이동 / 0: 10번 / 적 4명", (205, 218, 231))
             assets.font.draw(22, 25,

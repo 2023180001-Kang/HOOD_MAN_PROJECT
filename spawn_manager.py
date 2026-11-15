@@ -21,12 +21,14 @@ def attack_speed_for_spawn(index):
 
 
 class SpawnManager:
-    def __init__(self, *, rng=None, walkable=None, attack_sequence=None, spawn_area=None):
+    def __init__(self, *, rng=None, walkable=None, attack_sequence=None, spawn_area=None,
+                 enemy_type=Enemy):
         self.rng = random.Random() if rng is None else rng
         self.spawned_count = 0
         self.walkable = default_area() if walkable is None else walkable
         self.spawn_area = self.walkable if spawn_area is None else spawn_area
         self.attack_sequence = count() if attack_sequence is None else attack_sequence
+        self.enemy_type = enemy_type
 
     def spawn(self, count, elapsed):
         enemies = []
@@ -36,11 +38,15 @@ class SpawnManager:
                   else config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
             _, bottom, _, top = self.spawn_area.bounds
             ground_y = self.rng.uniform(bottom, top)
-            x, ground_y = self.spawn_area.project(x, ground_y, config.ENEMY_BOUNDARY_PADDING)
+            x, ground_y = self.spawn_area.project(x, ground_y, self.enemy_type.boundary_padding)
             run_speed = config.ENEMY_RUN_SPEEDS[self.spawned_count % len(config.ENEMY_RUN_SPEEDS)]
             attack_speed = attack_speed_for_spawn(next(self.attack_sequence))
-            enemy = Enemy(x, facing=-side, spawned_at=elapsed, run_speed=run_speed,
-                          ground_y=ground_y, attack_speed=attack_speed)
+            # Copy, rather than share or advance, the spawn RNG. Combat draws
+            # must not change later spawn sides/depths or another enemy's moves.
+            enemy_rng = random.Random()
+            enemy_rng.setstate(self.rng.getstate())
+            enemy = self.enemy_type(x, facing=-side, spawned_at=elapsed, run_speed=run_speed,
+                                   ground_y=ground_y, attack_speed=attack_speed, rng=enemy_rng)
             enemy.walkable = self.walkable
             enemies.append(enemy)
             self.spawned_count += 1

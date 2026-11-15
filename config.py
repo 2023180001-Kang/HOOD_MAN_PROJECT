@@ -116,6 +116,13 @@ COUNTER_MOVE_SPECS = (
 )
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 ENEMY02_IMAGE = "HOOD_MAN_enemy02.png"
+ENEMY02_STAGE_IMAGES = ("cityStage-1.png", "cityStage-2.png")
+ENEMY02_BOUNDARY_PADDING = 128.0  # Living attack/effect envelope reaches 126.75px.
+# Attack name: (one-based source row, damage for the whole motion, active frames).
+ENEMY02_ATTACKS = {
+    "clubs": (4, 60, (3, 4, 5)),
+    "slam": (5, 80, (5, 6)),
+}
 CAR_IMAGE = "HOOD_MAN_car_attached_wheels_8f_pico2d.png"
 PLAYER_CAR_HIT_IMAGE = "hoodman_car_hit_8frames_2048x256.png"
 ENEMY_CAR_HIT_IMAGE = "street_thug_car_hit_8frames_2048x256.png"
@@ -204,4 +211,12 @@ ENEMY_ANIMATIONS = {
     "KNOCKBACK": (5, 12.0, False),
     "DYING": (6, 10.0, False),
     "DEAD": (6, 10.0, False),
+}
+ENEMY02_ANIMATIONS = {
+    **ENEMY_ANIMATIONS,
+    "HIT": (6, 12.0, False),
+    "KNOCKBACK": (6, 12.0, False),
+    "DYING": (7, 10.0, False),
+    "DEAD": (7, 10.0, False),
+    "CAR_HIT": (7, CAR_HIT_FPS, False),
 }

@@ -3,6 +3,8 @@
 from math import ceil, floor, sin, tau
 
 import config
+from enemy import Enemy
+from enemy02 import Enemy02
 from spawn_manager import SpawnManager
 from traffic import Traffic
 from walkable import WalkableArea, for_stage
@@ -20,7 +22,9 @@ class Stage:
         self.spawn_area = (WalkableArea.rectangle(*spawn_bounds) if spawn_bounds is not None
                            else self.walkable)
         self.spawner = SpawnManager(rng=rng, walkable=self.walkable, spawn_area=self.spawn_area,
-                                    attack_sequence=attack_sequence)
+                                    attack_sequence=attack_sequence,
+                                    enemy_type=Enemy02 if self.image_name in config.ENEMY02_STAGE_IMAGES
+                                    else Enemy)
         self.enemies = self.spawner.spawn(config.ENEMIES_PER_STAGE, 0.0)
         self.traffic = Traffic(rng=traffic_rng) if self.image_name == config.CAR_STAGE_IMAGE else None
 

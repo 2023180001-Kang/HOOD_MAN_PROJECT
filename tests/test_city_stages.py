@@ -207,8 +207,8 @@ class CityStageTests(unittest.TestCase):
             stage = world.stages[2]
             enemies = stage.spawner.spawn(200, 0)
             self.assertEqual({enemy.x for enemy in enemies},
-                             {config.ENEMY_BOUNDARY_PADDING,
-                              config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING})
+                             {config.ENEMY02_BOUNDARY_PADDING,
+                              config.WORLD_WIDTH - config.ENEMY02_BOUNDARY_PADDING})
             for enemy in enemies:
                 self.assertTrue(stage.spawn_area.contains(enemy.x, enemy.ground_y,
                                                           enemy.boundary_padding))

@@ -115,10 +115,10 @@ def check_stage_shortcuts(game):
             world = game.world
             assert all(len(stage.enemies) == stage.spawner.spawned_count == 4
                        for stage in world.stages)
-            boundaries = {config.ENEMY_BOUNDARY_PADDING,
-                          config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING}
             for stage in world.stages:
-                assert all(enemy.x in boundaries and stage.spawn_area.contains(
+                assert all(enemy.x in (enemy.boundary_padding,
+                                      config.WORLD_WIDTH - enemy.boundary_padding)
+                           and stage.spawn_area.contains(
                     enemy.x, enemy.ground_y, enemy.boundary_padding) for enemy in stage.enemies)
             assert {enemy.facing for stage in world.stages for enemy in stage.enemies} == {-1, 1}
             player = world.player

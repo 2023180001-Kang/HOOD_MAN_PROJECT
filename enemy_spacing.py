@@ -9,19 +9,26 @@ from combat import MOVES
 from physics import clamp
 
 
-@lru_cache(maxsize=1)
-def sprite_extents():
+@lru_cache(maxsize=2)
+def sprite_extents(image_name=config.ENEMY_IMAGE):
     """Reserve the occupied PNG envelope, including offsets and attack frames.
 
     Using one envelope rather than the current frame avoids breathing/jitter as
     the baton extends. Clip metadata is shared with rendering; Pillow is not used.
     """
     with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
-        rows = json.load(file)[config.ENEMY_IMAGE]
-    tiles = [tile for row in rows[:5] for tile in row]
+        rows = json.load(file)[image_name]
+    tiles = [tile for row in rows[:-1] for tile in row]
     left = min(tile["offset_x"] - tile["clip"][2] / 2 for tile in tiles)
     right = max(tile["offset_x"] + tile["clip"][2] / 2 for tile in tiles)
     return left * config.SPRITE_SCALE, right * config.SPRITE_SCALE
+
+
+def encounter_envelope(enemies):
+    images = {enemy.image_name for enemy in enemies} or {config.ENEMY_IMAGE}
+    extents = [sprite_extents(name) for name in images]
+    return (min(left for left, _ in extents), max(right for _, right in extents),
+            max((enemy.boundary_padding for enemy in enemies), default=config.ENEMY_BOUNDARY_PADDING))
 
 
 def slot_cell(slot, columns=2):
@@ -57,7 +64,7 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
         if distance <= limit:
             groups[side].append(enemy)
 
-    left, right = sprite_extents()
+    left, right, padding = encounter_envelope(enemies)
     desired_gap = right - left + config.ENEMY_SPACING_MARGIN
     body_gap = config.PLAYER_HALF_WIDTH + config.ENEMY_HALF_WIDTH
     # Both sides can really connect: rear slots must remain counterable even
@@ -65,13 +72,13 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
     reach = min(config.ENEMY_ATTACK_REACH + config.PLAYER_HALF_WIDTH,
                 min(move.reach for move in MOVES.values()) + config.ENEMY_HALF_WIDTH)
     reach -= config.ENEMY_SPACING_MARGIN
-    floor = walkable.inset(config.ENEMY_BOUNDARY_PADDING)
+    floor = walkable.inset(padding)
     band = max(0.0, config.ATTACK_DEPTH_TOLERANCE - config.ENEMY_SPACING_MARGIN)
     bottom = max(min(y for _, y in floor), player.ground_y - band)
     top = min(max(y for _, y in floor), player.ground_y + band)
     for side, group in groups.items():
-        _, center_y = walkable.project(player.x, player.ground_y, config.ENEMY_BOUNDARY_PADDING)
-        limits = walkable.x_limits(center_y, config.ENEMY_BOUNDARY_PADDING)
+        _, center_y = walkable.project(player.x, player.ground_y, padding)
+        limits = walkable.x_limits(center_y, padding)
         room = player.x - limits[0] if side < 0 else limits[1] - player.x
         far = min(reach, room)
         if len(group) < 2 or far < body_gap or bottom > top:
@@ -104,7 +111,7 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
             lane, column = slot_cell(enemy.formation_slot, columns)
             ground_y = origin + offsets[lane] * depth_step
             target_x, target_y = walkable.project(player.x + side * (near + column * gap),
-                                                  ground_y, config.ENEMY_BOUNDARY_PADDING)
+                                                  ground_y, padding)
             if (target_x - player.x) * side >= 0:
                 enemy.target_ground_y = target_y
                 enemy.target_x = target_x
@@ -116,7 +123,7 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
     active = [enemy for enemy in enemies
               if player.alive and enemy.alive and not enemy.knockback_started
               and enemy.counter_move is None]
-    left, right = sprite_extents()
+    left, right, _ = encounter_envelope(enemies)
     width = right - left + config.ENEMY_SPACING_MARGIN
     crowded = set()
     for index, first in enumerate(active):

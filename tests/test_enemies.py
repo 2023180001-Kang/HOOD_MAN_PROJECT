@@ -122,8 +122,8 @@ class EnemyTests(unittest.TestCase):
                                  list(config.ENEMY_RUN_SPEEDS))
                 for enemy in stage.enemies:
                     sides.add(enemy.facing)
-                    self.assertEqual(enemy.x, config.ENEMY_BOUNDARY_PADDING if enemy.facing > 0
-                                     else config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING)
+                    self.assertEqual(enemy.x, enemy.boundary_padding if enemy.facing > 0
+                                     else config.WORLD_WIDTH - enemy.boundary_padding)
                     self.assertTrue(stage.spawn_area.contains(enemy.x, enemy.ground_y,
                                                               enemy.boundary_padding))
                     self.assertEqual((enemy.hp, enemy.spawned_at), (200, 0))

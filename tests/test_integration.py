@@ -85,11 +85,13 @@ class IntegrationTests(unittest.TestCase):
     def test_generated_clips_stay_inside_original_sprite_sheets(self):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             metadata = json.load(file)
-        row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.COMBAT_IMAGE: 4,
+        row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.ENEMY02_IMAGE: 7,
+                      config.COMBAT_IMAGE: 4,
                       config.COUNTER_PLAYER_IMAGE: 4, config.COUNTER_ENEMY_IMAGE: 4,
                       config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1}
         self.assertEqual(set(metadata), set(row_counts))
         for name, rows in metadata.items():
+            cell_size = 384 if name == config.ENEMY02_IMAGE else 256
             self.assertTrue((config.ROOT / name).is_file())
             self.assertEqual(len(rows), row_counts[name])
             for row_index, row in enumerate(rows):
@@ -98,10 +100,24 @@ class IntegrationTests(unittest.TestCase):
                     left, bottom, width, height = frame["clip"]
                     self.assertGreater(width, 0)
                     self.assertGreater(height, 0)
-                    self.assertGreaterEqual(left, col_index * 256)
-                    self.assertLessEqual(left + width, (col_index + 1) * 256)
-                    self.assertGreaterEqual(bottom, (row_counts[name] - 1 - row_index) * 256)
-                    self.assertLessEqual(bottom + height, (row_counts[name] - row_index) * 256)
+                    self.assertGreaterEqual(left, col_index * cell_size)
+                    self.assertLessEqual(left + width, (col_index + 1) * cell_size)
+                    self.assertGreaterEqual(bottom, (row_counts[name] - 1 - row_index) * cell_size)
+                    self.assertLessEqual(bottom + height, (row_counts[name] - row_index) * cell_size)
+
+    def test_enemy02_lift_matches_the_source_feet_without_a_second_render_offset(self):
+        from PIL import Image
+
+        with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
+            rows = json.load(file)[config.ENEMY02_IMAGE]
+        with Image.open(config.ROOT / config.ENEMY02_IMAGE) as image:
+            self.assertEqual(image.size, (3072, 2688))
+            feet = [image.crop((col * 384, 4 * 384, (col + 1) * 384, 5 * 384)).getbbox()[3]
+                    for col in range(8)]
+        self.assertEqual([frame["jump_height"] for frame in rows[4]],
+                         [max(feet) - foot for foot in feet])
+        self.assertEqual([frame["jump_height"] for frame in rows[4]], [0, 0, 48, 26, 0, 0, 0, 0])
+        self.assertTrue(all(frame.get("offset_y", 0) == 0 for frame in rows[4]))
 
     def test_counter_clips_preserve_the_shared_ground_anchor_and_airborne_poses(self):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:

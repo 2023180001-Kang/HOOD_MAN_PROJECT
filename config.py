@@ -115,6 +115,7 @@ COUNTER_MOVE_SPECS = (
     ("l", "회전 발차기", 4, 5),
 )
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
+ENEMY02_IMAGE = "HOOD_MAN_enemy02.png"
 CAR_IMAGE = "HOOD_MAN_car_attached_wheels_8f_pico2d.png"
 PLAYER_CAR_HIT_IMAGE = "hoodman_car_hit_8frames_2048x256.png"
 ENEMY_CAR_HIT_IMAGE = "street_thug_car_hit_8frames_2048x256.png"

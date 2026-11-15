@@ -17,7 +17,7 @@ class Assets:
                          config.PLAYER_IMAGE, config.COMBAT_IMAGE,
                          config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
                          config.CAR_IMAGE, config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE,
-                         config.ENEMY_IMAGE, config.BLOOD_IMAGE, config.HP_IMAGE,
+                         config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.BLOOD_IMAGE, config.HP_IMAGE,
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:

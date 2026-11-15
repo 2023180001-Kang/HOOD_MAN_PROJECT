@@ -19,7 +19,10 @@ class Stage:
         self.effects = []
         self.damage_numbers = []
         self.walkable = for_stage(index)
-        self.drop_items = spawn_drop_items(self.walkable, rng=item_rng)
+        drop_bounds = config.STAGE_DROP_ITEM_SPAWN_BOUNDS.get(self.image_name)
+        self.drop_spawn_area = (WalkableArea.rectangle(*drop_bounds) if drop_bounds is not None
+                                else self.walkable)
+        self.drop_items = spawn_drop_items(self.drop_spawn_area, rng=item_rng)
         spawn_bounds = config.STAGE_ENEMY_SPAWN_BOUNDS.get(self.image_name)
         self.spawn_area = (WalkableArea.rectangle(*spawn_bounds) if spawn_bounds is not None
                            else self.walkable)

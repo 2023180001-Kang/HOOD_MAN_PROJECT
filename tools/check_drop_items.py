@@ -98,7 +98,7 @@ def check_all_stages(game):
         counts.append(len(stage.drop_items))
         assert 5 <= counts[-1] <= 8
         assert {item.kind for item in stage.drop_items} == {"combat_knife", "steel_pipe"}
-        _, bottom, _, top = stage.walkable.bounds
+        _, bottom, _, top = stage.drop_spawn_area.bounds
         for side in (-1, 1):
             game.handle_events()
             world.player.x = 80 if side < 0 else config.WORLD_WIDTH - 80
@@ -110,6 +110,10 @@ def check_all_stages(game):
             assert box is not None
             assert box[1] >= floor(config.SCREEN_HEIGHT - top) - 1
             assert box[3] <= ceil(config.SCREEN_HEIGHT - bottom) + 1
+            if stage.image_name == "cityStage-1.png":
+                road_top = ceil(config.SCREEN_HEIGHT - config.GROUND_Y) + 1
+                assert delta.crop((0, road_top, config.SCREEN_WIDTH,
+                                   config.SCREEN_HEIGHT)).getbbox() is None
             exit_box = ((0, 0, arrow_edge + 1, config.SCREEN_HEIGHT) if side < 0 else
                         (config.SCREEN_WIDTH - arrow_edge - 1, 0,
                          config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
@@ -124,7 +128,8 @@ def check_all_stages(game):
                                        ceil(y + config.DROP_ITEM_SHADOW_HALF_DEPTH)))
                     assert crop.getbbox() is not None
     print(f"PASS: all ten stage layouts have 5-8 total drops ({counts}); actual floor pixels "
-          "fit each map, both exit areas stay clear, and both map halves render correctly.")
+          "fit each map, cityStage-1 weapons/shadows stay on the sidewalk with no road "
+          "pixels, both exit areas stay clear, and both map halves render correctly.")
 
 
 def check_restart(game):
@@ -137,6 +142,10 @@ def check_restart(game):
     assert game.world.stage_index == 0
     assert all(stage.drop_items is not old and 5 <= len(stage.drop_items) <= 8
                for stage, old in zip(game.world.stages, previous))
+    city = game.world.stages[config.STAGE_IMAGES.index("cityStage-1.png")]
+    assert all(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= config.GROUND_Y
+               and item.ground_y + config.DROP_ITEM_HEIGHT <= city.walkable.bounds[3]
+               for item in city.drop_items)
     assert all(game.assets.images[name] is texture for name, texture in textures.items())
     capture(game, "drop_items_restarted")
     print("PASS: actual SDL F5 replaces all ten item lists and reuses both shared textures.")

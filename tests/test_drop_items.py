@@ -56,6 +56,8 @@ class DropItemTests(unittest.TestCase):
             world = World(item_rng=random.Random(seed))
             for stage in world.stages:
                 self.assertFalse(stage.arrows_visible)
+                if stage.image_name != "cityStage-1.png":
+                    self.assertIs(stage.drop_spawn_area, stage.walkable)
                 previous_right = None
                 for item in stage.drop_items:
                     for parts in bounds[item.kind]:
@@ -68,6 +70,9 @@ class DropItemTests(unittest.TestCase):
                             for x in (visible_left, visible_right):
                                 for y in (visible_bottom, visible_top):
                                     self.assertTrue(stage.walkable.contains(x, y))
+                                    self.assertTrue(stage.drop_spawn_area.contains(x, y))
+                            if stage.image_name == "cityStage-1.png":
+                                self.assertGreaterEqual(visible_bottom, config.GROUND_Y)
                             self.assertGreaterEqual(visible_left, arrow_edge + config.DROP_ITEM_EXIT_GAP)
                             self.assertLessEqual(visible_right,
                                                  config.WORLD_WIDTH - arrow_edge - config.DROP_ITEM_EXIT_GAP)
@@ -139,6 +144,12 @@ class DropItemTests(unittest.TestCase):
             self.assertFalse(any(item is previous for item in new.drop_items
                                  for previous in old.drop_items))
             self.assertIn(len(new.drop_items), range(5, 9))
+            if new.image_name == "cityStage-1.png":
+                for item in new.drop_items:
+                    self.assertGreaterEqual(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH,
+                                            config.GROUND_Y)
+                    self.assertLessEqual(item.ground_y + config.DROP_ITEM_HEIGHT,
+                                         new.walkable.bounds[3])
 
     def test_walking_over_and_attacking_items_does_not_collect_move_or_destroy_them(self):
         world = World(item_rng=random.Random(1))

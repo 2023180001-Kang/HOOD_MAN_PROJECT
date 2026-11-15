@@ -214,6 +214,10 @@ STAGE_ENEMY_SPAWN_BOUNDS = {
     "cityStage-1.png": (0.0, GROUND_Y, WORLD_WIDTH, 148.0),
     "cityStage-2.png": (0.0, GROUND_Y, WORLD_WIDTH, 116.0),
 }
+# Keep cityStage-1 drops and their shadows on the sidewalk, above the roadway.
+STAGE_DROP_ITEM_SPAWN_BOUNDS = {
+    "cityStage-1.png": (0.0, GROUND_Y, WORLD_WIDTH, 148.0),
+}
 
 # State: (one-based source row, frames per second, loop).
 PLAYER_ANIMATIONS = {

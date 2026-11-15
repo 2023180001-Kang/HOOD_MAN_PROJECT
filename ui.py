@@ -7,6 +7,9 @@ from physics import clamp
 
 
 class UI:
+    def __init__(self):
+        self.details_visible = True
+
     def draw_attack_help(self, assets):
         import pico2d
 
@@ -20,6 +23,8 @@ class UI:
                              (218, 228, 240))
 
     def draw_enemy_health(self, assets, world, camera_x, camera_y):
+        if not self.details_visible:
+            return
         import pico2d
 
         for enemy in world.enemies:
@@ -65,9 +70,11 @@ class UI:
                 mask_bottom + height * scale - 1, 8, 15, 24, filled=True,
             )
         if assets.font is not None:
-            self.draw_attack_help(assets)
             assets.font.draw(x + image.w * scale + 16, y + 56,
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
+            if not self.details_visible:
+                return
+            self.draw_attack_help(assets)
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
             for index, move in enumerate(COUNTERS.values()):
@@ -88,7 +95,7 @@ class UI:
                              "← → ↑ ↓ 이동   Shift 달리기   Space 이단 점프   F5 다시 시작",
                              (205, 218, 231))
             mode = "ON" if world.player.invincible else "OFF"
-            assets.font.draw(740, 25, f"N 스테이지 이동 화살표 표시   P 무적 전환: {mode}",
+            assets.font.draw(740, 25, f"N 이동 화살표   P 무적: {mode}   U 설명 숨김/표시",
                              (205, 218, 231))
             if world.stage.traffic is not None:
                 assets.font.draw(22, 107, "도로 주의! 차량에 부딪히면 즉사합니다.", (255, 183, 100))

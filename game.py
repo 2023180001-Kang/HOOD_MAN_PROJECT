@@ -24,6 +24,7 @@ KEYS = {
     pico2d.SDLK_F5: "restart",
     pico2d.SDLK_n: "stage_exits",
     pico2d.SDLK_p: "invincibility",
+    pico2d.SDLK_u: "toggle_details",
 }
 KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
              for key, *_ in config.COMBAT_MOVE_SPECS})
@@ -83,6 +84,9 @@ class Game:
             sleep(min(1 / config.TARGET_FPS, remaining))
 
     def update(self, dt):
+        # Presentation remains toggleable while gameplay is loading or dead.
+        if self.world.controls.take_press("toggle_details"):
+            self.ui.details_visible = not self.ui.details_visible
         self.world.update(dt)
 
     def draw_stage_loading_screen(self, present=True):

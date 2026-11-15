@@ -20,6 +20,7 @@ from sdl2 import SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST
 import config
 from collision import bodies_overlap
 from combat import MOVES
+from effects import DamageNumber
 from enemy import Enemy
 from game import Game
 from tools.check_render import capture, render_image
@@ -651,6 +652,110 @@ def check_hp_pixels(game):
     print("PASS: rendered HP fill 100%/96%/92%/84%/50%/0%; portrait and HUD position unchanged.")
 
 
+def check_hud_toggle(game):
+    def u(down=True, *, repeat=False):
+        push_key(pico2d.SDLK_u, down=down, repeat=repeat)
+        game.handle_events()
+        game.update(0)  # Keep world pixels/clocks identical while comparing HUDs.
+
+    game.world = World()
+    world = game.world
+    assert game.ui.details_visible
+    world.player.invincible = True
+    enemy = Enemy(world.player.x + 200, -1)
+    enemy.cooldown = 100
+    world.enemies = [enemy]
+    world.damage_numbers = [DamageNumber(enemy.x, 280, 10)]
+    visible = capture(game, "hud_details_visible")
+    elapsed, player = world.elapsed, world.player
+    u()
+    assert not game.ui.details_visible and world.player is player and world.elapsed == elapsed
+    with (patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text,
+          patch.object(game.assets.damage_font, "draw", wraps=game.assets.damage_font.draw) as damage,
+          patch.object(pico2d, "draw_rectangle", wraps=pico2d.draw_rectangle) as rectangles):
+        hidden = capture(game, "hud_details_hidden")
+    assert [call.args[2] for call in text.call_args_list] == ["500 / 500"]
+    assert not damage.called and not rectangles.called
+    with patch.object(game.ui, "draw"):
+        scene_only = render_image(game)
+    overlay = ImageChops.difference(hidden.convert("RGB"), scene_only.convert("RGB"))
+    assert overlay.getbbox() is not None
+    assert overlay.crop((688, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT)).getbbox() is None
+    assert overlay.crop((0, 130, config.SCREEN_WIDTH, config.SCREEN_HEIGHT)).getbbox() is None
+    u(repeat=True)
+    u()  # Another KEYDOWN without KEYUP must not toggle again.
+    assert not game.ui.details_visible
+    u(False)
+    u()
+    assert game.ui.details_visible
+    restored = capture(game, "hud_details_restored")
+    assert ImageChops.difference(visible.convert("RGB"), restored.convert("RGB")).getbbox() is None
+    u(False)
+    u()
+    u(False)
+    world.player.hp = 250
+    with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
+        half_hp = capture(game, "hud_hidden_hp_250")
+    assert [call.args[2] for call in text.call_args_list] == ["250 / 500"]
+    blue = sum(half_hp.getpixel((x, 68))[2] > half_hp.getpixel((x, 68))[0] + 30
+               for x in range(125, 518))
+    assert abs(blue - 392.25 / 2) <= 2
+    world.select_stage(1)
+    assert not game.ui.details_visible
+    world.stage.arrows_visible = True
+    world.player.x, world.player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
+    assert world.try_stage_transition() and world.stage_loading
+    u()
+    assert game.ui.details_visible and world.stage_loading
+    u(False)
+    u()
+    u(False)
+    assert not game.ui.details_visible
+    game.update(config.STAGE_LOADING_DURATION)
+    assert world.stage_index == 2 and not world.stage_loading and not game.ui.details_visible
+    with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
+        capture(game, "hud_hidden_city")
+    assert [call.args[2] for call in text.call_args_list] == ["250 / 500"]
+    world.player.invincible = False
+    world.player.take_damage(500)
+    with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
+        capture(game, "hud_hidden_death")
+    assert [call.args[2] for call in text.call_args_list] == ["0 / 500"]
+    u()
+    u(False)
+    with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
+        capture(game, "hud_death_details_restored")
+    assert any("쓰러졌습니다" in call.args[2] for call in text.call_args_list)
+    u()
+    u(False)
+    textures = dict(game.assets.images)
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    push_key(pico2d.SDLK_F5, down=False)
+    game.handle_events()
+    assert not game.ui.details_visible and game.world.player.hp == 500
+    assert all(game.assets.images[name] is image for name, image in textures.items())
+    capture(game, "hud_hidden_restarted")
+    u()
+    u(False)
+    assert game.ui.details_visible
+    push_key(pico2d.SDLK_u)
+    event = SDL_Event()
+    event.type = SDL_WINDOWEVENT
+    event.window.event = SDL_WINDOWEVENT_FOCUS_LOST
+    assert SDL_PushEvent(ctypes.byref(event)) == 1
+    game.handle_events()
+    game.update(0)
+    assert game.ui.details_visible and not game.world.controls.held
+    push_key(pico2d.SDLK_u)
+    game.handle_events(title_screen=True)
+    game.update(0)
+    assert game.ui.details_visible
+    print("PASS: SDL U toggles all supplemental HUD off/on once per fresh press; only the "
+          "player HP image/current value remain, exact pixels restore, HP still updates; "
+          "stage/loading/death/F5 preserve the setting, focus loss/title input stay clean.")
+
+
 def check_focus_loss(game):
     game.world = World()
     push_key(pico2d.SDLK_RIGHT)
@@ -731,6 +836,7 @@ def main():
         check_nearby_death_knockback(game)
         check_focus_loss(game)
         check_hp_pixels(game)
+        check_hud_toggle(game)
         check_enemy_run_chase(game)
         check_natural_game(game)
         benchmark(game)

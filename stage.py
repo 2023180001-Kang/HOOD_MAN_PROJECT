@@ -3,6 +3,7 @@
 from math import ceil, floor, sin, tau
 
 import config
+from drop_items import spawn_drop_items
 from enemy import Enemy
 from enemy02 import Enemy02
 from spawn_manager import SpawnManager
@@ -11,13 +12,14 @@ from walkable import WalkableArea, for_stage
 
 
 class Stage:
-    def __init__(self, index=0, *, rng=None, attack_sequence=None, traffic_rng=None):
+    def __init__(self, index=0, *, rng=None, attack_sequence=None, traffic_rng=None, item_rng=None):
         self.index = index
         self.arrows_visible = False
         self.enemies = []
         self.effects = []
         self.damage_numbers = []
         self.walkable = for_stage(index)
+        self.drop_items = spawn_drop_items(self.walkable, rng=item_rng)
         spawn_bounds = config.STAGE_ENEMY_SPAWN_BOUNDS.get(self.image_name)
         self.spawn_area = (WalkableArea.rectangle(*spawn_bounds) if spawn_bounds is not None
                            else self.walkable)
@@ -69,6 +71,9 @@ class Stage:
                 index * width + width / 2 - camera_x,
                 bottom + height / 2, width, height,
             )
+        # Flat floor props stay underneath characters, vehicles and exit markers.
+        for item in self.drop_items:
+            assets.draw_drop_item(item, camera_x, camera_y)
         sway = (sin(tau * elapsed / config.STAGE_ARROW_SWAY_PERIOD)
                 * config.STAGE_ARROW_SWAY_AMPLITUDE)
         for side in self.arrow_sides:

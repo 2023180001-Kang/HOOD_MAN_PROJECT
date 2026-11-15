@@ -304,6 +304,7 @@ def check_factory_background(game):
         for shake_y in (-8, 0, 8):
             game.world.camera.offset_y = shake_y
             with (patch.object(game.assets, "draw_sprite"),
+                  patch.object(game.assets, "draw_drop_item"),
                   patch.object(game.ui, "draw"), patch.object(game.ui, "draw_enemy_health")):
                 image = capture(game, f"factory_background_{side}_{shake_y}")
             assert ImageChops.difference(image.convert("RGB"), expected).getbbox() is None
@@ -418,6 +419,7 @@ def check_factory_exterior(game):
         expected = tiled.crop((camera_x, supplied.height - config.SCREEN_HEIGHT,
                                camera_x + config.SCREEN_WIDTH, supplied.height))
         with (patch.object(game.assets, "draw_sprite"), patch.object(game.ui, "draw"),
+              patch.object(game.assets, "draw_drop_item"),
               patch.object(game.ui, "draw_enemy_health")):
             image = capture(game, f"factory_exterior_background_{camera_x}")
         assert ImageChops.difference(image.convert("RGB"), expected).getbbox() is None
@@ -480,6 +482,7 @@ def check_indoor_backgrounds(game, first=6):
                 expected = tiled.crop((camera_x, top,
                                        camera_x + config.SCREEN_WIDTH, top + config.SCREEN_HEIGHT))
                 with (patch.object(game.assets, "draw_sprite"), patch.object(game.ui, "draw"),
+                      patch.object(game.assets, "draw_drop_item"),
                       patch.object(game.ui, "draw_enemy_health")):
                     image = capture(game, f"{region}_{index - first + 1}_background_{camera_x}_{shake_y}")
                 assert ImageChops.difference(image.convert("RGB"), expected).getbbox() is None

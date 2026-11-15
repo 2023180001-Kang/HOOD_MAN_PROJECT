@@ -14,10 +14,11 @@ from stage import Stage
 
 
 class World:
-    def __init__(self, *, rng=None, traffic_rng=None):
+    def __init__(self, *, rng=None, traffic_rng=None, item_rng=None):
         self.controls = Controls()
         self.spawn_rng = rng
         self.traffic_rng = traffic_rng
+        self.item_rng = item_rng
         self.reset()
 
     def reset(self):
@@ -33,7 +34,7 @@ class World:
         self.camera = Camera(self.player.x)
         attack_sequence = count()
         self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,
-                             traffic_rng=self.traffic_rng)
+                             traffic_rng=self.traffic_rng, item_rng=self.item_rng)
                        for index in range(len(config.STAGE_IMAGES))]
         self.stage_index = 0
         self.pending_stage_index = None
@@ -117,6 +118,8 @@ class World:
         self.try_stage_transition()
         if self.stage_loading:
             return
+        for item in self.stage.drop_items:
+            item.update(dt)
         for effect in self.effects:
             effect.update(dt)
         self.effects = [effect for effect in self.effects if not effect.finished]

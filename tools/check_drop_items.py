@@ -1,0 +1,134 @@
+"""Verify floor drops, exact eight-frame clips and clear exits in a real SDL window."""
+
+from math import ceil, floor
+from pathlib import Path
+import random
+import sys
+from unittest.mock import patch
+
+from PIL import ImageChops
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+import pico2d
+
+import config
+from drop_items import DropItem
+from game import Game
+from tools.check_render import capture, render_image
+from tools.check_runtime import push_key, tick
+from world import World
+
+
+def without_items(game):
+    with patch.object(game.assets, "draw_drop_item"):
+        return render_image(game)
+
+
+def difference(image, baseline):
+    return ImageChops.difference(image.convert("RGB"), baseline.convert("RGB"))
+
+
+def check_sheets(game):
+    game.world = World(item_rng=random.Random(1))
+    world = game.world
+    world.camera.offset_y = 5
+    for kind, name in config.DROP_ITEM_IMAGES.items():
+        texture = game.assets.images[name]
+        assert (texture.w, texture.h) == (2048, 256)
+        for facing in (-1, 1):
+            item = DropItem(kind, world.player.x - 220, 112, facing)
+            world.stage.drop_items = [item]
+            baseline = without_items(game)
+            for frame in range(8):
+                game.handle_events()
+                item.elapsed = (frame + 0.1) / config.DROP_ITEM_FPS
+                with patch.object(texture, "clip_composite_draw", wraps=texture.clip_composite_draw) as draw:
+                    image = (capture(game, f"drop_{kind}_{facing}_frame_{frame}")
+                             if frame == 3 else render_image(game))
+                assert draw.call_count == 1
+                args = draw.call_args.args
+                assert args[:4] == (frame * 256, 0, 256, 256)
+                assert args[5] == ("h" if facing < 0 else "")
+                assert args[6:8] == (item.x - world.camera.render_x,
+                                     item.ground_y - world.camera.render_y)
+                assert args[8:10] == (128, 128)
+                delta = difference(image, baseline)
+                assert delta.getbbox() is not None
+                assert sum(pixel != (0, 0, 0) for pixel in delta.get_flattened_data()) > 300
+    print("PASS: both 2048x256 sheets, 8 frames x 2 directions, exact 256px clips, "
+          "0.5 scale and camera/shake transforms produce visible floor pixels.")
+
+
+def check_all_stages(game):
+    game.world = World(item_rng=random.Random(20261115))
+    world = game.world
+    arrow_edge = ceil(config.STAGE_EXIT_MARGIN + config.STAGE_ARROW_WIDTH / 2
+                      + config.STAGE_ARROW_SWAY_AMPLITUDE)
+    counts = []
+    for index, stage in enumerate(world.stages):
+        assert world.select_stage(index)
+        stage.arrows_visible = True
+        counts.append(len(stage.drop_items))
+        assert 5 <= counts[-1] <= 8
+        assert {item.kind for item in stage.drop_items} == {"combat_knife", "steel_pipe"}
+        _, bottom, _, top = stage.walkable.bounds
+        for side in (-1, 1):
+            game.handle_events()
+            world.player.x = 80 if side < 0 else config.WORLD_WIDTH - 80
+            world.camera.update(0, world.player.x)
+            baseline = without_items(game)
+            image = capture(game, f"drop_stage_{index + 1}_{'left' if side < 0 else 'right'}")
+            delta = difference(image, baseline)
+            box = delta.getbbox()
+            assert box is not None
+            assert box[1] >= floor(config.SCREEN_HEIGHT - top) - 1
+            assert box[3] <= ceil(config.SCREEN_HEIGHT - bottom) + 1
+            exit_box = ((0, 0, arrow_edge + 1, config.SCREEN_HEIGHT) if side < 0 else
+                        (config.SCREEN_WIDTH - arrow_edge - 1, 0,
+                         config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
+            assert delta.crop(exit_box).getbbox() is None
+            for item in stage.drop_items:
+                x = item.x - world.camera.render_x
+                if 64 <= x <= config.SCREEN_WIDTH - 64:
+                    y = config.SCREEN_HEIGHT - item.ground_y
+                    crop = delta.crop((floor(x - 48), floor(y - 18), ceil(x + 48), ceil(y + 18)))
+                    assert crop.getbbox() is not None
+    print(f"PASS: all ten stage layouts have 5-8 total drops ({counts}); actual floor pixels "
+          "fit each map, both exit areas stay clear, and both map halves render correctly.")
+
+
+def check_restart(game):
+    textures = dict(game.assets.images)
+    previous = [stage.drop_items for stage in game.world.stages]
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    push_key(pico2d.SDLK_F5, down=False)
+    game.handle_events()
+    assert game.world.stage_index == 0
+    assert all(stage.drop_items is not old and 5 <= len(stage.drop_items) <= 8
+               for stage, old in zip(game.world.stages, previous))
+    assert all(game.assets.images[name] is texture for name, texture in textures.items())
+    capture(game, "drop_items_restarted")
+    print("PASS: actual SDL F5 replaces all ten item lists and reuses both shared textures.")
+
+
+def main():
+    pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
+    pico2d.hide_lattice()
+    game = None
+    try:
+        game = Game()
+        game.handle_events()
+        check_sheets(game)
+        check_all_stages(game)
+        check_restart(game)
+    finally:
+        if game is not None:
+            game.close()
+        pico2d.close_canvas()
+
+
+if __name__ == "__main__":
+    main()

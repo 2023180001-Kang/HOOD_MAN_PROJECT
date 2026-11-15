@@ -19,6 +19,7 @@ class Assets:
                          config.CAR_IMAGE, config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.HP_IMAGE,
                          *config.HIT_EFFECT_IMAGES,
+                         *config.DROP_ITEM_IMAGES.values(),
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
@@ -67,6 +68,16 @@ class Assets:
             car.x - camera_x,
             car.ground_y - camera_y + (config.CAR_GROUND_ANCHOR - height / 2) * scale,
             width * scale, height * scale,
+        )
+
+    def draw_drop_item(self, item, camera_x, camera_y):
+        image = self.images[item.image_name]
+        width, height = image.w // config.DROP_ITEM_FRAMES, image.h
+        image.clip_composite_draw(
+            item.frame * width, 0, width, height,
+            0, "h" if item.facing < 0 else "",
+            item.x - camera_x, item.ground_y - camera_y,
+            width * config.DROP_ITEM_SCALE, height * config.DROP_ITEM_SCALE,
         )
 
     def draw_hit_effect(self, effect, camera_x, camera_y):

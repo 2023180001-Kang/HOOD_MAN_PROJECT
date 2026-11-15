@@ -145,6 +145,18 @@ CAR_SPAWN_MARGIN = 220.0
 CAR_HIT_FPS = 12.0
 CAR_HIT_SPEED = 360.0
 CAR_HIT_FRICTION = 600.0
+DROP_ITEM_IMAGES = {
+    "combat_knife": "hoodman_drop_combat_knife_8f.png",
+    "steel_pipe": "hoodman_drop_steel_pipe_8f.png",
+}
+DROP_ITEM_COUNT_RANGE = (5, 8)  # Combined count per stage, including both kinds.
+DROP_ITEM_FRAMES = 8
+DROP_ITEM_FPS = 8.0
+DROP_ITEM_SCALE = 0.5
+# Envelope of all visible pixels/shadows in the centered 256px cells at 0.5 scale.
+DROP_ITEM_HALF_WIDTH = 48.0
+DROP_ITEM_HALF_DEPTH = 18.0
+DROP_ITEM_EXIT_GAP = 24.0
 HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "newStage.png"
 FACTORY_OUTSIDE_IMAGE = "factoryOutside-1_pico2d_1280x720.png"

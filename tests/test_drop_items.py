@@ -34,8 +34,22 @@ class DropItemTests(unittest.TestCase):
                 self.assertEqual((image.size, image.mode), ((2048, 256), "RGBA"))
                 alpha = image.getchannel("A")
                 self.assertEqual(alpha.getextrema(), (0, 255))
-                bounds[kind] = [alpha.crop((frame * 256, 0, (frame + 1) * 256, 256)).getbbox()
-                                for frame in range(8)]
+                bounds[kind] = []
+                for frame in range(8):
+                    tile = alpha.crop((frame * 256, 0, (frame + 1) * 256, 256))
+                    top = config.DROP_ITEM_BODY_TOPS[kind][frame]
+                    height = config.DROP_ITEM_BODY_HEIGHTS[kind]
+                    # The opaque weapon must fit exactly; the faint shadow is
+                    # a separate source region below the original hovering gap.
+                    solid = tile.point(lambda value: 255 if value >= 64 else 0).getbbox()
+                    self.assertEqual((solid[1], solid[3]), (top, top + height))
+                    body = tile.crop((0, top, 256, top + height)).getbbox()
+                    shadow = tile.crop((0, config.DROP_ITEM_SHADOW_TOP, 256,
+                                        config.DROP_ITEM_SHADOW_TOP
+                                        + config.DROP_ITEM_SHADOW_HEIGHT)).getbbox()
+                    self.assertEqual((body[1], body[3]), (0, height))
+                    bounds[kind].append(((body, height),
+                                         (shadow, config.DROP_ITEM_SHADOW_HEIGHT / 2)))
         arrow_edge = (config.STAGE_EXIT_MARGIN + config.STAGE_ARROW_WIDTH / 2
                       + config.STAGE_ARROW_SWAY_AMPLITUDE)
         for seed in range(16):
@@ -44,18 +58,19 @@ class DropItemTests(unittest.TestCase):
                 self.assertFalse(stage.arrows_visible)
                 previous_right = None
                 for item in stage.drop_items:
-                    for left, top, right, bottom in bounds[item.kind]:
-                        xs = [(left - 128) * config.DROP_ITEM_SCALE * item.facing,
-                              (right - 128) * config.DROP_ITEM_SCALE * item.facing]
-                        visible_left, visible_right = item.x + min(xs), item.x + max(xs)
-                        visible_bottom = item.ground_y + (128 - bottom) * config.DROP_ITEM_SCALE
-                        visible_top = item.ground_y + (128 - top) * config.DROP_ITEM_SCALE
-                        for x in (visible_left, visible_right):
-                            for y in (visible_bottom, visible_top):
-                                self.assertTrue(stage.walkable.contains(x, y))
-                        self.assertGreaterEqual(visible_left, arrow_edge + config.DROP_ITEM_EXIT_GAP)
-                        self.assertLessEqual(visible_right,
-                                             config.WORLD_WIDTH - arrow_edge - config.DROP_ITEM_EXIT_GAP)
+                    for parts in bounds[item.kind]:
+                        for (left, top, right, bottom), anchor in parts:
+                            xs = [(left - 128) * config.DROP_ITEM_SCALE * item.facing,
+                                  (right - 128) * config.DROP_ITEM_SCALE * item.facing]
+                            visible_left, visible_right = item.x + min(xs), item.x + max(xs)
+                            visible_bottom = item.ground_y + (anchor - bottom) * config.DROP_ITEM_SCALE
+                            visible_top = item.ground_y + (anchor - top) * config.DROP_ITEM_SCALE
+                            for x in (visible_left, visible_right):
+                                for y in (visible_bottom, visible_top):
+                                    self.assertTrue(stage.walkable.contains(x, y))
+                            self.assertGreaterEqual(visible_left, arrow_edge + config.DROP_ITEM_EXIT_GAP)
+                            self.assertLessEqual(visible_right,
+                                                 config.WORLD_WIDTH - arrow_edge - config.DROP_ITEM_EXIT_GAP)
                     if previous_right is not None:
                         self.assertGreater(item.x - config.DROP_ITEM_HALF_WIDTH, previous_right)
                     previous_right = item.x + config.DROP_ITEM_HALF_WIDTH

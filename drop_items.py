@@ -43,8 +43,8 @@ def spawn_drop_items(walkable, *, rng=None):
     for index, kind in enumerate(choices):
         x = rng.uniform(left + index * strip_width + config.DROP_ITEM_HALF_WIDTH,
                         left + (index + 1) * strip_width - config.DROP_ITEM_HALF_WIDTH)
-        ground_y = rng.uniform(bottom + config.DROP_ITEM_HALF_DEPTH,
-                               top - config.DROP_ITEM_HALF_DEPTH)
+        ground_y = rng.uniform(bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH,
+                               top - config.DROP_ITEM_HEIGHT)
         items.append(DropItem(kind, x, ground_y, rng.choice((-1, 1)),
                               rng.random() * config.DROP_ITEM_FRAMES / config.DROP_ITEM_FPS))
     return items

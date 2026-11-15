@@ -72,12 +72,23 @@ class Assets:
 
     def draw_drop_item(self, item, camera_x, camera_y):
         image = self.images[item.image_name]
-        width, height = image.w // config.DROP_ITEM_FRAMES, image.h
+        width = image.w // config.DROP_ITEM_FRAMES
+        left = item.frame * width
+        scale = config.DROP_ITEM_SCALE
+        x, ground_y = item.x - camera_x, item.ground_y - camera_y
+        flip = "h" if item.facing < 0 else ""
+        # The source shadow stays still while the weapon hovers above it. Keep
+        # the shadow on the floor, then pin every weapon frame's bottom to it.
+        shadow_height = config.DROP_ITEM_SHADOW_HEIGHT
         image.clip_composite_draw(
-            item.frame * width, 0, width, height,
-            0, "h" if item.facing < 0 else "",
-            item.x - camera_x, item.ground_y - camera_y,
-            width * config.DROP_ITEM_SCALE, height * config.DROP_ITEM_SCALE,
+            left, image.h - config.DROP_ITEM_SHADOW_TOP - shadow_height, width, shadow_height,
+            0, flip, x, ground_y, width * scale, shadow_height * scale,
+        )
+        height = config.DROP_ITEM_BODY_HEIGHTS[item.kind]
+        top = config.DROP_ITEM_BODY_TOPS[item.kind][item.frame]
+        image.clip_composite_draw(
+            left, image.h - top - height, width, height,
+            0, flip, x, ground_y + height * scale / 2, width * scale, height * scale,
         )
 
     def draw_hit_effect(self, effect, camera_x, camera_y):

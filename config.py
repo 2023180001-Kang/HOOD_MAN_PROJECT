@@ -153,9 +153,18 @@ DROP_ITEM_COUNT_RANGE = (5, 8)  # Combined count per stage, including both kinds
 DROP_ITEM_FRAMES = 8
 DROP_ITEM_FPS = 8.0
 DROP_ITEM_SCALE = 0.5
-# Envelope of all visible pixels/shadows in the centered 256px cells at 0.5 scale.
+# Source weapons bob above a separate shadow. Clip them independently so each
+# frame's weapon bottom and the fixed shadow center share the same ground_y.
+DROP_ITEM_BODY_TOPS = {
+    "combat_knife": (102, 101, 100, 99, 100, 101, 102, 103),
+    "steel_pipe": (96, 95, 94, 93, 94, 95, 96, 97),
+}
+DROP_ITEM_BODY_HEIGHTS = {"combat_knife": 40, "steel_pipe": 53}
+DROP_ITEM_SHADOW_TOP = 155
+DROP_ITEM_SHADOW_HEIGHT = 9
 DROP_ITEM_HALF_WIDTH = 48.0
-DROP_ITEM_HALF_DEPTH = 18.0
+DROP_ITEM_HEIGHT = max(DROP_ITEM_BODY_HEIGHTS.values()) * DROP_ITEM_SCALE
+DROP_ITEM_SHADOW_HALF_DEPTH = DROP_ITEM_SHADOW_HEIGHT / 2 * DROP_ITEM_SCALE
 DROP_ITEM_EXIT_GAP = 24.0
 HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "newStage.png"

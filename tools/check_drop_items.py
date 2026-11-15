@@ -41,24 +41,49 @@ def check_sheets(game):
             item = DropItem(kind, world.player.x - 220, 112, facing)
             world.stage.drop_items = [item]
             baseline = without_items(game)
+            contact_rows = []
             for frame in range(8):
                 game.handle_events()
                 item.elapsed = (frame + 0.1) / config.DROP_ITEM_FPS
                 with patch.object(texture, "clip_composite_draw", wraps=texture.clip_composite_draw) as draw:
                     image = (capture(game, f"drop_{kind}_{facing}_frame_{frame}")
                              if frame == 3 else render_image(game))
-                assert draw.call_count == 1
-                args = draw.call_args.args
-                assert args[:4] == (frame * 256, 0, 256, 256)
-                assert args[5] == ("h" if facing < 0 else "")
-                assert args[6:8] == (item.x - world.camera.render_x,
-                                     item.ground_y - world.camera.render_y)
-                assert args[8:10] == (128, 128)
+                assert draw.call_count == 2
+                shadow, body = [call.args for call in draw.call_args_list]
+                top = config.DROP_ITEM_BODY_TOPS[kind][frame]
+                height = config.DROP_ITEM_BODY_HEIGHTS[kind]
+                assert shadow[:4] == (frame * 256, 256 - config.DROP_ITEM_SHADOW_TOP
+                                      - config.DROP_ITEM_SHADOW_HEIGHT, 256,
+                                      config.DROP_ITEM_SHADOW_HEIGHT)
+                assert body[:4] == (frame * 256, 256 - top - height, 256, height)
+                ground = item.ground_y - world.camera.render_y
+                for args in (shadow, body):
+                    assert args[5] == ("h" if facing < 0 else "")
+                    assert args[6] == item.x - world.camera.render_x
+                    assert args[8] == 128
+                assert shadow[7] == ground
+                assert body[7] - body[9] / 2 == ground
+                assert body[9] == height * config.DROP_ITEM_SCALE
                 delta = difference(image, baseline)
                 assert delta.getbbox() is not None
                 assert sum(pixel != (0, 0, 0) for pixel in delta.get_flattened_data()) > 300
-    print("PASS: both 2048x256 sheets, 8 frames x 2 directions, exact 256px clips, "
-          "0.5 scale and camera/shake transforms produce visible floor pixels.")
+                # Render the two parts separately to check actual rasterized
+                # contact, rather than just trusting the draw-call coordinates.
+                render = texture.clip_composite_draw
+                with patch.object(texture, "clip_composite_draw", side_effect=lambda *args:
+                                  render(*args) if args[3] == height else None):
+                    body_box = difference(render_image(game), baseline).getbbox()
+                with patch.object(texture, "clip_composite_draw", side_effect=lambda *args:
+                                  render(*args) if args[3] == config.DROP_ITEM_SHADOW_HEIGHT else None):
+                    shadow_box = difference(render_image(game), baseline).getbbox()
+                ground_row = config.SCREEN_HEIGHT - ground
+                assert abs(body_box[3] - ground_row) <= 1
+                assert shadow_box[1] <= body_box[3] <= shadow_box[3]
+                contact_rows.append(body_box[3])
+            assert len(set(contact_rows)) == 1
+    print("PASS: both sheets, 8 frames x 2 directions, separate exact weapon/shadow clips; "
+          "actual weapon bottoms touch the floor/shadow at a fixed row without bobbing, "
+          "including camera shake and 0.5 scale.")
 
 
 def check_all_stages(game):
@@ -93,7 +118,10 @@ def check_all_stages(game):
                 x = item.x - world.camera.render_x
                 if 64 <= x <= config.SCREEN_WIDTH - 64:
                     y = config.SCREEN_HEIGHT - item.ground_y
-                    crop = delta.crop((floor(x - 48), floor(y - 18), ceil(x + 48), ceil(y + 18)))
+                    crop = delta.crop((floor(x - config.DROP_ITEM_HALF_WIDTH),
+                                       floor(y - config.DROP_ITEM_HEIGHT),
+                                       ceil(x + config.DROP_ITEM_HALF_WIDTH),
+                                       ceil(y + config.DROP_ITEM_SHADOW_HALF_DEPTH)))
                     assert crop.getbbox() is not None
     print(f"PASS: all ten stage layouts have 5-8 total drops ({counts}); actual floor pixels "
           "fit each map, both exit areas stay clear, and both map halves render correctly.")

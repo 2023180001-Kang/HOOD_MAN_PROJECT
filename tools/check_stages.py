@@ -515,7 +515,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # Transition measurements use explicitly arranged actors; shortcuts are
-    # checked with the real four-enemy encounters in check_runtime.py.
-    with patch.object(config, "ENEMIES_PER_STAGE", 0):
-        main()
+    main()

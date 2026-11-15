@@ -8,7 +8,7 @@ from counter import can_counter
 from enemy02 import Enemy02, leap_height
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from player import Player
-from tests.helpers import advance, tap
+from tests.helpers import advance, spawn_encounter, tap
 from traffic import Car
 from world import World
 
@@ -204,8 +204,7 @@ class Enemy02LeapTests(unittest.TestCase):
     def test_air_target_phase_height_and_cooldowns_pause_during_loading_and_revisit(self):
         world = World(rng=random.Random(13))
         world.stage_index = 3
-        enemy = world.enemies[0]
-        world.enemies = [enemy]
+        enemy = spawn_encounter(world, 1)[0]
         enemy.x = enemy.previous_x = world.player.x - 400
         enemy.ground_y = enemy.previous_ground_y = world.player.ground_y
         while not enemy.leaping:
@@ -217,14 +216,18 @@ class Enemy02LeapTests(unittest.TestCase):
         world.player.x, world.player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
         self.assertTrue(world.try_stage_transition())
         advance(world, 2)
-        tap(world.controls, "stage_4")
-        world.update(1 / 60)
+        world.select_stage(3)
         self.assertIs(world.enemies[0], enemy)
         self.assertEqual((enemy.leap_phase, enemy.leap_elapsed, enemy.leap_target,
                           enemy.x, enemy.ground_y, enemy.jump_height, enemy.vy,
                           enemy.animation.elapsed, enemy.cooldown, enemy.leap_cooldown), snapshot)
         world.controls.press("restart")
         world.update(1 / 60)
+        self.assertEqual(world.stages[3].enemies, [])
+        self.assertEqual(world.stages[3].spawner.spawned_count, 0)
+        world.select_stage(3)
+        world.controls.press("spawn_4")
+        world.update(config.FIXED_DT)
         self.assertTrue(all(actor.leap_phase is None and actor.leap_cooldown == 0
                             for actor in world.stages[3].enemies))
         self.assertEqual(len(world.stages[3].enemies), 4)

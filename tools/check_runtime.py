@@ -109,88 +109,118 @@ def check_movement_tuning(game):
           f"forward slide {maximum_slide:.2f}px; released movement stops within 0.1s.")
 
 
-def check_stage_shortcuts(game):
+def check_numeric_spawns(game):
     textures = dict(game.assets.images)
+    game.world = World()
+    tick(game, 600)
+    for index in range(len(config.STAGE_IMAGES)):
+        game.world.select_stage(index)
+        tick(game)
+        assert not game.world.enemies and game.world.spawner.spawned_count == 0
+    assert all(not stage.enemies for stage in game.world.stages)
+    sides = set()
     for prefix in ("", "KP_"):
-        for number in range(1, 11):
+        for number in range(1, 10):
             game.world = World(rng=random.Random(42))
             world = game.world
-            assert all(len(stage.enemies) == stage.spawner.spawned_count == 4
-                       for stage in world.stages)
-            for stage in world.stages:
-                assert all(enemy.x in (enemy.boundary_padding,
-                                      config.WORLD_WIDTH - enemy.boundary_padding)
-                           and stage.spawn_area.contains(
-                    enemy.x, enemy.ground_y, enemy.boundary_padding) for enemy in stage.enemies)
-            assert {enemy.facing for stage in world.stages for enemy in stage.enemies} == {-1, 1}
+            source = (number - 1 + bool(prefix)) % len(world.stages)
+            world.stage_index = source
+            assert all(not stage.enemies and stage.spawner.spawned_count == 0 for stage in world.stages)
             player = world.player
             player.hp, player.invincible = 420, True
-            key = getattr(pico2d, f"SDLK_{prefix}{number % 10}")
+            key = getattr(pico2d, f"SDLK_{prefix}{number}")
             push_key(key)
             tick(game)
-            assert world.stage_index == number - 1 and not world.stage_loading
+            assert world.stage_index == source and not world.stage_loading
             assert world.player is player and player.x == config.START_X and player.hp == 420
             enemies = tuple(world.enemies)
-            player.x = 500
+            assert len(enemies) == world.spawner.spawned_count == number
+            for enemy in enemies:
+                sides.add(enemy.facing)
+                assert type(enemy) is world.spawner.enemy_type
+                assert enemy.hp == 200 and enemy.spawned_at == config.FIXED_DT
+                assert min(enemy.x, config.WORLD_WIDTH - enemy.x) <= (
+                    enemy.boundary_padding + max(config.ENEMY_RUN_SPEEDS) / 60 + 1e-6)
+                assert world.stage.spawn_area.contains(enemy.x, enemy.ground_y, enemy.boundary_padding)
+            if number == 9:
+                world.camera.x = 0
+                capture(game, f"numeric_spawn_{'keypad' if prefix else 'top'}_9")
             push_key(key, repeat=True)
-            game.handle_events()
-            game.update(0)
-            assert player.x == 500
             tick(game, 6)
-            assert tuple(world.enemies) == enemies and world.spawner.spawned_count == 4
+            assert tuple(world.enemies) == enemies and world.spawner.spawned_count == number
+            push_key(key)  # A repeated KEYDOWN without KEYUP is also ignored.
+            tick(game)
+            assert len(world.enemies) == number
             push_key(key, down=False)
             push_key(key)
             tick(game)
-            assert player.x == config.START_X and player.hp == 420
-            assert tuple(world.enemies) == enemies and world.spawner.spawned_count == 4
+            assert world.stage_index == source and player.hp == 420
+            assert len(world.enemies) == world.spawner.spawned_count == number * 2
+            assert all(enemy in world.enemies for enemy in enemies)
             assert all(game.assets.images[name] is image for name, image in textures.items())
             push_key(key, down=False)
             game.handle_events()
-    capture(game, "numeric_stage_10")
+    assert sides == {-1, 1}
 
     game.world = World(rng=random.Random(42))
     push_key(pico2d.SDLK_2)
     push_key(pico2d.SDLK_5)
     tick(game)
-    assert game.world.stage_index == 4 and len(game.world.enemies) == 4
+    assert game.world.stage_index == 0 and len(game.world.enemies) == 7
     for key in (pico2d.SDLK_2, pico2d.SDLK_5):
         push_key(key, down=False)
     game.handle_events()
+    for key in (pico2d.SDLK_0, pico2d.SDLK_KP_0):
+        push_key(key)
+    tick(game)
+    assert game.world.stage_index == 0 and len(game.world.enemies) == 7
+    for key in (pico2d.SDLK_0, pico2d.SDLK_KP_0):
+        push_key(key, down=False)
+    game.handle_events()
+    game.world.player.take_damage(500)
+    push_key(pico2d.SDLK_9)
+    tick(game)
+    assert game.world.stage_index == 0 and game.world.spawner.spawned_count == 7
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    assert game.world.stage_index == 0 and game.world.player.hp == 500
+    assert all(not stage.enemies and stage.spawner.spawned_count == 0 for stage in game.world.stages)
+    push_key(pico2d.SDLK_F5, down=False)
+    push_key(pico2d.SDLK_9, repeat=True)
+    tick(game, 60)
+    assert not game.world.enemies
+    push_key(pico2d.SDLK_9, down=False)
+    push_key(pico2d.SDLK_9)
+    tick(game)
+    assert game.world.stage_index == 0 and len(game.world.enemies) == 9
+    push_key(pico2d.SDLK_9, down=False)
+    game.handle_events()
+
+    game.world = World()
     world = game.world
     world.stage_index = 1
     world.stage.arrows_visible = True
     world.player.x, world.player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
     assert world.try_stage_transition() and world.stage_loading
-    push_key(pico2d.SDLK_0)
-    tick(game)
-    assert world.stage_index == 9 and not world.stage_loading
-    assert world.pending_stage_index is None and world.stage_loading_remaining == 0
-    push_key(pico2d.SDLK_0, down=False)
-    game.handle_events()
-    game.world.player.take_damage(500)
     push_key(pico2d.SDLK_9)
     tick(game)
-    assert game.world.stage_index == 9 and game.world.player.hp == 0
-    push_key(pico2d.SDLK_F5)
-    tick(game)
-    assert game.world.stage_index == 0 and game.world.player.hp == 500
-    assert all(len(stage.enemies) == stage.spawner.spawned_count == 4
-               for stage in game.world.stages)
-    push_key(pico2d.SDLK_F5, down=False)
-    game.handle_events()
+    assert world.stage_index == 1 and world.stage_loading and world.pending_stage_index == 2
+    assert all(not stage.enemies for stage in world.stages)
+    capture(game, "numeric_spawn_ignored_loading")
+    game.update(2)
+    assert world.stage_index == 2 and not world.stage_loading and not world.enemies
     push_key(pico2d.SDLK_9, repeat=True)
     tick(game)
-    assert game.world.stage_index == 0
+    assert not world.enemies
     push_key(pico2d.SDLK_9, down=False)
     push_key(pico2d.SDLK_9)
     tick(game)
-    assert game.world.stage_index == 8 and len(game.world.enemies) == 4
+    assert world.stage_index == 2 and len(world.enemies) == 9
     push_key(pico2d.SDLK_9, down=False)
     game.handle_events()
-    capture(game, "numeric_stage_9")
-    print("PASS: SDL top-row/keypad 1-9 select stages 1-9 and 0 selects stage 10; "
-          "each stage starts with four random-side enemies, repeated visits do not respawn; "
-          "latest input, HP/resource reuse, loading cancellation, death and F5 verified.")
+    print("PASS: SDL top-row/keypad 1-9 summon exactly that many random-side enemies; "
+          "no automatic start/entry/F5 spawns or numeric stage travel, held/repeated/0 inputs ignored; "
+          "2+5 adds seven, per-stage types/HP/resources and death/loading input consumption verified.")
 
 
 def check_player_action_inputs(game):
@@ -512,6 +542,10 @@ def check_crowd_damage(game):
 
 def check_enemy_run_chase(game):
     game.world = World()
+    push_key(pico2d.SDLK_4)
+    tick(game)
+    push_key(pico2d.SDLK_4, down=False)
+    game.handle_events()
     old_enemies = list(game.world.enemies)
     assert [enemy.run_speed for enemy in old_enemies] == list(config.ENEMY_RUN_SPEEDS)
     for enemy in old_enemies:
@@ -540,8 +574,11 @@ def check_enemy_run_chase(game):
     capture(game, "enemy_chase_arrival")
     push_key(pico2d.SDLK_F5)
     tick(game)
-    assert len(game.world.enemies) == game.world.spawner.spawned_count == 4
+    assert not game.world.enemies and game.world.spawner.spawned_count == 0
     push_key(pico2d.SDLK_F5, down=False)
+    push_key(pico2d.SDLK_4)
+    tick(game)
+    push_key(pico2d.SDLK_4, down=False)
     game.handle_events()
     assert [enemy.run_speed for enemy in game.world.enemies] == list(config.ENEMY_RUN_SPEEDS)
     assert all(enemy.hp == 200 for enemy in game.world.enemies)
@@ -634,11 +671,15 @@ def check_focus_loss(game):
     assert game.world.player.active_move is None and not game.world.enemies
     assert game.world.stage_index == 0
     assert not game.world.controls.held and not game.world.controls.pressed
-    print("PASS: window focus loss clears movement, pending attacks and stage selection.")
+    print("PASS: window focus loss clears movement, pending attacks and numeric summons.")
 
 
 def check_natural_game(game):
     game.world = World(rng=random.Random(1))
+    push_key(pico2d.SDLK_4)
+    tick(game)
+    push_key(pico2d.SDLK_4, down=False)
+    game.handle_events()
     for frame in range(3600):
         game.update(1 / 60)
         if frame % 120 == 0:
@@ -651,7 +692,7 @@ def check_natural_game(game):
     assert any(enemy.knockback_started for enemy in game.world.enemies)
     assert all(enemy.vx == 0 and not enemy.running for enemy in game.world.enemies)
     capture(game, "natural_death")
-    print(f"PASS: automatic four-enemy chase/attack/death after {game.world.elapsed:.2f} simulated seconds.")
+    print(f"PASS: numeric spawn/chase/attack/death after {game.world.elapsed:.2f} simulated seconds.")
 
 
 def benchmark(game):
@@ -677,21 +718,19 @@ def main():
     try:
         game = Game()
         game.handle_events()
-        check_stage_shortcuts(game)
-        # Isolate scripted movement/damage measurements from automatic encounters.
-        with patch.object(config, "ENEMIES_PER_STAGE", 0):
-            check_input(game)
-            check_movement_tuning(game)
-            check_player_action_inputs(game)
-            check_player_attack_switches(game)
-            check_player_damage_and_enemy_health(game)
-            check_received_damage_and_effects(game)
-            check_jump_range(game)
-            check_crowd_escape(game)
-            check_crowd_damage(game)
-            check_nearby_death_knockback(game)
-            check_focus_loss(game)
-            check_hp_pixels(game)
+        check_numeric_spawns(game)
+        check_input(game)
+        check_movement_tuning(game)
+        check_player_action_inputs(game)
+        check_player_attack_switches(game)
+        check_player_damage_and_enemy_health(game)
+        check_received_damage_and_effects(game)
+        check_jump_range(game)
+        check_crowd_escape(game)
+        check_crowd_damage(game)
+        check_nearby_death_knockback(game)
+        check_focus_loss(game)
+        check_hp_pixels(game)
         check_enemy_run_chase(game)
         check_natural_game(game)
         benchmark(game)

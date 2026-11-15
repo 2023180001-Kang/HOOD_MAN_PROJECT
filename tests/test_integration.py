@@ -11,6 +11,8 @@ from world import World
 class IntegrationTests(unittest.TestCase):
     def test_normal_spawn_chase_attack_death_and_restart_cycle(self):
         world = World(rng=random.Random(1))
+        world.controls.press("spawn_4")
+        world.update(config.FIXED_DT)
         advance(world, 8)
         self.assertEqual(len(world.enemies), 4)
         self.assertGreater(world.player.hp, 0)
@@ -23,12 +25,17 @@ class IntegrationTests(unittest.TestCase):
         tap(world.controls, "restart")
         world.update(1 / 60)
         self.assertEqual(world.player.hp, 500)
+        self.assertEqual(world.enemies, [])
+        world.controls.press("spawn_4")
+        world.update(config.FIXED_DT)
         self.assertEqual(len(world.enemies), 4)
 
     def test_combat_and_spawning_are_identical_at_different_render_rates(self):
         results = []
         for fps in (30, 60, 120, 144):
             world = World(rng=random.Random(1))
+            world.controls.press("spawn_4")
+            world.update(config.FIXED_DT)
             advance(world, 18, fps)
             results.append((world.player.hp, world.player.state,
                             [(enemy.x, enemy.state, enemy.animation.frame)
@@ -50,7 +57,7 @@ class IntegrationTests(unittest.TestCase):
             if frame % 900 == 899:
                 tap(world.controls, "restart")
             elif frame % 180 == 0:
-                tap(world.controls, "stage_2" if world.stage_index == 0 else "stage_1")
+                tap(world.controls, "spawn_3")
             world.update(1 / 60)
             self.assertGreaterEqual(world.player.hp, 0)
             self.assertLessEqual(world.player.hp, 500)
@@ -67,20 +74,18 @@ class IntegrationTests(unittest.TestCase):
                 if world.player.alive:
                     self.assertFalse(bodies_overlap(world.player, enemy))
 
-    def test_long_frame_is_bounded_and_does_not_repeat_stage_selection(self):
+    def test_long_frame_is_bounded_and_does_not_repeat_numeric_spawns(self):
         world = World()
         world.controls.press("right")
-        world.controls.press("stage_9")
+        world.controls.press("spawn_9")
         world.update(5)
-        self.assertEqual(world.stage_index, 8)
-        self.assertEqual(world.elapsed, 0)
-        world.update(5)
+        self.assertEqual(world.stage_index, 0)
         self.assertAlmostEqual(world.elapsed, config.MAX_FRAME_DT)
-        self.assertEqual(world.spawner.spawned_count, 4)
+        self.assertEqual(world.spawner.spawned_count, 9)
         self.assertLess(world.player.x - config.START_X, 20)
-        self.assertTrue(all(enemy.spawned_at == 0 for enemy in world.enemies))
+        self.assertTrue(all(enemy.spawned_at == config.FIXED_DT for enemy in world.enemies))
         advance(world, 0.1)
-        self.assertEqual(world.spawner.spawned_count, 4)
+        self.assertEqual(world.spawner.spawned_count, 9)
 
     def test_generated_clips_stay_inside_original_sprite_sheets(self):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:

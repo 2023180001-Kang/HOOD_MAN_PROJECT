@@ -5,7 +5,7 @@ import config
 from combat import MOVES
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
-from tests.helpers import advance, clear_encounters, tap
+from tests.helpers import advance, clear_encounters, spawn_encounter, tap
 from traffic import Car
 from world import World
 
@@ -180,9 +180,9 @@ class CityStageTests(unittest.TestCase):
         self.assertEqual(world.player.x, config.START_X)
         for stage in world.stages:
             self.assertFalse(stage.arrows_visible)
-            self.assertEqual(len(stage.enemies), 4)
+            self.assertEqual(stage.enemies, [])
             self.assertEqual((stage.effects, stage.damage_numbers), ([], []))
-            self.assertEqual(stage.spawner.spawned_count, 4)
+            self.assertEqual(stage.spawner.spawned_count, 0)
         advance(world, 2.5)
         self.assertEqual(world.stage_index, 0)
 
@@ -191,6 +191,7 @@ class CityStageTests(unittest.TestCase):
         for index in (2, 3):
             world.stage_index = index
             area = world.stage.walkable
+            tap(world.controls, "spawn_4")
             for key in ("right", "up", "left_shift"):
                 tap(world.controls, key)
             world.player.invincible = True
@@ -221,10 +222,14 @@ class CityStageTests(unittest.TestCase):
                     self.assertIs(other.spawn_area, other.walkable)
             world.reset()
 
-    def test_both_cities_start_with_four_enemies_on_the_pavement(self):
+    def test_both_cities_summon_on_the_pavement_only_after_numeric_input(self):
         world = World(rng=random.Random(32))
         for index, top in ((2, 148), (3, 116)):
             stage = world.stages[index]
+            self.assertEqual(stage.enemies, [])
+            world.stage_index = index
+            tap(world.controls, "spawn_4")
+            world.update(config.FIXED_DT)
             self.assertEqual(len(stage.enemies), 4)
             for enemy in stage.enemies:
                 self.assertGreaterEqual(enemy.ground_y, 100)
@@ -241,6 +246,7 @@ class CityStageTests(unittest.TestCase):
                         world.stage.traffic = None
                         world.player.ground_y = player_y
                         world.player.invincible = True
+                        spawn_encounter(world)
                         for number, enemy in enumerate(world.enemies):
                             enemy.x = enemy.previous_x = world.player.x + side * (220 + number * 5)
                             enemy.ground_y = enemy.previous_ground_y = 100
@@ -260,6 +266,7 @@ class CityStageTests(unittest.TestCase):
         world.stage.traffic = None
         world.player.ground_y = 56
         world.player.invincible = True
+        spawn_encounter(world)
         for number, enemy in enumerate(world.enemies):
             enemy.x = enemy.previous_x = world.player.x - (220 + number * 5)
             enemy.ground_y = enemy.previous_ground_y = 100
@@ -281,6 +288,7 @@ class CityStageTests(unittest.TestCase):
                         config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING)
                 car = Car(edge, -side, config.CAR_SPEED_RANGE[1])
                 world.stage.traffic.car = car
+                world.controls.press("spawn_4")
                 world.step(config.FIXED_DT)
                 self.assertEqual(len(world.enemies), 4)
                 self.assertTrue(any(abs(enemy.x - car.x) < config.CAR_HALF_WIDTH

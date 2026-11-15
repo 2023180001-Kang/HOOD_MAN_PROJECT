@@ -414,6 +414,7 @@ class BeltScrollTests(unittest.TestCase):
         world = World(rng=random.Random(17))
         for index in (0, 1):
             world.stage_index = index
+            tap(world.controls, "spawn_9")
             world.step(config.FIXED_DT)
             self.assert_inside(world)
             self.assertGreater(len({enemy.ground_y for enemy in world.enemies}), 1)
@@ -421,13 +422,15 @@ class BeltScrollTests(unittest.TestCase):
         world.update(config.FIXED_DT)
         self.assertEqual((world.player.ground_y, world.player.jump_height, world.player.ground_vy),
                          (config.GROUND_Y, 0, 0))
-        self.assertTrue(all(len(stage.enemies) == 4 for stage in world.stages))
+        self.assertTrue(all(not stage.enemies for stage in world.stages))
 
     def test_scripted_2d_world_is_independent_of_render_frame_rate(self):
         outcomes = []
         for fps in (30, 60, 120, 144):
             world = World(rng=random.Random(901))
             world.player.invincible = True
+            world.controls.press("spawn_5")
+            world.update(config.FIXED_DT)
             for keys in (("right", "up", "left_shift", "jump"), ("right", "down", "combat_a"),
                          ("left", "up", "combat_f"), ("down",)):
                 world.controls.held.clear()

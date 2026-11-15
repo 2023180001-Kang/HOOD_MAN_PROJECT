@@ -26,7 +26,7 @@ def encounter(game, kind="clubs", side=1, *, start=True):
     game.world = World(rng=random.Random(23))
     world = game.world
     world.stage_index = 3
-    enemy = world.enemies[0]
+    enemy = world.spawner.spawn(1, world.elapsed)[0]
     world.enemies = [enemy]  # Isolate the selected attack's pixels and exact damage.
     enemy.x = enemy.previous_x = world.player.x + side * (400 if kind == "slam" else 80)
     enemy.ground_y = enemy.previous_ground_y = world.player.ground_y
@@ -52,14 +52,15 @@ def set_frame(world, enemy, frame):
     enemy.update(0, world.player)
 
 
-def check_city_selection(game):
+def check_city_summons(game):
     game.world = World(rng=random.Random(32))
     textures = dict(game.assets.images)
     for number in range(1, 11):
-        key = getattr(pico2d, f"SDLK_{number % 10}")
-        push_key(key)
+        game.world.select_stage(number - 1)
+        assert not game.world.enemies and game.world.spawner.spawned_count == 0
+        push_key(pico2d.SDLK_4)
         tick(game)
-        release(game, key)
+        release(game, pico2d.SDLK_4)
         world = game.world
         expected = Enemy02 if number in (3, 4) else Enemy
         assert world.stage_index == number - 1
@@ -74,7 +75,7 @@ def check_city_selection(game):
                     capture(game, f"enemy02_city_{number - 2}_{side}")
                 assert any("몽둥이 60 / 착지 80" in call.args[2] for call in draw.call_args_list)
         assert all(game.assets.images[name] is image for name, image in textures.items())
-    print("PASS: SDL stages 3/4 use exactly four enemy02 actors; other stages keep the old type; "
+    print("PASS: SDL 4 summons four enemy02 actors on city stages, old actors elsewhere; "
           "spawn floors/texture reuse and the real 60/80 HUD text verified.")
 
 
@@ -249,6 +250,9 @@ def check_natural_encounter_and_restart(game):
     world = game.world
     world.stage_index = 3
     world.player.invincible = True
+    push_key(pico2d.SDLK_4)
+    tick(game)
+    release(game, pico2d.SDLK_4)
     seen = set()
     spawn_state = world.spawner.rng.getstate()
     for _ in range(480):
@@ -269,13 +273,19 @@ def check_natural_encounter_and_restart(game):
     tick(game)
     release(game, pico2d.SDLK_F5)
     assert game.world.stage_index == 0 and game.world.player.hp == 500
+    assert all(not stage.enemies and stage.spawner.spawned_count == 0 for stage in game.world.stages)
+    for index in (0, 3):
+        game.world.select_stage(index)
+        push_key(pico2d.SDLK_4)
+        tick(game)
+        release(game, pico2d.SDLK_4)
     for index, stage in enumerate(game.world.stages):
-        assert len(stage.enemies) == stage.spawner.spawned_count == 4
+        assert len(stage.enemies) == stage.spawner.spawned_count == (4 if index in (0, 3) else 0)
         expected = Enemy02 if index in (2, 3) else Enemy
         assert all(type(enemy) is expected and enemy not in old_enemies and enemy.hp == 200
                    for enemy in stage.enemies)
     print("PASS: natural four-enemy city combat uses ranged leaps/close attacks without touching spawn RNG; "
-          "SDL F5 creates fresh full-health groups with the correct stage-specific type.")
+          "SDL F5 clears all groups and fresh numeric input summons the correct full-health type.")
 
 
 def main():
@@ -285,7 +295,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
-        check_city_selection(game)
+        check_city_summons(game)
         check_attack_rendering(game)
         check_tracking_leap(game)
         check_damage(game)

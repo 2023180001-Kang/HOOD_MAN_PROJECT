@@ -273,7 +273,7 @@ class TrafficTests(unittest.TestCase):
         traffic = world.stage.traffic
         place_car(world)
         world.step(config.FIXED_DT)
-        for key in ("stage_9", "combat_a", "jump", "counter_h", "stage_exits", "invincibility"):
+        for key in ("spawn_9", "combat_a", "jump", "counter_h", "stage_exits", "invincibility"):
             world.controls.press(key)
         world.update(config.FIXED_DT)
         self.assertFalse(world.controls.pressed)

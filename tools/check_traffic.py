@@ -82,20 +82,21 @@ def check_driving_frames(game):
 
 def check_sidewalk_spawns(game):
     for side in (-1, 1):
-        with patch.object(config, "ENEMIES_PER_STAGE", 4):
-            world = city(game, ground_y=124)
+        world = city(game, ground_y=124)
         world.player.x = 300 if side < 0 else config.WORLD_WIDTH - 300
         edge = (config.ENEMY_BOUNDARY_PADDING if side < 0 else
                 config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING)
         car = car_at(world, edge, -side, speed=config.CAR_SPEED_RANGE[1])
+        push_key(pico2d.SDLK_4)
         tick(game)
+        release(game, pico2d.SDLK_4)
         assert len(world.enemies) == 4
         assert all(enemy.hp == config.ENEMY_MAX_HP and not enemy.car_hit for enemy in world.enemies)
         assert all(enemy.ground_y - car.ground_y > config.CAR_DEPTH_TOLERANCE
                    for enemy in world.enemies)
         assert any(abs(enemy.x - car.x) < config.CAR_HALF_WIDTH for enemy in world.enemies)
         capture(game, "traffic_sidewalk_spawn_left" if side < 0 else "traffic_sidewalk_spawn_right")
-    print("PASS: four automatic enemies spawn on the city sidewalk and survive cars already "
+    print("PASS: SDL 4 summons four enemies on the city sidewalk and they survive cars already "
           "passing through either spawn edge.")
 
 
@@ -219,7 +220,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # Vehicle impact scenarios supply their own targets; sidewalk spawn checks
-    # explicitly enable the normal four-enemy encounter.
-    with patch.object(config, "ENEMIES_PER_STAGE", 0):
-        main()
+    main()

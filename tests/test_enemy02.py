@@ -1,6 +1,6 @@
 import random
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import config
 from collision import bodies_overlap
@@ -8,7 +8,7 @@ from counter import can_counter
 from enemy import Enemy
 from enemy02 import Enemy02
 from player import Player
-from tests.helpers import advance, tap
+from tests.helpers import advance, spawn_encounter
 from tests.test_counters import follow_up
 from traffic import Car
 from world import World
@@ -36,10 +36,15 @@ def at_frame(kind, frame, *, side=1):
 
 
 class Enemy02Tests(unittest.TestCase):
-    def test_only_city_maps_use_the_new_type_and_all_maps_keep_four_enemies_after_f5(self):
+    def test_only_city_maps_summon_the_new_type_and_f5_clears_every_stage(self):
         world = World(rng=random.Random(51))
         for _ in range(2):
-            for stage in world.stages:
+            for index, stage in enumerate(world.stages):
+                self.assertEqual(stage.enemies, [])
+                world.stage_index = index
+                world.controls.press("spawn_4")
+                world.update(config.FIXED_DT)
+                world.controls.release("spawn_4")
                 expected = Enemy02 if stage.image_name in ("cityStage-1.png", "cityStage-2.png") else Enemy
                 self.assertEqual(len(stage.enemies), 4)
                 self.assertEqual(stage.spawner.spawned_count, 4)
@@ -52,6 +57,8 @@ class Enemy02Tests(unittest.TestCase):
             world.controls.press("restart")
             world.update(config.FIXED_DT)
             world.controls.release("restart")
+            self.assertTrue(all(not stage.enemies and stage.spawner.spawned_count == 0
+                                for stage in world.stages))
 
     def test_ai_selects_close_clubs_or_medium_range_leap_and_commits_until_recovery(self):
         for kind, gap, row, damage in (("clubs", 80, 4, 60), ("slam", 400, 5, 80)):
@@ -163,7 +170,7 @@ class Enemy02Tests(unittest.TestCase):
     def test_counter_reactions_and_lethal_poses_keep_the_new_enemy_sheet(self):
         for key in "hjkl":
             for hp in (200, 40):
-                with self.subTest(key=key, hp=hp), patch.object(config, "ENEMIES_PER_STAGE", 0):
+                with self.subTest(key=key, hp=hp):
                     world = World()
                     world.stage_index = 3
                     _, enemy = at_frame("clubs", 1)
@@ -194,7 +201,7 @@ class Enemy02Tests(unittest.TestCase):
         world.stage_index = 2
         world.player.ground_y = config.CAR_GROUND_Y
         world.player.invincible = True
-        enemy = world.enemies[0]
+        enemy = spawn_encounter(world, 1)[0]
         enemy.x = enemy.previous_x = world.player.x
         enemy.ground_y = enemy.previous_ground_y = config.CAR_GROUND_Y
         world.stage.traffic.car = Car(world.player.x, 1, 1400)
@@ -208,6 +215,7 @@ class Enemy02Tests(unittest.TestCase):
         first, second = (World(rng=random.Random(91)) for _ in range(2))
         for world in (first, second):
             world.stage_index = 3
+            spawn_encounter(world)
         enemy = first.enemies[0]
         other_state = first.enemies[1].rng.getstate()
         for _ in range(8):
@@ -224,7 +232,7 @@ class Enemy02Tests(unittest.TestCase):
     def test_loading_and_revisits_pause_the_selected_attack_and_its_private_rng(self):
         world = World(rng=random.Random(83))
         world.stage_index = 3
-        enemy = world.enemies[0]
+        enemy = spawn_encounter(world, 1)[0]
         enemy.start_attack()
         enemy.animation.elapsed = 2.05 / enemy.attack_fps
         enemy.update(0, world.player)
@@ -235,12 +243,11 @@ class Enemy02Tests(unittest.TestCase):
         advance(world, 2)
         self.assertEqual(world.stage_index, 4)
         advance(world, 0.2)
-        tap(world.controls, "stage_4")
-        world.update(1 / 60)
+        world.select_stage(3)
         self.assertIs(world.enemies[0], enemy)
         self.assertEqual((enemy.attack_kind, enemy.animation.elapsed, enemy.jump_height,
                           enemy.rng.getstate()), snapshot)
-        self.assertEqual(world.spawner.spawned_count, 4)
+        self.assertEqual(world.spawner.spawned_count, 1)
 
     def test_new_attack_ai_and_damage_results_are_identical_across_render_rates(self):
         outcomes = []
@@ -248,6 +255,7 @@ class Enemy02Tests(unittest.TestCase):
             world = World(rng=random.Random(37))
             world.stage_index = 3
             world.player.invincible = True
+            spawn_encounter(world)
             advance(world, 6, fps)
             outcomes.append([(enemy.x, enemy.ground_y, enemy.jump_height, enemy.state,
                               enemy.attack_kind, enemy.animation.elapsed, enemy.has_hit,
@@ -263,6 +271,7 @@ class Enemy02Tests(unittest.TestCase):
                     world.stage.traffic = None
                     world.player.x = x
                     world.player.invincible = True
+                    spawn_encounter(world)
                     advance(world, 4)
                     for enemy in world.enemies:
                         self.assertTrue(world.stage.walkable.contains(enemy.x, enemy.ground_y, 128))

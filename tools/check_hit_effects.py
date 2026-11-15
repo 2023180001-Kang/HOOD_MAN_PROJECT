@@ -115,14 +115,10 @@ def check_scene_lifetime_and_restart(game):
                for offset, facing, name in ((-30, -1, config.CLUB_HIT_IMAGE),
                                             (30, 1, config.PUNCH_KICK_HIT_IMAGE))]
     world.effects = effects
-    push_key(pico2d.SDLK_2)
-    tick(game)
-    release(game, pico2d.SDLK_2)
+    world.select_stage(1)
     tick(game, 6)
     assert all(effect.elapsed == 0.05 for effect in effects)
-    push_key(pico2d.SDLK_1)
-    tick(game)
-    release(game, pico2d.SDLK_1)
+    world.select_stage(0)
     assert world.effects == effects
     capture(game, "mixed_hit_effects_returned")
     push_key(pico2d.SDLK_F5)

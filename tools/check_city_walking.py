@@ -24,6 +24,7 @@ def walking_scene(game, index, side):
     world.stage_index = index
     world.stage.traffic = None  # Inspect pavement alignment without road deaths.
     world.player.invincible = True
+    world.enemies.extend(world.spawner.spawn(4, world.elapsed))
     for number, enemy in enumerate(world.enemies):
         enemy.x = enemy.previous_x = world.player.x + side * (220 + number * 5)
         enemy.ground_y = enemy.previous_ground_y = config.GROUND_Y

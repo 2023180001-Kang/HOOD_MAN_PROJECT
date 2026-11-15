@@ -1,6 +1,5 @@
 from math import hypot
 import unittest
-from unittest.mock import patch
 
 import config
 from counter import COUNTERS
@@ -20,8 +19,6 @@ def holding_world(key="j", *, side=1):
     return world, enemy
 
 
-# Carry geometry is checked with explicitly arranged opponents.
-@patch.object(config, "ENEMIES_PER_STAGE", 0)
 class CounterCarryTests(unittest.TestCase):
     def assert_pair(self, world, enemy):
         self.assertIsNotNone(world.counter)

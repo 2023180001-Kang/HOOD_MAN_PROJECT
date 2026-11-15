@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import patch
 
 import config
 from tests.helpers import advance
@@ -16,8 +15,6 @@ def fallen_enemy(world):
     return enemy
 
 
-# Corpse timing scenarios explicitly create the actors under inspection.
-@patch.object(config, "ENEMIES_PER_STAGE", 0)
 class EnemyDespawnTests(unittest.TestCase):
     def test_normal_death_waits_for_the_fall_then_holds_three_seconds_and_fades(self):
         world = World()

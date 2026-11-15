@@ -1,13 +1,10 @@
 import unittest
-from unittest.mock import patch
 
 import config
 from world import World
 from tests.helpers import advance
 
 
-# Movement measurements use an unobstructed floor.
-@patch.object(config, "ENEMIES_PER_STAGE", 0)
 class MovementTests(unittest.TestCase):
     def test_run_accelerates_and_release_stops_without_reversing(self):
         world = World()

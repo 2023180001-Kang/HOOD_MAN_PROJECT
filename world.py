@@ -82,9 +82,6 @@ class World:
         if self.controls.take_press("restart"):
             self.reset()
             return
-        selection = self.controls.take_latest_press(config.STAGE_SHORTCUTS)
-        if selection is not None and self.select_stage(config.STAGE_SHORTCUTS[selection]):
-            return
         if self.stage_loading:
             # Loading uses real elapsed time, independent of the physics dt cap.
             self.controls.pressed.clear()
@@ -126,6 +123,9 @@ class World:
         for number in self.damage_numbers:
             number.update(dt)
         self.damage_numbers = [number for number in self.damage_numbers if not number.finished]
+        for count in config.SPAWN_COUNTS:
+            if self.controls.take_press(f"spawn_{count}") and self.player.alive:
+                self.enemies.extend(self.spawner.spawn(count, self.elapsed))
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         self.player.update(dt, self.controls, self.stage.walkable)
@@ -255,7 +255,7 @@ class World:
         return False
 
     def select_stage(self, destination):
-        """Jump to a numbered scene without resetting its enemies or player HP."""
+        """Enter a scene for tooling while preserving its actors and player HP."""
         if not self.player.alive or not 0 <= destination < len(self.stages):
             return False
         if self.counter is not None:

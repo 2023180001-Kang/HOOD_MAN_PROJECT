@@ -128,7 +128,7 @@ class HitEffectTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 500)
         self.assertEqual(world.player.vx, 0)
         self.assertEqual(world.player.x, config.START_X)
-        self.assertEqual(len(world.enemies), 4)
+        self.assertEqual(world.enemies, [])
 
     def test_all_punches_and_kicks_use_the_new_sheet_against_both_enemy_types(self):
         for enemy_type in (Enemy, Enemy02):

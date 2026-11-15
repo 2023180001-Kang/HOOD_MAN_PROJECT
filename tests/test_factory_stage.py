@@ -92,7 +92,7 @@ class FactoryStageTests(unittest.TestCase):
             world.update(1 / 60)
             self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 10))
             self.assertIsNone(world.pending_stage_index)
-            self.assertTrue(all(len(stage.enemies) == 4 and not stage.arrows_visible
+            self.assertTrue(all(not stage.enemies and not stage.arrows_visible
                                 for stage in world.stages))
             advance(world, 2.5)
             self.assertEqual(world.stage_index, 0)
@@ -135,7 +135,8 @@ class FactoryStageTests(unittest.TestCase):
         world.stage_index = 4
         source = world.stage
         source.arrows_visible = True
-        enemy = source.enemies[0]
+        enemy = source.spawner.spawn(1, world.elapsed)[0]
+        source.enemies.append(enemy)
         enemy.x = 1400
         enemy.take_damage(40)
         player = world.player
@@ -163,7 +164,8 @@ class FactoryStageTests(unittest.TestCase):
         self.assertIs(world.stage, source)
         self.assertIs(source.enemies[0], enemy)
         self.assertEqual(enemy.hp, 160)
-        self.assertEqual(exterior.spawner.spawned_count, 4)
+        self.assertEqual(exterior.spawner.spawned_count, 0)
+        self.assertEqual(exterior.enemies, [])
         self.assertEqual((player.ground_y, player.jump_height, player.vy, player.jump_count),
                          (100, 140, 300, 2))
 

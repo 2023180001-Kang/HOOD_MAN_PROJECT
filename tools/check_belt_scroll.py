@@ -277,6 +277,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # Geometry and crowd benchmarks arrange their own actors.
-    with patch.object(config, "ENEMIES_PER_STAGE", 0):
-        main()
+    main()

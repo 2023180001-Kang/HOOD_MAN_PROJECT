@@ -83,7 +83,7 @@ class UI:
                 counter_help = (f"적 공격 피해: {config.ENEMY_DAMAGE}   "
                                 f"반격: 쇠파이프 공격 중 {config.COUNTER_RANGE:g}px 내")
             assets.font.draw(22, 48, counter_help, (205, 218, 231))
-            assets.font.draw(740, 48, "1~9: 해당 스테이지 이동 / 0: 10번 / 적 4명", (205, 218, 231))
+            assets.font.draw(740, 48, "1~9: 해당 수만큼 적 소환 (좌우 무작위)", (205, 218, 231))
             assets.font.draw(22, 25,
                              "← → ↑ ↓ 이동   Shift 달리기   Space 이단 점프   F5 다시 시작",
                              (205, 218, 231))

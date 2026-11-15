@@ -27,8 +27,25 @@ class EnemyTests(unittest.TestCase):
         self.assertEqual([enemy.run_speed for enemy in next_batch], [420, 480])
         self.assertEqual(spawner.spawned_count, 11)
 
-    def test_automatic_encounter_tracks_the_player(self):
+    def test_no_enemies_spawn_without_input_at_start_entry_or_restart(self):
+        world = World()
+        advance(world, 10)
+        for index in range(len(world.stages)):
+            world.select_stage(index)
+            advance(world, 0.2)
+            self.assertEqual(world.enemies, [])
+            self.assertEqual(world.spawner.spawned_count, 0)
+        world.controls.press("restart")
+        world.update(1 / 60)
+        advance(world, 3)
+        self.assertEqual(world.player.hp, 500)
+        self.assertTrue(all(not stage.enemies and stage.spawner.spawned_count == 0
+                            for stage in world.stages))
+
+    def test_requested_encounter_tracks_the_player(self):
         world = World(rng=random.Random(42))
+        world.controls.press("spawn_4")
+        world.update(1 / 60)
         self.assertEqual(len(world.enemies), 4)
         enemy = world.enemies[0]
         world.enemies = [enemy]  # Isolate this actor's change of pursuit direction.
@@ -39,42 +56,40 @@ class EnemyTests(unittest.TestCase):
         self.assertEqual(enemy.facing, -1)
         self.assertLess(enemy.vx, 0)
 
-    def test_each_number_selects_its_stage_without_spawning_more_enemies(self):
-        world = World(rng=random.Random(42))
-        for number in range(1, 11):
+    def test_each_number_spawns_its_count_once_until_released_and_never_changes_stage(self):
+        for number in range(1, 10):
             with self.subTest(number=number):
-                action = f"stage_{number}"
+                world = World(rng=random.Random(42))
+                action = f"spawn_{number}"
                 world.controls.press(action)
                 world.update(1 / 60)
-                self.assertEqual(world.stage_index, number - 1)
+                self.assertEqual(world.stage_index, 0)
                 self.assertEqual(world.player.x, config.START_X)
                 self.assertFalse(world.stage_loading)
                 enemies = list(world.enemies)
-                self.assertEqual(len(enemies), 4)
-                world.player.x = 500
+                self.assertEqual(len(enemies), number)
                 world.controls.press(action)
-                world.update(0)
-                self.assertEqual(world.player.x, 500)
+                advance(world, 0.1)
+                self.assertEqual(len(world.enemies), number)
                 tap(world.controls, action)
                 world.update(1 / 60)
-                self.assertEqual(world.enemies, enemies)
-                self.assertEqual(world.spawner.spawned_count, 4)
+                self.assertEqual(len(world.enemies), number * 2)
+                self.assertTrue(all(enemy in world.enemies for enemy in enemies))
+                self.assertEqual(world.spawner.spawned_count, number * 2)
                 self.assertFalse(world.controls.pressed)
 
-    def test_simultaneous_numbers_select_only_the_latest_pressed_stage(self):
+    def test_simultaneous_numbers_add_their_counts_without_a_four_enemy_limit(self):
         world = World()
-        world.controls.press("stage_2")
-        world.controls.press("stage_5")
+        world.controls.press("spawn_2")
+        world.controls.press("spawn_5")
         world.update(1 / 60)
-        self.assertEqual(world.stage_index, 4)
-        tap(world.controls, "stage_5")
-        tap(world.controls, "stage_2")
+        self.assertEqual(len(world.enemies), 7)
+        tap(world.controls, "spawn_9")
         world.update(1 / 60)
-        self.assertEqual(world.stage_index, 1)
-        self.assertTrue(all(stage.spawner.spawned_count == 4 for stage in world.stages))
+        self.assertEqual((world.stage_index, len(world.enemies), world.spawner.spawned_count), (0, 16, 16))
         self.assertFalse(world.controls.pressed)
 
-    def test_stage_selection_works_while_attacking_or_hit_without_healing(self):
+    def test_numeric_spawns_work_while_attacking_or_hit_without_resetting_the_player(self):
         for action in (None, "combat_a", "hit"):
             with self.subTest(action=action):
                 world = World()
@@ -83,69 +98,83 @@ class EnemyTests(unittest.TestCase):
                 elif action is not None:
                     world.player.start_move(MOVES[action], 1)
                 player, hp, state = world.player, world.player.hp, world.player.state
-                world.controls.press("stage_3")
+                world.controls.press("spawn_3")
                 world.update(1 / 60)
-                self.assertEqual(world.stage_index, 2)
+                self.assertEqual(world.stage_index, 0)
                 self.assertIs(world.player, player)
                 self.assertEqual((player.hp, player.state), (hp, state))
-                self.assertEqual(len(world.enemies), 4)
+                self.assertEqual(len(world.enemies), 3)
 
-    def test_death_discards_stage_presses_and_restart_creates_fresh_encounters(self):
+    def test_death_discards_spawn_presses_and_restart_requires_fresh_input(self):
         world = World()
-        old_enemies = [enemy for stage in world.stages for enemy in stage.enemies]
+        world.controls.press("spawn_2")
+        world.update(1 / 60)
+        old_enemies = list(world.enemies)
         world.player.take_damage(500)
         for _ in range(2):
-            tap(world.controls, "stage_9")
+            tap(world.controls, "spawn_9")
             advance(world, 1)
             self.assertEqual(world.stage_index, 0)
-            self.assertNotIn("stage_9", world.controls.pressed)
-        tap(world.controls, "stage_9")
+            self.assertEqual(world.spawner.spawned_count, 2)
+            self.assertNotIn("spawn_9", world.controls.pressed)
+        tap(world.controls, "spawn_9")
         world.controls.press("restart")
         world.update(1 / 60)
         self.assertEqual((world.stage_index, world.player.hp), (0, 500))
         for stage in world.stages:
-            self.assertEqual(len(stage.enemies), 4)
-            self.assertEqual(stage.spawner.spawned_count, 4)
-            self.assertTrue(all(enemy not in old_enemies and enemy.hp == 200
-                                for enemy in stage.enemies))
+            self.assertEqual(stage.enemies, [])
+            self.assertEqual(stage.spawner.spawned_count, 0)
         self.assertFalse(world.controls.pressed)
+        advance(world, 1)
+        self.assertEqual(world.enemies, [])
+        tap(world.controls, "spawn_1")
+        world.update(1 / 60)
+        self.assertEqual(len(world.enemies), 1)
+        self.assertNotIn(world.enemies[0], old_enemies)
+        self.assertEqual((world.enemies[0].hp, world.enemies[0].run_speed), (200, 360))
 
-    def test_every_stage_has_four_independent_random_boundary_enemies(self):
+    def test_manual_spawns_on_every_stage_have_independent_profiles_and_random_boundaries(self):
         sides = set()
         for seed in range(8):
             world = World(rng=random.Random(seed))
             all_enemies = []
-            for stage in world.stages:
-                self.assertEqual(len(stage.enemies), 4)
-                self.assertEqual(stage.spawner.spawned_count, 4)
-                self.assertEqual([enemy.run_speed for enemy in stage.enemies],
+            for index, stage in enumerate(world.stages):
+                world.stage_index = index
+                tap(world.controls, "spawn_9")
+                world.update(config.FIXED_DT)
+                self.assertEqual(len(stage.enemies), 9)
+                self.assertEqual(stage.spawner.spawned_count, 9)
+                self.assertEqual([enemy.run_speed for enemy in stage.enemies[:4]],
                                  list(config.ENEMY_RUN_SPEEDS))
                 for enemy in stage.enemies:
                     sides.add(enemy.facing)
-                    self.assertEqual(enemy.x, enemy.boundary_padding if enemy.facing > 0
-                                     else config.WORLD_WIDTH - enemy.boundary_padding)
+                    distance_from_edge = min(enemy.x, config.WORLD_WIDTH - enemy.x)
+                    self.assertLessEqual(distance_from_edge,
+                                         enemy.boundary_padding + max(config.ENEMY_RUN_SPEEDS) * config.FIXED_DT)
                     self.assertTrue(stage.spawn_area.contains(enemy.x, enemy.ground_y,
                                                               enemy.boundary_padding))
-                    self.assertEqual((enemy.hp, enemy.spawned_at), (200, 0))
+                    self.assertEqual((enemy.hp, enemy.spawned_at), (200, world.elapsed))
                 all_enemies.extend(stage.enemies)
-            self.assertEqual(len({id(enemy) for enemy in all_enemies}), 40)
-            self.assertEqual(len({enemy.attack_speed for enemy in all_enemies}), 40)
+            self.assertEqual(len({id(enemy) for enemy in all_enemies}), 90)
+            self.assertEqual(len({enemy.attack_speed for enemy in all_enemies}), 90)
         self.assertEqual(sides, {-1, 1})
 
     def test_defeated_encounter_does_not_respawn_when_revisiting_a_stage(self):
         world = World()
+        world.controls.press("spawn_4")
+        world.update(1 / 60)
         for enemy in world.enemies:
             enemy.take_damage(200)
         advance(world, 5)
         self.assertEqual(world.enemies, [])
         for number in (2, 1, 2, 1):
-            tap(world.controls, f"stage_{number}")
-            world.update(1 / 60)
+            world.select_stage(number - 1)
+            advance(world, 0.1)
         self.assertEqual(world.stage_index, 0)
         self.assertEqual(world.enemies, [])
         self.assertEqual(world.spawner.spawned_count, 4)
 
-    def test_shortcut_cancels_loading_and_preserves_airborne_player_state(self):
+    def test_loading_discards_numeric_spawns_and_preserves_the_pending_destination(self):
         world = World()
         world.stage_index = 1
         world.stage.arrows_visible = True
@@ -158,22 +187,30 @@ class EnemyTests(unittest.TestCase):
         player.animation.elapsed = 0.2
         self.assertTrue(world.try_stage_transition())
         self.assertTrue(world.stage_loading)
-        world.controls.press("stage_10")
-        world.update(0)
+        world.controls.press("spawn_9")
+        world.update(1.9)
         self.assertIs(world.player, player)
-        self.assertEqual(world.stage_index, 9)
+        self.assertEqual((world.stage_index, world.pending_stage_index), (1, 2))
+        self.assertTrue(world.stage_loading)
+        self.assertTrue(all(not stage.enemies for stage in world.stages))
+        world.update(0.1)
+        self.assertEqual(world.stage_index, 2)
         self.assertFalse(world.stage_loading)
-        self.assertEqual((world.stage_loading_remaining, world.accumulator), (0, 0))
-        self.assertEqual((player.x, player.ground_y, player.ground_vy), (config.START_X, 116, 0))
+        self.assertEqual(player.x, config.STAGE_ENTRY_MARGIN)
         self.assertEqual((player.hp, player.invincible, player.vx, player.jump_height,
                           player.vy, player.jump_count, player.animation.elapsed),
                          (420, True, config.RUN_SPEED, 140, 300, 2, 0.2))
-        advance(world, 2.1)
-        self.assertEqual(world.stage_index, 9)
+        world.controls.press("spawn_9")  # Still held: do not replay the discarded input.
+        world.update(config.FIXED_DT)
+        self.assertEqual(world.enemies, [])
+        tap(world.controls, "spawn_9")
+        world.update(config.FIXED_DT)
+        self.assertEqual((world.stage_index, len(world.enemies)), (2, 9))
 
-    def test_shortcut_releases_a_carried_enemy_before_changing_scenes(self):
+    def test_spawning_while_carrying_keeps_the_pair_and_adds_only_the_requested_enemies(self):
         world = World()
-        enemy = world.enemies[0]
+        enemy = Enemy(world.player.x + 80, -1)
+        world.enemies = [enemy]
         enemy.x, enemy.ground_y, enemy.facing = world.player.x + 80, 100, -1
         enemy.animation.set_state("ATTACK")
         enemy.animation.elapsed = 2 / enemy.attack_fps
@@ -182,29 +219,15 @@ class EnemyTests(unittest.TestCase):
         advance(world, 0.4)
         self.assertIsNotNone(world.counter)
         self.assertTrue(world.counter.holding)
-        world.controls.press("stage_6")
+        sequence = world.counter
+        world.controls.press("spawn_6")
         world.update(1 / 60)
-        self.assertEqual(world.stage_index, 5)
-        self.assertIsNone(world.counter)
-        self.assertIsNone(world.player.counter_move)
-        self.assertIsNone(enemy.counter_move)
-        self.assertEqual(enemy.jump_height, 0)
-        self.assertEqual(world.player.boundary_padding, config.PLAYER_BOUNDARY_PADDING)
-        self.assertIn(enemy, world.stages[0].enemies)
-        self.assertNotIn(enemy, world.enemies)
-
-    def test_shortcut_resolves_a_returning_scene_enemy_at_the_arrival_position(self):
-        world = World()
-        enemy = world.stages[1].enemies[0]
-        enemy.x = enemy.previous_x = config.START_X
-        enemy.ground_y = enemy.previous_ground_y = config.GROUND_Y
-        world.controls.press("stage_2")
-        world.update(1 / 60)
-        self.assertEqual(world.stage_index, 1)
-        self.assertTrue(all(not bodies_overlap(world.player, actor) for actor in world.enemies))
-        self.assertEqual(world.player.previous_x, world.player.x)
-        self.assertTrue(world.stage.walkable.contains(world.player.x, world.player.ground_y,
-                                                      world.player.boundary_padding))
+        self.assertEqual(world.stage_index, 0)
+        self.assertIs(world.counter, sequence)
+        self.assertIsNotNone(world.player.counter_move)
+        self.assertIsNotNone(enemy.counter_move)
+        self.assertEqual(enemy.jump_height, config.COUNTER_CARRY_HEIGHT)
+        self.assertEqual((len(world.enemies), world.spawner.spawned_count), (7, 6))
 
     def test_distant_enemies_keep_independent_ai_before_melee_spacing(self):
         world = World()

@@ -25,7 +25,6 @@ class Stage:
                                     attack_sequence=attack_sequence,
                                     enemy_type=Enemy02 if self.image_name in config.ENEMY02_STAGE_IMAGES
                                     else Enemy)
-        self.enemies = self.spawner.spawn(config.ENEMIES_PER_STAGE, 0.0)
         self.traffic = Traffic(rng=traffic_rng) if self.image_name == config.CAR_STAGE_IMAGE else None
 
     def constrain_actor(self, actor):

@@ -8,8 +8,6 @@ from tests.helpers import advance, tap
 from world import World
 
 
-# Jump distances and camera limits are isolated from automatic encounters.
-@patch.object(config, "ENEMIES_PER_STAGE", 0)
 class JumpCameraTests(unittest.TestCase):
     def running_double_jump_distance(self, direction=1, running=True):
         world = World()

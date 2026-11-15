@@ -2,7 +2,7 @@ import unittest
 
 import config
 from enemy import Enemy
-from tests.helpers import advance, tap
+from tests.helpers import advance, spawn_encounter, tap
 from world import World
 
 
@@ -133,7 +133,7 @@ class DeathRestartTests(unittest.TestCase):
         self.assertTrue(all(not enemy.knockback_started for enemy in world.enemies))
         self.assertEqual([enemy.x for enemy in world.enemies], positions)
 
-    def test_early_death_stops_stage_selection_and_other_attacks(self):
+    def test_early_death_stops_numeric_spawns_and_other_attacks(self):
         world = World()
         world.enemies.clear()
         world.player.hp = 20
@@ -146,10 +146,10 @@ class DeathRestartTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 0)
         self.assertTrue(world.death_handled)
         self.assertTrue(all(enemy.knockback_started for enemy in world.enemies))
-        world.controls.press("stage_9")
+        world.controls.press("spawn_9")
         advance(world, 10)
         self.assertEqual(world.stage_index, 0)
-        self.assertEqual(world.spawner.spawned_count, 4)
+        self.assertEqual(world.spawner.spawned_count, 0)
         self.assertEqual(len(world.enemies), 2)
         self.assertTrue(all(enemy.attack_box is None for enemy in world.enemies))
 
@@ -157,6 +157,7 @@ class DeathRestartTests(unittest.TestCase):
         for state in ("IDLE", "WALK", "RUN", "JUMP", "HIT", "DYING", "DEAD"):
             with self.subTest(state=state):
                 world = World()
+                spawn_encounter(world)
                 old_player = world.player
                 old_enemies = list(world.enemies)
                 world.player.animation.set_state(state)
@@ -180,15 +181,18 @@ class DeathRestartTests(unittest.TestCase):
                 self.assertEqual(world.player.jump_count, 0)
                 self.assertEqual(world.elapsed, 0)
                 self.assertEqual(world.accumulator, 0)
-                self.assertEqual(world.spawner.spawned_count, 4)
-                self.assertEqual(len(world.enemies), 4)
+                self.assertEqual(world.spawner.spawned_count, 0)
+                self.assertEqual(world.enemies, [])
                 self.assertEqual(world.camera.shake_remaining, 0)
                 self.assertEqual(world.camera.render_y, 0)
                 self.assertEqual(world.controls.held, {"restart"})
                 self.assertFalse(world.controls.pressed)
                 self.assertFalse(world.death_handled)
-                self.assertTrue(all(enemy not in old_enemies for enemy in world.enemies))
-                self.assertTrue(all(enemy.hp == 200 for enemy in world.enemies))
+                world.controls.press("spawn_1")
+                world.update(config.FIXED_DT)
+                self.assertEqual(len(world.enemies), 1)
+                self.assertNotIn(world.enemies[0], old_enemies)
+                self.assertEqual(world.enemies[0].hp, 200)
 
     def test_restart_is_edge_triggered_over_ten_repetitions(self):
         world = World()
@@ -201,7 +205,7 @@ class DeathRestartTests(unittest.TestCase):
             self.assertIs(world.player, player)
             self.assertGreater(world.elapsed, 0)
             self.assertEqual(world.player.hp, 500)
-            self.assertEqual(len(world.enemies), 4)
+            self.assertEqual(world.enemies, [])
 
 
 if __name__ == "__main__":

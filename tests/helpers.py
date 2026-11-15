@@ -9,7 +9,14 @@ def tap(controls, key):
 
 
 def clear_encounters(world):
-    """Remove automatic actors for isolated motion/transition test fixtures."""
+    """Clear explicitly arranged actors in motion/transition test fixtures."""
     for stage in world.stages:
         stage.enemies.clear()
     return world
+
+
+def spawn_encounter(world, count=4):
+    """Arrange combat actors explicitly; input tests exercise numeric presses."""
+    enemies = world.spawner.spawn(count, world.elapsed)
+    world.enemies.extend(enemies)
+    return enemies

@@ -125,7 +125,6 @@ ENEMY02_ATTACKS = {
 }
 ENEMY02_LEAP_MIN_DISTANCE = 320.0
 ENEMY02_LEAP_MAX_DISTANCE = 640.0
-ENEMY02_LEAP_LANDING_GAP = 80.0
 ENEMY02_LEAP_COOLDOWN = 2.0  # From landing/interruption until the next leap.
 CAR_IMAGE = "HOOD_MAN_car_attached_wheels_8f_pico2d.png"
 PLAYER_CAR_HIT_IMAGE = "hoodman_car_hit_8frames_2048x256.png"

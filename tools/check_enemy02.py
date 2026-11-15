@@ -12,6 +12,8 @@ sys.path.insert(0, str(ROOT))
 import pico2d
 
 import config
+from collision import bodies_overlap
+from combat import MOVES
 from enemy import Enemy
 from enemy02 import Enemy02, leap_height
 from game import Game
@@ -128,13 +130,15 @@ def check_tracking_leap(game):
             tick(game)
             if enemy.leaping:
                 origin, target = enemy.leap_origin, enemy.leap_target
+                assert target == (config.START_X, config.GROUND_Y)
                 peak = max(peak, enemy.jump_height)
                 assert enemy.attack_box is None and world.player.hp == 500
                 if enemy.vy <= 0 and not apex_captured:
                     capture(game, f"enemy02_leap_{side}_apex")
                     apex_captured = True
             elif enemy.leap_phase == "LANDING":
-                assert (enemy.x, enemy.ground_y) == target
+                assert enemy.leap_blocked and not bodies_overlap(world.player, enemy)
+                assert abs(enemy.x - world.player.x) <= 61 + 1e-7
                 assert (target[0] - origin[0]) * -side > 0
                 capture(game, f"enemy02_leap_{side}_landed")
                 break
@@ -163,8 +167,62 @@ def check_tracking_leap(game):
     assert world.player.hp == 500
     capture(game, "enemy02_leap_dodged")
     print(f"PASS: normal SDL player double-jump peak {reference_peak:.3f}px; enemy leap peaks "
-          f"{peaks[0]:.3f}/{peaks[1]:.3f}px; both directions fly to a committed target, "
-          "land before single 80 damage, and SDL running evades the fixed landing point.")
+           f"{peaks[0]:.3f}/{peaks[1]:.3f}px; both directions target the player's takeoff "
+           "position, stop at an occupied body edge and deal 80 after landing; "
+           "SDL running evades the committed landing point.")
+
+
+def check_midair_collisions(game):
+    for index in (2, 3):
+        for side in (-1, 1):
+            world, enemy = encounter(game, "slam", side)
+            world.stage_index = index
+            world.enemies = [enemy]
+            world.stage.traffic = None
+            tick(game, 30)
+            assert enemy.leaping
+            push_key(pico2d.SDLK_SPACE)
+            for _ in range(90):
+                tick(game)
+                if enemy.air_contact_attack:
+                    break
+            assert enemy.air_contact_attack and enemy.has_hit
+            assert enemy.jump_height > 0 and world.player.jump_height > 0
+            assert world.player.hp == 440
+            assert (enemy.attack_kind, enemy.animation.row) == ("clubs", 4)
+            assert not bodies_overlap(world.player, enemy)
+            assert len(world.effects) == 1
+            capture(game, f"enemy02_air_contact_city_{index - 1}_{side}")
+            release(game, pico2d.SDLK_SPACE)
+            tick(game, 42)
+            assert world.player.hp == 440 and enemy.jump_height == 0
+    for action in ("invincible", "player_jab"):
+        world, enemy = encounter(game, "slam", side=-1)
+        while not enemy.leaping:
+            tick(game)
+        enemy.update(enemy.leap_duration / 2 - enemy.leap_elapsed, world.player)
+        player = world.player
+        player.x = player.previous_x = enemy.x + 60
+        player.jump_height = player.previous_jump_height = enemy.jump_height
+        player.jump_count = 2
+        player.facing = -1
+        player.animation.set_state("JUMP")
+        if action == "invincible":
+            player.invincible = True
+        else:
+            player.start_move(MOVES["combat_a"], -1)
+            player.animation.elapsed = 3 / MOVES["combat_a"].fps
+        tick(game)
+        assert player.hp == 500
+        if action == "invincible":
+            assert enemy.has_hit and not world.effects
+        else:
+            assert enemy.hp == 190 and enemy.state == "HIT"
+            assert len(world.effects) == 1
+        capture(game, f"enemy02_air_contact_{action}")
+    print("PASS: real SDL jumps meet enemy leaps on both city maps/directions, block body "
+          "pass-through and trigger one row-4 normal hit (60), with no later landing 80; "
+          "P immunity and airborne player-jab priority also verified.")
 
 
 def check_damage(game):
@@ -298,6 +356,7 @@ def main():
         check_city_summons(game)
         check_attack_rendering(game)
         check_tracking_leap(game)
+        check_midair_collisions(game)
         check_damage(game)
         check_counters_and_death(game)
         check_city_car(game)

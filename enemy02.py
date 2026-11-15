@@ -3,6 +3,7 @@
 from math import hypot, sqrt
 
 import config
+from collision import Rect, body_contact_time
 from enemy import Enemy
 from physics import jump_apex
 
@@ -27,6 +28,8 @@ class Enemy02(Enemy):
         self.leap_cooldown = 0.0
         self.leap_elapsed = self.leap_duration = self.leap_launch_speed = 0.0
         self.leap_origin = self.leap_target = None
+        self.leap_blocked = False
+        self.air_contact_attack = self.air_contact_pending = False
         # The supplied sheet has no separate counter/car-hit art. Keep this
         # enemy's identity using its own hit/fall rows for those reactions.
         for state in self.animation.definitions:
@@ -52,13 +55,22 @@ class Enemy02(Enemy):
         return self.leap_phase == "AIR"
 
     @property
+    def blocks_movement(self):
+        return self.alive
+
+    @property
     def attack_box(self):
         if self.attack_kind == "slam" and (self.leap_phase != "LANDING" or self.jump_height > 0):
             return None
-        return super().attack_box
+        box = super().attack_box
+        if box is not None and self.air_contact_attack:
+            # A meeting at the feet/head is still a real midair body contact.
+            return Rect(box.left, self.body.bottom, box.right, box.top)
+        return box
 
-    def start_attack(self):
+    def start_attack(self, *, air_contact=False):
         self.attack_kind = "clubs"
+        self.air_contact_attack = self.air_contact_pending = air_contact
         row, _, _ = config.ENEMY02_ATTACKS["clubs"]
         self.animation.definitions["ATTACK"] = (row, self.attack_fps, False)
         super().start_attack()
@@ -72,6 +84,8 @@ class Enemy02(Enemy):
                 or not config.ENEMY02_LEAP_MIN_DISTANCE <= gap <= config.ENEMY02_LEAP_MAX_DISTANCE):
             return False
         self.attack_kind = "slam"
+        self.leap_blocked = False
+        self.air_contact_attack = self.air_contact_pending = False
         row, _, _ = config.ENEMY02_ATTACKS["slam"]
         self.animation.definitions["ATTACK"] = (row, self.attack_fps, False)
         self.leap_phase = "WINDUP"
@@ -88,11 +102,9 @@ class Enemy02(Enemy):
         dx = player.x - self.x
         if dx:
             self.facing = 1 if dx > 0 else -1
-        gap = min(config.ENEMY02_LEAP_LANDING_GAP, abs(dx))
-        target_x = player.x - self.facing * gap
-        travel_x, travel_y = target_x - self.x, player.ground_y - self.ground_y
+        travel_x, travel_y = dx, player.ground_y - self.ground_y
         distance = hypot(travel_x, travel_y)
-        maximum = config.ENEMY02_LEAP_MAX_DISTANCE - config.ENEMY02_LEAP_LANDING_GAP
+        maximum = config.ENEMY02_LEAP_MAX_DISTANCE
         if distance > maximum:
             travel_x, travel_y = travel_x * maximum / distance, travel_y * maximum / distance
         self.leap_origin = (self.x, self.ground_y)
@@ -103,6 +115,31 @@ class Enemy02(Enemy):
         self.leap_elapsed = 0.0
         self.leap_phase = "AIR"
         self.vy = self.leap_launch_speed
+
+    def _resolve_leap_contact(self, player):
+        contact = body_contact_time(player, self)
+        if contact is None:
+            return False
+        self.x = self.previous_x + (self.x - self.previous_x) * contact
+        self.ground_y = (self.previous_ground_y
+                         + (self.ground_y - self.previous_ground_y) * contact)
+        self.vx = self.ground_vy = 0.0
+        player_height = (player.previous_jump_height
+                         + (player.jump_height - player.previous_jump_height) * contact)
+        height = (self.previous_jump_height
+                  + (self.jump_height - self.previous_jump_height) * contact)
+        if player_height > 1e-9 and height > 1e-9:
+            self.jump_height = height
+            self._cancel_leap()
+            self.start_attack(air_contact=True)
+            # Contact is the strike, not another windup that could miss after
+            # the two bodies have already been separated by collision handling.
+            self.animation.elapsed = min(self.attack_active_frames) / self.attack_fps
+            return True
+        # An occupied landing point stops horizontal/depth travel at the body
+        # edge. Keep descending and use the original 80-damage landing motion.
+        self.leap_blocked = True
+        return False
 
     def _update_leap(self, dt, player):
         remaining = dt
@@ -122,16 +159,20 @@ class Enemy02(Enemy):
                 ratio = min(1.0, self.leap_elapsed / self.leap_duration)
                 start_x, start_y = self.leap_origin
                 end_x, end_y = self.leap_target
-                self.vx = (end_x - start_x) / self.leap_duration
-                self.ground_vy = (end_y - start_y) / self.leap_duration
-                self.x = start_x + (end_x - start_x) * ratio
-                self.ground_y = start_y + (end_y - start_y) * ratio
+                if not self.leap_blocked:
+                    self.vx = (end_x - start_x) / self.leap_duration
+                    self.ground_vy = (end_y - start_y) / self.leap_duration
+                    self.x = start_x + (end_x - start_x) * ratio
+                    self.ground_y = start_y + (end_y - start_y) * ratio
                 self.vy = self.leap_launch_speed - config.GRAVITY * self.leap_elapsed
                 self.jump_height = max(0.0, self.leap_launch_speed * self.leap_elapsed
                                        - config.GRAVITY * self.leap_elapsed ** 2 / 2)
                 self.animation.elapsed = (2.05 if self.vy >= 0 else 3.05) / self.attack_fps
+                if self._resolve_leap_contact(player):
+                    return
                 if self.leap_elapsed + 1e-9 >= self.leap_duration:
-                    self.x, self.ground_y = self.leap_target
+                    if not self.leap_blocked:
+                        self.x, self.ground_y = self.leap_target
                     self.jump_height = self.vy = self.vx = self.ground_vy = 0.0
                     self.leap_phase = "LANDING"
                     self.leap_cooldown = config.ENEMY02_LEAP_COOLDOWN
@@ -151,6 +192,17 @@ class Enemy02(Enemy):
         self.leap_phase = None
         self.leap_origin = self.leap_target = None
         self.leap_elapsed = self.leap_duration = self.leap_launch_speed = 0.0
+        self.leap_blocked = False
+        self.air_contact_attack = self.air_contact_pending = False
+
+    def try_hit(self, player):
+        if self.air_contact_pending and self.attack_box is not None:
+            # The swept contact was already validated at one common instant.
+            # Preserve that hit even if separation or fast motion ends overlap.
+            self.air_contact_pending = False
+            self.has_hit = True
+            return player.take_damage(self.attack_damage)
+        return super().try_hit(player)
 
     def _fall(self, dt):
         if self.jump_height > 0:
@@ -180,6 +232,8 @@ class Enemy02(Enemy):
             self._fall(dt)
             return
         super()._update_ai(dt, player)
+        if self.state != "ATTACK":
+            self.air_contact_attack = self.air_contact_pending = False
         if not self.car_hit and self.counter_move is None:
             self._fall(dt)
 

@@ -26,6 +26,33 @@ def bodies_overlap(first, second):
             and first.body.overlaps(second.body))
 
 
+def body_contact_time(first, second):
+    """First simultaneous x/depth/height body contact during the current step."""
+    half_width = (first.body.right - first.body.left + second.body.right - second.body.left) / 2
+    first_height = first.body.top - first.body.bottom
+    second_height = second.body.top - second.body.bottom
+    depth = config.BODY_DEPTH_TOLERANCE - 1e-9
+    axes = (
+        (second.previous_x - first.previous_x, second.x - first.x, -half_width, half_width),
+        (second.previous_ground_y - first.previous_ground_y,
+         second.ground_y - first.ground_y, -depth, depth),
+        (second.previous_jump_height - first.previous_jump_height,
+         second.jump_height - first.jump_height, -second_height, first_height),
+    )
+    enter, leave = 0.0, 1.0
+    for start, end, low, high in axes:
+        delta = end - start
+        if abs(delta) < 1e-12:
+            if not low <= start <= high:
+                return None
+            continue
+        first_time, last_time = sorted(((low - start) / delta, (high - start) / delta))
+        enter, leave = max(enter, first_time), min(leave, last_time)
+        if enter > leave:
+            return None
+    return enter
+
+
 def resolve_bodies(player, enemies, walkable=None):
     """Constrain player motion, then let enemies yield; bounded, non-iterative."""
     walkable = player.walkable if walkable is None else walkable

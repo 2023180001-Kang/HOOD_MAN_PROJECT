@@ -2,7 +2,8 @@ import random
 import unittest
 
 import config
-from collision import bodies_overlap, resolve_bodies
+from collision import bodies_overlap, body_contact_time, resolve_bodies
+from combat import MOVES
 from controls import Controls
 from counter import can_counter
 from enemy02 import Enemy02, leap_height
@@ -20,6 +21,23 @@ def flying_enemy(*, side=-1, gap=400, ground_y=100):
     while not enemy.leaping:
         enemy.update(config.FIXED_DT, player)
     return player, enemy
+
+
+def midair_encounter(index=3, side=-1):
+    world = World(rng=random.Random(17))
+    world.stage_index = index
+    world.stage.traffic = None
+    _, enemy = flying_enemy(side=side)
+    world.enemies = [enemy]
+    enemy.walkable = world.stage.walkable
+    enemy.update(enemy.leap_duration / 2 - enemy.leap_elapsed, world.player)
+    player = world.player
+    player.x = player.previous_x = enemy.x - side * 60
+    player.jump_height = player.previous_jump_height = enemy.jump_height
+    player.jump_count = 2
+    player.facing = side
+    player.animation.set_state("JUMP")
+    return world, enemy
 
 
 class Enemy02LeapTests(unittest.TestCase):
@@ -97,11 +115,11 @@ class Enemy02LeapTests(unittest.TestCase):
         self.assertGreater(observed, 300)
         self.assertEqual(enemy.jump_height, 0)
 
-    def test_plane_moves_toward_both_axes_and_lands_eighty_pixels_short(self):
+    def test_plane_targets_the_player_position_and_stops_at_an_occupied_body_edge(self):
         for side in (-1, 1):
             player, enemy = flying_enemy(side=side, ground_y=56)
             origin, target = enemy.leap_origin, enemy.leap_target
-            self.assertEqual(target, (player.x + side * 80, player.ground_y))
+            self.assertEqual(target, (player.x, player.ground_y))
             previous_x = enemy.x
             while enemy.leaping:
                 enemy.update(config.FIXED_DT, player)
@@ -111,7 +129,9 @@ class Enemy02LeapTests(unittest.TestCase):
                 self.assertTrue(enemy.walkable.contains(enemy.x, enemy.ground_y, 128))
                 self.assertFalse(enemy.try_hit(player))
                 previous_x = enemy.x
-            self.assertEqual((enemy.x, enemy.ground_y), target)
+            self.assertLessEqual(abs(enemy.x - player.x), 61 + 1e-8)
+            self.assertLess(abs(enemy.ground_y - player.ground_y), config.BODY_DEPTH_TOLERANCE)
+            self.assertTrue(enemy.leap_blocked)
             self.assertEqual(enemy.leap_phase, "LANDING")
             for _ in range(30):
                 enemy.update(config.FIXED_DT, player)
@@ -132,7 +152,7 @@ class Enemy02LeapTests(unittest.TestCase):
         while not enemy.leaping:
             enemy.update(config.FIXED_DT, player)
         target = enemy.leap_target
-        self.assertEqual(target, (player.x - 80, 116))
+        self.assertEqual(target, (player.x, 116))
         player.x += 300
         player.ground_y = 56
         while enemy.leaping:
@@ -144,32 +164,133 @@ class Enemy02LeapTests(unittest.TestCase):
             self.assertFalse(enemy.try_hit(player))
         self.assertEqual(player.hp, 500)
 
-    def test_player_moving_during_windup_cannot_force_an_unbounded_or_backward_flight(self):
-        for target_x in (900, 2400):
+    def test_windup_reaim_uses_the_actual_player_position_and_caps_flight_distance(self):
+        for target_x in (760, 900, 2400):
             player = Player()
             enemy = Enemy02(880)
             self.assertTrue(enemy.start_leap(player))
             player.x = target_x
             while not enemy.leaping:
                 enemy.update(config.FIXED_DT, player)
-            self.assertGreaterEqual(enemy.leap_target[0], 880)
-            self.assertLessEqual(enemy.leap_target[0] - 880, 560)
+            self.assertGreaterEqual((enemy.leap_target[0] - 880) * (target_x - 880), 0)
+            self.assertLessEqual(abs(enemy.leap_target[0] - 880), 640)
+            if abs(target_x - 880) <= 640:
+                self.assertEqual(enemy.leap_target, (target_x, player.ground_y))
 
-    def test_airborne_trajectory_is_not_modified_by_body_or_formation_corrections(self):
+    def test_high_flight_avoids_ground_bodies_but_matching_airborne_bodies_block(self):
         player, enemy = flying_enemy()
         enemy.x = enemy.previous_x = player.x + 10
-        enemy.jump_height = 1
-        self.assertTrue(bodies_overlap(player, enemy))
-        self.assertFalse(enemy.blocks_movement)
+        enemy.jump_height = 220
+        self.assertFalse(bodies_overlap(player, enemy))
+        self.assertTrue(enemy.blocks_movement)
         before = player.x, player.ground_y, enemy.x, enemy.ground_y
         resolve_bodies(player, [enemy])
         prepare_enemy_spacing(player, [enemy])
         resolve_enemy_spacing(player, [enemy], config.FIXED_DT)
         self.assertEqual((player.x, player.ground_y, enemy.x, enemy.ground_y), before)
         self.assertIsNone(enemy.target_x)
+        player.jump_height = player.previous_jump_height = 220
+        self.assertTrue(bodies_overlap(player, enemy))
+        resolve_bodies(player, [enemy])
+        self.assertFalse(bodies_overlap(player, enemy))
         player.x = enemy.x + enemy.facing * 80
         enemy.jump_height = 0  # Even the exact takeoff instant cannot be countered.
         self.assertFalse(can_counter(player, enemy))
+
+    def test_both_city_maps_apply_one_normal_club_hit_when_jumpers_meet(self):
+        for index in (2, 3):
+            for side in (-1, 1):
+                with self.subTest(stage=index, side=side):
+                    world, enemy = midair_encounter(index, side)
+                    world.step(config.FIXED_DT)
+                    self.assertEqual(world.player.hp, 440)
+                    self.assertEqual((enemy.attack_kind, enemy.animation.row), ("clubs", 4))
+                    self.assertTrue(enemy.air_contact_attack and enemy.has_hit)
+                    self.assertFalse(enemy.air_contact_pending)
+                    self.assertIsNone(enemy.leap_phase)
+                    self.assertGreater(enemy.jump_height, 0)
+                    self.assertFalse(bodies_overlap(world.player, enemy))
+                    self.assertEqual(len(world.effects), 1)
+                    self.assertEqual(world.effects[0].image_name, config.CLUB_HIT_IMAGE)
+                    advance(world, 0.7)
+                    self.assertEqual(world.player.hp, 440)  # No extra 80 on landing.
+                    self.assertEqual(enemy.jump_height, 0)
+
+    def test_midair_normal_hit_respects_invincibility_and_player_attack_priority(self):
+        world, enemy = midair_encounter()
+        world.player.invincible = True
+        world.step(config.FIXED_DT)
+        self.assertEqual(world.player.hp, 500)
+        self.assertTrue(enemy.has_hit)
+        self.assertFalse(world.effects)
+        world.player.invincible = False
+        advance(world, 0.5)
+        self.assertEqual(world.player.hp, 500)
+        for lethal in (False, True):
+            world, enemy = midair_encounter()
+            enemy.hp = 10 if lethal else 200
+            world.player.start_move(MOVES["combat_a"], -1)
+            world.player.animation.elapsed = 3 / MOVES["combat_a"].fps
+            world.step(config.FIXED_DT)
+            self.assertEqual(world.player.hp, 500)
+            self.assertEqual(enemy.hp, 0 if lethal else 190)
+            self.assertEqual(enemy.state, "DYING" if lethal else "HIT")
+            self.assertFalse(enemy.air_contact_pending)
+            self.assertEqual(len(world.effects), 1)
+            self.assertEqual(world.effects[0].image_name, config.PUNCH_KICK_HIT_IMAGE)
+
+    def test_depth_or_height_misses_do_not_trigger_an_air_contact_attack(self):
+        for depth, height in ((12, 0), (32, 0), (0, 200), (0, -200)):
+            with self.subTest(depth=depth, height=height):
+                world, enemy = midair_encounter()
+                world.player.ground_y += depth
+                world.player.previous_ground_y = world.player.ground_y
+                world.player.jump_height += height
+                world.player.previous_jump_height = world.player.jump_height
+                world.step(config.FIXED_DT)
+                self.assertTrue(enemy.leaping)
+                self.assertFalse(enemy.air_contact_attack)
+                self.assertEqual(world.player.hp, 500)
+
+    def test_swept_air_contact_catches_fast_crossing_without_false_axis_matches(self):
+        player, enemy = flying_enemy()
+        player.jump_height = player.previous_jump_height = 200
+        enemy.previous_jump_height = enemy.jump_height = 200
+        enemy.previous_x, enemy.x = player.x - 200, player.x + 200
+        contact = body_contact_time(player, enemy)
+        self.assertAlmostEqual(contact, (200 - 61) / 400)
+        self.assertTrue(enemy._resolve_leap_contact(player))
+        resolve_bodies(player, [enemy])
+        self.assertFalse(bodies_overlap(player, enemy))
+        self.assertLess(enemy.x, player.x)
+        self.assertTrue(enemy.try_hit(player))
+        self.assertEqual(player.hp, 440)
+        self.assertFalse(enemy.try_hit(player))
+        enemy.previous_x, enemy.x = player.x, player.x + 400
+        enemy.previous_jump_height, enemy.jump_height = 500, 200
+        self.assertIsNone(body_contact_time(player, enemy))
+
+    def test_actual_jump_meetings_have_the_same_result_at_all_render_rates(self):
+        for index in (2, 3):
+            for side in (-1, 1):
+                outcomes = []
+                for fps in (30, 60, 120, 144):
+                    world = World()
+                    world.stage_index = index
+                    world.stage.traffic = None
+                    enemy = Enemy02(world.player.x + side * 400, -side)
+                    world.enemies = [enemy]
+                    advance(world, 0.5, fps)
+                    world.controls.press("jump")
+                    for _ in range(fps):
+                        world.update(1 / fps)
+                        if enemy.air_contact_attack:
+                            self.assertFalse(bodies_overlap(world.player, enemy))
+                    self.assertEqual(world.player.hp, 440)
+                    outcomes.append((world.player.x, world.player.jump_height, world.player.state,
+                                     enemy.x, enemy.jump_height, enemy.state, enemy.attack_kind,
+                                     enemy.has_hit, enemy.leap_phase))
+                self.assertTrue(all(outcome == outcomes[0] for outcome in outcomes))
 
     def test_landing_cooldown_prevents_immediate_repeated_leaps(self):
         player, enemy = flying_enemy()

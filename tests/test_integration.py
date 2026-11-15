@@ -97,8 +97,7 @@ class IntegrationTests(unittest.TestCase):
                       **dict.fromkeys(config.WEAPON_POSE_IMAGES.values(), 6)}
         self.assertEqual(set(metadata), set(row_counts))
         for name, rows in metadata.items():
-            cell_width, cell_height = ((336, 352) if name in config.WEAPON_POSE_IMAGES.values()
-                                       else (384, 384) if name == config.ENEMY02_IMAGE else (256, 256))
+            cell_width, cell_height = (384, 384) if name == config.ENEMY02_IMAGE else (256, 256)
             self.assertTrue((config.ROOT / name).is_file())
             self.assertEqual(len(rows), row_counts[name])
             for row_index, row in enumerate(rows):

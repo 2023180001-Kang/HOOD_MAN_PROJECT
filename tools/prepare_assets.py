@@ -30,8 +30,7 @@ def main():
     metadata = {}
     for name, row_count in SHEETS.items():
         with Image.open(ROOT / name) as image:
-            cell_width, cell_height = ((336, 352) if name in config.WEAPON_POSE_IMAGES.values()
-                                       else (384, 384) if name == config.ENEMY02_IMAGE else (256, 256))
+            cell_width, cell_height = (384, 384) if name == config.ENEMY02_IMAGE else (256, 256)
             if image.size != (8 * cell_width, row_count * cell_height):
                 raise ValueError(f"Unexpected sprite grid: {name} {image.size}")
             rows = []

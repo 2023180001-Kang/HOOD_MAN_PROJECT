@@ -75,10 +75,10 @@ TITLE_IMAGE = "HOOD_MAN_TITLE_SCREEN_1280x720.png"
 TITLE_SCREEN_DURATION = 2.0
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 WEAPON_POSE_IMAGES = {
-    "combat_knife": "HOOD_MAN_DAGGER_Pose.png",
-    "steel_pipe": "HOOD_MAN_STEEL_PIPE_Pose.png",
+    "combat_knife": "HOOD_MAN_DAGGER_new.png",
+    "steel_pipe": "HOOD_MAN_STEEL_PIPE_new.png",
 }
-WEAPON_POSE_SCALE = 0.5  # 336x352 cells; match the original player's displayed size.
+WEAPON_POSE_SCALE = SPRITE_SCALE  # New 256x256 cells use the original player scale.
 WEAPON_POSE_ROWS = {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4,
                     "HIT": 5, "DYING": 6, "DEAD": 6}
 COMBAT_IMAGE = "HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png"

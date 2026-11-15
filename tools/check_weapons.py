@@ -76,7 +76,7 @@ def check_pose_frames(game):
         tap(game, pico2d.SDLK_g)
         player = world.player
         texture = game.assets.images[name]
-        assert (texture.w, texture.h) == (2688, 2112)
+        assert (texture.w, texture.h) == (2048, 1536)
         for facing in (-1, 1):
             player.facing = facing
             for state, row in (("IDLE", 1), ("WALK", 2), ("RUN", 3),
@@ -97,10 +97,11 @@ def check_pose_frames(game):
                     args = draw.call_args.args
                     assert args[:4] == tuple(tile["clip"])
                     assert args[5] == ("h" if facing < 0 else "")
-                    assert args[8:10] == (tile["clip"][2] * 0.5, tile["clip"][3] * 0.5)
+                    assert args[8:10] == (tile["clip"][2] * config.WEAPON_POSE_SCALE,
+                                         tile["clip"][3] * config.WEAPON_POSE_SCALE)
                     assert abs(args[7] - args[9] / 2 - player.y) < 1e-8
-    print("PASS: both equipped 336x352-cell sheets, all 6 rows x 8 frames x 2 facings, "
-          "exact clips/0.5 scale/feet alignment; HIT uses row 5 and death row 6.")
+    print("PASS: both new equipped 256x256-cell sheets, all 6 rows x 8 frames x 2 facings, "
+          "exact clips/0.75 scale/feet alignment; HIT uses row 5 and death row 6.")
 
 
 def check_air_drop_and_lifetime(game):

@@ -1,4 +1,4 @@
-"""Stage-local floor props with independent random layouts and looping sprites."""
+"""Stage-local weapons, initial floor layouts and gravity-driven discarded items."""
 
 from dataclasses import dataclass
 import random
@@ -13,6 +13,12 @@ class DropItem:
     ground_y: float
     facing: int = 1
     elapsed: float = 0.0
+    jump_height: float = 0.0
+    vy: float = 0.0
+
+    @property
+    def grounded(self):
+        return self.jump_height <= 0 and self.vy == 0
 
     @property
     def image_name(self):
@@ -24,6 +30,11 @@ class DropItem:
 
     def update(self, dt):
         self.elapsed += dt
+        if not self.grounded:
+            self.vy -= config.GRAVITY * dt
+            self.jump_height = max(0.0, self.jump_height + self.vy * dt)
+            if self.jump_height == 0:
+                self.vy = 0.0
 
 
 def spawn_drop_items(walkable, *, rng=None):

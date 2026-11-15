@@ -52,6 +52,19 @@ class UI:
                 assets.damage_font.draw(x + 1, y - 1, text, (12, 15, 20))
                 assets.damage_font.draw(x, y, text, (255, 224, 110))
 
+    def draw_pickup_prompt(self, assets, world, camera_x, camera_y):
+        if not self.details_visible or assets.font is None:
+            return
+        item = world.pickup_item
+        if item is None:
+            return
+        x = item.x - camera_x - 5
+        y = (item.ground_y - camera_y
+             + config.DROP_ITEM_BODY_HEIGHTS[item.kind] * config.DROP_ITEM_SCALE
+             + config.WEAPON_PROMPT_GAP)
+        assets.font.draw(x + 1, y - 1, "G", (12, 15, 20))
+        assets.font.draw(x, y, "G", (255, 224, 110))
+
     def draw(self, assets, world):
         import pico2d
 
@@ -92,7 +105,7 @@ class UI:
             assets.font.draw(22, 48, counter_help, (205, 218, 231))
             assets.font.draw(740, 48, "1~9: 해당 수만큼 적 소환 (좌우 무작위)", (205, 218, 231))
             assets.font.draw(22, 25,
-                             "← → ↑ ↓ 이동   Shift 달리기   Space 이단 점프   F5 다시 시작",
+                             "← → ↑ ↓ 이동   Shift 달리기   Space 이단 점프   G 획득/버리기   F5 재시작",
                              (205, 218, 231))
             mode = "ON" if world.player.invincible else "OFF"
             assets.font.draw(740, 25, f"N 이동 화살표   P 무적: {mode}   U 설명 숨김/표시",

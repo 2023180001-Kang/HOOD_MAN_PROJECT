@@ -22,6 +22,7 @@ SHEETS = {
     config.COUNTER_ENEMY_IMAGE: 4,
     config.PLAYER_CAR_HIT_IMAGE: 1,
     config.ENEMY_CAR_HIT_IMAGE: 1,
+    **dict.fromkeys(config.WEAPON_POSE_IMAGES.values(), 6),
 }
 
 
@@ -29,21 +30,22 @@ def main():
     metadata = {}
     for name, row_count in SHEETS.items():
         with Image.open(ROOT / name) as image:
-            cell_size = 384 if name == config.ENEMY02_IMAGE else 256
-            if image.size != (8 * cell_size, row_count * cell_size):
+            cell_width, cell_height = ((336, 352) if name in config.WEAPON_POSE_IMAGES.values()
+                                       else (384, 384) if name == config.ENEMY02_IMAGE else (256, 256))
+            if image.size != (8 * cell_width, row_count * cell_height):
                 raise ValueError(f"Unexpected sprite grid: {name} {image.size}")
             rows = []
             for row in range(row_count):
                 frames = []
-                bounds = [image.crop((col * cell_size, row * cell_size,
-                                      (col + 1) * cell_size, (row + 1) * cell_size)).getbbox()
+                bounds = [image.crop((col * cell_width, row * cell_height,
+                                      (col + 1) * cell_width, (row + 1) * cell_height)).getbbox()
                           for col in range(8)]
                 ground_anchor = max(box[3] for box in bounds)
                 for col, (left, top, right, bottom) in enumerate(bounds):
                     frame = {
-                        "clip": [col * cell_size + left, image.height - row * cell_size - bottom,
+                        "clip": [col * cell_width + left, image.height - row * cell_height - bottom,
                                  right - left, bottom - top],
-                        "offset_x": (left + right) / 2 - cell_size / 2,
+                        "offset_x": (left + right) / 2 - cell_width / 2,
                     }
                     if name == config.ENEMY02_IMAGE and row == 4:
                         # Keep the source-pose lift for inspection. The leap

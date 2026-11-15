@@ -31,6 +31,7 @@ class Player:
         self.hp = config.MAX_HP
         self.invincible = False
         self.car_hit = False
+        self.weapon = None
         self.active_move = None
         self.counter_move = None
         self.hit_enemies = set()
@@ -66,7 +67,15 @@ class Player:
             return config.PLAYER_CAR_HIT_IMAGE
         if self.counter_move is not None:
             return config.COUNTER_PLAYER_IMAGE
-        return config.COMBAT_IMAGE if self.active_move is not None else config.PLAYER_IMAGE
+        if self.active_move is not None:
+            return config.COMBAT_IMAGE
+        return config.WEAPON_POSE_IMAGES.get(self.weapon, config.PLAYER_IMAGE)
+
+    @property
+    def sprite_row(self):
+        if self.sprite_image in config.WEAPON_POSE_IMAGES.values():
+            return config.WEAPON_POSE_ROWS[self.state]
+        return self.animation.row
 
     def cancel_combat(self):
         self.active_move = None

@@ -7,8 +7,10 @@ from camera import Camera
 from collision import resolve_bodies
 from controls import Controls
 from counter import COUNTERS, CounterSequence, can_counter
+from drop_items import DropItem
 from effects import DamageNumber, HitEffect
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
+from physics import clamp
 from player import Player
 from stage import Stage
 
@@ -79,6 +81,51 @@ class World:
     def spawner(self):
         return self.stage.spawner
 
+    @property
+    def pickup_item(self):
+        player = self.player
+        if (self.stage_loading or not player.alive or not player.grounded
+                or player.counter_move is not None):
+            return None
+        candidates = [item for item in self.stage.drop_items if item.grounded
+                      and abs(item.x - player.x) <= config.WEAPON_PICKUP_RANGE
+                      and abs(item.ground_y - player.ground_y) <= config.WEAPON_PICKUP_DEPTH]
+        return min(candidates, key=lambda item: (item.x - player.x) ** 2
+                   + (item.ground_y - player.ground_y) ** 2, default=None)
+
+    def drop_weapon(self, kind):
+        player = self.player
+        area = self.stage.drop_spawn_area
+        x, ground_y = area.project(player.x, player.ground_y, config.DROP_ITEM_HALF_WIDTH)
+        left, bottom, right, top = area.bounds
+        exit_edge = (config.STAGE_EXIT_MARGIN + config.STAGE_ARROW_WIDTH / 2
+                     + config.STAGE_ARROW_SWAY_AMPLITUDE + config.DROP_ITEM_EXIT_GAP)
+        x = clamp(x, max(left, exit_edge) + config.DROP_ITEM_HALF_WIDTH,
+                  min(right, config.WORLD_WIDTH - exit_edge) - config.DROP_ITEM_HALF_WIDTH)
+        ground_y = clamp(ground_y, bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH,
+                         top - config.DROP_ITEM_HEIGHT)
+        item = DropItem(kind, x, ground_y, player.facing,
+                        jump_height=max(0.0, player.y + config.WEAPON_DROP_HAND_HEIGHT - ground_y))
+        self.stage.drop_items.append(item)
+        return item
+
+    def interact_weapon(self):
+        player = self.player
+        if self.stage_loading or not player.alive or player.counter_move is not None:
+            return False
+        item = self.pickup_item
+        if item is not None:
+            if player.weapon is not None:
+                self.drop_weapon(player.weapon)
+            self.stage.drop_items.remove(item)
+            player.weapon = item.kind
+            return True
+        if player.weapon is not None:
+            self.drop_weapon(player.weapon)
+            player.weapon = None
+            return True
+        return False
+
     def update(self, dt):
         if self.controls.take_press("restart"):
             self.reset()
@@ -115,6 +162,8 @@ class World:
         if self.controls.take_press("stage_exits") and self.player.alive:
             self.stage.arrows_visible = True
         self.stage.constrain_actor(self.player)
+        if self.controls.take_press("weapon_interact"):
+            self.interact_weapon()
         self.try_stage_transition()
         if self.stage_loading:
             return

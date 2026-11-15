@@ -93,10 +93,12 @@ class IntegrationTests(unittest.TestCase):
         row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.ENEMY02_IMAGE: 7,
                       config.COMBAT_IMAGE: 4,
                       config.COUNTER_PLAYER_IMAGE: 4, config.COUNTER_ENEMY_IMAGE: 4,
-                      config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1}
+                      config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1,
+                      **dict.fromkeys(config.WEAPON_POSE_IMAGES.values(), 6)}
         self.assertEqual(set(metadata), set(row_counts))
         for name, rows in metadata.items():
-            cell_size = 384 if name == config.ENEMY02_IMAGE else 256
+            cell_width, cell_height = ((336, 352) if name in config.WEAPON_POSE_IMAGES.values()
+                                       else (384, 384) if name == config.ENEMY02_IMAGE else (256, 256))
             self.assertTrue((config.ROOT / name).is_file())
             self.assertEqual(len(rows), row_counts[name])
             for row_index, row in enumerate(rows):
@@ -105,10 +107,10 @@ class IntegrationTests(unittest.TestCase):
                     left, bottom, width, height = frame["clip"]
                     self.assertGreater(width, 0)
                     self.assertGreater(height, 0)
-                    self.assertGreaterEqual(left, col_index * cell_size)
-                    self.assertLessEqual(left + width, (col_index + 1) * cell_size)
-                    self.assertGreaterEqual(bottom, (row_counts[name] - 1 - row_index) * cell_size)
-                    self.assertLessEqual(bottom + height, (row_counts[name] - row_index) * cell_size)
+                    self.assertGreaterEqual(left, col_index * cell_width)
+                    self.assertLessEqual(left + width, (col_index + 1) * cell_width)
+                    self.assertGreaterEqual(bottom, (row_counts[name] - 1 - row_index) * cell_height)
+                    self.assertLessEqual(bottom + height, (row_counts[name] - row_index) * cell_height)
 
     def test_enemy02_lift_matches_the_source_feet_without_a_second_render_offset(self):
         from PIL import Image

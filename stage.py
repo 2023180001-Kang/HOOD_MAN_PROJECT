@@ -76,7 +76,8 @@ class Stage:
             )
         # Flat floor props stay underneath characters, vehicles and exit markers.
         for item in self.drop_items:
-            assets.draw_drop_item(item, camera_x, camera_y)
+            if item.grounded:
+                assets.draw_drop_item(item, camera_x, camera_y)
         sway = (sin(tau * elapsed / config.STAGE_ARROW_SWAY_PERIOD)
                 * config.STAGE_ARROW_SWAY_AMPLITUDE)
         for side in self.arrow_sides:

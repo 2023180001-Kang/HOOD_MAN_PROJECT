@@ -25,6 +25,7 @@ KEYS = {
     pico2d.SDLK_n: "stage_exits",
     pico2d.SDLK_p: "invincibility",
     pico2d.SDLK_u: "toggle_details",
+    pico2d.SDLK_g: "weapon_interact",
 }
 KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
              for key, *_ in config.COMBAT_MOVE_SPECS})
@@ -110,19 +111,25 @@ class Game:
         sprites = [(enemy.ground_y, enemy, enemy.sprite_image, enemy.opacity)
                    for enemy in self.world.enemies]
         sprites.append((player.ground_y, player, player.sprite_image, 1.0))
+        sprites.extend((item.ground_y, item, item.image_name, 1.0)
+                       for item in self.world.stage.drop_items if not item.grounded)
         traffic = self.world.stage.traffic
         if traffic is not None and traffic.car is not None:
             sprites.append((traffic.car.ground_y, traffic.car, config.CAR_IMAGE, 1.0))
         for _, actor, image, opacity in sorted(sprites, key=lambda entry: entry[0], reverse=True):
             if image == config.CAR_IMAGE:
                 self.assets.draw_car(actor, camera_x, camera_y)
+            elif image in config.DROP_ITEM_IMAGES.values():
+                self.assets.draw_drop_item(actor, camera_x, camera_y)
             else:
-                self.assets.draw_sprite(image, actor.animation.row, actor.animation.frame,
+                row = player.sprite_row if actor is player else actor.animation.row
+                self.assets.draw_sprite(image, row, actor.animation.frame,
                                         actor.x - camera_x, actor.y - camera_y, actor.facing,
                                         opacity=opacity)
         for effect in self.world.effects:
             self.assets.draw_hit_effect(effect, camera_x, camera_y)
         self.ui.draw_enemy_health(self.assets, self.world, camera_x, camera_y)
+        self.ui.draw_pickup_prompt(self.assets, self.world, camera_x, camera_y)
         self.ui.draw(self.assets, self.world)
         if present:
             pico2d.update_canvas()

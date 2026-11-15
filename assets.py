@@ -20,6 +20,7 @@ class Assets:
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.HP_IMAGE,
                          *config.HIT_EFFECT_IMAGES,
                          *config.DROP_ITEM_IMAGES.values(),
+                         *config.WEAPON_POSE_IMAGES.values(),
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
@@ -32,7 +33,8 @@ class Assets:
     def draw_sprite(self, name, row, frame, x, feet_y, facing=1, opacity=1.0):
         tile = self.frames[name][row - 1][frame]
         left, bottom, width, height = tile["clip"]
-        scale = config.SPRITE_SCALE
+        scale = (config.WEAPON_POSE_SCALE if name in config.WEAPON_POSE_IMAGES.values()
+                 else config.SPRITE_SCALE)
         image = self.images[name]
         fading = opacity < 1.0
         if fading:
@@ -88,7 +90,8 @@ class Assets:
         top = config.DROP_ITEM_BODY_TOPS[item.kind][item.frame]
         image.clip_composite_draw(
             left, image.h - top - height, width, height,
-            0, flip, x, ground_y + height * scale / 2, width * scale, height * scale,
+            0, flip, x, ground_y + item.jump_height + height * scale / 2,
+            width * scale, height * scale,
         )
 
     def draw_hit_effect(self, effect, camera_x, camera_y):

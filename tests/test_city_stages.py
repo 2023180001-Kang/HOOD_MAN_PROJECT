@@ -22,18 +22,19 @@ class CityStageTests(unittest.TestCase):
         world.controls.press("left_shift")
         return world
 
-    def test_six_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
+    def test_eight_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
         world = World()
         self.assertEqual([stage.image_name for stage in world.stages],
                          ["newStage.png", "newStage-2.png", "cityStage-1.png", "cityStage-2.png",
-                          config.FACTORY_OUTSIDE_IMAGE, config.FACTORY_EXTERIOR_IMAGE])
+                          config.FACTORY_OUTSIDE_IMAGE, config.FACTORY_EXTERIOR_IMAGE,
+                          "factoryInside-1.png", "factoryStage-2.png"])
         for index, stage in enumerate(world.stages):
             stage.arrows_visible = True
             self.assertEqual(stage.destination(-1), index - 1 if index else None)
             self.assertEqual(stage.destination(1), index + 1 if index < len(world.stages) - 1 else None)
 
     def test_travel_inside_each_pair_preserves_motion_without_loading(self):
-        for first in (0, 2, 4):
+        for first in (0, 2, 4, 6):
             for side in (-1, 1):
                 with self.subTest(first=first, side=side):
                     world = self.at_exit(first if side > 0 else first + 1, side)
@@ -159,7 +160,7 @@ class CityStageTests(unittest.TestCase):
                 self.assertEqual(player.previous_x, player.x)
                 self.assertFalse(world.try_stage_transition())
 
-    def test_f5_cancels_loading_and_resets_all_six_stages(self):
+    def test_f5_cancels_loading_and_resets_all_stages(self):
         world = self.at_exit()
         for stage in world.stages:
             stage.arrows_visible = True
@@ -213,8 +214,9 @@ class CityStageTests(unittest.TestCase):
                 self.assertGreater(enemy.ground_y - config.CAR_GROUND_Y, config.CAR_DEPTH_TOLERANCE)
                 self.assertIs(enemy.walkable, stage.walkable)
                 self.assertEqual(enemy.hp, config.ENEMY_MAX_HP)
-            for index in (0, 1, 3, 4, 5):
-                self.assertIs(world.stages[index].spawn_area, world.stages[index].walkable)
+            for index, other in enumerate(world.stages):
+                if index != 2:
+                    self.assertIs(other.spawn_area, other.walkable)
             world.reset()
 
     def test_cars_at_spawn_edges_do_not_run_over_newly_summoned_sidewalk_enemies(self):

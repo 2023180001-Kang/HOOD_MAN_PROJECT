@@ -26,8 +26,8 @@ def place_car(world, direction=1, *, x=None, speed=600):
 class TrafficTests(unittest.TestCase):
     def test_only_city_stage_one_has_traffic_and_it_waits_before_the_first_pass(self):
         world = World()
-        self.assertEqual([stage.traffic is not None for stage in world.stages],
-                         [False, False, True, False, False, False])
+        self.assertEqual([index for index, stage in enumerate(world.stages)
+                          if stage.traffic is not None], [2])
         traffic = world.stages[2].traffic
         traffic.update(config.CAR_INITIAL_DELAY - config.FIXED_DT)
         self.assertIsNone(traffic.car)

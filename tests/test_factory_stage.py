@@ -9,9 +9,9 @@ from tests.helpers import advance
 from world import World
 
 
-def at_factory_boundary(side=1):
+def at_factory_boundary(side=1, first=3):
     world = World()
-    world.stage_index = 3 if side > 0 else 4
+    world.stage_index = first if side > 0 else first + 1
     world.stage.arrows_visible = True
     world.player.x = (config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN if side > 0
                       else config.STAGE_EXIT_MARGIN)
@@ -22,10 +22,10 @@ def at_factory_boundary(side=1):
 
 
 class FactoryStageTests(unittest.TestCase):
-    def test_city_factory_boundary_waits_two_seconds_and_preserves_the_same_player_both_ways(self):
-        for side in (-1, 1):
-            with self.subTest(side=side):
-                world = at_factory_boundary(side)
+    def test_factory_zone_boundaries_wait_two_seconds_and_preserve_the_same_player_both_ways(self):
+        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1)):
+            with self.subTest(first=first, side=side):
+                world = at_factory_boundary(side, first)
                 source = world.stage_index
                 player = world.player
                 player.hp, player.invincible = 420, True
@@ -49,38 +49,40 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertFalse(world.try_stage_transition())
 
     def test_factory_loading_freezes_both_maps_and_discards_actions_without_losing_held_movement(self):
-        world = at_factory_boundary()
-        city, factory = world.stages[3:5]
-        for stage in (city, factory):
-            stage.enemies.append(Enemy(1500))
-            stage.effects.append(HitEffect(1500, 180, 1))
-            stage.damage_numbers.append(DamageNumber(1500, 250, 40))
-        self.assertTrue(world.try_stage_transition())
-        for action in ("jump", "combat_a", "counter_j", "spawn_9", "invincibility", "stage_exits"):
-            world.controls.press(action)
-        advance(world, 1.9)
-        self.assertEqual(world.elapsed, 0)
-        for stage in (city, factory):
-            self.assertEqual(stage.enemies[0].x, 1500)
-            self.assertEqual(stage.enemies[0].animation.elapsed, 0)
-            self.assertEqual(stage.effects[0].elapsed, 0)
-            self.assertEqual(stage.damage_numbers[0].elapsed, 0)
-        self.assertFalse(world.controls.pressed)
-        world.update(0.1)
-        self.assertIs(world.stage, factory)
-        self.assertIn("right", world.controls.held)
-        self.assertIn("left_shift", world.controls.held)
-        self.assertFalse(factory.arrows_visible)
-        world.update(config.FIXED_DT)
-        self.assertIsNone(world.player.active_move)
-        self.assertIsNone(world.counter)
-        self.assertEqual(len(world.enemies), 1)
-        self.assertEqual(world.player.jump_count, 0)
-        self.assertFalse(world.player.invincible)
+        for first in (3, 5):
+            with self.subTest(first=first):
+                world = at_factory_boundary(first=first)
+                source, target = world.stages[first:first + 2]
+                for stage in (source, target):
+                    stage.enemies.append(Enemy(1500))
+                    stage.effects.append(HitEffect(1500, 180, 1))
+                    stage.damage_numbers.append(DamageNumber(1500, 250, 40))
+                self.assertTrue(world.try_stage_transition())
+                for action in ("jump", "combat_a", "counter_j", "spawn_9", "invincibility", "stage_exits"):
+                    world.controls.press(action)
+                advance(world, 1.9)
+                self.assertEqual(world.elapsed, 0)
+                for stage in (source, target):
+                    self.assertEqual(stage.enemies[0].x, 1500)
+                    self.assertEqual(stage.enemies[0].animation.elapsed, 0)
+                    self.assertEqual(stage.effects[0].elapsed, 0)
+                    self.assertEqual(stage.damage_numbers[0].elapsed, 0)
+                self.assertFalse(world.controls.pressed)
+                world.update(0.1)
+                self.assertIs(world.stage, target)
+                self.assertIn("right", world.controls.held)
+                self.assertIn("left_shift", world.controls.held)
+                self.assertFalse(target.arrows_visible)
+                world.update(config.FIXED_DT)
+                self.assertIsNone(world.player.active_move)
+                self.assertIsNone(world.counter)
+                self.assertEqual(len(world.enemies), 1)
+                self.assertEqual(world.player.jump_count, 0)
+                self.assertFalse(world.player.invincible)
 
-    def test_f5_during_factory_loading_cancels_the_destination_and_clears_all_six_maps(self):
-        for side in (-1, 1):
-            world = at_factory_boundary(side)
+    def test_f5_during_factory_loading_cancels_the_destination_and_clears_all_maps(self):
+        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1)):
+            world = at_factory_boundary(side, first)
             for stage in world.stages:
                 stage.arrows_visible = True
                 stage.enemies.extend(stage.spawner.spawn(2, 0))
@@ -88,7 +90,7 @@ class FactoryStageTests(unittest.TestCase):
             world.update(1)
             world.controls.press("restart")
             world.update(1 / 60)
-            self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 6))
+            self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 8))
             self.assertIsNone(world.pending_stage_index)
             self.assertTrue(all(not stage.enemies and not stage.arrows_visible for stage in world.stages))
             advance(world, 2.5)
@@ -112,18 +114,20 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertGreaterEqual(max(right for _, right in rectangles), config.SCREEN_WIDTH)
 
     def test_factory_loading_completion_is_identical_at_different_render_rates(self):
-        results = []
-        for fps in (30, 60, 120, 144):
-            world = at_factory_boundary()
-            world.try_stage_transition()
-            for _ in range(2 * fps - 1):
-                world.update(1 / fps)
-            self.assertTrue(world.stage_loading)
-            world.update(1 / fps)
-            self.assertFalse(world.stage_loading)
-            results.append((world.stage_index, world.player.x, world.player.vx,
-                            world.player.ground_y, world.elapsed, world.accumulator))
-        self.assertTrue(all(result == results[0] for result in results))
+        for first in (3, 5):
+            with self.subTest(first=first):
+                results = []
+                for fps in (30, 60, 120, 144):
+                    world = at_factory_boundary(first=first)
+                    world.try_stage_transition()
+                    for _ in range(2 * fps - 1):
+                        world.update(1 / fps)
+                    self.assertTrue(world.stage_loading)
+                    world.update(1 / fps)
+                    self.assertFalse(world.stage_loading)
+                    results.append((world.stage_index, world.player.x, world.player.vx,
+                                    world.player.ground_y, world.elapsed, world.accumulator))
+                self.assertTrue(all(result == results[0] for result in results))
 
     def test_factory_exterior_round_trip_preserves_objects_and_projects_only_the_ground(self):
         world = World()
@@ -149,7 +153,7 @@ class FactoryStageTests(unittest.TestCase):
                          (420, True, 100, 140, 300, 2, config.RUN_SPEED))
         exterior = world.stage
         exterior.arrows_visible = True
-        self.assertIsNone(exterior.destination(1))
+        self.assertEqual(exterior.destination(1), 6)
         exterior.enemies.extend(exterior.spawner.spawn(2, 0))
         world.controls.release("right")
         world.controls.press("left")

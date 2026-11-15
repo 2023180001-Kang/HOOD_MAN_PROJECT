@@ -16,10 +16,20 @@ from world import World
 
 def at_frame(kind, frame, *, side=1):
     player = Player()
-    enemy = Enemy02(player.x + side * 80, -side)
-    enemy.rng = Mock()
-    enemy.rng.choice.return_value = kind
-    enemy.start_attack()
+    enemy = Enemy02(player.x + side * (400 if kind == "slam" else 80), -side)
+    if kind == "slam":
+        assert enemy.start_leap(player)
+        if frame >= 2:
+            while enemy.leap_phase == "WINDUP":
+                enemy.update(config.FIXED_DT, player)
+            if frame in (2, 3):
+                target_time = enemy.leap_duration * (0.25 if frame == 2 else 0.75)
+                enemy.update(target_time - enemy.leap_elapsed, player)
+            else:
+                while enemy.leap_phase != "LANDING":
+                    enemy.update(config.FIXED_DT, player)
+    else:
+        enemy.start_attack()
     enemy.animation.elapsed = (frame + 0.05) / enemy.attack_fps
     enemy.update(0, player)
     return player, enemy
@@ -43,28 +53,23 @@ class Enemy02Tests(unittest.TestCase):
             world.update(config.FIXED_DT)
             world.controls.release("restart")
 
-    def test_ai_randomizes_once_at_each_attack_start_and_keeps_the_choice_until_recovery(self):
-        rng = Mock(wraps=random.Random(9))
-        player = Player()
-        enemy = Enemy02(player.x + 80, -1, rng=rng)
-        choices = set()
-        for attack in range(64):
-            enemy.cooldown = 0
+    def test_ai_selects_close_clubs_or_medium_range_leap_and_commits_until_recovery(self):
+        for kind, gap, row, damage in (("clubs", 80, 4, 60), ("slam", 400, 5, 80)):
+            player = Player()
+            rng = Mock(wraps=random.Random(9))
+            enemy = Enemy02(player.x + gap, -1, rng=rng)
             enemy.update(config.FIXED_DT, player)
             self.assertEqual(enemy.state, "ATTACK")
-            self.assertEqual(rng.choice.call_count, attack + 1)
-            kind, row, damage = enemy.attack_kind, enemy.animation.row, enemy.attack_damage
-            self.assertIn((kind, row, damage), (("clubs", 4, 60), ("slam", 5, 80)))
-            choices.add(kind)
-            for _ in range(160):
+            self.assertEqual((enemy.attack_kind, enemy.animation.row, enemy.attack_damage),
+                             (kind, row, damage))
+            for _ in range(320):
                 enemy.update(config.FIXED_DT, player)
                 self.assertEqual((enemy.attack_kind, enemy.attack_damage), (kind, damage))
-                self.assertEqual(rng.choice.call_count, attack + 1)
                 if enemy.state != "ATTACK":
                     break
                 self.assertEqual(enemy.animation.row, row)
             self.assertEqual((enemy.state, enemy.jump_height), ("IDLE", 0))
-        self.assertEqual(choices, {"clubs", "slam"})
+            self.assertEqual(rng.choice.call_count, 0)
 
     def test_dual_club_motion_deals_sixty_once_across_both_swings(self):
         for side in (-1, 1):
@@ -80,13 +85,16 @@ class Enemy02Tests(unittest.TestCase):
             self.assertTrue(enemy.try_hit(player))
             self.assertEqual(player.hp, 380)
 
-    def test_jump_uses_real_source_lift_and_hits_only_after_landing_for_eighty(self):
-        for frame, height in enumerate((0, 0, 36, 19.5, 0, 0, 0, 0)):
+    def test_flight_height_and_landing_frames_gate_eighty_damage(self):
+        for frame in range(8):
             with self.subTest(frame=frame):
                 player, enemy = at_frame("slam", frame)
-                self.assertEqual(enemy.jump_height, height)
-                self.assertEqual(enemy.y, enemy.ground_y + height)
-                self.assertEqual(enemy.body.bottom, config.GROUND_Y + height)
+                if frame in (2, 3):
+                    self.assertGreater(enemy.jump_height, 200)
+                else:
+                    self.assertEqual(enemy.jump_height, 0)
+                self.assertEqual(enemy.y, enemy.ground_y + enemy.jump_height)
+                self.assertEqual(enemy.body.bottom, config.GROUND_Y + enemy.jump_height)
                 self.assertEqual(enemy.try_hit(player), frame in (5, 6))
                 self.assertEqual(player.hp, 420 if frame in (5, 6) else 500)
         player, enemy = at_frame("slam", 5)
@@ -115,16 +123,9 @@ class Enemy02Tests(unittest.TestCase):
     def test_four_mixed_attacks_apply_each_enemys_damage_once_in_the_same_update(self):
         world = World(rng=random.Random(38))
         world.stage_index = 3
-        for index, enemy in enumerate(world.enemies):
-            enemy.x = world.player.x + (-80 if index < 2 else 80)
-            enemy.previous_x = enemy.x
-            enemy.ground_y = enemy.previous_ground_y = world.player.ground_y
-            enemy.facing = 1 if index < 2 else -1
-            enemy.rng = Mock()
-            enemy.rng.choice.return_value = "clubs" if index % 2 == 0 else "slam"
-            enemy.start_attack()
-            frame = 3 if enemy.attack_kind == "clubs" else 5
-            enemy.animation.elapsed = (frame + 0.05) / enemy.attack_fps
+        world.enemies = [at_frame("clubs" if index % 2 == 0 else "slam",
+                                  3 if index % 2 == 0 else 5,
+                                  side=-1 if index < 2 else 1)[1] for index in range(4)]
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.hp, 220)  # 500 - 60 - 80 - 60 - 80.
         self.assertTrue(all(enemy.has_hit for enemy in world.enemies))
@@ -135,6 +136,7 @@ class Enemy02Tests(unittest.TestCase):
     def test_counter_window_excludes_the_airborne_frames_of_the_slam(self):
         for frame, allowed in ((0, False), (1, True), (2, False), (3, False), (4, True), (6, False)):
             player, enemy = at_frame("slam", frame)
+            player.x = enemy.x + enemy.facing * 80
             self.assertEqual(can_counter(player, enemy), allowed)
 
     def test_interruptions_end_damage_and_fall_instead_of_leaving_a_floating_enemy(self):
@@ -151,7 +153,8 @@ class Enemy02Tests(unittest.TestCase):
                     player.take_damage(500)
                 else:
                     enemy.hit_by_car(1)
-                for _ in range(30):
+                enemy.cooldown = 10  # Inspect the cancellation without another attack.
+                for _ in range(180):
                     enemy.update(config.FIXED_DT, player)
                     self.assertIsNone(enemy.attack_box)
                     self.assertEqual(enemy.sprite_image, config.ENEMY02_IMAGE)
@@ -201,14 +204,18 @@ class Enemy02Tests(unittest.TestCase):
         advance(world, 1)
         self.assertEqual((enemy.state, enemy.animation.row, enemy.animation.frame), ("DEAD", 7, 7))
 
-    def test_combat_randomness_is_private_and_cannot_change_later_spawn_sides(self):
+    def test_leap_planning_cannot_change_other_enemies_or_later_spawn_sides(self):
         first, second = (World(rng=random.Random(91)) for _ in range(2))
         for world in (first, second):
             world.stage_index = 3
         enemy = first.enemies[0]
         other_state = first.enemies[1].rng.getstate()
-        for _ in range(64):
-            enemy.start_attack()
+        for _ in range(8):
+            enemy.x = enemy.previous_x = first.player.x + 400
+            enemy.cooldown = enemy.leap_cooldown = 0
+            self.assertTrue(enemy.start_leap(first.player))
+            while enemy.leap_phase is not None:
+                enemy.update(config.FIXED_DT, first.player)
         self.assertEqual(first.enemies[1].rng.getstate(), other_state)
         batches = [world.spawner.spawn(4, 0) for world in (first, second)]
         self.assertEqual([(actor.x, actor.ground_y, actor.attack_speed) for actor in batches[0]],

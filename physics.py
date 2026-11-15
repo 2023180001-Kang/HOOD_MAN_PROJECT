@@ -7,6 +7,12 @@ def clamp(value, lower, upper):
     return max(lower, min(value, upper))
 
 
+def jump_apex(speed, gravity, dt):
+    """Peak of the player's fixed-step, velocity-first vertical integration."""
+    steps = int(speed / (gravity * dt))
+    return speed * dt * steps - gravity * dt * dt * steps * (steps + 1) / 2
+
+
 def approach(value, target, amount):
     if value < target:
         return min(value + amount, target)

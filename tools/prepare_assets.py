@@ -46,8 +46,8 @@ def main():
                         "offset_x": (left + right) / 2 - cell_size / 2,
                     }
                     if name == config.ENEMY02_IMAGE and row == 4:
-                        # The fifth row's lift drives real jump/collision height.
-                        # Do not also add offset_y when drawing that attack.
+                        # Keep the source-pose lift for inspection. The leap
+                        # controller owns actual height; do not add offset_y too.
                         frame["jump_height"] = ground_anchor - bottom
                     elif name in (config.ENEMY02_IMAGE,
                                   config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,

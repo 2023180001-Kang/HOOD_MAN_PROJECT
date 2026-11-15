@@ -36,7 +36,7 @@ def resolve_bodies(player, enemies, walkable=None):
         # Keep the choreographed pair fixed; other actors yield to the player.
         separation = config.PLAYER_HALF_WIDTH + config.ENEMY_HALF_WIDTH
         for enemy in enemies:
-            if not enemy.alive or enemy.counter_move is not None or not bodies_overlap(player, enemy):
+            if not enemy.blocks_movement or enemy.counter_move is not None or not bodies_overlap(player, enemy):
                 continue
             side = (1 if enemy.x > player.x else -1) if enemy.x != player.x else -enemy.facing
             enemy.x = player.x + side * separation
@@ -45,7 +45,7 @@ def resolve_bodies(player, enemies, walkable=None):
     # A vertical approach should stop at the footprint edge, rather than turn
     # into a horizontal wall or allow walking through a different floor lane.
     for enemy in enemies:
-        if not enemy.alive or not bodies_overlap(player, enemy):
+        if not enemy.blocks_movement or not bodies_overlap(player, enemy):
             continue
         previous_depth = enemy.previous_ground_y - player.previous_ground_y
         if abs(previous_depth) >= config.BODY_DEPTH_TOLERANCE - 1e-9:
@@ -64,7 +64,7 @@ def resolve_bodies(player, enemies, walkable=None):
     room_low, room_high = low, high
     colliders = []
     for enemy in enemies:
-        if not enemy.alive:
+        if not enemy.blocks_movement:
             continue
         if not player.body.overlaps_vertically(enemy.body):
             continue

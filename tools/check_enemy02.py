@@ -1,10 +1,10 @@
-"""Verify city spawns, both enemy02 attacks and reactions in an actual SDL window."""
+"""Verify city spawns, ranged leap slams and reactions in an actual SDL window."""
 
 from pathlib import Path
 import random
 import sys
 from time import perf_counter
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -13,7 +13,7 @@ import pico2d
 
 import config
 from enemy import Enemy
-from enemy02 import Enemy02
+from enemy02 import Enemy02, leap_height
 from game import Game
 from tools.check_counters import release, start_follow_up, wait_for_hold
 from tools.check_render import capture
@@ -22,22 +22,32 @@ from traffic import Car
 from world import World
 
 
-def encounter(game, kind="clubs", side=1):
+def encounter(game, kind="clubs", side=1, *, start=True):
     game.world = World(rng=random.Random(23))
     world = game.world
     world.stage_index = 3
     enemy = world.enemies[0]
     world.enemies = [enemy]  # Isolate the selected attack's pixels and exact damage.
-    enemy.x = enemy.previous_x = world.player.x + side * 80
+    enemy.x = enemy.previous_x = world.player.x + side * (400 if kind == "slam" else 80)
     enemy.ground_y = enemy.previous_ground_y = world.player.ground_y
     enemy.facing = -side
-    enemy.rng = Mock()
-    enemy.rng.choice.return_value = kind
-    enemy.start_attack()
+    if start and kind == "slam":
+        assert enemy.start_leap(world.player)
+    elif start:
+        enemy.start_attack()
     return world, enemy
 
 
 def set_frame(world, enemy, frame):
+    if enemy.attack_kind == "slam" and frame >= 2:
+        while enemy.leap_phase == "WINDUP":
+            enemy.update(config.FIXED_DT, world.player)
+        if frame in (2, 3):
+            target_time = enemy.leap_duration * (0.25 if frame == 2 else 0.75)
+            enemy.update(max(0.0, target_time - enemy.leap_elapsed), world.player)
+        else:
+            while enemy.leap_phase != "LANDING":
+                enemy.update(config.FIXED_DT, world.player)
     enemy.animation.elapsed = (frame + 0.05) / enemy.attack_fps
     enemy.update(0, world.player)
 
@@ -82,10 +92,78 @@ def check_attack_rendering(game):
                 assert args[:4] == tuple(tile["clip"])
                 assert args[5] == ("h" if side > 0 else "")
                 assert abs(args[7] - args[9] / 2 - enemy.y) < 1e-8
-                height = (36 if frame == 2 else 19.5 if frame == 3 else 0) if kind == "slam" else 0
-                assert enemy.jump_height == height
+                height = leap_height() * 0.75 if kind == "slam" and frame in (2, 3) else 0
+                assert abs(enemy.jump_height - height) < 1e-7
     print("PASS: both source attack rows, 8 frames x 2 facings, exact clips/flips and real "
-          "36/19.5px airborne feet without a doubled render offset.")
+          "high-flight feet without a doubled render offset or premature landing pose.")
+
+
+def check_tracking_leap(game):
+    game.world = World()
+    game.world.stage_index = 3
+    game.world.enemies.clear()
+    push_key(pico2d.SDLK_SPACE)
+    tick(game)
+    while game.world.player.vy > 0:
+        tick(game)
+    release(game, pico2d.SDLK_SPACE)
+    push_key(pico2d.SDLK_SPACE)
+    tick(game)
+    reference_peak = game.world.player.jump_height
+    while game.world.player.vy > 0:
+        tick(game)
+        reference_peak = max(reference_peak, game.world.player.jump_height)
+    capture(game, "enemy02_player_double_jump_reference")
+    release(game, pico2d.SDLK_SPACE)
+    peaks = []
+    for side in (-1, 1):
+        world, enemy = encounter(game, "slam", side, start=False)
+        tick(game)
+        assert enemy.leap_phase == "WINDUP" and enemy.attack_kind == "slam"
+        capture(game, f"enemy02_leap_{side}_windup")
+        peak, apex_captured = 0.0, False
+        origin, target = None, None
+        for _ in range(180):
+            tick(game)
+            if enemy.leaping:
+                origin, target = enemy.leap_origin, enemy.leap_target
+                peak = max(peak, enemy.jump_height)
+                assert enemy.attack_box is None and world.player.hp == 500
+                if enemy.vy <= 0 and not apex_captured:
+                    capture(game, f"enemy02_leap_{side}_apex")
+                    apex_captured = True
+            elif enemy.leap_phase == "LANDING":
+                assert (enemy.x, enemy.ground_y) == target
+                assert (target[0] - origin[0]) * -side > 0
+                capture(game, f"enemy02_leap_{side}_landed")
+                break
+        assert apex_captured and abs(peak - reference_peak) < 1
+        peaks.append(peak)
+        for _ in range(20):
+            tick(game)
+            if enemy.has_hit:
+                break
+        assert world.player.hp == 420 and enemy.has_hit
+        capture(game, f"enemy02_leap_{side}_impact")
+        tick(game, 6)
+        assert world.player.hp == 420
+    world, enemy = encounter(game, "slam", side=-1)
+    while not enemy.leaping:
+        tick(game)
+    target = enemy.leap_target
+    push_key(pico2d.SDLK_RIGHT)
+    push_key(pico2d.SDLK_LSHIFT)
+    while enemy.leaping:
+        tick(game)
+        assert enemy.leap_target == target and world.player.hp == 500
+    release(game, pico2d.SDLK_RIGHT)
+    release(game, pico2d.SDLK_LSHIFT)
+    tick(game, 20)
+    assert world.player.hp == 500
+    capture(game, "enemy02_leap_dodged")
+    print(f"PASS: normal SDL player double-jump peak {reference_peak:.3f}px; enemy leap peaks "
+          f"{peaks[0]:.3f}/{peaks[1]:.3f}px; both directions fly to a committed target, "
+          "land before single 80 damage, and SDL running evades the fixed landing point.")
 
 
 def check_damage(game):
@@ -184,7 +262,7 @@ def check_natural_encounter_and_restart(game):
     frames = game.run(max_frames=180)
     seconds = perf_counter() - start
     assert frames == 180 and len(world.enemies) == 4
-    print(f"BENCHMARK: 4 enemy02 actors + random attacks/jump/HP/UI: "
+    print(f"BENCHMARK: 4 enemy02 actors + ranged leaps/close attacks/HP/UI: "
           f"{frames} frames / {seconds:.3f}s = {frames / seconds:.2f} FPS.")
     old_enemies = [enemy for stage in world.stages for enemy in stage.enemies]
     push_key(pico2d.SDLK_F5)
@@ -196,7 +274,7 @@ def check_natural_encounter_and_restart(game):
         expected = Enemy02 if index in (2, 3) else Enemy
         assert all(type(enemy) is expected and enemy not in old_enemies and enemy.hp == 200
                    for enemy in stage.enemies)
-    print("PASS: natural four-enemy city combat selects both attacks without touching spawn RNG; "
+    print("PASS: natural four-enemy city combat uses ranged leaps/close attacks without touching spawn RNG; "
           "SDL F5 creates fresh full-health groups with the correct stage-specific type.")
 
 
@@ -209,6 +287,7 @@ def main():
         game.handle_events()
         check_city_selection(game)
         check_attack_rendering(game)
+        check_tracking_leap(game)
         check_damage(game)
         check_counters_and_death(game)
         check_city_car(game)

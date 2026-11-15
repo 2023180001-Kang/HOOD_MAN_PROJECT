@@ -50,7 +50,7 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
         enemy.target_x = None
         enemy.target_ground_y = None
         if (not player.alive or not enemy.alive or enemy.knockback_started
-                or enemy.counter_move is not None):
+                or enemy.counter_move is not None or enemy.leaping):
             enemy.formation_slot = None
             continue
         difference = enemy.x - player.x
@@ -74,9 +74,15 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
     reach -= config.ENEMY_SPACING_MARGIN
     floor = walkable.inset(padding)
     band = max(0.0, config.ATTACK_DEPTH_TOLERANCE - config.ENEMY_SPACING_MARGIN)
-    bottom = max(min(y for _, y in floor), player.ground_y - band)
+    band_bottom = max(min(y for _, y in floor), player.ground_y - band)
     top = min(max(y for _, y in floor), player.ground_y + band)
     for side, group in groups.items():
+        preferred_bottom = max((enemy.formation_ground_min for enemy in group
+                                if enemy.formation_ground_min is not None), default=band_bottom)
+        # City formations use the pavement in front of the buildings, rather
+        # than placing their front row below the curb just to spread out.
+        # Following a player who actually enters the road remains possible.
+        bottom = max(band_bottom, min(player.ground_y, preferred_bottom))
         _, center_y = walkable.project(player.x, player.ground_y, padding)
         limits = walkable.x_limits(center_y, padding)
         room = player.x - limits[0] if side < 0 else limits[1] - player.x
@@ -109,7 +115,7 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
         gap = min(desired_gap, far - near)
         for enemy in group:
             lane, column = slot_cell(enemy.formation_slot, columns)
-            ground_y = origin + offsets[lane] * depth_step
+            ground_y = clamp(origin + offsets[lane] * depth_step, bottom, top)
             target_x, target_y = walkable.project(player.x + side * (near + column * gap),
                                                   ground_y, padding)
             if (target_x - player.x) * side >= 0:
@@ -122,7 +128,7 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
     walkable = player.walkable if walkable is None else walkable
     active = [enemy for enemy in enemies
               if player.alive and enemy.alive and not enemy.knockback_started
-              and enemy.counter_move is None]
+              and enemy.counter_move is None and not enemy.leaping]
     left, right, _ = encounter_envelope(enemies)
     width = right - left + config.ENEMY_SPACING_MARGIN
     crowded = set()

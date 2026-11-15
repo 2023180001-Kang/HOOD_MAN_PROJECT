@@ -58,7 +58,7 @@ def can_counter(player, enemy):
     return (enemy.alive and enemy.counter_move is None and not enemy.knockback_started
             and enemy.state == "ATTACK" and not enemy.has_hit
             and enemy.animation.frame in config.COUNTER_TRIGGER_FRAMES
-            and enemy.jump_height == 0
+            and enemy.jump_height == 0 and not enemy.leaping
             and abs(enemy.x - player.x) <= config.COUNTER_RANGE
             and abs(enemy.ground_y - player.ground_y) <= config.COUNTER_DEPTH_TOLERANCE
             and (player.x - enemy.x) * enemy.facing >= 0)

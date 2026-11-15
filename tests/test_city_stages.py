@@ -217,9 +217,59 @@ class CityStageTests(unittest.TestCase):
                 self.assertIs(enemy.walkable, stage.walkable)
                 self.assertEqual(enemy.hp, config.ENEMY_MAX_HP)
             for index, other in enumerate(world.stages):
-                if index != 2:
+                if index not in (2, 3):
                     self.assertIs(other.spawn_area, other.walkable)
             world.reset()
+
+    def test_both_cities_start_with_four_enemies_on_the_pavement(self):
+        world = World(rng=random.Random(32))
+        for index, top in ((2, 148), (3, 116)):
+            stage = world.stages[index]
+            self.assertEqual(len(stage.enemies), 4)
+            for enemy in stage.enemies:
+                self.assertGreaterEqual(enemy.ground_y, 100)
+                self.assertLessEqual(enemy.ground_y, top)
+                self.assertIs(enemy.walkable, stage.walkable)
+
+    def test_city_front_rows_do_not_step_below_the_pavement_when_the_player_is_on_it(self):
+        for index in (2, 3):
+            for side in (-1, 1):
+                for player_y in (100, config.STAGE_WALKABLE_BOUNDS[index][3]):
+                    with self.subTest(stage=index, side=side, player_y=player_y):
+                        world = World(rng=random.Random(32))
+                        world.stage_index = index
+                        world.stage.traffic = None
+                        world.player.ground_y = player_y
+                        world.player.invincible = True
+                        for number, enemy in enumerate(world.enemies):
+                            enemy.x = enemy.previous_x = world.player.x + side * (220 + number * 5)
+                            enemy.ground_y = enemy.previous_ground_y = 100
+                            enemy.facing = -side
+                        for _ in range(240):
+                            world.step(config.FIXED_DT)
+                            for enemy in world.enemies:
+                                self.assertGreaterEqual(enemy.ground_y, 100 - 1e-8)
+                                if enemy.target_ground_y is not None:
+                                    self.assertGreaterEqual(enemy.target_ground_y, 100)
+                        self.assertEqual(world.spawner.spawned_count, 4)
+
+    def test_pavement_formations_can_still_follow_a_player_onto_the_road(self):
+        world = World(rng=random.Random(32))
+        world.stage_index = 2
+        traffic = world.stage.traffic
+        world.stage.traffic = None
+        world.player.ground_y = 56
+        world.player.invincible = True
+        for number, enemy in enumerate(world.enemies):
+            enemy.x = enemy.previous_x = world.player.x - (220 + number * 5)
+            enemy.ground_y = enemy.previous_ground_y = 100
+        advance(world, 2)
+        victim = min(world.enemies, key=lambda enemy: enemy.ground_y)
+        self.assertLessEqual(victim.ground_y, config.CAR_GROUND_Y + config.CAR_DEPTH_TOLERANCE)
+        traffic.car = Car(victim.x, 1, 1400)
+        world.stage.traffic = traffic
+        world.step(config.FIXED_DT)
+        self.assertEqual((victim.hp, victim.state), (0, "CAR_HIT"))
 
     def test_cars_at_spawn_edges_do_not_run_over_newly_summoned_sidewalk_enemies(self):
         for side in (-1, 1):

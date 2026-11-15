@@ -16,6 +16,7 @@ class Enemy:
     boundary_padding = config.ENEMY_BOUNDARY_PADDING
     image_name = config.ENEMY_IMAGE
     animations = config.ENEMY_ANIMATIONS
+    formation_ground_min = None
 
     def __init__(self, x, facing=1, spawned_at=0.0, *, run_speed=None, ground_y=None,
                  attack_speed=1.0, rng=None):
@@ -66,6 +67,14 @@ class Enemy:
     @property
     def alive(self):
         return self.hp > 0
+
+    @property
+    def leaping(self):
+        return False
+
+    @property
+    def blocks_movement(self):
+        return self.alive and not self.leaping
 
     @property
     def opacity(self):

@@ -123,6 +123,10 @@ ENEMY02_ATTACKS = {
     "clubs": (4, 60, (3, 4, 5)),
     "slam": (5, 80, (5, 6)),
 }
+ENEMY02_LEAP_MIN_DISTANCE = 320.0
+ENEMY02_LEAP_MAX_DISTANCE = 640.0
+ENEMY02_LEAP_LANDING_GAP = 80.0
+ENEMY02_LEAP_COOLDOWN = 2.0  # From landing/interruption until the next leap.
 CAR_IMAGE = "HOOD_MAN_car_attached_wheels_8f_pico2d.png"
 PLAYER_CAR_HIT_IMAGE = "hoodman_car_hit_8frames_2048x256.png"
 ENEMY_CAR_HIT_IMAGE = "street_thug_car_hit_8frames_2048x256.png"
@@ -188,6 +192,7 @@ STAGE_WALKABLE_POLYGONS = {}
 # Spawn on the sidewalk, while pursuit can still use the full city floor.
 STAGE_ENEMY_SPAWN_BOUNDS = {
     "cityStage-1.png": (0.0, GROUND_Y, WORLD_WIDTH, 148.0),
+    "cityStage-2.png": (0.0, GROUND_Y, WORLD_WIDTH, 116.0),
 }
 
 # State: (one-based source row, frames per second, loop).

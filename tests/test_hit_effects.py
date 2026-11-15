@@ -119,7 +119,7 @@ class HitEffectTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 500)
         self.assertEqual(world.player.vx, 0)
         self.assertEqual(world.player.x, config.START_X)
-        self.assertEqual(world.enemies, [])
+        self.assertEqual(len(world.enemies), 4)
 
     def test_attack_and_effect_state_are_identical_across_render_rates(self):
         outcomes = []

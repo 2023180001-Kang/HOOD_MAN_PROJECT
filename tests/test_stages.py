@@ -3,7 +3,7 @@ import unittest
 import config
 from combat import MOVES
 from effects import HitEffect
-from tests.helpers import advance, tap
+from tests.helpers import advance, clear_encounters, tap
 from world import World
 
 
@@ -54,33 +54,30 @@ class StageTests(unittest.TestCase):
 
     def test_scenes_keep_independent_enemies_effects_and_spawn_profiles(self):
         world = World()
-        world.controls.press("spawn_3")
         world.step(config.FIXED_DT)
         enemies = world.enemies
         effect = HitEffect(500, 180, 1)
         world.effects.append(effect)
         positions = [enemy.x for enemy in enemies]
         world.stage_index = 1
-        self.assertEqual(world.enemies, [])
+        self.assertEqual(len(world.enemies), 4)
         self.assertEqual(world.effects, [])
-        self.assertEqual(world.spawner.spawned_count, 0)
-        world.controls.press("spawn_1")
+        self.assertEqual(world.spawner.spawned_count, 4)
         advance(world, 0.2)
-        self.assertEqual(len(world.enemies), 1)
+        self.assertEqual(len(world.enemies), 4)
         self.assertEqual(world.enemies[0].run_speed, 360)
         self.assertEqual([enemy.x for enemy in enemies], positions)
         self.assertEqual(effect.elapsed, 0)
         world.stage_index = 0
         self.assertIs(world.enemies, enemies)
         self.assertIs(world.effects[0], effect)
-        self.assertEqual(world.spawner.spawned_count, 3)
+        self.assertEqual(world.spawner.spawned_count, 4)
 
     def test_dead_n_is_consumed_and_restart_resets_all_scenes(self):
         world = World()
         for index in range(len(config.STAGE_IMAGES)):
             world.stage_index = index
             tap(world.controls, "stage_exits")
-            tap(world.controls, "spawn_2")
             world.step(config.FIXED_DT)
         world.stage.arrows_visible = False
         world.player.take_damage(500)
@@ -92,8 +89,8 @@ class StageTests(unittest.TestCase):
         world.update(1 / 60)
         self.assertEqual(world.stage_index, 0)
         self.assertTrue(all(stage.arrow_sides == () for stage in world.stages))
-        self.assertTrue(all(stage.enemies == [] and stage.effects == [] for stage in world.stages))
-        self.assertTrue(all(stage.spawner.spawned_count == 0 for stage in world.stages))
+        self.assertTrue(all(len(stage.enemies) == 4 and stage.effects == [] for stage in world.stages))
+        self.assertTrue(all(stage.spawner.spawned_count == 4 for stage in world.stages))
 
     def test_both_directions_keep_walking_running_and_rising_or_falling_double_jumps(self):
         for side in (-1, 1):
@@ -104,6 +101,7 @@ class StageTests(unittest.TestCase):
                     world.stage_index = 0 if side > 0 else 1
                     world.stage.arrows_visible = True
                     for scene in (world, reference):
+                        clear_encounters(scene)
                         scene.elapsed = 12
                         player = scene.player
                         player.vx = side * speed
@@ -145,6 +143,7 @@ class StageTests(unittest.TestCase):
         for index, side in ((0, -1), (0, 1), (last, 1)):
             with self.subTest(index=index, side=side):
                 world = World()
+                clear_encounters(world)
                 world.stage_index = index
                 world.stage.arrows_visible = index == last or side < 0
                 world.player.x = (config.PLAYER_HALF_WIDTH if side < 0 else
@@ -162,7 +161,7 @@ class StageTests(unittest.TestCase):
                     self.assertGreater(world.player.vx, 0)
 
     def test_n_stays_local_during_travel_and_return_does_not_bounce(self):
-        world = World()
+        world = clear_encounters(World())
         world.controls.press("stage_exits")
         world.controls.press("right")
         world.controls.press("left_shift")
@@ -191,8 +190,9 @@ class StageTests(unittest.TestCase):
 
     def test_real_round_trip_restores_scene_objects_and_pauses_inactive_simulation(self):
         world = World()
-        world.controls.press("spawn_3")
-        world.step(config.FIXED_DT)
+        for stage in world.stages:
+            for index, enemy in enumerate(stage.enemies):
+                enemy.x = 800 + index * 120
         first = world.stage
         first.enemies[0].take_damage(20)
         first.effects.append(HitEffect(600, 180, 1))
@@ -204,11 +204,10 @@ class StageTests(unittest.TestCase):
         world.player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
         world.step(config.FIXED_DT)
         self.assertEqual(world.stage_index, 1)
-        world.controls.press("spawn_2")
         advance(world, 0.2)
         second = world.stage
-        self.assertEqual(len(second.enemies), 2)
-        self.assertEqual(first.spawner.spawned_count, 3)
+        self.assertEqual(len(second.enemies), 4)
+        self.assertEqual(first.spawner.spawned_count, 4)
         self.assertEqual(first.effects[0].elapsed, 0)
         self.assertEqual([enemy.x for enemy in first.enemies], positions)
         world.controls.release("right")
@@ -219,9 +218,9 @@ class StageTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         self.assertIs(world.stage, first)
         self.assertEqual(first.enemies[0].hp, 180)
-        self.assertEqual(world.spawner.spawned_count, 3)
+        self.assertEqual(world.spawner.spawned_count, 4)
         self.assertEqual(first.effects[0].elapsed, config.FIXED_DT)
-        self.assertEqual(second.spawner.spawned_count, 2)
+        self.assertEqual(second.spawner.spawned_count, 4)
 
     def test_attacks_hit_and_death_cannot_trigger_travel(self):
         for action in ("combat_a", "HIT", "DYING", "DEAD"):
@@ -245,7 +244,7 @@ class StageTests(unittest.TestCase):
     def test_round_trip_is_identical_across_render_rates(self):
         outcomes = []
         for fps in (30, 60, 120, 144):
-            world = World()
+            world = clear_encounters(World())
             for stage in world.stages:
                 stage.arrows_visible = True
             world.player.x = config.WORLD_WIDTH - 300

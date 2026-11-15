@@ -19,7 +19,7 @@ class EnemyAttackSpeedTests(unittest.TestCase):
         low, high = config.ENEMY_ATTACK_SPEED_RANGE
         self.assertTrue(all(low < speed < high for speed in speeds))
         self.assertEqual([stage.spawner.spawned_count for stage in world.stages],
-                         [200] * len(world.stages))
+                          [204] * len(world.stages))
         for enemy in enemies:
             self.assertAlmostEqual(enemy.attack_fps, 12 * enemy.attack_speed)
             self.assertAlmostEqual(enemy.attack_interval, 1 / enemy.attack_speed)
@@ -81,14 +81,10 @@ class EnemyAttackSpeedTests(unittest.TestCase):
 
     def test_f5_resets_the_global_rate_sequence_and_keeps_run_profiles(self):
         world = World()
-        world.controls.press("spawn_9")
-        world.step(config.FIXED_DT)
         speeds = [enemy.attack_speed for enemy in world.enemies]
         running = [enemy.run_speed for enemy in world.enemies]
         world.controls.press("restart")
         world.update(config.FIXED_DT)
-        world.controls.press("spawn_9")
-        world.step(config.FIXED_DT)
         self.assertEqual([enemy.attack_speed for enemy in world.enemies], speeds)
         self.assertEqual([enemy.run_speed for enemy in world.enemies], running)
 
@@ -97,7 +93,6 @@ class EnemyAttackSpeedTests(unittest.TestCase):
         for fps in (30, 60, 120, 144):
             world = World(rng=random.Random(73))
             world.player.invincible = True
-            world.controls.press("spawn_9")
             advance(world, 7, fps)
             outcomes.append([(enemy.attack_speed, enemy.x, enemy.ground_y,
                               enemy.state, enemy.animation.frame, enemy.has_hit)

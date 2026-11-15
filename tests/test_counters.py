@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import config
 from combat import MOVES
@@ -33,6 +34,8 @@ def follow_up(world):
     world.step(config.FIXED_DT)
 
 
+# These scenarios supply their own precisely timed attackers.
+@patch.object(config, "ENEMIES_PER_STAGE", 0)
 class CounterTests(unittest.TestCase):
     def begin(self, key="h", *, side=1, hp=200):
         world = World()

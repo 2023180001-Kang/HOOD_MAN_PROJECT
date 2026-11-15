@@ -21,6 +21,7 @@ class Stage:
                            else self.walkable)
         self.spawner = SpawnManager(rng=rng, walkable=self.walkable, spawn_area=self.spawn_area,
                                     attack_sequence=attack_sequence)
+        self.enemies = self.spawner.spawn(config.ENEMIES_PER_STAGE, 0.0)
         self.traffic = Traffic(rng=traffic_rng) if self.image_name == config.CAR_STAGE_IMAGE else None
 
     def constrain_actor(self, actor):

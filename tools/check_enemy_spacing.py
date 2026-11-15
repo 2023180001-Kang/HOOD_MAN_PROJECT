@@ -174,4 +174,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Formation scenarios deliberately arrange 2/3/5/8/16 actors.
+    with patch.object(config, "ENEMIES_PER_STAGE", 0):
+        main()

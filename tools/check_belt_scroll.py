@@ -251,10 +251,10 @@ def main():
         check_crowds(game)
         check_travel(game)
         game.world = World(rng=random.Random(10))
+        game.world.enemies.extend(game.world.spawner.spawn(9, game.world.elapsed))
         push_key(pico2d.SDLK_p)
-        push_key(pico2d.SDLK_9)
         tick(game)
-        release((pico2d.SDLK_p, pico2d.SDLK_9))
+        release((pico2d.SDLK_p,))
         game.handle_events()
         game.world.enemies.append(Enemy(config.START_X + 200, -1, ground_y=120))
         start = perf_counter()
@@ -277,4 +277,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Geometry and crowd benchmarks arrange their own actors.
+    with patch.object(config, "ENEMIES_PER_STAGE", 0):
+        main()

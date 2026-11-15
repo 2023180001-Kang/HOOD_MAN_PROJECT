@@ -13,6 +13,7 @@ from world import World
 def city_world():
     world = World(rng=random.Random(7), traffic_rng=random.Random(11))
     world.stage_index = 2
+    world.enemies.clear()  # Vehicle scenarios arrange their own collision targets.
     world.player.ground_y = config.CAR_GROUND_Y
     return world
 
@@ -272,9 +273,9 @@ class TrafficTests(unittest.TestCase):
         traffic = world.stage.traffic
         place_car(world)
         world.step(config.FIXED_DT)
-        for key in ("spawn_9", "combat_a", "jump", "counter_h", "stage_exits", "invincibility"):
+        for key in ("stage_9", "combat_a", "jump", "counter_h", "stage_exits", "invincibility"):
             world.controls.press(key)
-        world.step(config.FIXED_DT)
+        world.update(config.FIXED_DT)
         self.assertFalse(world.controls.pressed)
         self.assertEqual(world.enemies, [])
         self.assertEqual(world.player.hp, 0)

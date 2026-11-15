@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import config
 from combat import MOVES
@@ -14,6 +15,8 @@ def target(world, offset=80):
     return enemy
 
 
+# Damage windows use the explicit targets created by each test.
+@patch.object(config, "ENEMIES_PER_STAGE", 0)
 class PlayerDamageTests(unittest.TestCase):
     def test_each_offensive_key_deals_its_requested_damage_once(self):
         for key, damage in zip("asdf", (10, 40, 50, 60)):

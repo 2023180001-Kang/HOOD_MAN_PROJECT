@@ -3,7 +3,7 @@ import unittest
 import config
 from collision import bodies_overlap
 from enemy import Enemy
-from tests.helpers import advance, tap
+from tests.helpers import advance
 from world import World
 
 
@@ -118,16 +118,12 @@ class EnemyPursuitTests(unittest.TestCase):
 
     def test_restart_restores_spawn_order_speed_profiles(self):
         world = World()
-        world.controls.press("spawn_4")
-        world.update(1 / 60)
         old_enemies = list(world.enemies)
         self.assertEqual([enemy.run_speed for enemy in old_enemies], list(config.ENEMY_RUN_SPEEDS))
         world.controls.press("restart")
         world.update(1 / 60)
-        self.assertEqual(world.enemies, [])
-        self.assertEqual(world.spawner.spawned_count, 0)
-        tap(world.controls, "spawn_4")
-        world.update(1 / 60)
+        self.assertEqual(len(world.enemies), 4)
+        self.assertEqual(world.spawner.spawned_count, 4)
         self.assertEqual([enemy.run_speed for enemy in world.enemies], list(config.ENEMY_RUN_SPEEDS))
         self.assertTrue(all(enemy not in old_enemies for enemy in world.enemies))
 

@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 from math import hypot
 
 import config
@@ -26,6 +27,8 @@ def ready_all(enemies):
         enemy.cooldown = config.ENEMY_ATTACK_INTERVAL
 
 
+# Each formation scenario constructs its own crowd size and starting positions.
+@patch.object(config, "ENEMIES_PER_STAGE", 0)
 class EnemySpacingTests(unittest.TestCase):
     def assert_distinguishable(self, enemies):
         for index, first in enumerate(enemies):

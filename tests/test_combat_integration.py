@@ -70,8 +70,6 @@ class CombatIntegrationTests(unittest.TestCase):
             if frame % 600 == 599:
                 tap(world.controls, "restart")
                 removed_count = 0
-            elif frame % 120 == 0:
-                tap(world.controls, "spawn_3")
             previous_enemies = set(world.enemies)
             world.update(1 / 60)
             if frame % 600 != 599:

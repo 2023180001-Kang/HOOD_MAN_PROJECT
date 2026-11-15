@@ -29,8 +29,8 @@ KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
              for key, *_ in config.COMBAT_MOVE_SPECS})
 KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"counter_{key}"
              for key, *_ in config.COUNTER_MOVE_SPECS})
-KEYS.update({getattr(pico2d, f"SDLK_{prefix}{count}"): f"spawn_{count}"
-             for count in config.SPAWN_COUNTS for prefix in ("", "KP_")})
+KEYS.update({getattr(pico2d, f"SDLK_{prefix}{(index + 1) % 10}"): action
+             for action, index in config.STAGE_SHORTCUTS.items() for prefix in ("", "KP_")})
 
 
 class Game:

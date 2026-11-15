@@ -5,14 +5,14 @@ import config
 from combat import MOVES
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
-from tests.helpers import advance, tap
+from tests.helpers import advance, clear_encounters, tap
 from traffic import Car
 from world import World
 
 
 class CityStageTests(unittest.TestCase):
     def at_exit(self, index=1, side=1):
-        world = World()
+        world = clear_encounters(World())
         world.stage_index = index
         world.stage.arrows_visible = True
         world.player.x = (config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
@@ -22,19 +22,20 @@ class CityStageTests(unittest.TestCase):
         world.controls.press("left_shift")
         return world
 
-    def test_eight_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
+    def test_ten_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
         world = World()
         self.assertEqual([stage.image_name for stage in world.stages],
                          ["newStage.png", "newStage-2.png", "cityStage-1.png", "cityStage-2.png",
                           config.FACTORY_OUTSIDE_IMAGE, config.FACTORY_EXTERIOR_IMAGE,
-                          "factoryInside-1.png", "factoryStage-2.png"])
+                          "factoryInside-1.png", "factoryStage-2.png",
+                          "labStage-1_1672x941.png", "labStage-2_1672x941.png"])
         for index, stage in enumerate(world.stages):
             stage.arrows_visible = True
             self.assertEqual(stage.destination(-1), index - 1 if index else None)
             self.assertEqual(stage.destination(1), index + 1 if index < len(world.stages) - 1 else None)
 
     def test_travel_inside_each_pair_preserves_motion_without_loading(self):
-        for first in (0, 2, 4, 6):
+        for first in (0, 2, 4, 6, 8):
             for side in (-1, 1):
                 with self.subTest(first=first, side=side):
                     world = self.at_exit(first if side > 0 else first + 1, side)
@@ -90,7 +91,7 @@ class CityStageTests(unittest.TestCase):
         before = (player.x, player.ground_y, player.jump_height, player.vy,
                   player.animation.elapsed, world.camera.shake_remaining)
         self.assertTrue(world.try_stage_transition())
-        for key in ("jump", "combat_f", "spawn_9", "invincibility", "stage_exits"):
+        for key in ("jump", "combat_f", "invincibility", "stage_exits"):
             world.controls.press(key)
         advance(world, 1.9)
         self.assertTrue(world.stage_loading)
@@ -179,8 +180,9 @@ class CityStageTests(unittest.TestCase):
         self.assertEqual(world.player.x, config.START_X)
         for stage in world.stages:
             self.assertFalse(stage.arrows_visible)
-            self.assertEqual((stage.enemies, stage.effects, stage.damage_numbers), ([], [], []))
-            self.assertEqual(stage.spawner.spawned_count, 0)
+            self.assertEqual(len(stage.enemies), 4)
+            self.assertEqual((stage.effects, stage.damage_numbers), ([], []))
+            self.assertEqual(stage.spawner.spawned_count, 4)
         advance(world, 2.5)
         self.assertEqual(world.stage_index, 0)
 
@@ -189,13 +191,13 @@ class CityStageTests(unittest.TestCase):
         for index in (2, 3):
             world.stage_index = index
             area = world.stage.walkable
-            for key in ("spawn_9", "right", "up", "left_shift"):
+            for key in ("right", "up", "left_shift"):
                 tap(world.controls, key)
             world.player.invincible = True
             advance(world, 1)
             for actor in (world.player, *world.enemies):
                 self.assertTrue(area.contains(actor.x, actor.ground_y, actor.boundary_padding))
-            self.assertEqual(len(world.enemies), 9)
+            self.assertEqual(len(world.enemies), 4)
         rates = [enemy.attack_speed for stage in world.stages for enemy in stage.enemies]
         self.assertEqual(len(set(rates)), len(rates))
 
@@ -229,9 +231,8 @@ class CityStageTests(unittest.TestCase):
                         config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING)
                 car = Car(edge, -side, config.CAR_SPEED_RANGE[1])
                 world.stage.traffic.car = car
-                world.controls.press("spawn_9")
                 world.step(config.FIXED_DT)
-                self.assertEqual(len(world.enemies), 9)
+                self.assertEqual(len(world.enemies), 4)
                 self.assertTrue(any(abs(enemy.x - car.x) < config.CAR_HALF_WIDTH
                                     for enemy in world.enemies))
                 self.assertTrue(all(enemy.hp == config.ENEMY_MAX_HP and not enemy.car_hit

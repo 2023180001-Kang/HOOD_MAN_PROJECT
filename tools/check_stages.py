@@ -115,7 +115,8 @@ def check_motion_continuity(game, first=0):
             assert game.world.elapsed == reference.elapsed
             assert not game.world.stage.arrows_visible
             assert all(game.assets.images[name] is image for name, image in textures.items())
-            prefix = {4: "factory_travel", 6: "factory_inside_travel"}.get(first, "stage_travel")
+            prefix = {4: "factory_travel", 6: "factory_inside_travel",
+                      8: "lab_travel"}.get(first, "stage_travel")
             capture(game, f"{prefix}_{'next' if side > 0 else 'previous'}_{mode}")
             assert abs(player.x - player.previous_x) <= config.RUN_SPEED * config.FIXED_DT + 1e-6
             for key in (direction_key, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE, pico2d.SDLK_n):
@@ -129,7 +130,7 @@ def check_round_trip_and_last_exit(game):
     game.world = World(rng=random.Random(1))
     player = game.world.player
     push_key(pico2d.SDLK_n)
-    push_key(pico2d.SDLK_1)
+    game.world.enemies.extend(game.world.spawner.spawn(1, game.world.elapsed))
     push_key(pico2d.SDLK_RIGHT)
     push_key(pico2d.SDLK_LSHIFT)
     for _ in range(240):
@@ -144,8 +145,7 @@ def check_round_trip_and_last_exit(game):
     first.enemies[0].take_damage(20)
     first_positions = [enemy.x for enemy in first.enemies]
     push_key(pico2d.SDLK_RIGHT, down=False)
-    push_key(pico2d.SDLK_1, down=False)
-    push_key(pico2d.SDLK_2)
+    game.world.enemies.extend(game.world.spawner.spawn(2, game.world.elapsed))
     push_key(pico2d.SDLK_n, down=False)
     push_key(pico2d.SDLK_n)
     push_key(pico2d.SDLK_LEFT)
@@ -166,7 +166,7 @@ def check_round_trip_and_last_exit(game):
     assert game.world.stage_index == 0
     assert player.vx == -720
     capture(game, "stage_return_running")
-    for key in (pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT, pico2d.SDLK_2, pico2d.SDLK_n):
+    for key in (pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT, pico2d.SDLK_n):
         push_key(key, down=False)
     game.handle_events()
 
@@ -181,7 +181,7 @@ def check_round_trip_and_last_exit(game):
     tick(game, 30)
     assert game.world.stage_index == len(config.STAGE_IMAGES) - 1
     assert player.x == config.WORLD_WIDTH - config.PLAYER_BOUNDARY_PADDING
-    capture(game, "factory_inside_last_boundary")
+    capture(game, "lab_last_boundary")
     push_key(pico2d.SDLK_F5)
     tick(game)
     assert game.world.stage_index == 0 and game.world.player.hp == 500
@@ -190,7 +190,7 @@ def check_round_trip_and_last_exit(game):
         push_key(key, down=False)
     game.handle_events()
     print("PASS: SDL full sprint round trip keeps per-map enemies/HP/spawn counts, "
-          "avoids return loops, bounds the final factory exit, and F5 resets all stages.")
+          "avoids return loops, bounds the final lab exit, and F5 resets all stages.")
 
 
 def check_city_loading(game):
@@ -230,7 +230,7 @@ def check_city_loading(game):
                     assert ImageChops.difference(image.convert("RGB"),
                                                 supplied.convert("RGB")).getbbox() is None
                 timing["start"] = perf_counter()
-                for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_9, pico2d.SDLK_p):
+                for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_p):
                     push_key(key)
                 push_key(pico2d.SDLK_n, down=False)
                 push_key(pico2d.SDLK_n)
@@ -248,7 +248,7 @@ def check_city_loading(game):
     assert not game.world.enemies and not game.world.stage.arrows_visible
     assert all(game.assets.images[name] is image for name, image in textures.items())
     capture(game, "city_stage_1_entered")
-    push_key(pico2d.SDLK_1)
+    game.world.enemies.extend(game.world.spawner.spawn(1, game.world.elapsed))
     tick(game)
     city_first = game.world.stage
     city_enemy = city_first.enemies[0]
@@ -313,7 +313,7 @@ def check_factory_background(game):
 
 def check_factory_loading(game, first=3):
     textures = dict(game.assets.images)
-    region = "factory_inside" if first == 5 else "factory"
+    region = {3: "factory", 5: "factory_inside", 7: "lab"}[first]
     for side in (1, -1):
         game.world = World()
         world = game.world
@@ -359,7 +359,7 @@ def check_factory_loading(game, first=3):
                         assert ImageChops.difference(image.convert("RGB"),
                                                     supplied.convert("RGB")).getbbox() is None
                     timing["start"] = perf_counter()
-                    for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_9, pico2d.SDLK_p):
+                for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_p):
                         push_key(key)
                 assert snapshot == frozen[0]
             elif world.stage_index == destination and "end" not in timing:
@@ -436,7 +436,7 @@ def check_factory_exterior(game):
     assert game.world.stage_index == 5 and not game.world.stage_loading
     assert game.world.player is player and player.hp == 420 and player.ground_y == 100
     capture(game, "factory_exterior_entered")
-    push_key(pico2d.SDLK_2)
+    game.world.enemies.extend(game.world.spawner.spawn(2, game.world.elapsed))
     tick(game)
     exterior = game.world.stage
     assert len(exterior.enemies) == 2
@@ -457,8 +457,9 @@ def check_factory_exterior(game):
           "travel, ground projection and saved enemy HP/spawn objects survive the round trip.")
 
 
-def check_factory_inside_backgrounds(game):
-    for index in (6, 7):
+def check_indoor_backgrounds(game, first=6):
+    region = "lab" if first == 8 else "factory_inside"
+    for index in (first, first + 1):
         game.world = World()
         game.world.stage_index = index
         with Image.open(config.ROOT / game.world.stage.image_name) as source:
@@ -472,15 +473,17 @@ def check_factory_inside_backgrounds(game):
             game.world.camera.offset_x = 0
             for shake_y in (-8, 0, 8):
                 game.world.camera.offset_y = shake_y
-                bottom = config.GROUND_Y - config.STAGE_GROUND_Y - shake_y
+                anchor = config.STAGE_GROUND_ANCHORS.get(game.world.stage.image_name,
+                                                        config.STAGE_GROUND_Y)
+                bottom = config.GROUND_Y - anchor - shake_y
                 top = int(supplied.height + bottom - config.SCREEN_HEIGHT)
                 expected = tiled.crop((camera_x, top,
                                        camera_x + config.SCREEN_WIDTH, top + config.SCREEN_HEIGHT))
                 with (patch.object(game.assets, "draw_sprite"), patch.object(game.ui, "draw"),
                       patch.object(game.ui, "draw_enemy_health")):
-                    image = capture(game, f"factory_inside_{index - 5}_background_{camera_x}_{shake_y}")
+                    image = capture(game, f"{region}_{index - first + 1}_background_{camera_x}_{shake_y}")
                 assert ImageChops.difference(image.convert("RGB"), expected).getbbox() is None
-    print("PASS: factoryInside-1 and factoryStage-2 keep original-size background pixels, "
+    print(f"PASS: {config.STAGE_IMAGES[first:first + 2]} keep original-size background pixels, "
           "mirrored tiling, floor alignment and full viewport coverage during shake.")
 
 
@@ -495,13 +498,16 @@ def main():
         check_motion_continuity(game)
         check_motion_continuity(game, first=4)
         check_motion_continuity(game, first=6)
+        check_motion_continuity(game, first=8)
         check_round_trip_and_last_exit(game)
         check_city_loading(game)
         check_factory_background(game)
         check_factory_loading(game)
         check_factory_exterior(game)
         check_factory_loading(game, first=5)
-        check_factory_inside_backgrounds(game)
+        check_indoor_backgrounds(game)
+        check_factory_loading(game, first=7)
+        check_indoor_backgrounds(game, first=8)
     finally:
         if game is not None:
             game.close()
@@ -509,4 +515,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Transition measurements use explicitly arranged actors; shortcuts are
+    # checked with the real four-enemy encounters in check_runtime.py.
+    with patch.object(config, "ENEMIES_PER_STAGE", 0):
+        main()

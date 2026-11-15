@@ -366,4 +366,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Each counter scenario supplies its own precisely timed opponents.
+    with patch.object(config, "ENEMIES_PER_STAGE", 0):
+        main()

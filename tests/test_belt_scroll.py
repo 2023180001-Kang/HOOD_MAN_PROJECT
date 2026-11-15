@@ -87,6 +87,8 @@ class BeltScrollTests(unittest.TestCase):
         for running in (False, True):
             with self.subTest(running=running):
                 actual, reference = World(), World()
+                actual.enemies.clear()
+                reference.enemies.clear()
                 actual.controls.press("up")
                 reference.controls.press("right")
                 if running:
@@ -146,6 +148,7 @@ class BeltScrollTests(unittest.TestCase):
                     with self.subTest(stage=stage_index, horizontal=horizontal, vertical=vertical):
                         world = World()
                         world.stage_index = stage_index
+                        world.enemies.clear()  # Isolate the floor from enemy body blocking.
                         world.stage.traffic = None  # Isolate walking limits from lethal road hazards.
                         for key in (horizontal, vertical, "left_shift"):
                             world.controls.press(key)
@@ -411,8 +414,6 @@ class BeltScrollTests(unittest.TestCase):
         world = World(rng=random.Random(17))
         for index in (0, 1):
             world.stage_index = index
-            world.controls.release("spawn_9")
-            world.controls.press("spawn_9")
             world.step(config.FIXED_DT)
             self.assert_inside(world)
             self.assertGreater(len({enemy.ground_y for enemy in world.enemies}), 1)
@@ -420,14 +421,13 @@ class BeltScrollTests(unittest.TestCase):
         world.update(config.FIXED_DT)
         self.assertEqual((world.player.ground_y, world.player.jump_height, world.player.ground_vy),
                          (config.GROUND_Y, 0, 0))
-        self.assertTrue(all(not stage.enemies for stage in world.stages))
+        self.assertTrue(all(len(stage.enemies) == 4 for stage in world.stages))
 
     def test_scripted_2d_world_is_independent_of_render_frame_rate(self):
         outcomes = []
         for fps in (30, 60, 120, 144):
             world = World(rng=random.Random(901))
             world.player.invincible = True
-            world.controls.press("spawn_5")
             for keys in (("right", "up", "left_shift", "jump"), ("right", "down", "combat_a"),
                          ("left", "up", "combat_f"), ("down",)):
                 world.controls.held.clear()

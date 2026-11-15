@@ -82,6 +82,9 @@ class World:
         if self.controls.take_press("restart"):
             self.reset()
             return
+        selection = self.controls.take_latest_press(config.STAGE_SHORTCUTS)
+        if selection is not None and self.select_stage(config.STAGE_SHORTCUTS[selection]):
+            return
         if self.stage_loading:
             # Loading uses real elapsed time, independent of the physics dt cap.
             self.controls.pressed.clear()
@@ -123,9 +126,6 @@ class World:
         for number in self.damage_numbers:
             number.update(dt)
         self.damage_numbers = [number for number in self.damage_numbers if not number.finished]
-        for count in config.SPAWN_COUNTS:
-            if self.controls.take_press(f"spawn_{count}") and self.player.alive:
-                self.enemies.extend(self.spawner.spawn(count, self.elapsed))
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         self.player.update(dt, self.controls, self.stage.walkable)
@@ -250,13 +250,32 @@ class World:
             return True
         return False
 
-    def _enter_stage(self, destination):
+    def select_stage(self, destination):
+        """Jump to a numbered scene without resetting its enemies or player HP."""
+        if not self.player.alive or not 0 <= destination < len(self.stages):
+            return False
+        if self.counter is not None:
+            self.counter.finish()
+            self.counter = None
+        self.pending_stage_index = None
+        self.stage_loading_remaining = 0.0
+        self.accumulator = 0.0
+        self.controls.pressed.clear()
+        self._enter_stage(destination, entry_x=config.START_X)
+        resolve_bodies(self.player, self.enemies, self.stage.walkable)
+        self.player.previous_x = self.player.x
+        self.player.previous_ground_y = self.player.ground_y
+        self.camera = Camera(self.player.x)
+        return True
+
+    def _enter_stage(self, destination, *, entry_x=None):
         # Keep the same player, physics, held input and animation clock, and
         # enter far enough inside the next scene to avoid an immediate return.
         side = 1 if destination > self.stage_index else -1
         self.stage_index = destination
         player = self.player
-        player.x = (config.STAGE_ENTRY_MARGIN if side > 0 else
+        player.x = (entry_x if entry_x is not None else
+                    config.STAGE_ENTRY_MARGIN if side > 0 else
                     config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
         self.stage.constrain_actor(player)
         player.previous_x = player.x

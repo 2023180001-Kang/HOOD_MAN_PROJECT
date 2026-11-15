@@ -5,12 +5,12 @@ from unittest.mock import Mock
 import config
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
-from tests.helpers import advance
+from tests.helpers import advance, clear_encounters
 from world import World
 
 
 def at_factory_boundary(side=1, first=3):
-    world = World()
+    world = clear_encounters(World())
     world.stage_index = first if side > 0 else first + 1
     world.stage.arrows_visible = True
     world.player.x = (config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN if side > 0
@@ -23,7 +23,7 @@ def at_factory_boundary(side=1, first=3):
 
 class FactoryStageTests(unittest.TestCase):
     def test_factory_zone_boundaries_wait_two_seconds_and_preserve_the_same_player_both_ways(self):
-        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1)):
+        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1), (7, -1), (7, 1)):
             with self.subTest(first=first, side=side):
                 world = at_factory_boundary(side, first)
                 source = world.stage_index
@@ -49,7 +49,7 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertFalse(world.try_stage_transition())
 
     def test_factory_loading_freezes_both_maps_and_discards_actions_without_losing_held_movement(self):
-        for first in (3, 5):
+        for first in (3, 5, 7):
             with self.subTest(first=first):
                 world = at_factory_boundary(first=first)
                 source, target = world.stages[first:first + 2]
@@ -58,7 +58,7 @@ class FactoryStageTests(unittest.TestCase):
                     stage.effects.append(HitEffect(1500, 180, 1))
                     stage.damage_numbers.append(DamageNumber(1500, 250, 40))
                 self.assertTrue(world.try_stage_transition())
-                for action in ("jump", "combat_a", "counter_j", "spawn_9", "invincibility", "stage_exits"):
+                for action in ("jump", "combat_a", "counter_j", "invincibility", "stage_exits"):
                     world.controls.press(action)
                 advance(world, 1.9)
                 self.assertEqual(world.elapsed, 0)
@@ -81,7 +81,7 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertFalse(world.player.invincible)
 
     def test_f5_during_factory_loading_cancels_the_destination_and_clears_all_maps(self):
-        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1)):
+        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1), (7, -1), (7, 1)):
             world = at_factory_boundary(side, first)
             for stage in world.stages:
                 stage.arrows_visible = True
@@ -90,9 +90,10 @@ class FactoryStageTests(unittest.TestCase):
             world.update(1)
             world.controls.press("restart")
             world.update(1 / 60)
-            self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 8))
+            self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 10))
             self.assertIsNone(world.pending_stage_index)
-            self.assertTrue(all(not stage.enemies and not stage.arrows_visible for stage in world.stages))
+            self.assertTrue(all(len(stage.enemies) == 4 and not stage.arrows_visible
+                                for stage in world.stages))
             advance(world, 2.5)
             self.assertEqual(world.stage_index, 0)
 
@@ -114,7 +115,7 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertGreaterEqual(max(right for _, right in rectangles), config.SCREEN_WIDTH)
 
     def test_factory_loading_completion_is_identical_at_different_render_rates(self):
-        for first in (3, 5):
+        for first in (3, 5, 7):
             with self.subTest(first=first):
                 results = []
                 for fps in (30, 60, 120, 144):
@@ -134,9 +135,9 @@ class FactoryStageTests(unittest.TestCase):
         world.stage_index = 4
         source = world.stage
         source.arrows_visible = True
-        enemy = Enemy(1400)
+        enemy = source.enemies[0]
+        enemy.x = 1400
         enemy.take_damage(40)
-        source.enemies.append(enemy)
         player = world.player
         player.hp, player.invincible = 420, True
         player.ground_y = 116
@@ -154,7 +155,6 @@ class FactoryStageTests(unittest.TestCase):
         exterior = world.stage
         exterior.arrows_visible = True
         self.assertEqual(exterior.destination(1), 6)
-        exterior.enemies.extend(exterior.spawner.spawn(2, 0))
         world.controls.release("right")
         world.controls.press("left")
         player.x, player.vx = config.STAGE_EXIT_MARGIN, -config.RUN_SPEED
@@ -163,7 +163,7 @@ class FactoryStageTests(unittest.TestCase):
         self.assertIs(world.stage, source)
         self.assertIs(source.enemies[0], enemy)
         self.assertEqual(enemy.hp, 160)
-        self.assertEqual(exterior.spawner.spawned_count, 2)
+        self.assertEqual(exterior.spawner.spawned_count, 4)
         self.assertEqual((player.ground_y, player.jump_height, player.vy, player.jump_count),
                          (100, 140, 300, 2))
 

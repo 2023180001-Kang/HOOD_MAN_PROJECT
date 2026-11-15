@@ -11,12 +11,13 @@ class HitEffect:
     y: float
     facing: int
     elapsed: float = 0.0
+    image_name: str = config.PUNCH_KICK_HIT_IMAGE
 
     @classmethod
-    def at_contact(cls, attack, body, facing, *, depth=0.0):
+    def at_contact(cls, attack, body, facing, *, depth=0.0, image_name=config.PUNCH_KICK_HIT_IMAGE):
         return cls((max(attack.left, body.left) + min(attack.right, body.right)) / 2,
                    (max(attack.bottom, body.bottom) + min(attack.top, body.top)) / 2 + depth,
-                   facing)
+                   facing, image_name=image_name)
 
     def update(self, dt):
         self.elapsed += dt

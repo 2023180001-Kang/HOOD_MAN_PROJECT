@@ -189,7 +189,7 @@ def check_damage(game):
     release(game, pico2d.SDLK_p)
     assert enemy.has_hit and world.player.hp == 500 and not world.effects
     print("PASS: both directions deal clubs=60 / landed slam=80 once per whole motion, "
-          "with real blood/HP/shake; SDL P consumes a swing without damage/effects.")
+          "with real hit effects/HP/shake; SDL P consumes a swing without damage/effects.")
 
 
 def check_counters_and_death(game):

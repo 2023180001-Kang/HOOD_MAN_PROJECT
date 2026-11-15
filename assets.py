@@ -17,7 +17,8 @@ class Assets:
                          config.PLAYER_IMAGE, config.COMBAT_IMAGE,
                          config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
                          config.CAR_IMAGE, config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE,
-                         config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.BLOOD_IMAGE, config.HP_IMAGE,
+                         config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.HP_IMAGE,
+                         *config.HIT_EFFECT_IMAGES,
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
@@ -69,16 +70,15 @@ class Assets:
         )
 
     def draw_hit_effect(self, effect, camera_x, camera_y):
-        image = self.images[config.BLOOD_IMAGE]
+        image = self.images[effect.image_name]
         width = image.w // config.HIT_EFFECT_COLUMNS
         height = image.h // config.HIT_EFFECT_ROWS
         column = effect.frame % config.HIT_EFFECT_COLUMNS
         row = effect.frame // config.HIT_EFFECT_COLUMNS
-        scale = config.HIT_EFFECT_SCALE
+        scale = config.HIT_EFFECT_SIZE / width
         image.clip_composite_draw(
             column * width, image.h - (row + 1) * height, width, height,
             0, "h" if effect.facing < 0 else "",
-            effect.x - camera_x + (width / 2 - config.HIT_EFFECT_ANCHOR_X) * scale * effect.facing,
-            effect.y - camera_y + (height / 2 - config.HIT_EFFECT_ANCHOR_Y) * scale,
+            effect.x - camera_x, effect.y - camera_y,
             width * scale, height * scale,
         )

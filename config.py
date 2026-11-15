@@ -79,13 +79,13 @@ COMBAT_JAB_FPS = 32.0
 COMBAT_STRAIGHT_FPS = 20.0
 COMBAT_KICK_FPS = 14.0
 PLAYER_ACTIVE_FRAMES = (3, 4)
-BLOOD_IMAGE = "Hood_man_blood_hit_effect_4x2.png"
+CLUB_HIT_IMAGE = "club_hit_effect_4x2.png"
+PUNCH_KICK_HIT_IMAGE = "punch_kick_hit_effect_4x2.png"
+HIT_EFFECT_IMAGES = (CLUB_HIT_IMAGE, PUNCH_KICK_HIT_IMAGE)
 HIT_EFFECT_FPS = 20.0
 HIT_EFFECT_COLUMNS = 4
 HIT_EFFECT_ROWS = 2
-HIT_EFFECT_SCALE = 0.5
-HIT_EFFECT_ANCHOR_X = 80.0
-HIT_EFFECT_ANCHOR_Y = 128.0
+HIT_EFFECT_SIZE = 128.0  # Display cell width; both 512px source cells use 0.25 scale.
 # Key, name, one-based source row, damage, horizontal reach, attack height, FPS.
 COMBAT_MOVE_SPECS = (
     ("a", "왼손 잽", 3, 10, 95.0, 146.0, COMBAT_JAB_FPS),

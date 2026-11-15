@@ -151,7 +151,8 @@ class World:
                     self.damage_numbers.append(DamageNumber.above_body(
                         enemy.body, damage, depth=enemy.ground_y - config.GROUND_Y))
                     self.effects.append(HitEffect(enemy.x, enemy.y + config.ENEMY_HEIGHT * 0.6,
-                                                  self.player.facing))
+                                                  self.player.facing,
+                                                  image_name=config.PUNCH_KICK_HIT_IMAGE))
                     self.camera.shake()
                 if sequence.finished:
                     self.counter = None
@@ -165,7 +166,8 @@ class World:
                                                      depth=enemy.ground_y - config.GROUND_Y))
                         self.effects.append(HitEffect.at_contact(player_box, enemy.body,
                                                                  self.player.facing,
-                                                                  depth=enemy.ground_y - config.GROUND_Y))
+                                                                 depth=enemy.ground_y - config.GROUND_Y,
+                                                                 image_name=config.PUNCH_KICK_HIT_IMAGE))
                         self.camera.shake()
             for enemy in self.enemies:
                 enemy_box = enemy.attack_box
@@ -173,7 +175,8 @@ class World:
                     self.cancel_invalid_counter()
                     self.effects.append(HitEffect.at_contact(enemy_box, self.player.body,
                                                              enemy.facing,
-                                                             depth=self.player.ground_y - config.GROUND_Y))
+                                                             depth=self.player.ground_y - config.GROUND_Y,
+                                                             image_name=config.CLUB_HIT_IMAGE))
                     self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
                     if not self.player.alive:
                         self.handle_death()
@@ -204,11 +207,12 @@ class World:
             enemy.hit_by_car(car.facing)
             self.damage_numbers.append(DamageNumber.above_body(
                 enemy.body, previous_hp, depth=enemy.ground_y - config.GROUND_Y))
-            self.effects.append(HitEffect(enemy.x, enemy.y + config.ENEMY_HEIGHT * 0.5, car.facing))
+            self.effects.append(HitEffect(enemy.x, enemy.y + config.ENEMY_HEIGHT * 0.5, car.facing,
+                                         image_name=config.CLUB_HIT_IMAGE))
         if hit_player:
             self.player.hit_by_car(car.facing)
             self.effects.append(HitEffect(self.player.x, self.player.y + config.PLAYER_HEIGHT * 0.5,
-                                          car.facing))
+                                          car.facing, image_name=config.CLUB_HIT_IMAGE))
         if hit_player or hit_enemies:
             self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
 

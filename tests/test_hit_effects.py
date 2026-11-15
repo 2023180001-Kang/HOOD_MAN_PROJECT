@@ -4,7 +4,11 @@ import config
 from combat import MOVES
 from effects import HitEffect
 from enemy import Enemy
+from enemy02 import Enemy02
 from tests.helpers import advance
+from tests.test_counters import attacker, follow_up
+from tests.test_enemy02 import at_frame
+from traffic import Car
 from world import World
 
 
@@ -31,6 +35,7 @@ class HitEffectTests(unittest.TestCase):
             self.assertEqual(len(world.effects), 1)
             self.assertGreater(world.camera.shake_remaining, 0)
             effect = world.effects[0]
+            self.assertEqual(effect.image_name, config.PUNCH_KICK_HIT_IMAGE)
             self.assertEqual(effect.facing, facing)
             self.assertGreaterEqual(effect.x, enemy.body.left)
             self.assertLessEqual(effect.x, enemy.body.right)
@@ -50,18 +55,20 @@ class HitEffectTests(unittest.TestCase):
             self.assertEqual(world.player.hp, 480)
             self.assertEqual(len(world.effects), 1)
             self.assertEqual(world.effects[0].facing, -side)
+            self.assertEqual(world.effects[0].image_name, config.CLUB_HIT_IMAGE)
             advance(world, 0.1)
             self.assertEqual(len(world.effects), 1)
 
     def test_effect_plays_eight_frames_then_expires(self):
-        effect = HitEffect(100, 150, 1)
-        frames = []
-        for _ in range(8):
-            frames.append(effect.frame)
-            self.assertFalse(effect.finished)
-            effect.update(1 / config.HIT_EFFECT_FPS)
-        self.assertEqual(frames, list(range(8)))
-        self.assertTrue(effect.finished)
+        for image_name in config.HIT_EFFECT_IMAGES:
+            effect = HitEffect(100, 150, 1, image_name=image_name)
+            frames = []
+            for _ in range(8):
+                frames.append(effect.frame)
+                self.assertFalse(effect.finished)
+                effect.update(1 / config.HIT_EFFECT_FPS)
+            self.assertEqual(frames, list(range(8)))
+            self.assertTrue(effect.finished)
 
     def test_simultaneous_player_and_other_enemy_hits_spawn_both_effects(self):
         world = World()
@@ -74,6 +81,8 @@ class HitEffectTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         self.assertEqual((victim.hp, world.player.hp), (190, 480))
         self.assertEqual(len(world.effects), 2)
+        self.assertEqual([effect.image_name for effect in world.effects],
+                         [config.PUNCH_KICK_HIT_IMAGE, config.CLUB_HIT_IMAGE])
         self.assertNotEqual(world.effects[0].x, world.effects[1].x)
 
     def test_misses_and_dead_targets_never_spawn_hit_effects(self):
@@ -121,6 +130,91 @@ class HitEffectTests(unittest.TestCase):
         self.assertEqual(world.player.x, config.START_X)
         self.assertEqual(len(world.enemies), 4)
 
+    def test_all_punches_and_kicks_use_the_new_sheet_against_both_enemy_types(self):
+        for enemy_type in (Enemy, Enemy02):
+            for facing in (-1, 1):
+                for action, move in MOVES.items():
+                    with self.subTest(enemy=enemy_type.__name__, facing=facing, action=action):
+                        world = World()
+                        enemy = enemy_type(config.START_X + facing * 80, -facing)
+                        enemy.cooldown = 100
+                        world.enemies = [enemy]
+                        world.controls.press("left" if facing < 0 else "right")
+                        world.controls.press(action)
+                        advance(world, 4 / move.fps, fps=120)
+                        self.assertEqual(enemy.hp, 200 - move.damage)
+                        self.assertEqual(len(world.effects), 1)
+                        self.assertEqual(world.effects[0].image_name, config.PUNCH_KICK_HIT_IMAGE)
+                        self.assertEqual(world.effects[0].facing, facing)
+
+    def test_new_enemy_club_swings_and_leap_landings_use_the_club_sheet(self):
+        for side in (-1, 1):
+            for kind, frame, hp in (("clubs", 2, 440), ("slam", 4, 420)):
+                with self.subTest(side=side, kind=kind):
+                    world = World()
+                    world.stage_index = 3
+                    _, enemy = at_frame(kind, frame, side=side)
+                    world.enemies = [enemy]
+                    advance(world, 0.12, fps=120)
+                    self.assertEqual(world.player.hp, hp)
+                    self.assertEqual(len(world.effects), 1)
+                    self.assertEqual(world.effects[0].image_name, config.CLUB_HIT_IMAGE)
+                    self.assertEqual(world.effects[0].facing, -side)
+
+    def test_counter_followups_use_the_player_impact_instead_of_blood(self):
+        for key in "hjkl":
+            world = World()
+            world.enemies.clear()
+            enemy = attacker(world)
+            world.controls.press(f"counter_{key}")
+            world.step(config.FIXED_DT)
+            follow_up(world)
+            for _ in range(120):
+                world.step(config.FIXED_DT)
+                if world.effects:
+                    break
+            self.assertEqual(enemy.hp, 120)
+            self.assertEqual(len(world.effects), 1)
+            self.assertEqual(world.effects[0].image_name, config.PUNCH_KICK_HIT_IMAGE)
+
+    def test_vehicle_impacts_use_the_club_impact_for_both_victims(self):
+        world = World()
+        world.stage_index = 2
+        world.player.ground_y = config.CAR_GROUND_Y
+        enemy = Enemy02(world.player.x, ground_y=config.CAR_GROUND_Y)
+        world.enemies = [enemy]
+        world.stage.traffic.car = Car(world.player.x, 1, 1400)
+        world.step(config.FIXED_DT)
+        self.assertEqual((world.player.hp, enemy.hp), (0, 0))
+        self.assertEqual(len(world.effects), 2)
+        self.assertTrue(all(effect.image_name == config.CLUB_HIT_IMAGE for effect in world.effects))
+
+    def test_both_new_resources_are_transparent_four_by_two_sheets(self):
+        from PIL import Image
+
+        for name in config.HIT_EFFECT_IMAGES:
+            with Image.open(config.ROOT / name) as image:
+                self.assertEqual((image.size, image.mode), ((2048, 1024), "RGBA"))
+                self.assertEqual(image.getchannel("A").getextrema(), (0, 255))
+                for frame in range(8):
+                    x, y = frame % 4 * 512, frame // 4 * 512
+                    self.assertIsNotNone(image.crop((x, y, x + 512, y + 512)).getbbox())
+
+    def test_mixed_effect_images_keep_their_clocks_when_the_scene_is_inactive(self):
+        world = World()
+        effects = [HitEffect(100, 150, 1, image_name=name) for name in config.HIT_EFFECT_IMAGES]
+        world.effects.extend(effects)
+        world.stage_index = 1
+        advance(world, 0.2)
+        self.assertTrue(all(effect.elapsed == 0 for effect in effects))
+        world.stage_index = 0
+        advance(world, 0.1)
+        self.assertEqual([effect.image_name for effect in world.effects], list(config.HIT_EFFECT_IMAGES))
+        self.assertTrue(all(effect.frame == 2 for effect in effects))
+        world.controls.press("restart")
+        world.update(config.FIXED_DT)
+        self.assertTrue(all(not stage.effects for stage in world.stages))
+
     def test_attack_and_effect_state_are_identical_across_render_rates(self):
         outcomes = []
         for fps in (30, 60, 120, 144):
@@ -131,7 +225,8 @@ class HitEffectTests(unittest.TestCase):
             world.controls.press("combat_a")
             advance(world, 0.5, fps)
             outcomes.append((enemy.hp, world.player.state,
-                             [(effect.x, effect.y, effect.frame) for effect in world.effects]))
+                              [(effect.x, effect.y, effect.frame, effect.image_name)
+                               for effect in world.effects]))
         self.assertTrue(all(outcome == outcomes[0] for outcome in outcomes))
 
 

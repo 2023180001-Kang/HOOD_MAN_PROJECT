@@ -8,6 +8,8 @@ import sys
 from time import perf_counter
 from unittest.mock import patch
 
+from PIL import ImageChops
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
@@ -296,7 +298,7 @@ def check_player_damage_and_enemy_health(game):
         assert len(game.world.effects) == 1
         assert game.world.camera.shake_remaining > 0
         if key_name == "a":
-            verify_blood_pixels(game, "blood_player_to_enemy")
+            verify_hit_effect_pixels(game, "punch_kick_hit_player_to_enemy", config.PUNCH_KICK_HIT_IMAGE)
         if key_name in "sdf":
             capture(game, f"player_damage_{key_name}")
         tick(game, 20)
@@ -334,25 +336,27 @@ def check_player_damage_and_enemy_health(game):
           "are full/half/hidden at 200/100/0; four right kicks defeat an enemy.")
 
 
-def verify_blood_pixels(game, name):
+def verify_hit_effect_pixels(game, name, expected_image):
     image = capture(game, name)
     effects = game.world.effects
+    assert effects and all(effect.image_name == expected_image for effect in effects)
     try:
         game.world.effects = []
         clean = render_image(game)
     finally:
         game.world.effects = effects
-    red_pixels = sum(image.getpixel((x, y))[0] > clean.getpixel((x, y))[0] + 25
-                     for y in range(400, 651) for x in range(480, 871))
-    assert red_pixels > 20, (name, red_pixels)
+    difference = ImageChops.difference(image.convert("RGB"), clean.convert("RGB"))
+    changed_pixels = sum(max(pixel) > 25 for pixel in
+                         difference.crop((480, 400, 871, 651)).get_flattened_data())
+    assert changed_pixels > 20, (name, changed_pixels)
 
 
-def check_received_damage_and_blood(game):
+def check_received_damage_and_effects(game):
     game.world = World()
     game.world.enemies = [ready_enemy(config.START_X - 80)]
     tick(game, 7)
     assert game.world.player.hp == 480 and len(game.world.effects) == 1
-    verify_blood_pixels(game, "blood_enemy_to_player")
+    verify_hit_effect_pixels(game, "club_hit_enemy_to_player", config.CLUB_HIT_IMAGE)
     game.world.enemies.clear()
     tick(game, 30)
     assert not game.world.effects
@@ -366,7 +370,8 @@ def check_received_damage_and_blood(game):
         tick(game)
         assert game.world.player.hp == 480 and game.world.player.state == "HIT"
         assert len(game.world.effects) == 1 and game.world.camera.shake_remaining > 0
-        verify_blood_pixels(game, f"failed_counter_h_hit_{'left' if side < 0 else 'right'}")
+        verify_hit_effect_pixels(game, f"failed_counter_h_hit_{'left' if side < 0 else 'right'}",
+                                 config.CLUB_HIT_IMAGE)
         push_key(pico2d.SDLK_h, down=False)
         tick(game)
 
@@ -384,7 +389,7 @@ def check_received_damage_and_blood(game):
         push_key(key, down=False)
     game.handle_events()
     print("PASS: SDL H without a timed attacker does not block; running/jumping and both-side attacks "
-          "deal 20 with blood/shake; hit effects expire normally.")
+          "deal 20 with club-hit effects/shake; hit effects expire normally.")
 
 
 def running_jump_distance(game, record=False, running=True):
@@ -680,7 +685,7 @@ def main():
             check_player_action_inputs(game)
             check_player_attack_switches(game)
             check_player_damage_and_enemy_health(game)
-            check_received_damage_and_blood(game)
+            check_received_damage_and_effects(game)
             check_jump_range(game)
             check_crowd_escape(game)
             check_crowd_damage(game)

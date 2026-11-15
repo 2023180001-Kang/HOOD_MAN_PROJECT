@@ -15,7 +15,8 @@ def main():
         "HOOD_MAN_enemy02.png",
         "HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png",
         "before_sheets/HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png",
-        "Hood_man_blood_hit_effect_4x2.png",
+        "club_hit_effect_4x2.png",
+        "punch_kick_hit_effect_4x2.png",
         "HoodMan_HP_pico2d.png",
         "newStage.png",
     ):
@@ -30,8 +31,8 @@ def main():
                             and image.getpixel((x, y))[3] > 200]
                     print("blue fill", y, (min(blue), max(blue)) if blue else None)
             if any(part in name for part in
-                   ("Sprite", "StreetThug", "enemy02", "BasicAttack", "BasicCombat", "blood_hit")):
-                columns = 4 if "blood_hit" in name else 8
+                   ("Sprite", "StreetThug", "enemy02", "BasicAttack", "BasicCombat", "hit_effect")):
+                columns = 4 if "hit_effect" in name else 8
                 row_count = image.height // (image.width // columns)
                 for row in range(row_count):
                     bounds = []

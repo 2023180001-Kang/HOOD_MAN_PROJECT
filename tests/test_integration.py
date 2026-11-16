@@ -94,7 +94,8 @@ class IntegrationTests(unittest.TestCase):
                       config.COMBAT_IMAGE: 4,
                       config.COUNTER_PLAYER_IMAGE: 4, config.COUNTER_ENEMY_IMAGE: 4,
                       config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1,
-                      **dict.fromkeys(config.WEAPON_POSE_IMAGES.values(), 6)}
+                      **{name: config.WEAPON_SHEET_ROWS[kind]
+                         for kind, name in config.WEAPON_POSE_IMAGES.items()}}
         self.assertEqual(set(metadata), set(row_counts))
         for name, rows in metadata.items():
             cell_width, cell_height = (384, 384) if name == config.ENEMY02_IMAGE else (256, 256)
@@ -136,6 +137,21 @@ class IntegrationTests(unittest.TestCase):
                 self.assertEqual(len(anchors), 1)
                 self.assertTrue(all(tile["offset_y"] >= 0 for tile in row))
         self.assertGreaterEqual(metadata[config.COUNTER_ENEMY_IMAGE][3][2]["offset_y"], 50)
+
+    def test_weapon_airborne_attack_clips_preserve_source_pose_lift(self):
+        from PIL import Image
+
+        with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
+            metadata = json.load(file)
+        for kind, row in config.WEAPON_AIRBORNE_ROWS.items():
+            name = config.WEAPON_POSE_IMAGES[kind]
+            with Image.open(config.ROOT / name) as image:
+                feet = [image.crop((col * 256, (row - 1) * 256,
+                                    (col + 1) * 256, row * 256)).getbbox()[3]
+                        for col in range(8)]
+            self.assertEqual([tile["offset_y"] for tile in metadata[name][row - 1]],
+                             [max(feet) - foot for foot in feet])
+            self.assertGreater(max(tile["offset_y"] for tile in metadata[name][row - 1]), 25)
 
 
 if __name__ == "__main__":

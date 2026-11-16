@@ -77,11 +77,10 @@ def check_pose_frames(game):
         tap(game, pico2d.SDLK_g)
         player = world.player
         texture = game.assets.images[name]
-        assert (texture.w, texture.h) == (2048, 1536)
+        assert (texture.w, texture.h) == (2048, config.WEAPON_SHEET_ROWS[kind] * 256)
         for facing in (-1, 1):
             player.facing = facing
-            for state, row in (("IDLE", 1), ("WALK", 2), ("RUN", 3),
-                               ("JUMP", 4), ("HIT", 5), ("DYING", 6)):
+            for state, row in config.WEAPON_POSE_ROWS[kind].items():
                 player.animation.set_state(state)
                 player.jump_height = 150 if state == "JUMP" else 0
                 fps = player.animation.definitions[state][1]
@@ -101,8 +100,8 @@ def check_pose_frames(game):
                     assert args[8:10] == (tile["clip"][2] * config.WEAPON_POSE_SCALE,
                                          tile["clip"][3] * config.WEAPON_POSE_SCALE)
                     assert abs(args[7] - args[9] / 2 - player.y) < 1e-8
-    print("PASS: both new equipped 256x256-cell sheets, all 6 rows x 8 frames x 2 facings, "
-          "exact clips/0.75 scale/feet alignment; HIT uses row 5 and death row 6.")
+    print("PASS: new 9/8-row equipped sheets, movement/hit/death poses x 8 frames x 2 facings, "
+          "exact clips/0.75 scale/feet alignment; pipe death uses the shared player sheet.")
 
 
 def check_hit_recovery(game):
@@ -142,7 +141,8 @@ def check_hit_recovery(game):
             assert draw.call_args.args[5] == ("h" if facing < 0 else "")
             player.take_damage(config.MAX_HP)
             tick(game, 15)
-            assert (player.state, player.sprite_row, player.hp) == ("DYING", 6, 0)
+            death_row = config.WEAPON_POSE_ROWS[kind].get("DYING", 5)
+            assert (player.state, player.sprite_row, player.hp) == ("DYING", death_row, 0)
             tick(game, 60)
             assert player.state == "DEAD"
     print("PASS: SDL G pickup + real enemy hits for both weapons/facings: all 8 HIT poses "

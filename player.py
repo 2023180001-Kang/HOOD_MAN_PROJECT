@@ -69,12 +69,14 @@ class Player:
             return config.COUNTER_PLAYER_IMAGE
         if self.active_move is not None:
             return config.COMBAT_IMAGE
-        return config.WEAPON_POSE_IMAGES.get(self.weapon, config.PLAYER_IMAGE)
+        if self.state in config.WEAPON_POSE_ROWS.get(self.weapon, {}):
+            return config.WEAPON_POSE_IMAGES[self.weapon]
+        return config.PLAYER_IMAGE
 
     @property
     def sprite_row(self):
         if self.sprite_image in config.WEAPON_POSE_IMAGES.values():
-            return config.WEAPON_POSE_ROWS[self.state]
+            return config.WEAPON_POSE_ROWS[self.weapon][self.state]
         return self.animation.row
 
     def cancel_combat(self):

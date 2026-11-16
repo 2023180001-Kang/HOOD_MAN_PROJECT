@@ -182,9 +182,12 @@ class WeaponPickupTests(unittest.TestCase):
         player = world.player
         for kind, image in config.WEAPON_POSE_IMAGES.items():
             player.weapon = kind
-            for state, row in config.WEAPON_POSE_ROWS.items():
+            for state, row in config.WEAPON_POSE_ROWS[kind].items():
                 player.animation.set_state(state)
                 self.assertEqual((player.sprite_image, player.sprite_row), (image, row))
+            if kind == "steel_pipe":
+                player.animation.set_state("DYING")
+                self.assertEqual((player.sprite_image, player.sprite_row), (config.PLAYER_IMAGE, 5))
             player.animation.set_state("IDLE")
             player.start_move(MOVES["combat_a"], 1)
             self.assertEqual(player.sprite_image, config.COMBAT_IMAGE)

@@ -78,12 +78,18 @@ TITLE_IMAGE = "HOOD_MAN_TITLE_SCREEN_1280x720.png"
 TITLE_SCREEN_DURATION = 2.0
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 WEAPON_POSE_IMAGES = {
-    "combat_knife": "HOOD_MAN_DAGGER_new.png",
-    "steel_pipe": "HOOD_MAN_STEEL_PIPE_new.png",
+    "combat_knife": "HOOD_MAN_DAGGER_move and fight.png",
+    "steel_pipe": "HOOD_MAN_STEEL_PIPE_move and fight.png",
 }
-WEAPON_POSE_SCALE = SPRITE_SCALE  # New 256x256 cells use the original player scale.
-WEAPON_POSE_ROWS = {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4,
-                    "HIT": 5, "DYING": 6, "DEAD": 6}
+WEAPON_POSE_SCALE = SPRITE_SCALE
+WEAPON_SHEET_ROWS = {"combat_knife": 9, "steel_pipe": 8}
+WEAPON_POSE_ROWS = {
+    "combat_knife": {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4,
+                     "HIT": 5, "DYING": 6, "DEAD": 6},
+    # The pipe sheet has attacks in rows 6..8, so use the shared death sprite.
+    "steel_pipe": {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4, "HIT": 5},
+}
+WEAPON_AIRBORNE_ROWS = {"combat_knife": 9, "steel_pipe": 8}
 WEAPON_HIT_FPS = 40.0  # Brief 8-frame flinch, then equipped IDLE after 0.2 seconds.
 COMBAT_IMAGE = "HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png"
 COMBAT_JAB_FPS = 32.0

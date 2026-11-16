@@ -22,8 +22,10 @@ SHEETS = {
     config.COUNTER_ENEMY_IMAGE: 4,
     config.PLAYER_CAR_HIT_IMAGE: 1,
     config.ENEMY_CAR_HIT_IMAGE: 1,
-    **dict.fromkeys(config.WEAPON_POSE_IMAGES.values(), 6),
+    **{name: config.WEAPON_SHEET_ROWS[kind] for kind, name in config.WEAPON_POSE_IMAGES.items()},
 }
+AIRBORNE_WEAPON_ROWS = {config.WEAPON_POSE_IMAGES[kind]: row
+                        for kind, row in config.WEAPON_AIRBORNE_ROWS.items()}
 
 
 def main():
@@ -50,9 +52,10 @@ def main():
                         # Keep the source-pose lift for inspection. The leap
                         # controller owns actual height; do not add offset_y too.
                         frame["jump_height"] = ground_anchor - bottom
-                    elif name in (config.ENEMY02_IMAGE,
-                                  config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
-                                  config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE):
+                    elif (row + 1 == AIRBORNE_WEAPON_ROWS.get(name) or
+                          name in (config.ENEMY02_IMAGE,
+                                   config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
+                                   config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE)):
                         # Keep airborne throws above the floor instead of moving
                         # every cropped frame's bottom down to the same feet y.
                         frame["offset_y"] = ground_anchor - bottom

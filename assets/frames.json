@@ -3195,7 +3195,7 @@
           216
         ],
         "offset_x": 1.0,
-        "offset_y": 1
+        "jump_height": 1
       },
       {
         "clip": [
@@ -3205,7 +3205,7 @@
           179
         ],
         "offset_x": 4.0,
-        "offset_y": 18
+        "jump_height": 18
       },
       {
         "clip": [
@@ -3215,7 +3215,7 @@
           173
         ],
         "offset_x": 0.0,
-        "offset_y": 45
+        "jump_height": 45
       },
       {
         "clip": [
@@ -3225,7 +3225,7 @@
           179
         ],
         "offset_x": -9.5,
-        "offset_y": 49
+        "jump_height": 49
       },
       {
         "clip": [
@@ -3235,7 +3235,7 @@
           181
         ],
         "offset_x": -9.0,
-        "offset_y": 7
+        "jump_height": 7
       },
       {
         "clip": [
@@ -3245,7 +3245,7 @@
           158
         ],
         "offset_x": 13.5,
-        "offset_y": 7
+        "jump_height": 7
       },
       {
         "clip": [
@@ -3255,7 +3255,7 @@
           156
         ],
         "offset_x": 4.0,
-        "offset_y": 4
+        "jump_height": 4
       },
       {
         "clip": [
@@ -3265,7 +3265,7 @@
           214
         ],
         "offset_x": 3.0,
-        "offset_y": 0
+        "jump_height": 0
       }
     ]
   ],
@@ -3797,7 +3797,7 @@
           222
         ],
         "offset_x": 9.5,
-        "offset_y": 8
+        "jump_height": 8
       },
       {
         "clip": [
@@ -3807,7 +3807,7 @@
           208
         ],
         "offset_x": 22.0,
-        "offset_y": 37
+        "jump_height": 37
       },
       {
         "clip": [
@@ -3817,7 +3817,7 @@
           207
         ],
         "offset_x": 15.5,
-        "offset_y": 40
+        "jump_height": 40
       },
       {
         "clip": [
@@ -3827,7 +3827,7 @@
           229
         ],
         "offset_x": 0.0,
-        "offset_y": 17
+        "jump_height": 17
       },
       {
         "clip": [
@@ -3837,7 +3837,7 @@
           230
         ],
         "offset_x": 8.0,
-        "offset_y": 17
+        "jump_height": 17
       },
       {
         "clip": [
@@ -3847,7 +3847,7 @@
           185
         ],
         "offset_x": 13.0,
-        "offset_y": 0
+        "jump_height": 0
       },
       {
         "clip": [
@@ -3857,7 +3857,7 @@
           189
         ],
         "offset_x": 23.5,
-        "offset_y": 4
+        "jump_height": 4
       },
       {
         "clip": [
@@ -3867,7 +3867,7 @@
           222
         ],
         "offset_x": 47.5,
-        "offset_y": 8
+        "jump_height": 8
       }
     ]
   ]

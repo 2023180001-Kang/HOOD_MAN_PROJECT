@@ -42,7 +42,7 @@ class WeaponCombatTests(unittest.TestCase):
                 self.assertEqual(player.active_move.damage, damage)
                 self.assertEqual(player.animation.definitions[player.state][1],
                                  MOVES[f"combat_{key}"].fps)
-                advance(world, 0.7)
+                advance(world, 2.4 if key == "d" else 0.7)
                 self.assertIsNone(player.active_move)
                 self.assertEqual((player.state, player.sprite_image, player.sprite_row),
                                  ("IDLE", config.WEAPON_POSE_IMAGES[kind], 1))
@@ -62,7 +62,7 @@ class WeaponCombatTests(unittest.TestCase):
                             enemy = target(world, enemy_type, side)
                             world.controls.press(key)
                             hits = 0
-                            for _ in range(90):
+                            for _ in range(300 if move.jump_attack else 90):
                                 hp = enemy.hp
                                 world.step(config.FIXED_DT)
                                 if enemy.hp != hp:
@@ -86,7 +86,7 @@ class WeaponCombatTests(unittest.TestCase):
             advance(world, before)
             self.assertEqual(enemy.hp, 200)
             self.assertEqual(world.effects, [])
-            advance(world, 0.1)
+            advance(world, 2 if key == "d" else 0.1)
             self.assertEqual(enemy.hp, 200 - WEAPON_MOVES[kind][f"combat_{key}"].damage)
 
     def test_depth_facing_height_and_dead_targets_still_filter_weapon_hits(self):
@@ -96,7 +96,10 @@ class WeaponCombatTests(unittest.TestCase):
                 player = world.player
                 enemy = target(world)
                 player.start_move(move, 1)
+                if move.jump_attack:
+                    player.weapon_leap_phase = "LANDING"
                 player.animation.elapsed = (move.active_frames[0] + 0.1) / move.fps
+                self.assertIsNotNone(player.attack_box)
                 enemy.ground_y = player.ground_y + 33
                 self.assertFalse(player.try_hit(enemy))
                 enemy.ground_y = player.ground_y
@@ -141,7 +144,7 @@ class WeaponCombatTests(unittest.TestCase):
             world.step(config.FIXED_DT)
             self.assertIs(player.active_move, WEAPON_MOVES[kind]["combat_d"])
             self.assertEqual(player.animation.elapsed, config.FIXED_DT)
-            advance(world, 0.8)
+            advance(world, 2.4)
             self.assertIsNone(player.active_move)
             self.assertFalse(world.controls.pressed)
 
@@ -208,7 +211,7 @@ class WeaponCombatTests(unittest.TestCase):
             for fps in (30, 60, 120, 144):
                 world = equipped_world(kind)
                 enemy = target(world)
-                for key, seconds in (("combat_d", 1), ("combat_s", 0.5), ("combat_a", 0.5)):
+                for key, seconds in (("combat_d", 2.5), ("combat_s", 0.5), ("combat_a", 0.5)):
                     tap(world.controls, key)
                     advance(world, seconds, fps)
                 results.append((enemy.hp, world.player.state, world.player.animation.elapsed,

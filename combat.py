@@ -17,6 +17,7 @@ class Move:
     image_name: str = config.COMBAT_IMAGE
     active_frames: tuple = config.PLAYER_ACTIVE_FRAMES
     hit_image: str = config.PUNCH_KICK_HIT_IMAGE
+    jump_attack: bool = False
 
     @property
     def state(self):
@@ -32,7 +33,8 @@ WEAPON_MOVES = {
         f"combat_{key}": Move(key, name, row, damage, reach, height, fps,
                                image_name=config.WEAPON_POSE_IMAGES[kind],
                                active_frames=active_frames,
-                               hit_image=config.WEAPON_HIT_IMAGES[kind])
+                               hit_image=config.WEAPON_HIT_IMAGES[kind],
+                               jump_attack=key == "d")
         for key, name, row, damage, reach, height, fps, active_frames in specs
     }
     for kind, specs in config.WEAPON_MOVE_SPECS.items()

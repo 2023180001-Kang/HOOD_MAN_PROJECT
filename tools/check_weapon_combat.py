@@ -70,7 +70,94 @@ def check_clips(game):
                     assert abs(args[7] - args[9] / 2 - player.y
                                - tile.get("offset_y", 0) * config.WEAPON_POSE_SCALE) < 1e-8
     print("PASS: all 6 equipped attacks x 8 frames x 2 facings use exact new source clips, "
-          "0.75 scale and preserved airborne D poses.")
+          "0.75 scale and D poses without a second height offset.")
+
+
+def measure_jump(game, kind, side, running):
+    if kind is None:
+        game.world = World()
+    else:
+        scene(game, kind, side=side)
+    world, player = game.world, game.world.player
+    player.x = 350 if side > 0 else config.WORLD_WIDTH - 350
+    player.vx = side * (config.RUN_SPEED if running else config.WALK_SPEED)
+    player.facing = side
+    start = player.x
+    direction = pico2d.SDLK_RIGHT if side > 0 else pico2d.SDLK_LEFT
+    push_key(direction)
+    if running:
+        push_key(pico2d.SDLK_LSHIFT)
+    if kind is not None:
+        tap(game, pico2d.SDLK_d)
+        for _ in range(30):
+            if player.weapon_leap_phase == "AIR":
+                break
+            tick(game)
+        assert player.weapon_leap_phase == "AIR" and player.jump_height == 0
+    else:
+        push_key(pico2d.SDLK_SPACE)
+    observed = {"peak": 0.0, "count": 0}
+    original_step = world.step
+
+    def observe_step(dt):
+        original_step(dt)
+        observed["peak"] = max(observed["peak"], player.jump_height)
+        observed["count"] = max(observed["count"], player.jump_count)
+        if player.grounded:
+            observed.setdefault("land_x", player.x)
+
+    apex_captured = False
+    with patch.object(world, "step", side_effect=observe_step):
+        for frame in range(150):
+            if kind is None and frame == 30:
+                push_key(pico2d.SDLK_SPACE, down=False)
+                push_key(pico2d.SDLK_SPACE)
+            elif kind is not None and frame in (10, 20, 40):
+                # Fresh D and Space during flight must not grant another boost.
+                for key in (pico2d.SDLK_d, pico2d.SDLK_SPACE):
+                    push_key(key, down=False)
+                    push_key(key)
+            tick(game)
+            if (not apex_captured and player.jump_count == 2 and 0 < player.vy <= 30
+                    and (kind is not None or side > 0)):
+                label = kind or "reference"
+                capture(game, f"weapon_double_jump_{label}_{side}_{'run' if running else 'walk'}_apex")
+                apex_captured = True
+            if "land_x" in observed:
+                break
+            if kind is not None:
+                assert player.weapon_leap_phase == "AIR" and player.animation.frame in (2, 3)
+                assert player.attack_box is None
+    assert player.grounded and observed["count"] == 2
+    release(game, direction, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE, pico2d.SDLK_d)
+    if kind is not None:
+        assert player.weapon_leap_phase == "LANDING"
+        capture(game, f"weapon_double_jump_{kind}_{side}_{'run' if running else 'walk'}_landed")
+        tick(game, 30)
+        assert player.active_move is None
+    return observed["peak"], (observed["land_x"] - start) * side
+
+
+def check_double_jump_range(game):
+    for running in (False, True):
+        for side in (-1, 1):
+            reference = measure_jump(game, None, side, running)
+            for kind in WEAPON_MOVES:
+                actual = measure_jump(game, kind, side, running)
+                assert all(abs(a - b) < 1e-6 for a, b in zip(actual, reference)), (kind, actual, reference)
+            print(f"PASS: SDL D / real Space double jump, {'run' if running else 'walk'}, "
+                  f"side {side}: peak {reference[0]:.3f}px, first-touchdown range {reference[1]:.1f}px; "
+                  "both weapons match and repeated D/Space adds no extra jump.")
+    for kind in WEAPON_MOVES:
+        world = scene(game, kind)
+        tap(game, pico2d.SDLK_d)
+        tick(game, 20)
+        assert world.player.weapon_leap_phase == "AIR" and world.player.weapon_leap_boost_pending
+        tap(game, pico2d.SDLK_g)
+        assert world.player.weapon_leap_phase is None and not world.player.weapon_leap_boost_pending
+        tick(game, 120)
+        assert world.player.grounded and world.player.weapon is None
+    print("PASS: SDL midair G discard cancels the scheduled second boost and lands naturally.")
 
 
 def check_damage_effects_and_hud(game):
@@ -83,7 +170,7 @@ def check_damage_effects_and_hud(game):
                     key = getattr(pico2d, f"SDLK_{move.key}")
                     push_key(key)
                     hits = 0
-                    for _ in range(60):
+                    for _ in range(180 if move.jump_attack else 60):
                         previous_hp = enemy.hp
                         tick(game)
                         if previous_hp == enemy.hp:
@@ -91,6 +178,8 @@ def check_damage_effects_and_hud(game):
                         hits += 1
                         assert previous_hp - enemy.hp == move.damage
                         assert player.animation.frame in move.active_frames
+                        if move.jump_attack:
+                            assert player.grounded and player.weapon_leap_phase == "LANDING"
                         assert world.effects[-1].image_name == config.WEAPON_HIT_IMAGES[kind]
                         assert world.effects[-1].facing == side
                         assert world.damage_numbers[-1].damage == move.damage
@@ -119,7 +208,7 @@ def check_switches_and_discard(game):
         world = scene(game, kind, Enemy)
         enemy = world.enemies[0]
         for key, frames, hp in ((pico2d.SDLK_a, 5, 190),
-                                (pico2d.SDLK_s, 14, 150), (pico2d.SDLK_d, 25, 100)):
+                                (pico2d.SDLK_s, 14, 150), (pico2d.SDLK_d, 119, 100)):
             tap(game, key)
             tick(game, frames)
             assert enemy.hp == hp, (kind, key, enemy.hp)
@@ -189,6 +278,7 @@ def main():
         game = Game()
         game.handle_events()
         check_clips(game)
+        check_double_jump_range(game)
         check_damage_effects_and_hud(game)
         check_switches_and_discard(game)
         benchmark(game)

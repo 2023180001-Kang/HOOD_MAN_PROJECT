@@ -33,6 +33,10 @@ class Player:
         self.car_hit = False
         self.weapon = None
         self.active_move = None
+        self.weapon_leap_phase = None
+        self.weapon_leap_elapsed = 0.0
+        self.weapon_leap_boost_pending = False
+        self.weapon_leap_velocity = (0.0, 0.0)
         self.counter_move = None
         self.hit_enemies = set()
         definitions = dict(config.PLAYER_ANIMATIONS)
@@ -88,6 +92,10 @@ class Player:
     def cancel_combat(self):
         self.active_move = None
         self.hit_enemies.clear()
+        self.weapon_leap_phase = None
+        self.weapon_leap_elapsed = 0.0
+        self.weapon_leap_boost_pending = False
+        self.weapon_leap_velocity = (0.0, 0.0)
 
     def equip_weapon(self, weapon):
         if weapon == self.weapon:
@@ -99,8 +107,9 @@ class Player:
             self.animation.set_state("IDLE" if self.grounded else "JUMP")
 
     def start_move(self, move, direction):
+        velocity = self.vx, self.ground_vy
+        self.cancel_combat()
         self.active_move = move
-        self.hit_enemies.clear()
         self.vx = 0.0
         self.ground_vy = 0.0
         if direction:
@@ -108,6 +117,53 @@ class Player:
         self.animation.definitions[move.state] = (move.row, move.fps, False)
         self.animation.set_state(move.state)
         self.animation.elapsed = 0.0
+        if move.jump_attack:
+            if self.grounded:
+                self.weapon_leap_phase = "WINDUP"
+                self.weapon_leap_velocity = velocity
+            else:
+                # Airborne D uses the current jump, never a third/repeated boost.
+                self.weapon_leap_phase = "AIR"
+                self.vx, self.ground_vy = velocity
+
+    def update_weapon_leap(self, dt, controls):
+        move = self.active_move
+        if self.weapon_leap_phase == "WINDUP":
+            self.vx = self.ground_vy = 0.0
+            self.animation.update(dt)
+            if self.animation.elapsed + 1e-9 >= 2 / move.fps:
+                self.weapon_leap_phase = "AIR"
+                self.weapon_leap_elapsed = 0.0
+                self.weapon_leap_boost_pending = True
+                self.vx, self.ground_vy = self.weapon_leap_velocity
+                self.vy, self.jump_count = config.JUMP_SPEED, 1
+                self.animation.elapsed = 2 / move.fps
+            return
+        if self.weapon_leap_phase == "AIR":
+            speed = config.RUN_SPEED if controls.running else config.WALK_SPEED
+            self.move_on_ground(dt, controls, speed, turn=False)
+            if (self.weapon_leap_boost_pending
+                    and self.weapon_leap_elapsed + 1e-9 >= config.WEAPON_LEAP_BOOST_DELAY):
+                self.vy = (config.RUN_DOUBLE_JUMP_SPEED if controls.running and controls.moving
+                           else config.DOUBLE_JUMP_SPEED)
+                self.jump_count = 2
+                self.weapon_leap_boost_pending = False
+            self.weapon_leap_elapsed += dt
+            self.update_vertical(dt)
+            # The flight outlasts the original eight frames. Keep the airborne
+            # poses until physical landing, then play the downswing and recovery.
+            self.animation.elapsed = (2.05 if self.vy >= 0 else 3.05) / move.fps
+            if self.grounded:
+                self.weapon_leap_phase = "LANDING"
+                self.weapon_leap_boost_pending = False
+                self.vx = self.ground_vy = 0.0
+                self.animation.elapsed = 4 / move.fps
+            return
+        self.vx = self.ground_vy = 0.0
+        self.animation.update(dt)
+        if self.animation.finished:
+            self.cancel_combat()
+            self.animation.set_state("IDLE")
 
     def start_counter(self, move, facing):
         self.cancel_combat()
@@ -136,6 +192,8 @@ class Player:
         move = self.active_move
         if (not self.alive or move is None or self.state != move.state
                 or self.animation.frame not in move.active_frames):
+            return None
+        if move.jump_attack and (self.weapon_leap_phase != "LANDING" or not self.grounded):
             return None
         near = self.x + self.facing * 10
         far = self.x + self.facing * move.reach
@@ -233,6 +291,9 @@ class Player:
             if move != self.active_move:
                 self.start_move(move, controls.direction)
         if self.active_move is not None:
+            if self.active_move.jump_attack:
+                self.update_weapon_leap(dt, controls)
+                return
             self.vx = 0.0
             self.ground_vy = 0.0
             self.update_vertical(dt)

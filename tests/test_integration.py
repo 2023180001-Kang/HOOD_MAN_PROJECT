@@ -138,7 +138,7 @@ class IntegrationTests(unittest.TestCase):
                 self.assertTrue(all(tile["offset_y"] >= 0 for tile in row))
         self.assertGreaterEqual(metadata[config.COUNTER_ENEMY_IMAGE][3][2]["offset_y"], 50)
 
-    def test_weapon_airborne_attack_clips_preserve_source_pose_lift(self):
+    def test_weapon_airborne_attack_clips_do_not_double_add_the_physical_jump(self):
         from PIL import Image
 
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
@@ -149,9 +149,10 @@ class IntegrationTests(unittest.TestCase):
                 feet = [image.crop((col * 256, (row - 1) * 256,
                                     (col + 1) * 256, row * 256)).getbbox()[3]
                         for col in range(8)]
-            self.assertEqual([tile["offset_y"] for tile in metadata[name][row - 1]],
+            self.assertEqual([tile["jump_height"] for tile in metadata[name][row - 1]],
                              [max(feet) - foot for foot in feet])
-            self.assertGreater(max(tile["offset_y"] for tile in metadata[name][row - 1]), 25)
+            self.assertGreater(max(tile["jump_height"] for tile in metadata[name][row - 1]), 25)
+            self.assertTrue(all(tile.get("offset_y", 0) == 0 for tile in metadata[name][row - 1]))
 
 
 if __name__ == "__main__":

@@ -48,14 +48,14 @@ def main():
                                  right - left, bottom - top],
                         "offset_x": (left + right) / 2 - cell_width / 2,
                     }
-                    if name == config.ENEMY02_IMAGE and row == 4:
+                    if ((name == config.ENEMY02_IMAGE and row == 4)
+                            or row + 1 == AIRBORNE_WEAPON_ROWS.get(name)):
                         # Keep the source-pose lift for inspection. The leap
                         # controller owns actual height; do not add offset_y too.
                         frame["jump_height"] = ground_anchor - bottom
-                    elif (row + 1 == AIRBORNE_WEAPON_ROWS.get(name) or
-                          name in (config.ENEMY02_IMAGE,
-                                   config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
-                                   config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE)):
+                    elif name in (config.ENEMY02_IMAGE,
+                                  config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
+                                  config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE):
                         # Keep airborne throws above the floor instead of moving
                         # every cropped frame's bottom down to the same feet y.
                         frame["offset_y"] = ground_anchor - bottom

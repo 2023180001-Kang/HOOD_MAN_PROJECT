@@ -1,6 +1,6 @@
 # 테스트 방법 및 결과
 
-최신 단검/쇠파이프 이동·A/S/D 공격 검증은 **17장**에 기록한다. 현재 로직은 **334개**이며 이전 개발 단계의 결과는 각 절의 당시 사양을 따른다. 도시 첫 맵의 인도 소환은 16장, 반격 제압 유지·이동·A 후속 공격은 15장, 차량은 13~14장에 기록한다.
+최신 무기 D의 실제 이단 도약은 **18장**, 단검/쇠파이프 이동·A/S/D 공격 기반은 **17장**에 기록한다. 현재 로직은 **343개**이며 이전 개발 단계의 결과는 각 절의 당시 사양을 따른다. 도시 첫 맵의 인도 소환은 16장, 반격 제압 유지·이동·A 후속 공격은 15장, 차량은 13~14장에 기록한다.
 
 ## 1. 검증 환경
 
@@ -504,3 +504,27 @@ PRD 대응: AC-19(공격별 속도·유효 프레임), AC-20(지정 피해·중�
 5. F5로 비무장과 초기 바닥 배치를 복원한다. 비무장 A/S/D는 원래 공격으로 돌아와야 한다.
 
 대표 캡처: `artifacts/weapon_hit_combat_knife_s_Enemy_1.png`, `weapon_hit_steel_pipe_s_Enemy02_1.png`, `weapon_attack_combat_knife_d_frame_2.png`, `weapon_hit_steel_pipe_d_Enemy_-1.png`, `weapon_combo_steel_pipe.png`.
+
+## 18. 무기 D의 실제 이단 도약·착지 타격 (2026-11-16)
+
+```powershell
+.\.venv\Scripts\python.exe tools/prepare_assets.py
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+.\.venv\Scripts\python.exe tools/check_weapon_combat.py
+.\.venv\Scripts\python.exe tools/check_runtime.py
+```
+
+- 전체 로직 **343개 통과**(32.374초). `test_weapon_leap.py` 9개에서 두 무기·좌우·걷기/달리기의 매 물리 갱신을 실제 `Space → 0.5초 뒤 Space` 기준과 비교했다.
+- 실제 SDL에서도 두 무기×좌우 모두 같은 결과였다. 아래 값은 이동 속도에 도달한 상태에서 **첫 실제 착지 순간**까지의 거리다.
+
+| 입력 | 최고 높이 | 수평 거리 |
+| --- | --- | --- |
+| 방향키 + D | 293.417px | 462.5px |
+| 방향키 + Shift + D | 369.875px | 1224px |
+
+- 17장 이전의 걷기 465px는 렌더 프레임이 끝날 때까지 측정해 착지 이후 한 물리 갱신의 2.5px 이동을 포함한다. 현재 비교는 Space와 D 모두 같은 첫 착지 기준을 사용한다.
+- D의 0/1번 준비 뒤 실제 이륙·자동 2차 도약, 공중 2/3번 유지와 무피해, 실제 착지 후 4~7번 진행·5/6번의 50 단발/기존 효과를 확인했다. 원본 포즈 높이는 실제 높이에 중복 가산하지 않는다.
+- 반복 D/Space·공중 D 재진입은 추가 도약하지 않았다. 피격/사망·다른 공격·G 버리기·차량에서 예약 부스트 제거, 전 맵 네 모서리의 발 경계·로딩 정지/F5 초기화와 30/60/120/144 FPS 동일성을 확인했다.
+- `tools/check_weapon_combat.py`의 기존 공격/효과/HUD/교체/F/F5도 통과했다. 무기 공격+적 4명은 **180프레임/3.000초·59.99 FPS**였으며 `tools/check_runtime.py`의 일반 이동/이단 점프·비무장 전투·HP/UI·종료 회귀도 통과했다.
+- 직접 확인: 무기를 G로 획득한 뒤 D만 눌러 제자리 높이를 확인하고, 방향키 및 Shift를 함께 사용해 이동 범위를 비교한다. 착지 후 내려찍기와 50 피해, 공중 G 취소·F5를 확인한다.
+- 캡처: `artifacts/weapon_double_jump_combat_knife_1_walk_apex.png`, `weapon_double_jump_steel_pipe_1_run_apex.png`, `weapon_double_jump_steel_pipe_1_run_landed.png`, `weapon_hit_steel_pipe_d_Enemy02_1.png`.

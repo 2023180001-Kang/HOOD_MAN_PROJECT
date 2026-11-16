@@ -6,6 +6,39 @@ import config
 
 
 @dataclass
+class SpriteAfterimage:
+    image_name: str
+    row: int
+    frame: int
+    x: float
+    ground_y: float
+    jump_height: float
+    facing: int
+    elapsed: float = 0.0
+
+    @classmethod
+    def from_player(cls, player):
+        return cls(player.sprite_image, player.sprite_row, player.animation.frame,
+                   player.x, player.ground_y, player.jump_height, player.facing)
+
+    @property
+    def y(self):
+        return self.ground_y + self.jump_height
+
+    def update(self, dt):
+        self.elapsed += dt
+
+    @property
+    def opacity(self):
+        return config.WEAPON_DIVE_AFTERIMAGE_OPACITY * max(
+            0.0, 1 - self.elapsed / config.WEAPON_DIVE_AFTERIMAGE_DURATION)
+
+    @property
+    def finished(self):
+        return self.elapsed + 1e-9 >= config.WEAPON_DIVE_AFTERIMAGE_DURATION
+
+
+@dataclass
 class HitEffect:
     x: float
     y: float

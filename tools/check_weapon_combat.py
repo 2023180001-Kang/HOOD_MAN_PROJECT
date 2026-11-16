@@ -185,6 +185,52 @@ def check_damage_effects_and_hud(game):
           "equipped HUD labels and return to weapon IDLE.")
 
 
+def check_dive_afterimages(game):
+    for kind in WEAPON_MOVES:
+        for side in (-1, 1):
+            world = scene(game, kind, side=side)
+            double_jump(game)
+            tap(game, pico2d.SDLK_d)
+            tick(game, 60)
+            assert world.player.weapon_leap_phase == "AIM" and not world.afterimages
+            push_key(pico2d.SDLK_RIGHT if side > 0 else pico2d.SDLK_LEFT)
+            tap(game, pico2d.SDLK_d)
+            tick(game, 2)
+            assert world.player.weapon_leap_phase == "DIVE" and len(world.afterimages) >= 3
+            echoes = tuple(world.afterimages)
+            ages = [echo.elapsed for echo in echoes]
+            world.camera.shake()
+            texture = game.assets.images[config.WEAPON_POSE_IMAGES[kind]]
+            with (patch.object(game.assets, "draw_sprite", wraps=game.assets.draw_sprite) as draw,
+                  patch.object(texture, "opacify", wraps=texture.opacify) as alpha):
+                shown = capture(game, f"weapon_dive_afterimages_{kind}_{side}")
+            calls = draw.call_args_list
+            assert len(calls) == len(echoes) + 1
+            for call, echo in zip(calls[:-1], echoes):
+                assert call.args == (echo.image_name, echo.row, echo.frame,
+                                     echo.x - world.camera.render_x, echo.y - world.camera.render_y,
+                                     echo.facing)
+                assert call.kwargs["opacity"] == echo.opacity
+            assert calls[-1].kwargs["opacity"] == 1.0
+            assert alpha.call_args.args == (1.0,)
+            assert [echo.elapsed for echo in echoes] == ages
+            with patch.object(world.stage, "afterimages", []):
+                baseline = render_image(game)
+            assert ImageChops.difference(shown.convert("RGB"), baseline.convert("RGB")).getbbox() is not None
+            with patch.object(game.ui, "details_visible", False):
+                hidden_hud = render_image(game)
+                with patch.object(world.stage, "afterimages", []):
+                    hidden_baseline = render_image(game)
+            assert ImageChops.difference(hidden_hud.convert("RGB"),
+                                         hidden_baseline.convert("RGB")).getbbox() is not None
+            tick(game, 45)
+            assert world.player.active_move is None and not world.afterimages
+            release(game, pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT)
+    print("PASS: SDL second-D dives leave frozen weapon silhouettes in both directions; "
+          "real trail pixels, camera/shake coordinates, old-to-new draw order, restored "
+          "texture alpha, HUD-independent display and post-landing fade verified.")
+
+
 def check_switches_and_discard(game):
     for kind in WEAPON_MOVES:
         world = scene(game, kind, Enemy)
@@ -275,6 +321,7 @@ def main():
         check_clips(game)
         check_slow_aim_and_dive(game)
         check_damage_effects_and_hud(game)
+        check_dive_afterimages(game)
         check_switches_and_discard(game)
         benchmark(game)
     finally:

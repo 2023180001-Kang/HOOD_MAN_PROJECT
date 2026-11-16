@@ -9,6 +9,7 @@ from sdl2 import SDL_Event, SDL_PollEvent, SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCU
 
 import config
 from assets import Assets
+from effects import SpriteAfterimage
 from ui import UI
 from world import World
 
@@ -111,8 +112,12 @@ class Game:
         camera_y = self.world.camera.render_y
         self.world.stage.draw(self.assets, camera_x, camera_y, elapsed=self.world.elapsed)
         player = self.world.player
-        sprites = [(enemy.ground_y, enemy, enemy.sprite_image, enemy.opacity)
-                   for enemy in self.world.enemies]
+        # Stable depth sorting puts older echoes behind newer ones and the
+        # live actors on the same floor, without sorting by airborne height.
+        sprites = [(image.ground_y, image, image.image_name, image.opacity)
+                   for image in self.world.afterimages]
+        sprites.extend((enemy.ground_y, enemy, enemy.sprite_image, enemy.opacity)
+                       for enemy in self.world.enemies)
         sprites.append((player.ground_y, player, player.sprite_image, 1.0))
         sprites.extend((item.ground_y, item, item.image_name, 1.0)
                        for item in self.world.stage.drop_items if not item.grounded)
@@ -125,8 +130,12 @@ class Game:
             elif image in config.DROP_ITEM_IMAGES.values():
                 self.assets.draw_drop_item(actor, camera_x, camera_y)
             else:
-                row = player.sprite_row if actor is player else actor.animation.row
-                self.assets.draw_sprite(image, row, actor.animation.frame,
+                if isinstance(actor, SpriteAfterimage):
+                    row, frame = actor.row, actor.frame
+                else:
+                    row = player.sprite_row if actor is player else actor.animation.row
+                    frame = actor.animation.frame
+                self.assets.draw_sprite(image, row, frame,
                                         actor.x - camera_x, actor.y - camera_y, actor.facing,
                                         opacity=opacity)
         for effect in self.world.effects:

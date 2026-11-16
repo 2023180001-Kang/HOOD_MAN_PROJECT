@@ -8,7 +8,7 @@ from collision import resolve_bodies
 from controls import Controls
 from counter import COUNTERS, CounterSequence, can_counter
 from drop_items import DropItem
-from effects import DamageNumber, HitEffect
+from effects import DamageNumber, HitEffect, SpriteAfterimage
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
 from player import Player
@@ -44,6 +44,7 @@ class World:
         self.death_handled = False
         self.elapsed = 0.0
         self.accumulator = 0.0
+        self._dive_afterimage_remaining = 0.0
 
     @property
     def stage(self):
@@ -72,6 +73,10 @@ class World:
     @effects.setter
     def effects(self, effects):
         self.stage.effects = effects
+
+    @property
+    def afterimages(self):
+        return self.stage.afterimages
 
     @property
     def damage_numbers(self):
@@ -176,6 +181,7 @@ class World:
         # motion immediately. Every gameplay clock advances by the same dt.
         dt *= self.time_scale
         self.elapsed += dt
+        self.update_afterimages(dt)
         for item in self.stage.drop_items:
             item.update(dt)
         for effect in self.effects:
@@ -246,6 +252,20 @@ class World:
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         self.camera.update(dt, self.player.x)
+
+    def update_afterimages(self, dt):
+        for afterimage in self.afterimages:
+            afterimage.update(dt)
+        self.afterimages[:] = [image for image in self.afterimages if not image.finished]
+        if self.player.weapon_leap_phase != "DIVE" or not self.player.alive:
+            self._dive_afterimage_remaining = 0.0
+            return
+        self._dive_afterimage_remaining -= dt
+        if self._dive_afterimage_remaining <= 1e-9:
+            # Capture before movement: even the release tick leaves a pose
+            # behind the player. Snapshots never follow later equipment/poses.
+            self.afterimages.append(SpriteAfterimage.from_player(self.player))
+            self._dive_afterimage_remaining += config.WEAPON_DIVE_AFTERIMAGE_INTERVAL
 
     def cancel_invalid_counter(self):
         if self.counter is not None and (not self.counter.valid or self.counter.enemy not in self.enemies):
@@ -337,6 +357,7 @@ class World:
         # Keep the same player, physics, held input and animation clock, and
         # enter far enough inside the next scene to avoid an immediate return.
         side = 1 if destination > self.stage_index else -1
+        self._dive_afterimage_remaining = 0.0
         self.stage_index = destination
         player = self.player
         player.x = (entry_x if entry_x is not None else

@@ -17,6 +17,7 @@ class Stage:
         self.arrows_visible = False
         self.enemies = []
         self.effects = []
+        self.afterimages = []
         self.damage_numbers = []
         self.walkable = for_stage(index)
         drop_bounds = config.STAGE_DROP_ITEM_SPAWN_BOUNDS.get(self.image_name)

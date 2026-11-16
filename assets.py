@@ -48,7 +48,7 @@ class Assets:
             )
         finally:
             if fading:
-                # Enemy instances share textures; never dim the next actor.
+                # Actors and afterimages share textures; never dim the next sprite.
                 image.opacify(1.0)
 
     def release(self):

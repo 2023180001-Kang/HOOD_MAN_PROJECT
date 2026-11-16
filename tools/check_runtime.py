@@ -665,6 +665,69 @@ def check_hp_pixels(game):
           "region, including its edges; portrait and HUD position unchanged.")
 
 
+def check_hp_damage_trail(game):
+    def bar_pixels(image):
+        pixels = [(x, image.getpixel((x, 68))) for x in range(125, 518)]
+        blue = sum(color[2] > color[0] + 30 for _, color in pixels)
+        red = [x for x, color in pixels if color[:3] == config.HP_DAMAGE_COLOR]
+        return blue, red
+
+    game.world = World()
+    game.update(0)
+    full_blue, red = bar_pixels(render_image(game))
+    assert full_blue > 390 and not red
+    game.world.enemies = [ready_enemy(config.START_X - 80)]
+    tick(game)
+    assert game.world.player.hp == 480
+    hit = capture(game, "hp_damage_hit")
+    blue, red = bar_pixels(hit)
+    assert abs(blue - full_blue * 480 / 500) <= 2
+    assert abs(len(red) - full_blue * 20 / 500) <= 2
+    assert hit.crop((125, 56, 518, 79)).tobytes() == render_image(game).crop((125, 56, 518, 79)).tobytes()
+    game.world.enemies.clear()
+    held_frames = floor(config.HP_DAMAGE_HOLD * 60 / 2)
+    tick(game, held_frames)
+    assert bar_pixels(render_image(game)) == (blue, red)
+    tick(game, ceil((config.HP_DAMAGE_HOLD + config.HP_DAMAGE_DURATION / 2) * 60) - held_frames)
+    shrinking = capture(game, "hp_damage_shrinking")
+    shrinking_blue, shrinking_red = bar_pixels(shrinking)
+    assert shrinking_blue == blue and 0 < len(shrinking_red) < len(red)
+    game.world.enemies = [ready_enemy(config.START_X + 80, -1)]
+    tick(game)
+    assert game.world.player.hp == 460
+    stacked = capture(game, "hp_damage_stacked")
+    stacked_blue, stacked_red = bar_pixels(stacked)
+    assert abs(stacked_blue - full_blue * 460 / 500) <= 2
+    assert len(stacked_red) > len(shrinking_red) and stacked_red[-1] == shrinking_red[-1]
+    game.world.enemies.clear()
+    tick(game, ceil((config.HP_DAMAGE_HOLD + config.HP_DAMAGE_DURATION) * 60) + 1)
+    assert bar_pixels(capture(game, "hp_damage_finished")) == (stacked_blue, [])
+
+    # Start with low HP to check a lethal hit, then F5 while its trail is active.
+    game.world = World()
+    game.world.player.hp = 20
+    game.update(0)
+    game.world.enemies = [ready_enemy(config.START_X - 80)]
+    tick(game)
+    assert game.world.player.hp == 0
+    lethal = capture(game, "hp_damage_lethal")
+    lethal_blue, lethal_red = bar_pixels(lethal)
+    assert lethal_blue == 0 and abs(len(lethal_red) - full_blue * 20 / 500) <= 2
+    game.ui.details_visible = False
+    hidden = render_image(game)
+    assert bar_pixels(hidden) == (lethal_blue, lethal_red)
+    game.ui.details_visible = True
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    push_key(pico2d.SDLK_F5, down=False)
+    game.handle_events()
+    assert game.world.player.hp == 500
+    assert bar_pixels(capture(game, "hp_damage_restarted")) == (full_blue, [])
+    print("PASS: actual enemy hits immediately reduce blue HP and show only the lost segment in red; "
+          "the red trail holds briefly, drains, merges consecutive hits, works at zero/hidden HUD, "
+          "and clears on F5; rendering alone does not advance it.")
+
+
 def check_hud_toggle(game):
     def u(down=True, *, repeat=False):
         push_key(pico2d.SDLK_u, down=down, repeat=repeat)
@@ -854,6 +917,7 @@ def main():
         check_nearby_death_knockback(game)
         check_focus_loss(game)
         check_hp_pixels(game)
+        check_hp_damage_trail(game)
         check_hud_toggle(game)
         check_enemy_run_chase(game)
         check_natural_game(game)

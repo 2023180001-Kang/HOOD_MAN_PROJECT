@@ -88,7 +88,10 @@ class Game:
         # Presentation remains toggleable while gameplay is loading or dead.
         if self.world.controls.take_press("toggle_details"):
             self.ui.details_visible = not self.ui.details_visible
+        # Snapshot HP before simulation so a first-frame hit also leaves a trail.
+        self.ui.update(0, self.world.player)
         self.world.update(dt)
+        self.ui.update(dt, self.world.player)
 
     def draw_stage_loading_screen(self, present=True):
         pico2d.clear_canvas()

@@ -11,6 +11,37 @@ from physics import clamp
 class UI:
     def __init__(self):
         self.details_visible = True
+        self._hp_player = None
+        self._hp = config.MAX_HP
+        self.damage_hp = float(config.MAX_HP)
+        self._damage_start_hp = self.damage_hp
+        self._damage_elapsed = 0.0
+
+    def update(self, dt, player):
+        """Keep the blue fill immediate while a red damage trail catches up."""
+        hp = clamp(player.hp, 0, config.MAX_HP)
+        if player is not self._hp_player or hp > self._hp:
+            # A new player (F5) or healing must not retain an old damage trail.
+            self._hp_player = player
+            self._hp = hp
+            self.damage_hp = self._damage_start_hp = float(hp)
+            self._damage_elapsed = 0.0
+            return
+        if hp < self._hp:
+            # Consecutive hits extend the red segment without jumping its end.
+            self.damage_hp = self._damage_start_hp = max(self.damage_hp, self._hp)
+            self._hp = hp
+            self._damage_elapsed = 0.0
+            return
+        if self.damage_hp <= hp:
+            return
+        self._damage_elapsed += max(0.0, dt)
+        if self._damage_elapsed + 1e-9 >= config.HP_DAMAGE_HOLD + config.HP_DAMAGE_DURATION:
+            self.damage_hp = float(hp)
+            return
+        progress = clamp((self._damage_elapsed - config.HP_DAMAGE_HOLD)
+                         / config.HP_DAMAGE_DURATION, 0.0, 1.0)
+        self.damage_hp = hp + (self._damage_start_hp - hp) * (1 - progress) ** 2
 
     def draw_attack_help(self, assets):
         import pico2d
@@ -86,6 +117,14 @@ class UI:
                 mask_left, mask_bottom, mask_right - 1, mask_top - 1,
                 8, 15, 24, filled=True,
             )
+            if self._hp_player is world.player and self._hp == world.player.hp:
+                damage_ratio = clamp(self.damage_hp / config.MAX_HP, ratio, 1.0)
+                if damage_ratio > ratio:
+                    damage_right = ceil(x + (left + width * damage_ratio) * scale)
+                    pico2d.draw_rectangle(
+                        mask_left, mask_bottom, damage_right - 1, mask_top - 1,
+                        *config.HP_DAMAGE_COLOR, filled=True,
+                    )
         if assets.font is not None:
             assets.font.draw(x + image.w * scale + 16, y + 56,
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))

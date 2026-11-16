@@ -118,11 +118,11 @@ class World:
             if player.weapon is not None:
                 self.drop_weapon(player.weapon)
             self.stage.drop_items.remove(item)
-            player.weapon = item.kind
+            player.equip_weapon(item.kind)
             return True
         if player.weapon is not None:
             self.drop_weapon(player.weapon)
-            player.weapon = None
+            player.equip_weapon(None)
             return True
         return False
 
@@ -219,7 +219,7 @@ class World:
                         self.effects.append(HitEffect.at_contact(player_box, enemy.body,
                                                                  self.player.facing,
                                                                  depth=enemy.ground_y - config.GROUND_Y,
-                                                                 image_name=config.PUNCH_KICK_HIT_IMAGE))
+                                                                 image_name=self.player.active_move.hit_image))
                         self.camera.shake()
             for enemy in self.enemies:
                 enemy_box = enemy.attack_box

@@ -5,7 +5,7 @@ from math import hypot
 import config
 from animation import Animation
 from collision import Rect
-from combat import MOVES
+from combat import MOVES, moves_for_weapon
 from counter import COUNTERS
 from physics import approach_vector
 from traffic import start_car_hit, update_car_hit
@@ -53,6 +53,10 @@ class Player:
         return self.hp > 0
 
     @property
+    def moves(self):
+        return moves_for_weapon(self.weapon)
+
+    @property
     def y(self):
         """Projected feet; physics keeps ground_y and jump_height independent."""
         return self.ground_y + self.jump_height
@@ -68,13 +72,15 @@ class Player:
         if self.counter_move is not None:
             return config.COUNTER_PLAYER_IMAGE
         if self.active_move is not None:
-            return config.COMBAT_IMAGE
+            return self.active_move.image_name
         if self.state in config.WEAPON_POSE_ROWS.get(self.weapon, {}):
             return config.WEAPON_POSE_IMAGES[self.weapon]
         return config.PLAYER_IMAGE
 
     @property
     def sprite_row(self):
+        if self.active_move is not None:
+            return self.active_move.row
         if self.sprite_image in config.WEAPON_POSE_IMAGES.values():
             return config.WEAPON_POSE_ROWS[self.weapon][self.state]
         return self.animation.row
@@ -83,6 +89,15 @@ class Player:
         self.active_move = None
         self.hit_enemies.clear()
 
+    def equip_weapon(self, weapon):
+        if weapon == self.weapon:
+            return
+        self.weapon = weapon
+        if self.active_move is not None:
+            # Dropping/swapping a weapon cannot leave its old strike pending.
+            self.cancel_combat()
+            self.animation.set_state("IDLE" if self.grounded else "JUMP")
+
     def start_move(self, move, direction):
         self.active_move = move
         self.hit_enemies.clear()
@@ -90,7 +105,9 @@ class Player:
         self.ground_vy = 0.0
         if direction:
             self.facing = direction
+        self.animation.definitions[move.state] = (move.row, move.fps, False)
         self.animation.set_state(move.state)
+        self.animation.elapsed = 0.0
 
     def start_counter(self, move, facing):
         self.cancel_combat()
@@ -118,7 +135,7 @@ class Player:
     def attack_box(self):
         move = self.active_move
         if (not self.alive or move is None or self.state != move.state
-                or self.animation.frame not in config.PLAYER_ACTIVE_FRAMES):
+                or self.animation.frame not in move.active_frames):
             return None
         near = self.x + self.facing * 10
         far = self.x + self.facing * move.reach
@@ -212,7 +229,7 @@ class Player:
             return
 
         if combat_pressed is not None:
-            move = MOVES[combat_pressed]
+            move = self.moves[combat_pressed]
             if move != self.active_move:
                 self.start_move(move, controls.direction)
         if self.active_move is not None:

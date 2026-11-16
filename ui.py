@@ -3,7 +3,6 @@
 from math import ceil, floor
 
 import config
-from combat import MOVES
 from counter import COUNTERS
 from physics import clamp
 
@@ -43,13 +42,15 @@ class UI:
                          / config.HP_DAMAGE_DURATION, 0.0, 1.0)
         self.damage_hp = hp + (self._damage_start_hp - hp) * (1 - progress) ** 2
 
-    def draw_attack_help(self, assets):
+    def draw_attack_help(self, assets, player):
         import pico2d
 
         pico2d.draw_rectangle(688, 616, config.SCREEN_WIDTH - 20, 704,
                               12, 21, 33, filled=True)
-        assets.font.draw(704, 686, "기본 공격 · 피해량", (244, 204, 66))
-        for index, move in enumerate(MOVES.values()):
+        title = (f"{config.WEAPON_NAMES[player.weapon]} 공격 · 피해량"
+                 if player.weapon in config.WEAPON_NAMES else "기본 공격 · 피해량")
+        assets.font.draw(704, 686, title, (244, 204, 66))
+        for index, move in enumerate(player.moves.values()):
             x = 704 + index % 2 * 270
             y = 659 - index // 2 * 24
             assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
@@ -130,7 +131,7 @@ class UI:
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
             if not self.details_visible:
                 return
-            self.draw_attack_help(assets)
+            self.draw_attack_help(assets, world.player)
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
             for index, move in enumerate(COUNTERS.values()):

@@ -62,8 +62,8 @@ class Stage:
         height = image.h * scale
         anchor = config.STAGE_GROUND_ANCHORS.get(self.image_name, config.STAGE_GROUND_Y)
         bottom = config.GROUND_Y - anchor * scale - camera_y
-        # The factory artwork exactly fills the viewport: clamp vertical shake
-        # at image edges so it never exposes a blank strip above or below it.
+        # Clamp vertical shake at image edges so backgrounds never expose a
+        # blank strip above or below the viewport.
         bottom = min(0.0, max(config.SCREEN_HEIGHT - height, bottom))
         first = max(0, floor(camera_x / width))
         last = min(ceil(config.WORLD_WIDTH / width),

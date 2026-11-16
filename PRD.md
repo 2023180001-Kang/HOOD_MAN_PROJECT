@@ -17,7 +17,7 @@
 
 ### 2.1 개발 목표
 
-플레이어가 4방향·대각선 바닥 이동, 가속과 마찰이 적용된 달리기, 독립된 이단 점프와 기본 전투를 사용하는 열 스테이지를 만든다. N키로 맵 끝 이동 화살표를 표시하고 걷기·달리기·점프 상태를 이어가며 `newStage → newStage-2 → cityStage-1 → cityStage-2 → factoryOutside-1 → HOOD_MAN_Factory_Exterior → factoryInside-1 → factoryStage-2 → labStage-1 → labStage-2`를 진행·왕복한다. 기존/도시, 도시/공장 외부, 공장 외부/내부, 공장 내부/연구소 구역 경계에는 기존 STAGE_LOADING 이미지를 2초 표시한다. 적은 자동 생성하지 않으며 숫자 1~9를 새로 누를 때만 현재 맵에 해당 수를 무작위 좌우 방향으로 소환한다. 도시 두 맵은 enemy02, 나머지 맵은 기존 적을 사용한다. 적은 2차원으로 추적·분산하고 실제 바닥 깊이를 고려해 공격한다. 주인공과 적의 발은 모든 이동·보정·넉백 뒤에도 각 맵의 이동 가능 영역 안에 있어야 한다. 각 맵 바닥에는 이동 화살표 영역을 피해서 combat_knife·steel_pipe 드랍 아이템을 합계 5~8개 무작위 배치한다. 가까운 바닥 무기는 G로 획득/교체하고 해당 무기 Pose 시트를 사용하며, 근처 무기가 없으면 G로 버리고 공중에서 버린 무기도 중력으로 낙하한다. `F5`로 처음부터 반복 테스트할 수 있어야 한다.
+플레이어가 4방향·대각선 바닥 이동, 가속과 마찰이 적용된 달리기, 독립된 이단 점프와 기본 전투를 사용하는 열 스테이지를 만든다. N키로 맵 끝 이동 화살표를 표시하고 걷기·달리기·점프 상태를 이어가며 `newStage → newStage-2 → cityStage-1 → cityStage-2 → hood_man_factory_loading_dock → HOOD_MAN_Factory_Exterior → factoryInside-1 → factoryStage-2 → labStage-1 → labStage-2`를 진행·왕복한다. 기존/도시, 도시/공장 외부, 공장 외부/내부, 공장 내부/연구소 구역 경계에는 기존 STAGE_LOADING 이미지를 2초 표시한다. 적은 자동 생성하지 않으며 숫자 1~9를 새로 누를 때만 현재 맵에 해당 수를 무작위 좌우 방향으로 소환한다. 도시 두 맵은 enemy02, 나머지 맵은 기존 적을 사용한다. 적은 2차원으로 추적·분산하고 실제 바닥 깊이를 고려해 공격한다. 주인공과 적의 발은 모든 이동·보정·넉백 뒤에도 각 맵의 이동 가능 영역 안에 있어야 한다. 각 맵 바닥에는 이동 화살표 영역을 피해서 combat_knife·steel_pipe 드랍 아이템을 합계 5~8개 무작위 배치한다. 가까운 바닥 무기는 G로 획득/교체하고 해당 무기 Pose 시트를 사용하며, 근처 무기가 없으면 G로 버리고 공중에서 버린 무기도 중력으로 낙하한다. `F5`로 처음부터 반복 테스트할 수 있어야 한다.
 
 ### 2.2 필수 개발 범위
 
@@ -92,7 +92,7 @@
 | 두 번째 배경 | 신규 두 번째 거리 | `newStage-2.png` | 1672×941, 첫 맵과 같은 배율·지면 기준 사용 |
 | 세 번째 배경 | 첫 번째 도시 거리 | `cityStage-1.png` | 1672×941, 기존 두 맵 다음 구역의 첫 맵 |
 | 네 번째 배경 | 두 번째 도시 거리 | `cityStage-2.png` | 1672×941, 오른쪽 출구에서 로딩 후 공장 외부로 진행 |
-| 다섯 번째 배경 | 공장 외부 factoryOutside-1 | `factoryOutside-1_pico2d_1280x720.png` | 1280×720, 오른쪽 출구에서 새 공장 외부로 진행 |
+| 다섯 번째 배경 | 공장 하역장 hood_man_factory_loading_dock | `hood_man_factory_loading_dock_1672x941.png` | 1672×941, 원본 배율·지면 기준 100px, 오른쪽 출구에서 두 번째 공장 외부로 진행 |
 | 여섯 번째 배경 | 두 번째 공장 외부 HOOD_MAN_Factory_Exterior | `HOOD_MAN_Factory_Exterior_1672x941.png` | 1672×941, 원본 배율·지면 기준 100px, 오른쪽 출구에서 2초 로딩 후 내부로 진행 |
 | 일곱 번째 배경 | 첫 번째 공장 내부 factoryInside-1 | `factoryInside-1.png` | 1672×941, 원본 배율·지면 기준 144px, 외부 두 맵 다음 구역의 첫 맵 |
 | 여덟 번째 배경 | 두 번째 공장 내부 factoryStage-2 | `factoryStage-2.png` | 1672×941, 첫 내부 맵 다음에 즉시 연결, 오른쪽 출구에서 2초 로딩 후 연구소로 진행 |
@@ -100,7 +100,9 @@
 | 열 번째 배경 | 두 번째 연구소 labStage-2 | `labStage-2_new_1672x941.png` | 1672×941, 첫 연구소 맵 다음에 즉시 연결, 현재 마지막 맵 |
 | 이전/다음 이동 표식 | 노란색 좌우 화살표 | `arrow_left_yellow.png`, `arrow_right_yellow.png` | 512×320 원본, 96×60px 표시·월드 좌표 적용 |
 
-기존 배경 `stage.png`는 `before_sheets/stage.png`에 원본 그대로 보관한다. 게임 실행에는 `newStage.png`, `newStage-2.png`, `cityStage-1.png`, `cityStage-2.png`, `factoryOutside-1_pico2d_1280x720.png`, `HOOD_MAN_Factory_Exterior_1672x941.png`, `factoryInside-1.png`, `factoryStage-2.png`, `labStage-1_new_1672x941.png`, `labStage-2_new_1672x941.png`를 순서대로 사용한다. 두 번째 내부 배경은 사용자 확인에 따라 `factoryStage-2.png`를 사용한다.
+기존 배경 `stage.png`는 `before_sheets/stage.png`에 원본 그대로 보관한다. 게임 실행에는 `newStage.png`, `newStage-2.png`, `cityStage-1.png`, `cityStage-2.png`, `hood_man_factory_loading_dock_1672x941.png`, `HOOD_MAN_Factory_Exterior_1672x941.png`, `factoryInside-1.png`, `factoryStage-2.png`, `labStage-1_new_1672x941.png`, `labStage-2_new_1672x941.png`를 순서대로 사용한다. 두 번째 내부 배경은 사용자 확인에 따라 `factoryStage-2.png`를 사용한다.
+
+교체한 첫 공장 외부 배경은 `before_sheets/factoryOutside-1_pico2d_1280x720.png`에 원본 그대로 보관한다.
 
 교체한 연구소 배경 원본은 `before_sheets/labStage-1_1672x941.png`, `before_sheets/labStage-2_1672x941.png`에 보관한다.
 
@@ -195,8 +197,8 @@
 12. 기존 출구 통과를 클리어·진행 기준으로 사용한다. 두 번째 맵 `newStage-2`에서 N으로 연 오른쪽 출구를 통과하면 `HOOD_MAN_STAGE_LOADING` 화면을 2초 표시한 뒤 `cityStage-1` 왼쪽으로 진입한다. 도시 첫 맵의 오른쪽 출구는 `cityStage-2`로 이어진다. 이전 맵으로 돌아갈 수 있으며 기존/도시 구역 경계에서는 양방향 모두 2초 로딩을 표시한다.
 13. 적이 주인공 쪽으로 쇠파이프 공격 중일 때 근거리에서 H/J/K/L을 새로 누르면 대응 반격을 시작해 제압 자세에서 멈춘다. 방향키로 적을 든 채 이동하고 A를 새로 누르면 선택한 기술의 후속 공격으로 피해 80을 한 번 적용한다. 후속 동작 완료 후 주인공이 먼저 복귀하고, 적은 남은 반응을 마친 뒤 생존 IDLE/추적 또는 사망/페이드로 이어진다.
 14. cityStage-1에서는 인도 아래 도로로 차량이 좌우 무작위 통행한다. 같은 도로 레인에서 차체에 닿으면 주인공과 적 모두 즉시 HP 0·차량 피격 모션에 진입한다. 인도 또는 차체보다 충분히 높은 점프로 피할 수 있으며, P 무적·반격 보호는 차량 즉사를 막지 않는다.
-15. cityStage-2에서 N으로 연 오른쪽 출구를 통과하면 기존 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 2초 표시하고 공장 외부 factoryOutside-1 왼쪽 x=128에 진입한다. 공장 외부에서 도시로 돌아갈 때도 같은 로딩을 사용한다.
-16. factoryOutside-1에서 N으로 연 오른쪽 출구를 통과하면 새 HOOD_MAN_Factory_Exterior 왼쪽 x=128에 즉시 진입한다. 같은 공장 구역의 연속 맵이므로 양방향 즉시 전환하고, 기존 이동·점프 상태와 맵별 객체를 이어간다.
+15. cityStage-2에서 N으로 연 오른쪽 출구를 통과하면 기존 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 2초 표시하고 공장 하역장 hood_man_factory_loading_dock 왼쪽 x=128에 진입한다. 공장 외부에서 도시로 돌아갈 때도 같은 로딩을 사용한다.
+16. hood_man_factory_loading_dock에서 N으로 연 오른쪽 출구를 통과하면 새 HOOD_MAN_Factory_Exterior 왼쪽 x=128에 즉시 진입한다. 같은 공장 구역의 연속 맵이므로 양방향 즉시 전환하고, 기존 이동·점프 상태와 맵별 객체를 이어간다.
 17. 공장 외부 두 맵을 지나 HOOD_MAN_Factory_Exterior의 오른쪽 N 출구를 통과하면 기존 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 창 전체에 2초 표시하고 첫 공장 내부 `factoryInside-1` 왼쪽 x=128에 진입한다. 내부에서 외부로 돌아갈 때도 같은 로딩을 사용한다.
 18. factoryInside-1 오른쪽 N 출구는 두 번째 내부 `factoryStage-2`로 즉시 이어진다. 두 내부 맵은 양방향 즉시 전환한다.
 19. 공장 내부 두 번째 맵 factoryStage-2의 오른쪽 N 출구를 통과하면 기존 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 창 전체에 2초 표시한 뒤 `labStage-1` 왼쪽 x=128에 진입한다. 연구소에서 공장 내부로 돌아갈 때도 같은 2초 로딩을 사용한다.
@@ -462,7 +464,7 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 
 ### FR-15. 열 스테이지 배경과 N키 이동 표식
 
-- 스테이지 순서는 `newStage.png → newStage-2.png → cityStage-1.png → cityStage-2.png → factoryOutside-1_pico2d_1280x720.png → HOOD_MAN_Factory_Exterior_1672x941.png → factoryInside-1.png → factoryStage-2.png → labStage-1_new_1672x941.png → labStage-2_new_1672x941.png`다. 열 맵 모두 월드 너비 2560px·지면 y=100·원본 배율 1.0·교대 좌우 반전 연결을 사용한다. 기존 네 거리 맵과 두 공장 내부 맵의 보행 기준은 원본 아래 144px, 두 공장 외부 맵은 100px, 두 연구소 맵은 280px다.
+- 스테이지 순서는 `newStage.png → newStage-2.png → cityStage-1.png → cityStage-2.png → hood_man_factory_loading_dock_1672x941.png → HOOD_MAN_Factory_Exterior_1672x941.png → factoryInside-1.png → factoryStage-2.png → labStage-1_new_1672x941.png → labStage-2_new_1672x941.png`다. 열 맵 모두 월드 너비 2560px·지면 y=100·원본 배율 1.0·교대 좌우 반전 연결을 사용한다. 기존 네 거리 맵과 두 공장 내부 맵의 보행 기준은 원본 아래 144px, 두 공장 외부 맵은 100px, 두 연구소 맵은 280px다.
 - 시작 시 화살표를 숨긴다. 살아 있는 주인공이 N을 새로 누르면 현재 맵의 이동 표식을 표시하고 유지한다. 재입력은 숨김 토글이 아니며 키 반복은 새 입력으로 처리하지 않는다.
 - 첫 맵은 오른쪽 화살표만, 나머지 맵은 왼쪽/오른쪽 화살표를 각각 맵 양 끝에서 안쪽 80px에 표시한다. 화살표 중심을 캐릭터 발이 닿는 맵 바닥선 y=100에 맞춰 96×60px로 렌더링하며 카메라 이동·흔들림과 함께 이동한다.
 - 화살표는 기준 x좌표에서 좌우 최대 6px씩, 1.6초 주기의 사인 곡선으로 부드럽게 왕복한다. 높이는 고정하고 게임 경과 시간을 사용한다. 애니메이션은 표시 위치에만 적용하며 스테이지 전환 영역은 맵 끝 안쪽 80px로 유지한다.
@@ -472,7 +474,7 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 
 ### FR-16. 이동 상태를 보존하는 양방향 스테이지 전환
 
-- N으로 표시한 유효한 이동 표식 쪽 맵 끝 안쪽 80px 영역에 들어가 바깥쪽으로 이동하면 이웃 맵으로 전환한다. 열 맵을 순서대로 양방향 연결하며 `newStage-2 ↔ cityStage-1`, `cityStage-2 ↔ factoryOutside-1`, `HOOD_MAN_Factory_Exterior ↔ factoryInside-1`, `factoryStage-2 ↔ labStage-1` 사이에는 FR-21의 로딩을 거친다. 각 구역 안의 두 맵끼리는 즉시 전환한다. 화살표가 숨겨진 방향·첫 맵 왼쪽·마지막 맵 오른쪽에는 이동 대상이 없다.
+- N으로 표시한 유효한 이동 표식 쪽 맵 끝 안쪽 80px 영역에 들어가 바깥쪽으로 이동하면 이웃 맵으로 전환한다. 열 맵을 순서대로 양방향 연결하며 `newStage-2 ↔ cityStage-1`, `cityStage-2 ↔ hood_man_factory_loading_dock`, `HOOD_MAN_Factory_Exterior ↔ factoryInside-1`, `factoryStage-2 ↔ labStage-1` 사이에는 FR-21의 로딩을 거친다. 각 구역 안의 두 맵끼리는 즉시 전환한다. 화살표가 숨겨진 방향·첫 맵 왼쪽·마지막 맵 오른쪽에는 이동 대상이 없다.
 - 다음 맵으로 갈 때 x=128, 이전 맵으로 돌아올 때 x=2432에 진입한다. 표식 영역에서 48px 안쪽에 배치하여 즉시 재전환을 막고, 충돌용 이전 x도 진입 위치에 동기화한다.
 - **동일한 Player 객체**를 유지하고 x/이전 x와 카메라를 새 맵에 맞춘다. 공통 바닥 구간에서는 `ground_y`와 바닥 속도도 이어가고 새 맵의 보행 영역 밖인 깊이만 투영한다. `jump_height`·점프 속도·횟수·HP·무적·방향·모션 시간·유지 입력은 이어간다. 바닥 경계로 막힌 축 속도만 0으로 한다.
 - 매 물리 갱신의 이동/경계 보정 전에 전환을 처리하여 맵 끝 클램프가 달리기 속도를 0으로 만들지 않도록 한다. 전환 후에도 같은 방향키/Shift/Space 입력과 정상 가속·중력·착지 처리를 이어간다.
@@ -508,7 +510,7 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 ### FR-19. 맵별 바닥 보행 영역과 좌표·경계의 일관성
 
 - 좌표는 `x`·`ground_y`·`jump_height`로 분리한다. 화면 발 위치 `y`는 두 높이의 합이며 실제 바닥 제한에 점프 높이를 넣지 않는다. 바닥 속도는 `(vx, ground_vy)`, 점프 속도는 `vy`다.
-- 배경의 원본 크기·카메라 뷰포트와 분리된 `STAGE_WALKABLE_BOUNDS`를 사용한다. 첫 맵·`cityStage-1`·두 공장 내부 맵·`labStage-1`의 바닥은 월드 y=56~148, 두 번째 맵·`cityStage-2`·`factoryOutside-1`·`labStage-2`는 y=56~116, `HOOD_MAN_Factory_Exterior`는 y=56~100이며 x 범위는 0~2560이다. 초기 스프라이트 좌우 여백은 주인공 68·적 88px다.
+- 배경의 원본 크기·카메라 뷰포트와 분리된 `STAGE_WALKABLE_BOUNDS`를 사용한다. 첫 맵·`cityStage-1`·두 공장 내부 맵·`labStage-1`의 바닥은 월드 y=56~148, 두 번째 맵·`cityStage-2`·`hood_man_factory_loading_dock`·`labStage-2`는 y=56~116, `HOOD_MAN_Factory_Exterior`는 y=56~100이며 x 범위는 0~2560이다. 초기 스프라이트 좌우 여백은 주인공 68·적 88px다.
 - `WalkableArea`는 직사각형과 볼록 다각형을 지원한다. `STAGE_WALKABLE_POLYGONS[index]`로 재정의할 수 있고 발의 수평 폭을 고려해 다각형을 안쪽으로 축소한 뒤 내부 검사·최근접 투영을 수행한다. 현재 열 배경은 건물/소품 앞의 안전한 직사각형을 사용한다.
 - 경계는 액터 갱신 전후, 적의 넉백 이동 직후, 몸체/Separation 보정 뒤, 매 `World.step()` 마지막에 검사한다. 막힌 바닥 축 속도만 제거하고 점프 속도·높이는 유지한다. 공격·피격·사망의 조기 반환 경로도 `update()` 래퍼의 검사에서 빠지지 않는다.
 - 적 생성과 공격 슬롯 목표도 먼저 보행 영역 안에 둔다. 실제 이동이 끝난 뒤만 자르는 방식으로 벽 바깥 목표를 계속 추적하지 않게 한다. 밀집 시 일부 겹침을 허용하되 반복 투영이 바깥 밀림이나 무한 루프를 만들지 않게 한다.
@@ -526,7 +528,7 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 
 - 기존 두 맵의 진행/클리어는 N으로 연 출구 통과를 기준으로 한다. `newStage-2` 오른쪽 출구에서 도시 구역으로 진행할 때 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 창 전체에 표시하고 2초 후 `cityStage-1` 왼쪽 x=128에 진입한다.
 - `cityStage-1` 오른쪽은 `cityStage-2`, 도시 두 번째 맵 왼쪽은 도시 첫 번째 맵으로 즉시 연결한다. 도시 첫 번째 맵에서 기존 두 번째 맵으로 돌아가는 구역 경계도 2초 로딩 후 오른쪽 x=2432에 진입한다.
-- `cityStage-2` 오른쪽 출구는 STAGE_LOADING 이미지를 2초 표시한 뒤 `factoryOutside-1` 왼쪽 x=128로 연결한다. 공장 외부 왼쪽 출구에서도 같은 이미지를 2초 표시한 뒤 도시 두 번째 맵 오른쪽 x=2432로 돌아간다.
+- `cityStage-2` 오른쪽 출구는 STAGE_LOADING 이미지를 2초 표시한 뒤 `hood_man_factory_loading_dock` 왼쪽 x=128로 연결한다. 공장 외부 왼쪽 출구에서도 같은 이미지를 2초 표시한 뒤 도시 두 번째 맵 오른쪽 x=2432로 돌아간다.
 - 공장 외부 두 번째 맵 `HOOD_MAN_Factory_Exterior` 오른쪽 출구는 같은 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 2초 표시한 뒤 `factoryInside-1` 왼쪽 x=128로 연결한다. 첫 내부 맵 왼쪽에서 외부로 돌아갈 때도 같은 2초 로딩 뒤 x=2432로 진입한다. 내부 첫 맵과 두 번째 `factoryStage-2` 사이에는 로딩 없이 즉시 전환한다.
 - 공장 내부 두 번째 맵 `factoryStage-2` 오른쪽 출구는 같은 STAGE_LOADING 이미지를 2초 표시한 뒤 `labStage-1` 왼쪽 x=128로 연결한다. 연구소 첫 맵 왼쪽 출구는 같은 2초 로딩 뒤 공장 내부 두 번째 맵 오른쪽 x=2432로 돌아간다. `labStage-1 ↔ labStage-2`는 로딩 없이 즉시 전환한다.
 - 로딩은 물리 갱신의 최대 dt=0.1초 제한과 독립된 실제 경과 시간으로 계산한다. 처음 로딩 이미지를 표시한 뒤 2초를 기다리며, 남은 시간이 끝나기 전에 목적 맵을 표시하지 않는다. 초기 타이틀의 2초 자동 시작과 별도로 동작한다.
@@ -590,23 +592,23 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 - 일반 피격·사망·대상 제거/사망은 연결과 들린 높이·임시 여백을 정리한다. 차량 충돌은 우선 즉사 규칙을 따른다. F5는 CAPTURE/HOLD/FOLLOW_UP와 적의 독립 반응을 모두 해제한다. 연결 중 스테이지 전환은 제한한다.
 - A 후 피해·복귀·적 사망은 FR-22/23을 따르며, 30/60/120/144 FPS에서 같은 입력의 이동·모션·체력 결과가 동일해야 한다.
 
-### FR-26. factoryOutside-1 공장 외부 배경과 도시 출구 연결
+### FR-26. 공장 하역장 배경과 도시 출구 연결
 
-- 제공된 `factoryOutside-1_pico2d_1280x720.png`를 다섯 번째 맵으로 공유 로딩한다. cityStage-2의 N 오른쪽 출구 이후 FR-21의 기존 로딩 이미지를 창 전체에 2초 표시하고 자동으로 새 배경에 진입한다.
+- 제공된 `hood_man_factory_loading_dock_1672x941.png`를 다섯 번째 맵으로 공유 로딩한다. cityStage-2의 N 오른쪽 출구 이후 FR-21의 기존 로딩 이미지를 창 전체에 2초 표시하고 자동으로 새 배경에 진입한다. 이전 factoryOutside-1 원본은 `before_sheets/`에 보관한다.
 - 공장 배경은 원본 배율 1.0·월드 폭 2560px에 교대 좌우 반전으로 이어 그린다. 원본 아래 100px를 월드 지면 y=100에 맞춰 화면 전체를 채우며, 보행 영역은 건물/전경 앞의 y=56~116이다.
-- 1280×720 배경에 세로 여유 픽셀이 없으므로 배경의 최종 세로 위치를 이미지/뷰포트 경계에 제한해 흔들림 중 빈 띠가 드러나지 않게 한다. 캐릭터/표식은 기존 월드 카메라와 흔들림을 사용한다.
-- HP·무적·이동/점프·입력·애니메이션과 각 맵의 적/효과/소환 상태를 보존한다. 로딩 중에는 플레이를 멈추고 일회성 입력을 소비하며 F5는 공장 진입을 취소하고 열 맵을 초기화한다. factoryOutside-1 오른쪽은 FR-27의 새 공장 외부로 연결한다.
+- 1672×941 원본을 확대하지 않고 좌/중앙/우 뷰포트에 해당하는 부분을 표시한다. 배경의 최종 세로 위치를 이미지/뷰포트 경계에 제한해 흔들림 중 빈 띠가 드러나지 않게 한다. 캐릭터/표식은 기존 월드 카메라와 흔들림을 사용한다.
+- HP·무적·이동/점프·입력·애니메이션과 각 맵의 적/효과/소환 상태를 보존한다. 로딩 중에는 플레이를 멈추고 일회성 입력을 소비하며 F5는 공장 진입을 취소하고 열 맵을 초기화한다. hood_man_factory_loading_dock 오른쪽은 FR-27의 두 번째 공장 외부로 연결한다.
 
 ### FR-27. HOOD_MAN_Factory_Exterior 연속 스테이지
 
-- `HOOD_MAN_Factory_Exterior_1672x941.png`를 factoryOutside-1 다음의 여섯 번째 맵으로 공유 로딩한다. 첫 공장 맵에서 N을 새로 누르고 오른쪽 끝으로 나가면 새 맵 x=128에 즉시 진입한다. 새 맵 왼쪽 N 출구는 첫 공장 맵 x=2432로 즉시 돌아간다.
+- `HOOD_MAN_Factory_Exterior_1672x941.png`를 hood_man_factory_loading_dock 다음의 여섯 번째 맵으로 공유 로딩한다. 첫 공장 맵에서 N을 새로 누르고 오른쪽 끝으로 나가면 새 맵 x=128에 즉시 진입한다. 새 맵 왼쪽 N 출구는 첫 공장 맵 x=2432로 즉시 돌아간다.
 - 같은 Player·HP·무적·방향·이동 속도·점프 높이/속도/횟수·모션 시간·유지 입력을 보존한다. 새 맵의 좁은 바닥에서는 `ground_y`만 y=56~100으로 투영하며, 점프는 그 바닥과 독립적으로 이어간다.
 - 배경은 1672×941 원본 배율 1.0·원본 아래 100px 지면 기준·월드 폭 2560px·교대 수평 반전을 사용한다. 출입문/벽/소품 앞 바닥을 보행 영역으로 두고 원본 이미지를 확대하거나 변형하지 않는다.
 - 적/효과/피해 숫자·소환 순서·화살표는 맵별로 보관하며 떠난 맵은 정지한다. F5는 열 맵을 초기화한다. 오른쪽 N 출구는 FR-28의 첫 공장 내부로 연결하며, 도시→첫 공장 외부와 공장 외부→내부 구역의 기존 STAGE_LOADING 2초 전환은 FR-21을 따른다.
 
 ### FR-28. 공장 내부 두 스테이지와 외부 완료 후 2초 로딩
 
-- 사용자 확인에 따라 `factoryInside-1.png`와 `factoryStage-2.png`를 일곱 번째·여덟 번째 맵으로 공유 로딩한다. 공장 외부 `factoryOutside-1 → HOOD_MAN_Factory_Exterior` 두 맵 다음에 `factoryInside-1 → factoryStage-2` 순서로 이어진다.
+- 사용자 확인에 따라 `factoryInside-1.png`와 `factoryStage-2.png`를 일곱 번째·여덟 번째 맵으로 공유 로딩한다. 공장 외부 `hood_man_factory_loading_dock → HOOD_MAN_Factory_Exterior` 두 맵 다음에 `factoryInside-1 → factoryStage-2` 순서로 이어진다.
 - 외부 두 번째 맵 오른쪽 N 출구를 통과하면 기존 `HOOD_MAN_STAGE_LOADING_1280x720.png`만 창 전체에 2초 표시한 뒤 첫 내부 맵을 시작한다. 역방향 구역 이동도 같은 로딩을 사용하고 두 내부 맵 사이의 양방향 이동은 즉시 처리한다.
 - 두 내부 배경은 1672×941 원본 배율 1.0·원본 아래 144px 지면 기준·월드 폭 2560px·교대 좌우 반전 연결을 사용한다. 보행 영역은 벽/장비 앞 바닥 y=56~148이며 플레이어와 적의 좌우 여백을 기존과 동일하게 적용한다.
 - 로딩 동안 월드·이동/점프/모션·적·효과/피해 숫자를 멈추고 일회성 입력을 소비한다. 동일 Player·HP·무적·속도/점프·유지 입력·맵별 객체는 이어가며 내부에서 외부로 돌아갈 때 목적 맵의 바닥만 투영한다.
@@ -685,14 +687,14 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 | 설명/보조 HUD 표시 | 기본 표시 / U 새 입력마다 숨김·표시 | 주인공 HP바·현재 체력 수치·적 HP바 상시 표시, 맵 이동·F5에도 설정 유지 |
 | 시작 화면 / 진입 조건 | HOOD_MAN_TITLE / 표시 후 2초 자동 전환 | 타이틀 중 게임 입력 소비·안내 문구 없음·F5는 즉시 플레이 재시작 |
 | 월드 너비                 | 2560px                  | 카메라 스크롤을 확인할 수 있도록 화면보다 넓게 구성  |
-| 배경 이미지 / 원본 크기    | 기존 네 거리·HOOD_MAN_Factory_Exterior·두 공장 내부·두 연구소 1672×941 / factoryOutside-1 1280×720 | 열 배경 원본 비율·배율 유지 |
+| 배경 이미지 / 원본 크기    | 모든 배경 1672×941, 첫 공장 외부는 hood_man_factory_loading_dock | 배경 원본 비율·배율 유지 |
 | 배경 표시 배율 / 연결 방식 | 1.0 / 교대 좌우 반전    | 원본 크기로 표시하고 수평 반복으로 월드 구간 구성    |
-| 스테이지 순서 / 진입 위치 | newStage → newStage-2 → cityStage-1 → cityStage-2 → factoryOutside-1 → HOOD_MAN_Factory_Exterior → factoryInside-1 → factoryStage-2 → labStage-1 → labStage-2 / x=128·2432 | N 표시 후 유효한 맵 끝으로 이동, 이동·점프·입력 유지 |
+| 스테이지 순서 / 진입 위치 | newStage → newStage-2 → cityStage-1 → cityStage-2 → hood_man_factory_loading_dock → HOOD_MAN_Factory_Exterior → factoryInside-1 → factoryStage-2 → labStage-1 → labStage-2 / x=128·2432 | N 표시 후 유효한 맵 끝으로 이동, 이동·점프·입력 유지 |
 | 구역 경계 로딩 | 기존 HOOD_MAN_STAGE_LOADING / 2초 | 기존/도시·도시/공장 외부·공장 외부/내부·공장 내부/연구소 경계 양방향, 실제 시간 기준·월드 일시 정지 |
 | 표식 위치 / 크기 | 좌우 끝 안쪽 80px·중심 y=100 / 96×60px | 맵 바닥선에 배치, 첫 맵 오른쪽·나머지 양쪽, 마지막 오른쪽 이동 대상 없음 |
 | 표식 좌우 애니메이션 | 최대 ±6px / 주기 1.6초 | 게임 경과 시간 기준 사인 왕복, 높이 고정·표시 좌표에만 적용 |
 | 배경 보행 기준 / 월드 지면 | 기존 거리·공장 내부 원본 아래 144px·공장 외부 100px·연구소 280px / y=100 | 배경 지면과 주인공·적의 발 기준 정렬               |
-| 맵별 바닥 깊이 | 첫 맵·cityStage-1·공장 내부 두 맵·labStage-1 56~148 / 두 번째·cityStage-2·factoryOutside-1·labStage-2 56~116 / HOOD_MAN_Factory_Exterior 56~100 | 발 좌표 기준, 배경 건물/소품/전경 제외 |
+| 맵별 바닥 깊이 | 첫 맵·cityStage-1·공장 내부 두 맵·labStage-1 56~148 / 두 번째·cityStage-2·hood_man_factory_loading_dock·labStage-2 56~116 / HOOD_MAN_Factory_Exterior 56~100 | 발 좌표 기준, 배경 건물/소품/전경 제외 |
 | 바닥 드랍 개수 / 종류 | 초기 맵별 합계 5~8개 / combat_knife·steel_pipe | G로 획득/교체/버리기 후 수량 변동·자동 보충 없음, 재방문 보존·F5 재추첨 |
 | 무기 획득 범위 / 보유 | x 72px·바닥 깊이 32px / 한 개 | 지상·착지한 가장 가까운 무기에 G 표시, 새 G 입력 우선 획득/교체 |
 | 무기 Pose / 표시 배율 | 336×352 셀·8×6 / 0.5 | 대기/걷기/달리기/점프/피격/사망 1~6행, 기존 공격/반격·차량 전용 시트 우선 |
@@ -878,7 +880,7 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 | AC-39 | 깊이 정렬·카메라·맵 왕복·다각형 확장 | ground_y 내림차순 그리기·점프 높이 240에서도 순서 동일. 카메라 흔들림과 월드 경계 독립, 공중 왕복 시 점프 보존·목적 맵 바닥만 투영. 볼록 다각형 내부·여백·최근접 투영의 순수 로직 통과 |
 | AC-40 | 소환 적별 공격 속도 차등 | 같은 묶음·추가 묶음·네 맵의 배율 모두 서로 다름. 각 배율에 맞는 모션 프레임·공격 주기·공격당 1회 피해 적용, 상태/맵 이동 시 고정·F5 배정 초기화·렌더 FPS 독립 |
 | AC-41 | 실행 타이틀·2초 자동 시작·입력 소비·종료·F5 | 일반 실행 시 안내 문구 없이 타이틀 이미지를 먼저 표시하고 실제 시간 2초 뒤 입력 없이 HP 500·IDLE 플레이 진입. 대기 중 월드 시간 0 유지, Space/반복/다른 키로 건너뛰기·지연 없음·입력 예약으로 점프/소환 없음. 플레이 중 새 Space 점프 정상, 타이틀 창 닫기 정상 종료·F5 즉시 플레이 초기화 |
-| AC-42 | 기존/도시/공장 외부/내부/연구소 구역 2초 로딩·왕복·중단 | newStage-2↔cityStage-1, cityStage-2↔factoryOutside-1, HOOD_MAN_Factory_Exterior↔factoryInside-1, factoryStage-2↔labStage-1에서 기존 STAGE_LOADING 이미지를 2초 표시 후 전환, 같은 구역의 두 맵끼리는 즉시 왕복. 대기 중 월드/모션/AI/효과 정지·입력 예약 없음, 동일 Player·HP·무적·점프/속도·맵별 객체 유지, F5 로딩 취소/열 맵 초기화·정상 종료·30/60/120/144 FPS 동일 |
+| AC-42 | 기존/도시/공장 외부/내부/연구소 구역 2초 로딩·왕복·중단 | newStage-2↔cityStage-1, cityStage-2↔hood_man_factory_loading_dock, HOOD_MAN_Factory_Exterior↔factoryInside-1, factoryStage-2↔labStage-1에서 기존 STAGE_LOADING 이미지를 2초 표시 후 전환, 같은 구역의 두 맵끼리는 즉시 왕복. 대기 중 월드/모션/AI/효과 정지·입력 예약 없음, 동일 Player·HP·무적·점프/속도·맵별 객체 유지, F5 로딩 취소/열 맵 초기화·정상 종료·30/60/120/144 FPS 동일 |
 | AC-43 | H/J/K/L 행 매핑·발동 창·범위·방향·입력 | 양쪽 같은 1/2/3/4행·주인공 8/적 6 FPS로 제압 프레임까지 시작. 기존 ATTACK 1~5번·미소비·가로 140/깊이 32 경계와 최신 새 입력 선택 유지. 유효 적이 없거나 공중/HIT/사망이면 실패·예약 없음 |
 | AC-44 | A 후속 단발 피해·연출 보호·생존/사망 복귀 | A 이전 HP 유지, 새 A 후 네 기술 모두 지정 프레임의 80·숫자/punch_kick_hit/흔들림 1회. 준비/후속 공격만 보호, HOLD 일반 피격은 해제. 주인공 먼저 복귀·적은 남은 독립 반응 후 생존 AI 또는 DEAD/페이드 |
 | AC-45 | 반격 HUD·벽/집단·입력 제한·F5·FPS | 하단 네 키/이름/80 및 HOLD 이동/A 안내, 좌우 시트·공중 높이 정상. 공동 발 영역으로 네 맵 모서리/볼록 다각형 경계 유지·좁은 영역 거부. 준비/HOLD/후속/독립 반응 F5 해제·30/60/120/144 FPS 동일 |
@@ -889,7 +891,7 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 | AC-50 | 반격 후 제압 유지·적을 든 8방향 이동 | 네 기술×좌우에서 선택한 제압 자세/HP를 5초 이상 유지·자동 타격/복귀 없음, 정규화 전체 180px/s·높이 24/간격 80 유지·정지/반대 이동/모서리·다각형 경계 정상 |
 | AC-51 | A 새 입력 후속·예약 방지·제압 중단 | 제압 후 새 A만 후속 재개·80 단발·이동 후 접점 정상, 준비 중/유지/반복 A와 SDF/점프는 추가 공격 없음. 일반 피격/대상 제거/사망/차량/F5에서 연결·높이·여백 정리, 스테이지 전환 차단·FPS 독립 |
 | AC-52 | 도시 첫 맵 적의 인도 소환 | cityStage-1의 좌우 적 생성 깊이가 y=100~148 안에 있고 차량 레인 밖. 차량이 양쪽 생성 지점을 통과 중이어도 새 소환 직후 HP 200 유지. F5 후 같은 생성 제한 적용·다른 맵 생성 영역/적의 전체 추적 보행 영역 유지 |
-| AC-53 | 도시 두 번째 맵→공장 외부·STAGE_LOADING·공장 배경 | cityStage-2 오른쪽 N 출구에서 지정 STAGE_LOADING 원본 이미지를 2초 표시한 뒤 공장 왼쪽 x=128 진입, 역방향도 같은 로딩. 공장 1280×720 원본 배율/좌우 반복·양 끝/세로 흔들림의 빈 영역 없음·바닥 y=56~116, 상태/객체/공유 이미지 보존·로딩 중 F5 취소 |
+| AC-53 | 도시 두 번째 맵→공장 하역장·STAGE_LOADING·공장 배경 | cityStage-2 오른쪽 N 출구에서 지정 STAGE_LOADING 원본 이미지를 2초 표시한 뒤 공장 하역장 왼쪽 x=128 진입, 역방향도 같은 로딩. 하역장 1672×941 원본 배율/좌우 반복·좌/중앙/우 및 세로 흔들림의 빈 영역 없음·바닥 y=56~116, 상태/객체/공유 이미지 보존·로딩 중 F5 취소 |
 | AC-54 | 기존 공장 외부→새 Factory Exterior 연속 진행 | 첫 공장 오른쪽 N 출구에서 새 맵 x=128 즉시 진입·역방향 x=2432. 걷기/달리기/이단 점프 상승·하강의 양방향 8가지 상태·HP·입력·모션 보존, 바닥만 y=56~100 투영. 원본 배율/반복 픽셀·맵별 적 HP/소환 보존·F5 정상 |
 | AC-55 | 공장 외부 두 맵 완료 후 기존 로딩·내부 순서 | HOOD_MAN_Factory_Exterior 오른쪽 N 출구에서 지정 STAGE_LOADING 원본을 실제 시간 2초 표시한 뒤 factoryInside-1 x=128 진입, 다음 오른쪽 출구는 factoryStage-2로 즉시 연결. 역방향 구역 로딩도 2초, 대기 중 월드/AI/효과 정지·일회성 입력 예약 없음·상태/객체 보존·F5 취소 |
 | AC-56 | 두 내부 배경·보행·연속 이동 | 두 내부 맵 1672×941 원본 배율/반전 연결·지면 기준 144px·바닥 y=56~148, 양 끝/세로 흔들림의 빈 영역 없음. 양방향 걷기/달리기/이단 점프 상승·하강 상태 유지, 열 맵 F5 초기화·이미지 재사용 |
@@ -1525,3 +1527,11 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 - 배경·바닥: 두 보스 PNG는 각각 1672×941이며 원본 배율 1.0·교대 좌우 반전·월드 폭 2560px로 표시한다. 원본 아래 144px를 월드 지면 y=100에 맞추고, 보행 영역은 bossStage-1 y=56~148·bossStage-2 y=56~116으로 설정했다.
 - 상태·초기화: 동일 Player의 HP·보유 무기·무적·이동 속도·점프 높이/속도/횟수·모션과 유지 이동 입력을 이어가며, 구역 로딩 중 월드·적·효과를 정지하고 일회성 입력을 소비한다. 보스 맵에도 기존 맵별 적/효과/드랍 아이템 보관을 적용하고 F5는 진입 대기를 취소하며 총 12개 맵을 초기화한다. 두 보스 배경은 기존 공유 로더로 한 번 로딩해 재사용한다.
 - 검증: 맵 순서·구역 로딩/왕복·전체 초기화 및 적/드랍 개수 검증을 12개 맵에 맞췄다. `python -m unittest discover -s tests` **323개 통과**. 실제 SDL `tools/check_stages.py`에서 연구소→보스 **2.005초**·보스→연구소 **2.004초** 로딩, 보스 두 맵의 양방향 걷기/달리기/이단 점프 상승·하강 8가지 전환, 원본/반전 배경 픽셀·세로 흔들림 중 화면 채움, 최종 경계·F5·이미지 재사용을 확인했다. 화면은 `artifacts/boss_entered.png`, `boss_travel_next_walk.png`, `boss_last_boundary.png`로 검토했다.
+
+### 첫 공장 외부를 hood_man_factory_loading_dock으로 교체 (2026-11-16)
+
+- 요청·보관: 기존 `factoryOutside-1_pico2d_1280x720.png`를 `before_sheets/factoryOutside-1_pico2d_1280x720.png`로 이동했다. 이동 전후 Git 객체 해시는 `bf41da35706f5dbbf4074051d3960d0421afa645`로 동일하며 원본을 보존했다.
+- 적용: `config.py`의 `FACTORY_OUTSIDE_IMAGE`를 새 `hood_man_factory_loading_dock_1672x941.png`로 바꾸어 다섯 번째 맵에 공유 로딩한다. `cityStage-2 → 2초 STAGE_LOADING → hood_man_factory_loading_dock → HOOD_MAN_Factory_Exterior` 순서로 양방향 연결한다.
+- 배경·바닥: 1672×941 원본 배율 1.0·월드 폭 2560px·교대 좌우 반전과 아래 100px 지면 기준, 보행 영역 y=56~116을 적용했다. 기존 배경 크기에 고정된 로직 테스트와 SDL 픽셀 검증을 새 크기·좌/중앙/우 뷰포트에 맞췄다.
+- 검증: `python -m unittest tests.test_factory_stage tests.test_city_stages tests.test_stages tests.test_drop_items tests.test_weapon_pickup -v` **56개 통과**(0.658초). 실제 SDL `tools/check_stages.py`에서 새 배경 원본/반전 연결 픽셀·세로 흔들림 중 화면 채움, 공장 두 맵의 걷기/달리기/이단 점프 왕복·상태/객체 보존을 확인했다. 도시↔하역장 로딩은 양방향 모두 **2.004초**였으며 12개 배경/N 표식·최종 경계/F5·이미지 재사용도 통과했다.
+- 화면·보고: `artifacts/stage_5_left_markers.png`, `stage_5_right_markers.png`, `factory_outside_returned_from_exterior.png`에서 하역장 배경·발 접지·표식을 검토했다. 현재 리소스/진행 명세와 FR-26·AC-53을 갱신하고 개발 결과를 보고하며, 별도 커밋은 생성하지 않았다.

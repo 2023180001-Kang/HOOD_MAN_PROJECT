@@ -295,22 +295,30 @@ def check_factory_background(game):
     game.world = World()
     game.world.stage_index = 4
     with Image.open(config.ROOT / config.FACTORY_OUTSIDE_IMAGE) as source:
-        assert source.size == (1280, 720)
+        assert source.size == (1672, 941)
         supplied = source.convert("RGB")
-    for side, camera_x in ((-1, 0), (1, config.WORLD_WIDTH - config.SCREEN_WIDTH)):
+    tiled = Image.new("RGB", (supplied.width * 2, supplied.height))
+    tiled.paste(supplied, (0, 0))
+    tiled.paste(supplied.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (supplied.width, 0))
+    for camera_x in (0, 640, config.WORLD_WIDTH - config.SCREEN_WIDTH):
         game.world.camera.x = camera_x
         game.world.camera.offset_x = 0
-        expected = supplied if side < 0 else supplied.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
         for shake_y in (-8, 0, 8):
             game.world.camera.offset_y = shake_y
+            # The existing 100px floor anchor keeps the image bottom at zero;
+            # downward shake is clamped while upward shake reveals spare rows.
+            bottom = min(0, -shake_y)
+            top = int(supplied.height + bottom - config.SCREEN_HEIGHT)
+            expected = tiled.crop((camera_x, top,
+                                   camera_x + config.SCREEN_WIDTH, top + config.SCREEN_HEIGHT))
             with (patch.object(game.assets, "draw_sprite"),
                   patch.object(game.assets, "draw_drop_item"),
                   patch.object(game.ui, "draw_pickup_prompt"),
                   patch.object(game.ui, "draw"), patch.object(game.ui, "draw_enemy_health")):
-                image = capture(game, f"factory_background_{side}_{shake_y}")
+                image = capture(game, f"factory_loading_dock_background_{camera_x}_{shake_y}")
             assert ImageChops.difference(image.convert("RGB"), expected).getbbox() is None
-    print("PASS: factory 1280x720 original/mirrored backgrounds fill the viewport at both "
-          "edges, including vertical shake, with exact source pixels and no blank strip.")
+    print("PASS: factory loading dock 1672x941 original-size pixels and mirrored tiling "
+          "fill left/center/right views during vertical shake without blank strips.")
 
 
 def check_factory_loading(game, first=3):

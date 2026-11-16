@@ -101,7 +101,7 @@ class FactoryStageTests(unittest.TestCase):
 
     def test_factory_background_covers_the_viewport_at_both_edges_and_during_vertical_shake(self):
         stage = World().stages[4]
-        image = SimpleNamespace(w=1280, h=720, composite_draw=Mock())
+        image = SimpleNamespace(w=1672, h=941, composite_draw=Mock())
         assets = SimpleNamespace(images={config.FACTORY_OUTSIDE_IMAGE: image}, draw_drop_item=Mock())
         for camera_x in (0, 640, 1280):
             for camera_y in (-8, 0, 8):

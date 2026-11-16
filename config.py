@@ -84,6 +84,7 @@ WEAPON_POSE_IMAGES = {
 WEAPON_POSE_SCALE = SPRITE_SCALE  # New 256x256 cells use the original player scale.
 WEAPON_POSE_ROWS = {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4,
                     "HIT": 5, "DYING": 6, "DEAD": 6}
+WEAPON_HIT_FPS = 40.0  # Brief 8-frame flinch, then equipped IDLE after 0.2 seconds.
 COMBAT_IMAGE = "HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png"
 COMBAT_JAB_FPS = 32.0
 COMBAT_STRAIGHT_FPS = 20.0

@@ -16,7 +16,7 @@ import config
 from drop_items import DropItem
 from game import Game
 from tools.check_render import capture, render_image
-from tools.check_runtime import push_key, tick
+from tools.check_runtime import push_key, ready_enemy, tick
 from world import World
 
 
@@ -104,6 +104,51 @@ def check_pose_frames(game):
           "exact clips/0.75 scale/feet alignment; HIT uses row 5 and death row 6.")
 
 
+def check_hit_recovery(game):
+    for kind, name in config.WEAPON_POSE_IMAGES.items():
+        for facing in (-1, 1):
+            world = setup(game, kind)
+            tap(game, pico2d.SDLK_g)
+            player = world.player
+            player.facing = facing
+            world.enemies = [ready_enemy(player.x - 80)]
+            tick(game)
+            assert (player.hp, player.state, player.weapon) == (480, "HIT", kind)
+            assert (player.sprite_image, player.sprite_row) == (name, 5)
+            frames = {player.animation.frame}
+            for frame in range(15):
+                if frame == 5:
+                    elapsed = player.animation.elapsed
+                    world.enemies.append(ready_enemy(player.x + 80, -1))
+                tick(game)
+                if frame == 5:
+                    assert player.hp == 460 and player.animation.elapsed > elapsed
+                    capture(game, f"weapon_{kind}_quick_hit_{facing}")
+                if player.state != "HIT":
+                    break
+                frames.add(player.animation.frame)
+                assert (player.sprite_image, player.sprite_row) == (name, 5)
+                render_image(game)
+            assert frames == set(range(8)), (kind, facing, frames)
+            assert (player.state, player.weapon, player.facing, player.hp) == ("IDLE", kind, facing, 460)
+            assert (frame + 1) / 60 <= 0.25
+            assert (player.sprite_image, player.sprite_row) == (name, 1)
+            texture = game.assets.images[name]
+            with patch.object(texture, "clip_composite_draw", wraps=texture.clip_composite_draw) as draw:
+                capture(game, f"weapon_{kind}_quick_hit_idle_{facing}")
+            tile = game.assets.frames[name][0][player.animation.frame]
+            assert draw.call_count == 1 and draw.call_args.args[:4] == tuple(tile["clip"])
+            assert draw.call_args.args[5] == ("h" if facing < 0 else "")
+            player.take_damage(config.MAX_HP)
+            tick(game, 15)
+            assert (player.state, player.sprite_row, player.hp) == ("DYING", 6, 0)
+            tick(game, 60)
+            assert player.state == "DEAD"
+    print("PASS: SDL G pickup + real enemy hits for both weapons/facings: all 8 HIT poses "
+          "play in about 0.2s before the exact equipped IDLE returns; staggered hits deal "
+          "500->480->460 without restarting recovery, and lethal hits stay in death states.")
+
+
 def check_air_drop_and_lifetime(game):
     textures = dict(game.assets.images)
     for kind in config.WEAPON_POSE_IMAGES:
@@ -170,6 +215,7 @@ def main():
         game.handle_events()
         check_pickup_hint_and_input(game)
         check_pose_frames(game)
+        check_hit_recovery(game)
         check_air_drop_and_lifetime(game)
     finally:
         if game is not None:

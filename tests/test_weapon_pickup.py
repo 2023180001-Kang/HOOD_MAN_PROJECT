@@ -6,6 +6,7 @@ from combat import MOVES
 from counter import COUNTERS
 from drop_items import DropItem
 from tests.helpers import advance, tap
+from tests.test_combat import attacking_enemy
 from world import World
 
 
@@ -194,6 +195,108 @@ class WeaponPickupTests(unittest.TestCase):
             player.counter_move = None
         player.hit_by_car(1)
         self.assertEqual(player.sprite_image, config.PLAYER_CAR_HIT_IMAGE)
+
+    def test_equipped_enemy_hits_return_to_the_same_weapon_idle_within_a_quarter_second(self):
+        for kind, image in config.WEAPON_POSE_IMAGES.items():
+            for facing in (-1, 1):
+                with self.subTest(kind=kind, facing=facing):
+                    world, _ = encounter(kind)
+                    world.controls.press("weapon_interact")
+                    world.step(config.FIXED_DT)
+                    player = world.player
+                    player.facing = facing
+                    world.enemies = [attacking_enemy(player.x - 80)]
+                    world.step(config.FIXED_DT)
+                    self.assertEqual((player.hp, player.state), (480, "HIT"))
+                    self.assertEqual((player.sprite_image, player.sprite_row), (image, 5))
+                    advance(world, 0.1)
+                    self.assertEqual(player.state, "HIT")
+                    self.assertGreater(player.animation.frame, 0)
+                    advance(world, 0.15)
+                    self.assertEqual((player.state, player.weapon, player.facing), ("IDLE", kind, facing))
+                    self.assertEqual((player.sprite_image, player.sprite_row), (image, 1))
+                    self.assertEqual(player.hp, 480)
+
+    def test_staggered_equipped_hits_keep_damage_and_do_not_extend_hit_recovery(self):
+        for kind in config.WEAPON_POSE_IMAGES:
+            with self.subTest(kind=kind):
+                world, _ = encounter(kind)
+                world.interact_weapon()
+                player = world.player
+                player.take_damage(20)
+                advance(world, 0.1)
+                elapsed = player.animation.elapsed
+                world.enemies = [attacking_enemy(player.x + 80, -1)]
+                world.step(config.FIXED_DT)
+                self.assertEqual((player.hp, player.state), (460, "HIT"))
+                self.assertAlmostEqual(player.animation.elapsed, elapsed + config.FIXED_DT)
+                advance(world, 0.15)
+                self.assertEqual((player.state, player.weapon), ("IDLE", kind))
+
+    def test_quick_equipped_hit_cancels_attacks_consumes_input_and_keeps_gravity(self):
+        for kind in config.WEAPON_POSE_IMAGES:
+            with self.subTest(kind=kind):
+                world, _ = encounter(kind)
+                world.interact_weapon()
+                player = world.player
+                player.jump_height, player.vy, player.jump_count = 120, -30, 1
+                player.start_move(MOVES["combat_f"], 1)
+                player.take_damage(20)
+                world.controls.press("right")
+                world.controls.press("jump")
+                world.controls.press("combat_a")
+                x = player.x
+                for _ in range(30):
+                    world.step(config.FIXED_DT)
+                    self.assertEqual(player.x, x)
+                    if player.state != "HIT":
+                        break
+                self.assertEqual(player.state, "IDLE")
+                self.assertEqual(player.weapon, kind)
+                self.assertIsNone(player.active_move)
+                self.assertEqual(player.jump_count, 1)
+                self.assertLess(player.jump_height, 120)
+                self.assertNotIn("jump", world.controls.pressed)
+                self.assertNotIn("combat_a", world.controls.pressed)
+                tap(world.controls, "combat_a")
+                world.step(config.FIXED_DT)
+                self.assertEqual(player.state, "ATTACK_A")
+
+    def test_lethal_and_car_hits_override_quick_equipped_recovery(self):
+        for kind in config.WEAPON_POSE_IMAGES:
+            for source in ("enemy", "car"):
+                with self.subTest(kind=kind, source=source):
+                    world, _ = encounter(kind)
+                    world.interact_weapon()
+                    player = world.player
+                    player.take_damage(20)
+                    advance(world, 0.1)
+                    if source == "enemy":
+                        player.take_damage(config.MAX_HP)
+                    else:
+                        player.hit_by_car(1)
+                    advance(world, 0.25)
+                    self.assertEqual(player.state, "DYING" if source == "enemy" else "CAR_HIT")
+                    self.assertEqual((player.hp, player.weapon), (0, kind))
+                    advance(world, 1)
+                    self.assertEqual(player.state, "DEAD")
+
+    def test_dropping_during_a_quick_hit_does_not_extend_it_and_future_unarmed_hits_use_normal_timing(self):
+        world, _ = encounter()
+        world.interact_weapon()
+        player = world.player
+        player.take_damage(20)
+        advance(world, 0.1)
+        world.interact_weapon()
+        self.assertIsNone(player.weapon)
+        advance(world, 0.15)
+        self.assertEqual(player.state, "IDLE")
+        player.take_damage(20)
+        advance(world, 0.25)
+        self.assertEqual(player.state, "HIT")
+        advance(world, 0.5)
+        self.assertEqual(player.state, "IDLE")
+        self.assertEqual(player.sprite_image, config.PLAYER_IMAGE)
 
     def test_pickup_and_falling_results_are_identical_at_different_render_rates(self):
         outcomes = []

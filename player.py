@@ -140,6 +140,13 @@ class Player:
         self.vx = 0.0
         self.ground_vy = 0.0
         self.cancel_combat()
+        if self.hp and self.state != "HIT":
+            # Choose recovery speed once per reaction; further hits must not
+            # restart or prolong it, even if equipment changes during HIT.
+            row, fps, loop = config.PLAYER_ANIMATIONS["HIT"]
+            if self.weapon in config.WEAPON_POSE_IMAGES:
+                fps = config.WEAPON_HIT_FPS
+            self.animation.definitions["HIT"] = (row, fps, loop)
         # Every enemy swing applies damage. Re-entering HIT preserves the
         # current animation clock; a lethal hit always overrides it with DYING.
         self.animation.set_state("HIT" if self.hp else "DYING")

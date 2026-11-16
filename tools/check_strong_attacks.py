@@ -198,10 +198,13 @@ def check_raise_punch(game):
                 start, elapsed = mover.x, world.elapsed
                 push_key(pico2d.SDLK_r)
                 tick(game, 30)
-                assert world.time_scale == 1 and enemy.hp == 200 and player.attack_box is None
-                assert abs(world.elapsed - elapsed - 0.5) < 1e-7
-                assert abs((mover.x - start) * side - mover.run_speed * 0.5) < 1e-7
-                assert abs(player.animation.elapsed - 0.5 * config.R_RAISE_SPEED) < 1e-7
+                simulated = 0.5 * config.R_RAISE_TIME_SCALE
+                assert world.time_scale == config.R_RAISE_TIME_SCALE
+                assert enemy.hp == 200 and player.attack_box is None
+                assert abs(world.elapsed - elapsed - simulated) < 1e-7
+                assert abs((mover.x - start) * side - mover.run_speed * simulated) < 1e-7
+                assert abs(mover.animation.elapsed - simulated) < 1e-7
+                assert abs(player.animation.elapsed - simulated) < 1e-7
                 world.enemies.remove(mover)
                 for repeat in (True, False):
                     push_key(pico2d.SDLK_r, repeat=repeat)
@@ -218,7 +221,7 @@ def check_raise_punch(game):
                 tick(game, 30)
                 assert player.active_move is None and player.raise_punch_phase is None
                 assert player.sprite_image == config.WEAPON_POSE_IMAGES.get(weapon, config.PLAYER_IMAGE)
-    print("PASS: SDL R slows only the arm/prepare animation while enemies/world move normally; "
+    print("PASS: SDL first R slows the player, enemies and world clocks to 0.2x; "
           "held/repeated R does not attack, fresh R releases 50 once with enemy row 2 and normal recovery.")
 
 

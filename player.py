@@ -69,6 +69,8 @@ class Player:
     def time_scale(self):
         if self.alive and self.active_move is not None and self.air_kick_phase == "WAIT":
             return config.AIR_KICK_TIME_SCALE
+        if self.alive and self.active_move is not None and self.raise_punch_phase == "RAISE":
+            return config.R_RAISE_TIME_SCALE
         if self.alive and self.active_move is not None and self.active_move.jump_attack:
             if self.weapon_leap_phase == "AIM":
                 return config.WEAPON_AIM_TIME_SCALE
@@ -202,7 +204,7 @@ class Player:
         self.vx = self.ground_vy = 0.0
         self.update_vertical(dt)
         if self.raise_punch_phase == "RAISE":
-            self.animation.update(dt * config.R_RAISE_SPEED)
+            self.animation.update(dt)
             self.animation.elapsed = min(self.animation.elapsed,
                                          (config.R_READY_FRAME + 0.05) / self.active_move.fps)
         else:

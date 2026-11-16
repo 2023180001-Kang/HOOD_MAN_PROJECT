@@ -68,9 +68,9 @@ class UI:
                      if player.air_kick_phase == "WAIT" else
                      "E: ←/→ 공중 방향 전환 · 최대 2회 후 복귀")
         assets.font.draw(704, 493, kick_help, (126, 218, 255))
-        punch_help = ("R 준비 중: 주먹 모션 감속 · R 다시 눌러 공격"
+        punch_help = ("R 슬로 모션: R 다시 눌러 공격"
                       if player.raise_punch_phase == "RAISE" else
-                      "R: 느린 주먹 준비 → R 재입력으로 타격")
+                      "R: 주변 슬로 모션 → R 재입력으로 타격")
         assets.font.draw(704, 470, punch_help, (126, 218, 255))
         assets.font.draw(704, 447, "W 유지: ←/→ 비행 전환 · 적 동반 / 놓으면 해제", (126, 218, 255))
 

@@ -671,14 +671,19 @@ def check_hud_toggle(game):
     u()
     assert not game.ui.details_visible and world.player is player and world.elapsed == elapsed
     with (patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text,
-          patch.object(game.assets.damage_font, "draw", wraps=game.assets.damage_font.draw) as damage,
-          patch.object(pico2d, "draw_rectangle", wraps=pico2d.draw_rectangle) as rectangles):
+          patch.object(game.assets.damage_font, "draw", wraps=game.assets.damage_font.draw) as damage):
         hidden = capture(game, "hud_details_hidden")
     assert [call.args[2] for call in text.call_args_list] == ["500 / 500"]
-    assert not damage.called and not rectangles.called
+    assert not damage.called
+    with patch.object(game.ui, "draw_enemy_health"):
+        without_enemy_health = render_image(game)
+    bar_bounds = ImageChops.difference(hidden.convert("RGB"),
+                                      without_enemy_health.convert("RGB")).getbbox()
+    assert bar_bounds is not None, "Enemy HP must remain visible with details hidden"
+    assert hidden.crop(bar_bounds).tobytes() == visible.crop(bar_bounds).tobytes()
     with patch.object(game.ui, "draw"):
-        scene_only = render_image(game)
-    overlay = ImageChops.difference(hidden.convert("RGB"), scene_only.convert("RGB"))
+        scene_with_enemy_health = render_image(game)
+    overlay = ImageChops.difference(hidden.convert("RGB"), scene_with_enemy_health.convert("RGB"))
     assert overlay.getbbox() is not None
     assert overlay.crop((688, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT)).getbbox() is None
     assert overlay.crop((0, 130, config.SCREEN_WIDTH, config.SCREEN_HEIGHT)).getbbox() is None
@@ -751,8 +756,8 @@ def check_hud_toggle(game):
     game.handle_events(title_screen=True)
     game.update(0)
     assert game.ui.details_visible
-    print("PASS: SDL U toggles all supplemental HUD off/on once per fresh press; only the "
-          "player HP image/current value remain, exact pixels restore, HP still updates; "
+    print("PASS: SDL U toggles supplemental HUD off/on once per fresh press; "
+          "player HP image/current value and enemy HP bars remain, exact pixels restore, HP still updates; "
           "stage/loading/death/F5 preserve the setting, focus loss/title input stay clean.")
 
 

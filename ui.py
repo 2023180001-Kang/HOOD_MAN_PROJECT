@@ -23,8 +23,6 @@ class UI:
                              (218, 228, 240))
 
     def draw_enemy_health(self, assets, world, camera_x, camera_y):
-        if not self.details_visible:
-            return
         import pico2d
 
         for enemy in world.enemies:
@@ -44,7 +42,7 @@ class UI:
                 pico2d.draw_rectangle(left, bottom, left + config.ENEMY_HP_BAR_WIDTH * ratio - 1,
                                       bottom + config.ENEMY_HP_BAR_HEIGHT - 1,
                                       215, 38, 45, filled=True)
-        if assets.damage_font is not None:
+        if self.details_visible and assets.damage_font is not None:
             for number in world.damage_numbers:
                 text = f"-{number.damage}"
                 x = number.x - camera_x - len(text) * config.DAMAGE_NUMBER_FONT_SIZE / 4

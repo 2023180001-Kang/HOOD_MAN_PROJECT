@@ -243,18 +243,30 @@ def check_rush_flight(game):
                 assert enemy.jump_height == player.jump_height and enemy.hp == 150
                 if weapon is None:
                     capture(game, f"rush_carry_{enemy_type.__name__}_{side}")
+                direction = pico2d.SDLK_LEFT if side > 0 else pico2d.SDLK_RIGHT
+                push_key(direction)
+                start = player.x
+                tick(game, 10)
+                flight_side = -side
+                assert player.facing == flight_side and world.rush.direction == flight_side
+                assert (player.x - start) * flight_side > 100
+                assert abs(enemy.x - player.x - flight_side * config.RUSH_CARRY_DISTANCE) < 1e-7
+                assert (enemy.facing, enemy.hp, enemy.state) == (-flight_side, 150, "RUSH_CARRIED")
+                if weapon is None:
+                    capture(game, f"rush_turn_{enemy_type.__name__}_{side}")
+                release(game, direction)
                 px, ex = player.x, enemy.x
                 release(game, pico2d.SDLK_w)
                 tick(game)
                 assert player.x == px and player.vx == 0 and world.rush is None
-                assert enemy.state == "RUSH_RELEASED" and (enemy.x - ex) * side > 0
+                assert enemy.state == "RUSH_RELEASED" and (enemy.x - ex) * flight_side > 0
                 if weapon is None:
                     capture(game, f"rush_release_{enemy_type.__name__}_{side}")
                 for _ in range(60):
                     tick(game)
                     if enemy.vx == 0:
                         break
-                assert 50 < (enemy.x - ex) * side < 90
+                assert 50 < (enemy.x - ex) * flight_side < 90
                 stopped = enemy.x
                 tick(game, 3)
                 assert enemy.x == stopped and player.x == px
@@ -264,7 +276,8 @@ def check_rush_flight(game):
                 assert player.active_move is None and player.weapon == weapon
                 assert enemy.sprite_image == enemy.image_name and enemy.hp == 150
     print("PASS: SDL held W flies with fists forward, captures/contact-hits 50 once, "
-          "carries the enemy continuously, KEYUP stops the player while the enemy slides 50..90px, "
+          "left/right turns keep the captive in front without extra damage, "
+          "KEYUP stops the player while the enemy slides 50..90px in the last flight direction, "
           "settles, then restores its own art/AI; all loadouts/types/directions verified.")
 
 

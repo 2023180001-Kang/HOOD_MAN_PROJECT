@@ -72,7 +72,7 @@ class UI:
                       if player.raise_punch_phase == "RAISE" else
                       "R: 느린 주먹 준비 → R 재입력으로 타격")
         assets.font.draw(704, 470, punch_help, (126, 218, 255))
-        assets.font.draw(704, 447, "W 유지: 양주먹 비행·적 동반 이동 / 놓으면 해제", (126, 218, 255))
+        assets.font.draw(704, 447, "W 유지: ←/→ 비행 전환 · 적 동반 / 놓으면 해제", (126, 218, 255))
 
     def draw_enemy_health(self, assets, world, camera_x, camera_y):
         import pico2d

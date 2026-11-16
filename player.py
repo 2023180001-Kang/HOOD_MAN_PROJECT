@@ -219,8 +219,10 @@ class Player:
             self.vy = 0.0
             self.animation.elapsed = 6 / self.active_move.fps
 
-    def update_rush(self, dt):
+    def update_rush(self, dt, controls):
         move = self.active_move
+        if self.rush_phase in ("WINDUP", "FLY") and controls.direction:
+            self.facing = controls.direction
         if self.rush_phase == "WINDUP":
             self.update_vertical(dt)
             self.animation.update(dt)
@@ -454,7 +456,7 @@ class Player:
                 self.update_raise_punch(dt)
                 return
             if self.rush_phase is not None:
-                self.update_rush(dt)
+                self.update_rush(dt, controls)
                 return
             if self.active_move.jump_attack:
                 self.update_weapon_leap(dt, controls)

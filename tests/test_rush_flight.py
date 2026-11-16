@@ -265,6 +265,122 @@ class RushFlightTests(unittest.TestCase):
                             enemy.x, enemy.vx, enemy.jump_height, enemy.state))
         self.assertTrue(all(result == results[0] for result in results))
 
+    def test_held_w_turns_without_a_captive_and_keeps_the_last_direction_when_neutral(self):
+        for side in (-1, 1):
+            world, _ = encounter(side=side)
+            world.enemies.clear()
+            launch(world)
+            world.controls.press("left" if side > 0 else "right")
+            before = world.player.x
+            world.step(config.FIXED_DT)
+            self.assertEqual(world.player.facing, -side)
+            self.assertEqual(world.rush.direction, -side)
+            self.assertAlmostEqual(world.player.x - before, -side * config.RUSH_SPEED * config.FIXED_DT)
+            world.controls.press("right" if side > 0 else "left")
+            world.step(config.FIXED_DT)
+            self.assertEqual(world.player.facing, -side)
+            world.controls.release("left")
+            world.controls.release("right")
+            world.step(config.FIXED_DT)
+            self.assertEqual(world.player.vx, -side * config.RUSH_SPEED)
+            self.assertIn("combat_w", world.controls.held)
+
+    def test_turning_moves_captives_to_the_new_front_without_restarting_or_redamaging(self):
+        for weapon in (None, *config.WEAPON_POSE_IMAGES):
+            for enemy_type in (Enemy, Enemy02):
+                for side in (-1, 1):
+                    world, enemy = encounter(enemy_type, side, weapon)
+                    capture_enemy(world, enemy)
+                    sequence = world.rush
+                    for direction in (-side, side, -side):
+                        world.controls.release("left")
+                        world.controls.release("right")
+                        world.controls.press("right" if direction > 0 else "left")
+                        before = world.player.x
+                        world.step(config.FIXED_DT)
+                        self.assertIs(world.rush, sequence)
+                        self.assertEqual((world.player.rush_phase, world.player.facing), ("FLY", direction))
+                        self.assertAlmostEqual(world.player.x - before,
+                                               direction * config.RUSH_SPEED * config.FIXED_DT)
+                        self.assertAlmostEqual(enemy.x - world.player.x, direction * config.RUSH_CARRY_DISTANCE)
+                        self.assertEqual((enemy.facing, enemy.hp, enemy.state), (-direction, 150, "RUSH_CARRIED"))
+                        self.assertEqual((world.player.animation.frame, enemy.animation.frame), (4, 4))
+                        self.assertEqual(len(world.damage_numbers), 1)
+                    world.controls.release("left")
+                    world.controls.release("right")
+                    world.controls.release("combat_w")
+                    px, ex = world.player.x, enemy.x
+                    world.step(config.FIXED_DT)
+                    self.assertEqual((world.player.x, world.player.vx), (px, 0))
+                    self.assertGreater((enemy.x - ex) * -side, 0)
+                    self.assertEqual(enemy.state, "RUSH_RELEASED")
+
+    def test_reversed_flight_captures_new_front_targets_without_hitting_the_same_enemy_again(self):
+        world, first = encounter()
+        second = Enemy02(world.player.x - 160, 1)
+        second.animation.set_state("HIT")
+        second.cooldown = 100
+        world.enemies.append(second)
+        capture_enemy(world, first)
+        self.assertEqual((first.hp, second.hp), (150, 200))
+        world.controls.press("left")
+        advance(world, 0.25)
+        self.assertEqual((first.hp, second.hp), (150, 150))
+        self.assertEqual(set(world.rush.captives), {first, second})
+        self.assertTrue(all(enemy.x < world.player.x for enemy in world.rush.captives))
+
+    def test_reversing_at_every_stage_edge_keeps_the_flying_pair_inside(self):
+        for enemy_type in (Enemy, Enemy02):
+            for index in range(len(config.STAGE_IMAGES)):
+                for side in (-1, 1):
+                    world, enemy = encounter(enemy_type, side)
+                    world.select_stage(index)
+                    world.stage.traffic = None
+                    left, bottom, right, top = world.stage.walkable.bounds
+                    enemy.x = left + enemy.boundary_padding + 20 if side < 0 else right - enemy.boundary_padding - 20
+                    enemy.ground_y = bottom if side < 0 else top
+                    world.player.x = enemy.x - side * 80
+                    world.player.ground_y = enemy.ground_y
+                    world.enemies = [enemy]
+                    capture_enemy(world, enemy)
+                    advance(world, 0.5)
+                    before = world.player.x
+                    world.controls.press("left" if side > 0 else "right")
+                    world.step(config.FIXED_DT)
+                    self.assertAlmostEqual(world.player.x - before, -side * config.RUSH_SPEED * config.FIXED_DT)
+                    for actor in (world.player, enemy):
+                        self.assertTrue(world.stage.walkable.contains(actor.x, actor.ground_y,
+                                                                     actor.boundary_padding))
+                    self.assertAlmostEqual(enemy.x - world.player.x, -side * config.RUSH_CARRY_DISTANCE)
+
+    def test_interruption_uses_the_last_flight_direction_instead_of_the_next_attacks_direction(self):
+        world, enemy = encounter()
+        capture_enemy(world, enemy)
+        world.controls.press("left")
+        world.step(config.FIXED_DT)
+        world.controls.release("left")
+        world.controls.press("right")
+        tap(world.controls, "combat_q")
+        before = enemy.x
+        world.step(config.FIXED_DT)
+        self.assertEqual(world.player.facing, 1)
+        self.assertIsNone(world.rush)
+        self.assertEqual(enemy.state, "RUSH_RELEASED")
+        self.assertLess(enemy.x, before)
+        self.assertLess(enemy.vx, 0)
+
+    def test_mirroring_a_captive_does_not_sweep_its_old_side_into_a_vehicle(self):
+        world, enemy = encounter()
+        capture_enemy(world, enemy)
+        world.player.ground_y = enemy.ground_y = config.CAR_GROUND_Y
+        world.stage.traffic = Traffic()
+        world.stage.traffic.car = Car(world.player.x + config.CAR_HALF_WIDTH + config.PLAYER_HALF_WIDTH + 8,
+                                      1, 1400)
+        world.controls.press("left")
+        world.step(config.FIXED_DT)
+        self.assertEqual((world.player.hp, enemy.hp, enemy.state), (500, 150, "RUSH_CARRIED"))
+        self.assertLess(enemy.x, world.player.x)
+
 
 if __name__ == "__main__":
     unittest.main()

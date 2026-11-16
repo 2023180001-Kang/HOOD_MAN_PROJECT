@@ -53,9 +53,11 @@ class RushSequence:
         return impacts
 
     def sync_pair(self):
+        player = self.player
+        turned = self.direction != player.facing
+        self.direction = player.facing
         if not self.captives:
             return True
-        player = self.player
         distance = self.direction * config.RUSH_CARRY_DISTANCE
         padding = max(enemy.boundary_padding for enemy in self.captives)
         left = min(-player.boundary_padding, distance - padding)
@@ -74,6 +76,12 @@ class RushSequence:
         player.x, player.ground_y = x, y
         player.facing = self.direction
         for enemy in self.captives:
+            if turned:
+                # Mirroring the carried pose is not a flight through the player.
+                # Keep swept collisions on the new side's actual movement path.
+                enemy.previous_x = player.previous_x + distance
+                enemy.previous_ground_y = player.previous_ground_y
+                enemy.previous_jump_height = player.previous_jump_height
             enemy.x, enemy.ground_y = x + distance, y
             enemy.jump_height = player.jump_height
             enemy.vx, enemy.ground_vy, enemy.vy = player.vx, player.ground_vy, 0.0

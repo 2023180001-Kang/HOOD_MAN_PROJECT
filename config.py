@@ -217,7 +217,8 @@ STAGE_WALKABLE_BOUNDS = (
     (0.0, 56.0, WORLD_WIDTH, 116.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
-    (0.0, 56.0, WORLD_WIDTH, 116.0),
+    # Loading dock: source rows 701..893, below the stairs and above the drain.
+    (0.0, 48.0, WORLD_WIDTH, 240.0),
     (0.0, 56.0, WORLD_WIDTH, 100.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),

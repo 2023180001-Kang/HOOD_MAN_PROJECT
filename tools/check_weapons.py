@@ -15,6 +15,7 @@ import pico2d
 import config
 from drop_items import DropItem
 from game import Game
+from tools.check_drop_items import check_city_sidewalk_pixels, without_items
 from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, ready_enemy, tick
 from world import World
@@ -196,10 +197,13 @@ def check_air_drop_and_lifetime(game):
     world.player.ground_y = config.CAR_GROUND_Y
     tap(game, pico2d.SDLK_g)
     item = world.stage.drop_items[0]
-    assert item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= config.GROUND_Y
+    assert item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 123
+    assert item.ground_y + config.DROP_ITEM_HEIGHT <= 161
     tick(game, 60)
     assert item.grounded
-    capture(game, "weapon_city_discard_keeps_sidewalk")
+    baseline = without_items(game)
+    image = capture(game, "weapon_city_discard_keeps_sidewalk")
+    check_city_sidewalk_pixels(game, image, baseline)
     print("PASS: SDL Space + G releases both weapons in midair, gravity lands them without "
           "automatic reacquisition; U hides/restores the prompt, equipped travel/loading "
           "persists, loading G is consumed, F5 clears equipment/falling drops with texture "

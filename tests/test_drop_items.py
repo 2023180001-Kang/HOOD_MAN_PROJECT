@@ -60,6 +60,7 @@ class DropItemTests(unittest.TestCase):
                     self.assertIs(stage.drop_spawn_area, stage.walkable)
                 previous_right = None
                 for item in stage.drop_items:
+                    self.assertTrue(stage.walkable.contains(item.x, item.ground_y))
                     for parts in bounds[item.kind]:
                         for (left, top, right, bottom), anchor in parts:
                             xs = [(left - 128) * config.DROP_ITEM_SCALE * item.facing,
@@ -69,10 +70,12 @@ class DropItemTests(unittest.TestCase):
                             visible_top = item.ground_y + (anchor - top) * config.DROP_ITEM_SCALE
                             for x in (visible_left, visible_right):
                                 for y in (visible_bottom, visible_top):
-                                    self.assertTrue(stage.walkable.contains(x, y))
                                     self.assertTrue(stage.drop_spawn_area.contains(x, y))
                             if stage.image_name == "cityStage-1.png":
-                                self.assertGreaterEqual(visible_bottom, config.GROUND_Y)
+                                # Source pavement rows 736..774 map to y=123..161,
+                                # above the curb; the old y=100 floor line is too low.
+                                self.assertGreaterEqual(visible_bottom, 123)
+                                self.assertLessEqual(visible_top, 161)
                             self.assertGreaterEqual(visible_left, arrow_edge + config.DROP_ITEM_EXIT_GAP)
                             self.assertLessEqual(visible_right,
                                                  config.WORLD_WIDTH - arrow_edge - config.DROP_ITEM_EXIT_GAP)
@@ -147,9 +150,10 @@ class DropItemTests(unittest.TestCase):
             if new.image_name == "cityStage-1.png":
                 for item in new.drop_items:
                     self.assertGreaterEqual(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH,
-                                            config.GROUND_Y)
+                                            123)
                     self.assertLessEqual(item.ground_y + config.DROP_ITEM_HEIGHT,
-                                         new.walkable.bounds[3])
+                                         161)
+                    self.assertTrue(new.walkable.contains(item.x, item.ground_y))
 
     def test_walking_over_and_attacking_items_does_not_collect_move_or_destroy_them(self):
         world = World(item_rng=random.Random(1))

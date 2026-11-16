@@ -30,6 +30,22 @@ def difference(image, baseline):
     return ImageChops.difference(image.convert("RGB"), baseline.convert("RGB"))
 
 
+def check_city_sidewalk_pixels(game, image, baseline):
+    # Measure against the artwork's paving, independently of the spawn bounds:
+    # source rows 736..774 exclude the buildings, curb lip and roadway.
+    source = game.assets.images["cityStage-1.png"]
+    anchor = config.STAGE_GROUND_ANCHORS.get("cityStage-1.png", config.STAGE_GROUND_Y)
+    bottom = config.GROUND_Y - anchor * config.STAGE_SCALE - game.world.camera.render_y
+    sidewalk_bottom = bottom + (source.h - 774) * config.STAGE_SCALE
+    sidewalk_top = bottom + (source.h - 736) * config.STAGE_SCALE
+    delta = difference(image, baseline)
+    assert delta.getbbox() is not None
+    assert delta.crop((0, 0, config.SCREEN_WIDTH,
+                       floor(config.SCREEN_HEIGHT - sidewalk_top) - 1)).getbbox() is None
+    assert delta.crop((0, ceil(config.SCREEN_HEIGHT - sidewalk_bottom) + 1,
+                       config.SCREEN_WIDTH, config.SCREEN_HEIGHT)).getbbox() is None
+
+
 def check_sheets(game):
     game.world = World(item_rng=random.Random(1))
     world = game.world
@@ -111,9 +127,7 @@ def check_all_stages(game):
             assert box[1] >= floor(config.SCREEN_HEIGHT - top) - 1
             assert box[3] <= ceil(config.SCREEN_HEIGHT - bottom) + 1
             if stage.image_name == "cityStage-1.png":
-                road_top = ceil(config.SCREEN_HEIGHT - config.GROUND_Y) + 1
-                assert delta.crop((0, road_top, config.SCREEN_WIDTH,
-                                   config.SCREEN_HEIGHT)).getbbox() is None
+                check_city_sidewalk_pixels(game, image, baseline)
             exit_box = ((0, 0, arrow_edge + 1, config.SCREEN_HEIGHT) if side < 0 else
                         (config.SCREEN_WIDTH - arrow_edge - 1, 0,
                          config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
@@ -143,13 +157,21 @@ def check_restart(game):
     assert all(stage.drop_items is not old and 5 <= len(stage.drop_items) <= 8
                for stage, old in zip(game.world.stages, previous))
     city = game.world.stages[config.STAGE_IMAGES.index("cityStage-1.png")]
-    assert all(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= config.GROUND_Y
-               and item.ground_y + config.DROP_ITEM_HEIGHT <= city.walkable.bounds[3]
+    assert all(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 123
+               and item.ground_y + config.DROP_ITEM_HEIGHT <= 161
+               and city.walkable.contains(item.x, item.ground_y)
                for item in city.drop_items)
     assert all(game.assets.images[name] is texture for name, texture in textures.items())
     capture(game, "drop_items_restarted")
+    assert game.world.select_stage(config.STAGE_IMAGES.index(city.image_name))
+    for side in (-1, 1):
+        game.world.player.x = 80 if side < 0 else config.WORLD_WIDTH - 80
+        game.world.camera.update(0, game.world.player.x)
+        baseline = without_items(game)
+        image = capture(game, f"city_sidewalk_drops_restarted_{'left' if side < 0 else 'right'}")
+        check_city_sidewalk_pixels(game, image, baseline)
     print(f"PASS: actual SDL F5 replaces all {len(game.world.stages)} item lists "
-          "and reuses both shared textures.")
+          "and reuses both shared textures; city drops stay above the curb in both views.")
 
 
 def main():

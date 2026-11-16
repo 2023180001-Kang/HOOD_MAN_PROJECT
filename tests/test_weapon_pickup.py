@@ -327,16 +327,17 @@ class WeaponPickupTests(unittest.TestCase):
                 item = world.stage.drop_items[0]
                 advance(world, 1)
                 self.assertTrue(item.grounded)
+                self.assertTrue(world.stage.walkable.contains(item.x, item.ground_y))
                 for x in (item.x - config.DROP_ITEM_HALF_WIDTH, item.x + config.DROP_ITEM_HALF_WIDTH):
                     for y in (item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH,
                               item.ground_y + config.DROP_ITEM_HEIGHT):
-                        self.assertTrue(world.stage.walkable.contains(x, y))
                         self.assertTrue(world.stage.drop_spawn_area.contains(x, y))
                 self.assertGreaterEqual(item.x, 206)
                 self.assertLessEqual(item.x, config.WORLD_WIDTH - 206)
                 if world.stage.image_name == "cityStage-1.png":
                     self.assertGreaterEqual(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH,
-                                            config.GROUND_Y)
+                                            123)
+                    self.assertLessEqual(item.ground_y + config.DROP_ITEM_HEIGHT, 161)
                 player.x, player.ground_y = item.x, item.ground_y
                 self.assertIs(world.pickup_item, item)
 

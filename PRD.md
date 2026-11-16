@@ -96,11 +96,13 @@
 | 여섯 번째 배경 | 두 번째 공장 외부 HOOD_MAN_Factory_Exterior | `HOOD_MAN_Factory_Exterior_1672x941.png` | 1672×941, 원본 배율·지면 기준 100px, 오른쪽 출구에서 2초 로딩 후 내부로 진행 |
 | 일곱 번째 배경 | 첫 번째 공장 내부 factoryInside-1 | `factoryInside-1.png` | 1672×941, 원본 배율·지면 기준 144px, 외부 두 맵 다음 구역의 첫 맵 |
 | 여덟 번째 배경 | 두 번째 공장 내부 factoryStage-2 | `factoryStage-2.png` | 1672×941, 첫 내부 맵 다음에 즉시 연결, 오른쪽 출구에서 2초 로딩 후 연구소로 진행 |
-| 아홉 번째 배경 | 첫 번째 연구소 labStage-1 | `labStage-1_1672x941.png` | 1672×941, 원본 배율·지면 기준 280px, 공장 내부 두 맵 다음 구역의 첫 맵 |
-| 열 번째 배경 | 두 번째 연구소 labStage-2 | `labStage-2_1672x941.png` | 1672×941, 첫 연구소 맵 다음에 즉시 연결, 현재 마지막 맵 |
+| 아홉 번째 배경 | 첫 번째 연구소 labStage-1 | `labStage-1_new_1672x941.png` | 1672×941, 원본 배율·지면 기준 280px, 공장 내부 두 맵 다음 구역의 첫 맵 |
+| 열 번째 배경 | 두 번째 연구소 labStage-2 | `labStage-2_new_1672x941.png` | 1672×941, 첫 연구소 맵 다음에 즉시 연결, 현재 마지막 맵 |
 | 이전/다음 이동 표식 | 노란색 좌우 화살표 | `arrow_left_yellow.png`, `arrow_right_yellow.png` | 512×320 원본, 96×60px 표시·월드 좌표 적용 |
 
-기존 배경 `stage.png`는 `before_sheets/stage.png`에 원본 그대로 보관한다. 게임 실행에는 `newStage.png`, `newStage-2.png`, `cityStage-1.png`, `cityStage-2.png`, `factoryOutside-1_pico2d_1280x720.png`, `HOOD_MAN_Factory_Exterior_1672x941.png`, `factoryInside-1.png`, `factoryStage-2.png`, `labStage-1_1672x941.png`, `labStage-2_1672x941.png`를 순서대로 사용한다. 두 번째 내부 배경은 사용자 확인에 따라 `factoryStage-2.png`를 사용한다.
+기존 배경 `stage.png`는 `before_sheets/stage.png`에 원본 그대로 보관한다. 게임 실행에는 `newStage.png`, `newStage-2.png`, `cityStage-1.png`, `cityStage-2.png`, `factoryOutside-1_pico2d_1280x720.png`, `HOOD_MAN_Factory_Exterior_1672x941.png`, `factoryInside-1.png`, `factoryStage-2.png`, `labStage-1_new_1672x941.png`, `labStage-2_new_1672x941.png`를 순서대로 사용한다. 두 번째 내부 배경은 사용자 확인에 따라 `factoryStage-2.png`를 사용한다.
+
+교체한 연구소 배경 원본은 `before_sheets/labStage-1_1672x941.png`, `before_sheets/labStage-2_1672x941.png`에 보관한다.
 
 기존 9Moves 시트는 `before_sheets/HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png`에 원본 그대로 보관한다. `tools/prepare_assets.py`는 기존 8개 캐릭터 시트의 264프레임과 단검/쇠파이프 Pose 시트의 각 48프레임을 합한 **10개 시트·360프레임**을 생성한다. enemy02는 384×384 셀, 두 무기 Pose는 336×352 셀, 나머지는 256×256 셀이다. 차량의 4×2 시트와 두 드랍 아이템의 8×1 시트는 각각 8프레임을 별도로 직접 클립한다. 이전 H 블로킹 시트는 사용하지 않으며 새 반격 시트와 구분한다.
 
@@ -460,7 +462,7 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 
 ### FR-15. 열 스테이지 배경과 N키 이동 표식
 
-- 스테이지 순서는 `newStage.png → newStage-2.png → cityStage-1.png → cityStage-2.png → factoryOutside-1_pico2d_1280x720.png → HOOD_MAN_Factory_Exterior_1672x941.png → factoryInside-1.png → factoryStage-2.png → labStage-1_1672x941.png → labStage-2_1672x941.png`다. 열 맵 모두 월드 너비 2560px·지면 y=100·원본 배율 1.0·교대 좌우 반전 연결을 사용한다. 기존 네 거리 맵과 두 공장 내부 맵의 보행 기준은 원본 아래 144px, 두 공장 외부 맵은 100px, 두 연구소 맵은 280px다.
+- 스테이지 순서는 `newStage.png → newStage-2.png → cityStage-1.png → cityStage-2.png → factoryOutside-1_pico2d_1280x720.png → HOOD_MAN_Factory_Exterior_1672x941.png → factoryInside-1.png → factoryStage-2.png → labStage-1_new_1672x941.png → labStage-2_new_1672x941.png`다. 열 맵 모두 월드 너비 2560px·지면 y=100·원본 배율 1.0·교대 좌우 반전 연결을 사용한다. 기존 네 거리 맵과 두 공장 내부 맵의 보행 기준은 원본 아래 144px, 두 공장 외부 맵은 100px, 두 연구소 맵은 280px다.
 - 시작 시 화살표를 숨긴다. 살아 있는 주인공이 N을 새로 누르면 현재 맵의 이동 표식을 표시하고 유지한다. 재입력은 숨김 토글이 아니며 키 반복은 새 입력으로 처리하지 않는다.
 - 첫 맵은 오른쪽 화살표만, 나머지 맵은 왼쪽/오른쪽 화살표를 각각 맵 양 끝에서 안쪽 80px에 표시한다. 화살표 중심을 캐릭터 발이 닿는 맵 바닥선 y=100에 맞춰 96×60px로 렌더링하며 카메라 이동·흔들림과 함께 이동한다.
 - 화살표는 기준 x좌표에서 좌우 최대 6px씩, 1.6초 주기의 사인 곡선으로 부드럽게 왕복한다. 높이는 고정하고 게임 경과 시간을 사용한다. 애니메이션은 표시 위치에만 적용하며 스테이지 전환 영역은 맵 끝 안쪽 80px로 유지한다.
@@ -612,7 +614,7 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 
 ### FR-29. 공장 내부 다음 연구소 두 스테이지와 2초 로딩
 
-- `labStage-1_1672x941.png`와 `labStage-2_1672x941.png`를 아홉 번째·열 번째 맵으로 공유 로딩한다. 공장 내부 두 맵 뒤에 `factoryStage-2 → 2초 STAGE_LOADING → labStage-1 → labStage-2` 순서로 진행한다.
+- `labStage-1_new_1672x941.png`와 `labStage-2_new_1672x941.png`를 아홉 번째·열 번째 맵으로 공유 로딩한다. 공장 내부 두 맵 뒤에 `factoryStage-2 → 2초 STAGE_LOADING → labStage-1 → labStage-2` 순서로 진행한다.
 - 기존 N 출구 통과를 진행 기준으로 사용한다. 공장 내부 두 번째 맵 오른쪽에서 연구소로 나갈 때 기존 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 창 전체에 2초 표시한 뒤 x=128에 진입한다. 연구소에서 공장 내부로 돌아갈 때도 같은 2초 로딩 뒤 x=2432에 진입한다. 두 연구소 맵 사이는 즉시 왕복한다.
 - 두 배경은 1672×941 원본 배율 1.0·월드 폭 2560px·교대 좌우 반전 연결을 사용한다. 원본 아래 280px를 월드 지면 y=100에 맞춰 발을 하단 기계 구조물 위의 통로에 둔다. 첫 연구소 맵의 보행 영역은 y=56~148, 두 번째는 장비/계단 앞의 y=56~116이며 기존 좌우 여백을 적용한다.
 - 로딩 중 월드/모션·적 AI·효과/피해 숫자를 정지하고 일회성 입력을 소비한다. 동일 Player·HP·무적·속도·점프 높이/속도/횟수·모션 시간·유지 이동 입력과 맵별 객체를 이어가며 목적 맵의 바닥 범위를 벗어난 깊이만 투영한다.

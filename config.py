@@ -185,7 +185,7 @@ STAGE_IMAGE = "newStage.png"
 FACTORY_OUTSIDE_IMAGE = "factoryOutside-1_pico2d_1280x720.png"
 FACTORY_EXTERIOR_IMAGE = "HOOD_MAN_Factory_Exterior_1672x941.png"
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
-LAB_STAGE_IMAGES = ("labStage-1_1672x941.png", "labStage-2_1672x941.png")
+LAB_STAGE_IMAGES = ("labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png")
 STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png", "cityStage-1.png", "cityStage-2.png",
                 FACTORY_OUTSIDE_IMAGE, FACTORY_EXTERIOR_IMAGE, *FACTORY_INSIDE_IMAGES,
                 *LAB_STAGE_IMAGES)

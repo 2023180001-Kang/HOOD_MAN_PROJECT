@@ -56,7 +56,7 @@ class UI:
             y = 659 - index // 2 * 24
             assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
                              (218, 228, 240))
-        pico2d.draw_rectangle(688, 508, config.SCREEN_WIDTH - 20, 610,
+        pico2d.draw_rectangle(688, 436, config.SCREEN_WIDTH - 20, 610,
                              12, 21, 33, filled=True)
         assets.font.draw(704, 590, "강화 기본 공격 · 피해량", (126, 218, 255))
         for index, move in enumerate(STRONG_MOVES.values()):
@@ -64,6 +64,15 @@ class UI:
             y = 565 - index // 2 * 23
             assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
                              (218, 228, 240))
+        kick_help = ("슬로 대기 중: ←/→ 전환 · E 두 번째 발차기 (1/2)"
+                     if player.air_kick_phase == "WAIT" else
+                     "E: ←/→ 공중 방향 전환 · 최대 2회 후 복귀")
+        assets.font.draw(704, 493, kick_help, (126, 218, 255))
+        punch_help = ("R 준비 중: 주먹 모션 감속 · R 다시 눌러 공격"
+                      if player.raise_punch_phase == "RAISE" else
+                      "R: 느린 주먹 준비 → R 재입력으로 타격")
+        assets.font.draw(704, 470, punch_help, (126, 218, 255))
+        assets.font.draw(704, 447, "W 유지: 양주먹 비행·적 동반 이동 / 놓으면 해제", (126, 218, 255))
 
     def draw_enemy_health(self, assets, world, camera_x, camera_y):
         import pico2d

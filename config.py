@@ -104,6 +104,20 @@ STRONG_HIT_IMAGE = "HoodMan_Enemy_StrongHit_2048x1280.png"
 STRONG_ATTACK_DAMAGE = 50
 STRONG_ATTACK_FPS = 16.0
 STRONG_HIT_FPS = 16.0
+AIR_KICK_TIME_SCALE = 0.2
+AIR_KICK_STRIKE_FRAMES = (3, 5)
+AIR_KICK_HOLD_FRAME = 4
+AIR_KICK_MAX_COUNT = 2
+R_RAISE_SPEED = 0.2  # Animation only; the world clock remains at normal speed.
+R_READY_FRAME = 4
+RUSH_SPEED = 720.0
+RUSH_HEIGHT = 32.0
+RUSH_PLAYER_HOLD_FRAME = 4
+RUSH_ENEMY_HOLD_FRAME = 4
+RUSH_CARRY_DISTANCE = PLAYER_HALF_WIDTH + ENEMY_HALF_WIDTH
+RUSH_RELEASE_SPEED = 360.0
+RUSH_RELEASE_FRICTION = 900.0
+RUSH_RELEASE_SETTLE = 0.15
 # The new artwork occupies less of each cell; match the existing actor heights.
 SPRITE_IMAGE_SCALES = {
     **dict.fromkeys(WEAPON_POSE_IMAGES.values(), WEAPON_POSE_SCALE),
@@ -114,7 +128,7 @@ SPRITE_IMAGE_SCALES = {
 STRONG_MOVE_SPECS = (
     ("q", "양주먹 내지르기", 1, 1, 140.0, 146.0, (3, 4, 5), 0.0),
     ("w", "도약 양주먹 넉백", 2, 5, 150.0, 170.0, (3, 4, 5), KNOCKBACK_SPEED),
-    ("e", "공중 연속 발차기", 3, 4, 140.0, 170.0, (3, 4, 5), 0.0),
+    ("e", "공중 연속 발차기", 3, 4, 140.0, 170.0, AIR_KICK_STRIKE_FRAMES, 0.0),
     ("r", "양주먹 올려치기", 4, 2, 130.0, 190.0, (4, 5), 0.0),
     ("t", "어퍼컷", 5, 3, 120.0, 190.0, (3, 4), 0.0),
 )

@@ -27,7 +27,9 @@ def encounter(enemy_type=Enemy, side=1, weapon=None):
 def strike(world, enemy, action):
     hp = enemy.hp
     tap(world.controls, action)
-    for _ in range(90):
+    for step in range(90):
+        if action == "combat_r" and step == 12:
+            tap(world.controls, action)
         world.step(config.FIXED_DT)
         if enemy.hp != hp:
             return
@@ -47,6 +49,16 @@ class StrongAttackTests(unittest.TestCase):
                 self.assertEqual((player.sprite_image, player.sprite_row), (config.STRONG_ATTACK_IMAGE, row))
                 self.assertEqual((player.active_move.damage, player.active_move.enemy_hit_row), (50, hit_row))
                 advance(world, 0.6)
+                if key == "e":
+                    self.assertEqual(player.air_kick_phase, "WAIT")
+                    tap(world.controls, "combat_e")
+                    advance(world, 0.4)
+                elif key == "w":
+                    world.controls.release("combat_w")
+                    advance(world, 0.4)
+                elif key == "r":
+                    tap(world.controls, "combat_r")
+                    advance(world, 0.4)
                 self.assertIsNone(player.active_move)
                 self.assertEqual(player.sprite_image, config.WEAPON_POSE_IMAGES.get(weapon, config.PLAYER_IMAGE))
                 self.assertEqual(player.weapon, weapon)
@@ -58,18 +70,22 @@ class StrongAttackTests(unittest.TestCase):
                     with self.subTest(action=action, enemy=enemy_type, side=side):
                         world, enemy = encounter(enemy_type, side)
                         strike(world, enemy, action)
+                        reaction = "RUSH_CARRIED" if move.key == "w" else "STRONG_HIT"
                         self.assertEqual((enemy.hp, enemy.state, enemy.animation.row),
-                                         (150, "STRONG_HIT", move.enemy_hit_row))
+                                         (150, reaction, move.enemy_hit_row))
                         self.assertEqual(enemy.sprite_image, config.STRONG_HIT_IMAGE)
                         self.assertIn(world.player.animation.frame, move.active_frames)
                         self.assertEqual(enemy.facing, -side)
-                        self.assertEqual(enemy.vx, side * move.knockback_speed)
+                        self.assertEqual(enemy.vx, side * config.RUSH_SPEED if move.key == "w" else 0)
                         self.assertEqual([number.damage for number in world.damage_numbers], [50])
                         self.assertEqual(world.effects[-1].image_name, config.PUNCH_KICK_HIT_IMAGE)
                         self.assertGreater(world.camera.shake_remaining, 0)
                         advance(world, 0.1)
                         self.assertEqual(enemy.hp, 150)
-                        while enemy.state == "STRONG_HIT":
+                        if move.key == "w":
+                            world.controls.release(action)
+                            world.step(config.FIXED_DT)
+                        while enemy.state in ("STRONG_HIT", "RUSH_RELEASED"):
                             world.step(config.FIXED_DT)
                         self.assertEqual((enemy.hp, enemy.state, enemy.sprite_image),
                                          (150, "IDLE", enemy.image_name))
@@ -80,7 +96,9 @@ class StrongAttackTests(unittest.TestCase):
             world, enemy = encounter()
             tap(world.controls, action)
             hits = []
-            for _ in range(75):
+            for step in range(75):
+                if move.key == "r" and step == 18:
+                    tap(world.controls, action)
                 hp = enemy.hp
                 world.step(config.FIXED_DT)
                 if enemy.hp != hp:
@@ -93,10 +111,14 @@ class StrongAttackTests(unittest.TestCase):
 
     def test_range_depth_height_facing_and_dead_targets_filter_strong_hits(self):
         for move in STRONG_MOVES.values():
+            if move.key == "w":
+                continue  # Held W uses swept body contacts, covered by test_rush_flight.
             for reason in ("range", "depth", "height", "back", "dead"):
                 world, enemy = encounter()
                 player = world.player
                 player.start_move(move, 1)
+                if move.key == "r":
+                    player.raise_punch_phase = "STRIKE"
                 player.animation.elapsed = (min(move.active_frames) + 0.1) / move.fps
                 if reason == "range":
                     enemy.x = player.x + move.reach + config.ENEMY_HALF_WIDTH + 1
@@ -136,7 +158,10 @@ class StrongAttackTests(unittest.TestCase):
             elapsed = world.player.animation.elapsed
             tap(world.controls, action)
             world.step(config.FIXED_DT)
-            self.assertAlmostEqual(world.player.animation.elapsed, elapsed + config.FIXED_DT)
+            if move.key == "r":
+                self.assertEqual(world.player.raise_punch_phase, "STRIKE")
+            else:
+                self.assertAlmostEqual(world.player.animation.elapsed, elapsed + config.FIXED_DT)
             tap(world.controls, "combat_f")
             world.step(config.FIXED_DT)
             self.assertIs(world.player.active_move, MOVES["combat_f"])
@@ -151,7 +176,13 @@ class StrongAttackTests(unittest.TestCase):
             advance(world, 1)
             world.controls.press(action)
             world.step(config.FIXED_DT)
-            self.assertIsNone(world.player.active_move)
+            if move.key == "e":
+                self.assertIs(world.player.active_move, move)
+                self.assertEqual(world.player.air_kick_phase, "WAIT")
+            elif move.key in "wr":
+                self.assertIs(world.player.active_move, move)
+            else:
+                self.assertIsNone(world.player.active_move)
             self.assertFalse(world.controls.pressed)
 
     def test_w_knockback_is_bounded_at_both_stage_edges_and_ai_can_resume(self):
@@ -172,6 +203,8 @@ class StrongAttackTests(unittest.TestCase):
                         world.step(config.FIXED_DT)
                         self.assertTrue(world.stage.walkable.contains(enemy.x, enemy.ground_y,
                                                                      enemy.boundary_padding))
+                    world.controls.release("combat_w")
+                    advance(world, 0.8)
                     self.assertEqual(enemy.hp, 150)
                     self.assertFalse(enemy.knockback_started)
                     self.assertNotEqual(enemy.state, "STRONG_HIT")
@@ -180,12 +213,15 @@ class StrongAttackTests(unittest.TestCase):
         start = enemy.x
         advance(world, 0.2)
         self.assertGreater(enemy.x, start + 50)
+        world.controls.release("combat_w")
         advance(world, 1.5)
         self.assertIn(enemy.state, ("WALK", "RUN", "ATTACK", "IDLE"))
         self.assertLess(abs(enemy.x - world.player.x), 150)
 
     def test_lethal_hits_finish_the_selected_reaction_then_play_normal_death_and_fade(self):
         for action in STRONG_MOVES:
+            if action == "combat_w":
+                continue  # Rush's held lethal pose and release death have a separate regression.
             for enemy_type in (Enemy, Enemy02):
                 world, enemy = encounter(enemy_type)
                 enemy.hp = 40
@@ -199,6 +235,8 @@ class StrongAttackTests(unittest.TestCase):
                     world.step(config.FIXED_DT)
                 self.assertEqual(frames, set(range(8)))
                 self.assertEqual((enemy.state, enemy.sprite_image), ("DYING", enemy.image_name))
+                if action == "combat_e":
+                    tap(world.controls, "combat_a")
                 advance(world, 5)
                 self.assertNotIn(enemy, world.enemies)
 
@@ -292,7 +330,7 @@ class StrongAttackTests(unittest.TestCase):
 
     def test_loading_inactive_stage_and_restart_preserve_or_clear_the_reaction(self):
         world, enemy = encounter()
-        strike(world, enemy, "combat_w")
+        strike(world, enemy, "combat_q")
         before = enemy.x, enemy.vx, enemy.animation.elapsed
         world.pending_stage_index, world.stage_loading_remaining = 1, 2
         tap(world.controls, "combat_t")

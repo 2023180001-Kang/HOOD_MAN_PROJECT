@@ -12,6 +12,7 @@ from effects import DamageNumber, HitEffect, SpriteAfterimage
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
 from player import Player
+from rush import RushSequence
 from stage import Stage
 
 
@@ -24,6 +25,8 @@ class World:
         self.reset()
 
     def reset(self):
+        if getattr(self, "rush", None) is not None:
+            self.rush.finish()
         if getattr(self, "counter", None) is not None:
             self.counter.finish()
         for stage in getattr(self, "stages", ()):
@@ -32,6 +35,7 @@ class World:
                     enemy.finish_counter()
         self.controls.reset_for_restart()
         self.counter = None
+        self.rush = None
         self.player = Player()
         self.camera = Camera(self.player.x)
         attack_sequence = count()
@@ -177,6 +181,7 @@ class World:
             self.elapsed += dt
             return
         self.player.handle_input(self.controls)
+        self.cancel_invalid_rush()
         # Input stays on the real fixed-step clock, so D can enter/leave slow
         # motion immediately. Every gameplay clock advances by the same dt.
         dt *= self.time_scale
@@ -197,17 +202,38 @@ class World:
             self.stage.constrain_actor(enemy)
         self.player.update(dt, self.controls, self.stage.walkable, process_input=False)
         self.cancel_invalid_counter()
+        self.cancel_invalid_rush()
+        if self.player.rush_phase == "FLY" and self.rush is None:
+            self.rush = RushSequence(self.player, self.stage.walkable)
         self.handle_death()
         prepare_enemy_spacing(self.player, self.enemies, self.stage.walkable)
         for enemy in self.enemies:
             enemy.update(dt, self.player, self.stage.walkable)
         if self.counter is not None:
             self.counter.sync_pair()
+        traffic_updated = self.rush is not None
+        if traffic_updated:
+            # Move existing captives before swept car checks, but let fatal
+            # traffic cancel the flight before applying any new W contact hit.
+            if not self.rush.sync_pair():
+                self.player.release_rush()
+            self.update_traffic(dt)
+            self.handle_death()
+            self.cancel_invalid_rush()
+        if self.rush is not None:
+            for enemy, damage in self.rush.update(self.enemies):
+                self.damage_numbers.append(DamageNumber.above_body(
+                    enemy.body, damage, depth=enemy.ground_y - config.GROUND_Y))
+                self.effects.append(HitEffect(enemy.x, enemy.y + config.ENEMY_HEIGHT * 0.6,
+                                              self.player.facing,
+                                              image_name=config.PUNCH_KICK_HIT_IMAGE))
+                self.camera.shake()
         self.enemies[:] = [enemy for enemy in self.enemies if not enemy.faded_out]
         if self.player.alive:
             resolve_bodies(self.player, self.enemies, self.stage.walkable)
             resolve_enemy_spacing(self.player, self.enemies, dt, self.stage.walkable)
-        self.update_traffic(dt)
+        if not traffic_updated:
+            self.update_traffic(dt)
         self.handle_death()
         if self.player.alive:
             if self.counter is not None:
@@ -248,6 +274,7 @@ class World:
                     if not self.player.alive:
                         self.handle_death()
                         break
+        self.cancel_invalid_rush()
         self.stage.constrain_actor(self.player)
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
@@ -271,6 +298,13 @@ class World:
         if self.counter is not None and (not self.counter.valid or self.counter.enemy not in self.enemies):
             self.counter.finish()
             self.counter = None
+
+    def cancel_invalid_rush(self):
+        if self.rush is not None:
+            self.rush.prune(self.enemies)
+            if not self.rush.valid:
+                self.rush.finish()
+                self.rush = None
 
     def update_traffic(self, dt):
         if self.stage.traffic is None:
@@ -354,6 +388,11 @@ class World:
         return True
 
     def _enter_stage(self, destination, *, entry_x=None):
+        if self.rush is not None:
+            self.rush.finish()
+            self.rush = None
+        if self.player.rush_phase is not None:
+            self.player.finish_move()
         # Keep the same player, physics, held input and animation clock, and
         # enter far enough inside the next scene to avoid an immediate return.
         side = 1 if destination > self.stage_index else -1

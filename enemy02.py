@@ -40,7 +40,7 @@ class Enemy02(Enemy):
 
     @property
     def sprite_image(self):
-        if self.state == "STRONG_HIT":
+        if self.state in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED"):
             return config.STRONG_HIT_IMAGE
         return self.image_name
 
@@ -58,7 +58,7 @@ class Enemy02(Enemy):
 
     @property
     def blocks_movement(self):
-        return self.alive
+        return self.alive and self.state != "RUSH_CARRIED"
 
     @property
     def attack_box(self):
@@ -214,6 +214,9 @@ class Enemy02(Enemy):
                 self.vy = 0.0
 
     def _update_ai(self, dt, player):
+        if self.state in ("RUSH_CARRIED", "RUSH_RELEASED"):
+            super()._update_ai(dt, player)
+            return
         if self.alive and player.alive and not self.car_hit and self.counter_move is None:
             self.leap_cooldown = max(0.0, self.leap_cooldown - dt)
         if self.leap_phase is not None:
@@ -231,12 +234,13 @@ class Enemy02(Enemy):
             self.cooldown = max(0.0, self.cooldown - dt)
             self.animation.set_state("IDLE")
             self.animation.update(dt)
-            self._fall(dt)
+            if not self.rush_falling:
+                self._fall(dt)
             return
         super()._update_ai(dt, player)
         if self.state != "ATTACK":
             self.air_contact_attack = self.air_contact_pending = False
-        if not self.car_hit and self.counter_move is None:
+        if not self.car_hit and self.counter_move is None and not self.rush_falling:
             self._fall(dt)
 
     def take_damage(self, damage):

@@ -79,6 +79,8 @@ def check_source_clips(game):
 def check_inputs_damage_and_recovery(game):
     for weapon in (None, *config.WEAPON_POSE_IMAGES):
         for move in STRONG_MOVES.values():
+            if move.key in "ewr":
+                continue  # These attacks have dedicated input/state checks below.
             for enemy_type in (Enemy, Enemy02):
                 for side in (-1, 1):
                     world, enemy = scene(game, enemy_type, side, weapon)
@@ -128,9 +130,142 @@ def check_inputs_damage_and_recovery(game):
                     tick(game, 10)
                     assert player.active_move is None and enemy.hp == 150
                     release(game, key)
-    print("PASS: SDL Q/W/E/R/T with all three loadouts, both enemy types/directions: "
-          "rows 1..5 -> 1/5/4/2/3, 50 damage once, W real knockback, hit effects/numbers/shake, "
+    print("PASS: SDL Q/T with all three loadouts, both enemy types/directions: "
+          "matched reaction rows, 50 damage once, hit effects/numbers/shake, "
           "held/repeated-key suppression, HUD labels and original-sprite/AI recovery.")
+
+
+def check_air_kick_chain(game):
+    for weapon in (None, *config.WEAPON_POSE_IMAGES):
+        for enemy_type in (Enemy, Enemy02):
+            for side in (-1, 1):
+                world, enemy = scene(game, enemy_type, side, weapon)
+                player = world.player
+                push_key(pico2d.SDLK_e)
+                for _ in range(40):
+                    tick(game)
+                    if player.air_kick_phase == "WAIT":
+                        break
+                assert (enemy.hp, player.air_kick_phase, player.animation.frame) == (150, "WAIT", 4)
+                assert world.time_scale == config.AIR_KICK_TIME_SCALE and player.attack_box is None
+                elapsed = world.elapsed
+                for repeat in (True, False):
+                    push_key(pico2d.SDLK_e, repeat=repeat)
+                    tick(game, 15)
+                    assert enemy.hp == 150 and player.air_kick_phase == "WAIT"
+                assert abs(world.elapsed - elapsed - 0.5 * config.AIR_KICK_TIME_SCALE) < 1e-7
+                if weapon is None:
+                    with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as font:
+                        capture(game, f"air_kick_wait_{enemy_type.__name__}_{side}")
+                    assert any(call.args[2].startswith("슬로 대기 중:") for call in font.call_args_list)
+                behind = enemy_type(player.x - side * 80, side, ground_y=player.ground_y)
+                behind.animation.set_state("HIT")
+                behind.cooldown = 100
+                world.enemies.append(behind)
+                direction = pico2d.SDLK_LEFT if side > 0 else pico2d.SDLK_RIGHT
+                push_key(direction)
+                tick(game)
+                assert player.facing == -side
+                release(game, pico2d.SDLK_e)
+                tap(game, pico2d.SDLK_e)
+                assert player.air_kick_phase == "KICK" and world.time_scale == 1
+                for _ in range(20):
+                    tick(game)
+                    if behind.hp == 150:
+                        break
+                assert (enemy.hp, behind.hp) == (150, 150) and player.animation.frame == 5
+                assert behind.animation.row == 4 and world.damage_numbers[-1].damage == 50
+                if weapon is None:
+                    capture(game, f"air_kick_followup_{enemy_type.__name__}_{side}")
+                push_key(pico2d.SDLK_e)  # Early third input must not queue another kick.
+                tick(game, 30)
+                assert player.air_kick_phase is None and world.time_scale == 1
+                assert player.active_move is None and player.weapon == weapon
+                assert (enemy.hp, behind.hp) == (150, 150)
+                release(game, direction, pico2d.SDLK_e)
+    print("PASS: SDL E first kick -> 0.2x wait, left/right midair turn -> second kick; "
+          "50 once per kick, automatic normal-time/loadout recovery after two, no queued third kick.")
+
+
+def check_raise_punch(game):
+    for weapon in (None, *config.WEAPON_POSE_IMAGES):
+        for enemy_type in (Enemy, Enemy02):
+            for side in (-1, 1):
+                world, enemy = scene(game, enemy_type, side, weapon)
+                player = world.player
+                mover = enemy_type(player.x - side * 900, side, ground_y=player.ground_y)
+                world.enemies.append(mover)
+                start, elapsed = mover.x, world.elapsed
+                push_key(pico2d.SDLK_r)
+                tick(game, 30)
+                assert world.time_scale == 1 and enemy.hp == 200 and player.attack_box is None
+                assert abs(world.elapsed - elapsed - 0.5) < 1e-7
+                assert abs((mover.x - start) * side - mover.run_speed * 0.5) < 1e-7
+                assert abs(player.animation.elapsed - 0.5 * config.R_RAISE_SPEED) < 1e-7
+                world.enemies.remove(mover)
+                for repeat in (True, False):
+                    push_key(pico2d.SDLK_r, repeat=repeat)
+                    tick(game, 30)
+                    assert player.raise_punch_phase == "RAISE" and enemy.hp == 200
+                if weapon is None:
+                    capture(game, f"raise_punch_prepare_{enemy_type.__name__}_{side}")
+                release(game, pico2d.SDLK_r)
+                tap(game, pico2d.SDLK_r)
+                assert player.raise_punch_phase == "STRIKE" and enemy.hp == 150
+                assert enemy.animation.row == 2 and world.time_scale == 1
+                if weapon is None:
+                    capture(game, f"raise_punch_strike_{enemy_type.__name__}_{side}")
+                tick(game, 30)
+                assert player.active_move is None and player.raise_punch_phase is None
+                assert player.sprite_image == config.WEAPON_POSE_IMAGES.get(weapon, config.PLAYER_IMAGE)
+    print("PASS: SDL R slows only the arm/prepare animation while enemies/world move normally; "
+          "held/repeated R does not attack, fresh R releases 50 once with enemy row 2 and normal recovery.")
+
+
+def check_rush_flight(game):
+    for weapon in (None, *config.WEAPON_POSE_IMAGES):
+        for enemy_type in (Enemy, Enemy02):
+            for side in (-1, 1):
+                world, enemy = scene(game, enemy_type, side, weapon)
+                player = world.player
+                push_key(pico2d.SDLK_w)
+                for _ in range(60):
+                    tick(game)
+                    if enemy.state == "RUSH_CARRIED":
+                        break
+                assert (enemy.hp, enemy.state) == (150, "RUSH_CARRIED")
+                assert player.rush_phase == "FLY" and player.animation.frame == 4
+                start = player.x
+                push_key(pico2d.SDLK_w, repeat=True)
+                tick(game, 20)
+                assert (player.x - start) * side > 200
+                assert abs(enemy.x - player.x - side * config.RUSH_CARRY_DISTANCE) < 1e-7
+                assert enemy.jump_height == player.jump_height and enemy.hp == 150
+                if weapon is None:
+                    capture(game, f"rush_carry_{enemy_type.__name__}_{side}")
+                px, ex = player.x, enemy.x
+                release(game, pico2d.SDLK_w)
+                tick(game)
+                assert player.x == px and player.vx == 0 and world.rush is None
+                assert enemy.state == "RUSH_RELEASED" and (enemy.x - ex) * side > 0
+                if weapon is None:
+                    capture(game, f"rush_release_{enemy_type.__name__}_{side}")
+                for _ in range(60):
+                    tick(game)
+                    if enemy.vx == 0:
+                        break
+                assert 50 < (enemy.x - ex) * side < 90
+                stopped = enemy.x
+                tick(game, 3)
+                assert enemy.x == stopped and player.x == px
+                if weapon is None:
+                    capture(game, f"rush_stopped_{enemy_type.__name__}_{side}")
+                tick(game, 30)
+                assert player.active_move is None and player.weapon == weapon
+                assert enemy.sprite_image == enemy.image_name and enemy.hp == 150
+    print("PASS: SDL held W flies with fists forward, captures/contact-hits 50 once, "
+          "carries the enemy continuously, KEYUP stops the player while the enemy slides 50..90px, "
+          "settles, then restores its own art/AI; all loadouts/types/directions verified.")
 
 
 def check_switches_death_and_restart(game):
@@ -193,8 +328,12 @@ def benchmark(game):
     def attacking_draw(present=True):
         nonlocal frame
         original_draw(present)
-        if frame % 30 == 0:
-            key = getattr(pico2d, f"SDLK_{'qwert'[frame // 30 % 5]}")
+        if frame == 0:
+            push_key(pico2d.SDLK_w)
+        elif frame == 50:
+            push_key(pico2d.SDLK_w, down=False)
+        elif frame in (65, 90, 115, 145, 165):
+            key = getattr(pico2d, f"SDLK_{ {65: 'e', 90: 'e', 115: 'r', 145: 'r', 165: 'q'}[frame]}")
             push_key(key)
             push_key(key, down=False)
         frame += 1
@@ -217,6 +356,9 @@ def main():
         game.handle_events()
         check_source_clips(game)
         check_inputs_damage_and_recovery(game)
+        check_air_kick_chain(game)
+        check_raise_punch(game)
+        check_rush_flight(game)
         check_switches_death_and_restart(game)
         benchmark(game)
     finally:

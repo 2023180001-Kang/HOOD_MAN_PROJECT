@@ -1,5 +1,7 @@
 """Screen-fixed controls/HP and world-space enemy health/damage feedback."""
 
+from math import ceil, floor
+
 import config
 from combat import MOVES
 from counter import COUNTERS
@@ -74,11 +76,15 @@ class UI:
         left, bottom, width, height = config.HP_FILL
         ratio = clamp(world.player.hp / config.MAX_HP, 0.0, 1.0)
         if ratio < 1:
-            mask_left = x + (left + width * ratio) * scale
-            mask_bottom = y + bottom * scale
+            # Cover whole pixels: SDL truncates fractional rectangle sizes,
+            # otherwise leaving blue slivers along the bottom and right edges.
+            mask_left = floor(x + (left + width * ratio) * scale)
+            mask_bottom = floor(y + bottom * scale)
+            mask_right = ceil(x + (left + width) * scale)
+            mask_top = ceil(y + (bottom + height) * scale)
             pico2d.draw_rectangle(
-                mask_left, mask_bottom, x + (left + width) * scale - 1,
-                mask_bottom + height * scale - 1, 8, 15, 24, filled=True,
+                mask_left, mask_bottom, mask_right - 1, mask_top - 1,
+                8, 15, 24, filled=True,
             )
         if assets.font is not None:
             assets.font.draw(x + image.w * scale + 16, y + 56,

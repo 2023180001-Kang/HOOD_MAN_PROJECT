@@ -1,7 +1,7 @@
 """Exercise real SDL input, HP pixels, resource reuse, performance and quit."""
 
 import ctypes
-from math import ceil, hypot
+from math import ceil, floor, hypot
 from pathlib import Path
 import random
 import sys
@@ -632,8 +632,13 @@ def check_nearby_death_knockback(game):
 
 def check_hp_pixels(game):
     game.world = World()
+    hp_image = game.assets.images[config.HP_IMAGE]
+    left, bottom, width, height = config.HP_FILL
+    fill_left = config.UI_MARGIN + left * config.UI_SCALE
+    fill_top = config.UI_MARGIN + (hp_image.h - bottom - height) * config.UI_SCALE
+    fill_width = width * config.UI_SCALE
     shots = {}
-    for hp in (500, 480, 460, 420, 250, 0):
+    for hp in (500, 499, 480, 460, 420, 250, 1, 0):
         game.world.player.hp = hp
         shots[hp] = capture(game, f"verified_hp_{hp}")
     for hp, image in shots.items():
@@ -642,6 +647,13 @@ def check_hp_pixels(game):
             for x in range(125, 518)
         )
         assert abs(blue_pixels - 392.25 * hp / 500) <= 2, (hp, blue_pixels)
+        if hp < config.MAX_HP:
+            depleted = image.crop((
+                ceil(fill_left + fill_width * hp / config.MAX_HP), floor(fill_top),
+                ceil(fill_left + fill_width), ceil(fill_top + height * config.UI_SCALE),
+            ))
+            leaked_blue = sum(blue > red + 30 for red, _, blue, _ in depleted.get_flattened_data())
+            assert leaked_blue == 0, (hp, "blue pixels remain in depleted HP", leaked_blue)
         assert image.crop((35, 40, 100, 95)).tobytes() == shots[500].crop((35, 40, 100, 95)).tobytes()
     game.world.player.hp = 250
     game.world.player.x = 100
@@ -649,7 +661,8 @@ def check_hp_pixels(game):
     game.world.camera.update(0.03, 100)
     shaken = capture(game, "verified_ui_fixed")
     assert shaken.crop((126, 58, 516, 77)).tobytes() == shots[250].crop((126, 58, 516, 77)).tobytes()
-    print("PASS: rendered HP fill 100%/96%/92%/84%/50%/0%; portrait and HUD position unchanged.")
+    print("PASS: rendered HP fill including 499/1/0; no blue remains anywhere in the depleted "
+          "region, including its edges; portrait and HUD position unchanged.")
 
 
 def check_hud_toggle(game):

@@ -25,7 +25,7 @@ class DropItemTests(unittest.TestCase):
                 counts.add(len(stage.drop_items))
                 layouts.add(tuple(layout(stage)))
         self.assertEqual(counts, {5, 6, 7, 8})
-        self.assertEqual(len(layouts), 320)
+        self.assertEqual(len(layouts), 32 * len(config.STAGE_IMAGES))
 
     def test_all_visible_frames_and_shadows_fit_the_floor_and_avoid_swaying_arrows(self):
         bounds = {}

@@ -22,20 +22,21 @@ class CityStageTests(unittest.TestCase):
         world.controls.press("left_shift")
         return world
 
-    def test_ten_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
+    def test_twelve_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
         world = World()
         self.assertEqual([stage.image_name for stage in world.stages],
                          ["newStage.png", "newStage-2.png", "cityStage-1.png", "cityStage-2.png",
                           config.FACTORY_OUTSIDE_IMAGE, config.FACTORY_EXTERIOR_IMAGE,
                           "factoryInside-1.png", "factoryStage-2.png",
-                          "labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png"])
+                          "labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png",
+                          "bossStage-1.png", "bossStage-2.png"])
         for index, stage in enumerate(world.stages):
             stage.arrows_visible = True
             self.assertEqual(stage.destination(-1), index - 1 if index else None)
             self.assertEqual(stage.destination(1), index + 1 if index < len(world.stages) - 1 else None)
 
     def test_travel_inside_each_pair_preserves_motion_without_loading(self):
-        for first in (0, 2, 4, 6, 8):
+        for first in (0, 2, 4, 6, 8, 10):
             for side in (-1, 1):
                 with self.subTest(first=first, side=side):
                     world = self.at_exit(first if side > 0 else first + 1, side)

@@ -116,7 +116,7 @@ def check_motion_continuity(game, first=0):
             assert not game.world.stage.arrows_visible
             assert all(game.assets.images[name] is image for name, image in textures.items())
             prefix = {4: "factory_travel", 6: "factory_inside_travel",
-                      8: "lab_travel"}.get(first, "stage_travel")
+                      8: "lab_travel", 10: "boss_travel"}.get(first, "stage_travel")
             capture(game, f"{prefix}_{'next' if side > 0 else 'previous'}_{mode}")
             assert abs(player.x - player.previous_x) <= config.RUN_SPEED * config.FIXED_DT + 1e-6
             for key in (direction_key, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE, pico2d.SDLK_n):
@@ -181,7 +181,7 @@ def check_round_trip_and_last_exit(game):
     tick(game, 30)
     assert game.world.stage_index == len(config.STAGE_IMAGES) - 1
     assert player.x == config.WORLD_WIDTH - config.PLAYER_BOUNDARY_PADDING
-    capture(game, "lab_last_boundary")
+    capture(game, "boss_last_boundary")
     push_key(pico2d.SDLK_F5)
     tick(game)
     assert game.world.stage_index == 0 and game.world.player.hp == 500
@@ -190,7 +190,7 @@ def check_round_trip_and_last_exit(game):
         push_key(key, down=False)
     game.handle_events()
     print("PASS: SDL full sprint round trip keeps per-map enemies/HP/spawn counts, "
-          "avoids return loops, bounds the final lab exit, and F5 resets all stages.")
+          "avoids return loops, bounds the final boss exit, and F5 resets all stages.")
 
 
 def check_city_loading(game):
@@ -315,7 +315,7 @@ def check_factory_background(game):
 
 def check_factory_loading(game, first=3):
     textures = dict(game.assets.images)
-    region = {3: "factory", 5: "factory_inside", 7: "lab"}[first]
+    region = {3: "factory", 5: "factory_inside", 7: "lab", 9: "boss"}[first]
     for side in (1, -1):
         game.world = World()
         world = game.world
@@ -462,7 +462,7 @@ def check_factory_exterior(game):
 
 
 def check_indoor_backgrounds(game, first=6):
-    region = "lab" if first == 8 else "factory_inside"
+    region = {6: "factory_inside", 8: "lab", 10: "boss"}[first]
     for index in (first, first + 1):
         game.world = World()
         game.world.stage_index = index
@@ -505,6 +505,7 @@ def main():
         check_motion_continuity(game, first=4)
         check_motion_continuity(game, first=6)
         check_motion_continuity(game, first=8)
+        check_motion_continuity(game, first=10)
         check_round_trip_and_last_exit(game)
         check_city_loading(game)
         check_factory_background(game)
@@ -514,6 +515,8 @@ def main():
         check_indoor_backgrounds(game)
         check_factory_loading(game, first=7)
         check_indoor_backgrounds(game, first=8)
+        check_factory_loading(game, first=9)
+        check_indoor_backgrounds(game, first=10)
     finally:
         if game is not None:
             game.close()

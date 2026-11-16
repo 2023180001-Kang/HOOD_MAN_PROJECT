@@ -155,8 +155,9 @@ class EnemyTests(unittest.TestCase):
                                                               enemy.boundary_padding))
                     self.assertEqual((enemy.hp, enemy.spawned_at), (200, world.elapsed))
                 all_enemies.extend(stage.enemies)
-            self.assertEqual(len({id(enemy) for enemy in all_enemies}), 90)
-            self.assertEqual(len({enemy.attack_speed for enemy in all_enemies}), 90)
+            total = 9 * len(world.stages)
+            self.assertEqual(len({id(enemy) for enemy in all_enemies}), total)
+            self.assertEqual(len({enemy.attack_speed for enemy in all_enemies}), total)
         self.assertEqual(sides, {-1, 1})
 
     def test_defeated_encounter_does_not_respawn_when_revisiting_a_stage(self):

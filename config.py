@@ -186,12 +186,14 @@ FACTORY_OUTSIDE_IMAGE = "factoryOutside-1_pico2d_1280x720.png"
 FACTORY_EXTERIOR_IMAGE = "HOOD_MAN_Factory_Exterior_1672x941.png"
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
 LAB_STAGE_IMAGES = ("labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png")
+BOSS_STAGE_IMAGES = ("bossStage-1.png", "bossStage-2.png")
 STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png", "cityStage-1.png", "cityStage-2.png",
                 FACTORY_OUTSIDE_IMAGE, FACTORY_EXTERIOR_IMAGE, *FACTORY_INSIDE_IMAGES,
-                *LAB_STAGE_IMAGES)
+                *LAB_STAGE_IMAGES, *BOSS_STAGE_IMAGES)
 STAGE_LOADING_IMAGE = "HOOD_MAN_STAGE_LOADING_1280x720.png"
 STAGE_LOADING_DURATION = 2.0
-STAGE_LOADING_TRANSITIONS = ((1, 2), (2, 1), (3, 4), (4, 3), (5, 6), (6, 5), (7, 8), (8, 7))
+STAGE_LOADING_TRANSITIONS = ((1, 2), (2, 1), (3, 4), (4, 3), (5, 6), (6, 5),
+                             (7, 8), (8, 7), (9, 10), (10, 9))
 STAGE_ARROW_IMAGES = {-1: "arrow_left_yellow.png", 1: "arrow_right_yellow.png"}
 STAGE_ARROW_WIDTH = 96.0
 STAGE_ARROW_Y = GROUND_Y
@@ -219,6 +221,8 @@ STAGE_WALKABLE_BOUNDS = (
     (0.0, 56.0, WORLD_WIDTH, 100.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
+    (0.0, 56.0, WORLD_WIDTH, 148.0),
+    (0.0, 56.0, WORLD_WIDTH, 116.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
 )

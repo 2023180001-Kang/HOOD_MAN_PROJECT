@@ -23,7 +23,8 @@ def at_factory_boundary(side=1, first=3):
 
 class FactoryStageTests(unittest.TestCase):
     def test_factory_zone_boundaries_wait_two_seconds_and_preserve_the_same_player_both_ways(self):
-        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1), (7, -1), (7, 1)):
+        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1),
+                            (7, -1), (7, 1), (9, -1), (9, 1)):
             with self.subTest(first=first, side=side):
                 world = at_factory_boundary(side, first)
                 source = world.stage_index
@@ -49,7 +50,7 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertFalse(world.try_stage_transition())
 
     def test_factory_loading_freezes_both_maps_and_discards_actions_without_losing_held_movement(self):
-        for first in (3, 5, 7):
+        for first in (3, 5, 7, 9):
             with self.subTest(first=first):
                 world = at_factory_boundary(first=first)
                 source, target = world.stages[first:first + 2]
@@ -81,7 +82,8 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertFalse(world.player.invincible)
 
     def test_f5_during_factory_loading_cancels_the_destination_and_clears_all_maps(self):
-        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1), (7, -1), (7, 1)):
+        for first, side in ((3, -1), (3, 1), (5, -1), (5, 1),
+                            (7, -1), (7, 1), (9, -1), (9, 1)):
             world = at_factory_boundary(side, first)
             for stage in world.stages:
                 stage.arrows_visible = True
@@ -90,7 +92,7 @@ class FactoryStageTests(unittest.TestCase):
             world.update(1)
             world.controls.press("restart")
             world.update(1 / 60)
-            self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 10))
+            self.assertEqual((world.stage_index, world.player.hp, len(world.stages)), (0, 500, 12))
             self.assertIsNone(world.pending_stage_index)
             self.assertTrue(all(not stage.enemies and not stage.arrows_visible
                                 for stage in world.stages))
@@ -115,7 +117,7 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertGreaterEqual(max(right for _, right in rectangles), config.SCREEN_WIDTH)
 
     def test_factory_loading_completion_is_identical_at_different_render_rates(self):
-        for first in (3, 5, 7):
+        for first in (3, 5, 7, 9):
             with self.subTest(first=first):
                 results = []
                 for fps in (30, 60, 120, 144):

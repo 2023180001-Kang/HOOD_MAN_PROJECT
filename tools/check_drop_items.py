@@ -127,7 +127,7 @@ def check_all_stages(game):
                                        ceil(x + config.DROP_ITEM_HALF_WIDTH),
                                        ceil(y + config.DROP_ITEM_SHADOW_HALF_DEPTH)))
                     assert crop.getbbox() is not None
-    print(f"PASS: all ten stage layouts have 5-8 total drops ({counts}); actual floor pixels "
+    print(f"PASS: all {len(world.stages)} stage layouts have 5-8 total drops ({counts}); actual floor pixels "
           "fit each map, cityStage-1 weapons/shadows stay on the sidewalk with no road "
           "pixels, both exit areas stay clear, and both map halves render correctly.")
 
@@ -148,7 +148,8 @@ def check_restart(game):
                for item in city.drop_items)
     assert all(game.assets.images[name] is texture for name, texture in textures.items())
     capture(game, "drop_items_restarted")
-    print("PASS: actual SDL F5 replaces all ten item lists and reuses both shared textures.")
+    print(f"PASS: actual SDL F5 replaces all {len(game.world.stages)} item lists "
+          "and reuses both shared textures.")
 
 
 def main():

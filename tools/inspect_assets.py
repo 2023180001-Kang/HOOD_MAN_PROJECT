@@ -14,6 +14,8 @@ def main():
         "HoodMan_StreetThug_FINAL_2048x1536.png",
         "HOOD_MAN_enemy02.png",
         "HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png",
+        "HoodMan_StrongAttacks_Uppercut_IDLE_FINAL_2048x1280.png",
+        "HoodMan_Enemy_StrongHit_2048x1280.png",
         "HOOD_MAN_DAGGER_move and fight.png",
         "HOOD_MAN_STEEL_PIPE_move and fight.png",
         "before_sheets/HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png",
@@ -33,7 +35,7 @@ def main():
                             and image.getpixel((x, y))[3] > 200]
                     print("blue fill", y, (min(blue), max(blue)) if blue else None)
             if any(part in name for part in
-                   ("Sprite", "StreetThug", "enemy02", "BasicAttack", "BasicCombat",
+                   ("Sprite", "StreetThug", "enemy02", "BasicAttack", "BasicCombat", "Strong",
                     "hit_effect", "move and fight")):
                 columns = 4 if "hit_effect" in name else 8
                 row_count = image.height // (image.width // columns)

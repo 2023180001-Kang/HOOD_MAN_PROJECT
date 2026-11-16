@@ -92,6 +92,7 @@ class IntegrationTests(unittest.TestCase):
             metadata = json.load(file)
         row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.ENEMY02_IMAGE: 7,
                       config.COMBAT_IMAGE: 4,
+                      config.STRONG_ATTACK_IMAGE: 5, config.STRONG_HIT_IMAGE: 5,
                       config.COUNTER_PLAYER_IMAGE: 4, config.COUNTER_ENEMY_IMAGE: 4,
                       config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1,
                       **{name: config.WEAPON_SHEET_ROWS[kind]
@@ -153,6 +154,22 @@ class IntegrationTests(unittest.TestCase):
                              [max(feet) - foot for foot in feet])
             self.assertGreater(max(tile["jump_height"] for tile in metadata[name][row - 1]), 25)
             self.assertTrue(all(tile.get("offset_y", 0) == 0 for tile in metadata[name][row - 1]))
+
+    def test_strong_attack_and_hit_sheets_preserve_source_airborne_offsets(self):
+        from PIL import Image
+
+        with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
+            metadata = json.load(file)
+        for name in (config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE):
+            with Image.open(config.ROOT / name) as image:
+                self.assertEqual((image.size, image.mode), ((2048, 1280), "RGBA"))
+                for row_index, row in enumerate(metadata[name]):
+                    feet = [image.crop((col * 256, row_index * 256,
+                                        (col + 1) * 256, (row_index + 1) * 256)).getbbox()[3]
+                            for col in range(8)]
+                    self.assertEqual([tile["offset_y"] for tile in row],
+                                     [max(feet) - foot for foot in feet])
+            self.assertTrue(any(tile["offset_y"] > 20 for row in metadata[name] for tile in row))
 
 
 if __name__ == "__main__":

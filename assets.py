@@ -15,6 +15,7 @@ class Assets:
             name: pico2d.load_image(str(config.ROOT / name))
             for name in (config.TITLE_IMAGE, config.STAGE_LOADING_IMAGE,
                          config.PLAYER_IMAGE, config.COMBAT_IMAGE,
+                         config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                          config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
                          config.CAR_IMAGE, config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.HP_IMAGE,

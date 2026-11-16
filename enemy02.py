@@ -40,6 +40,8 @@ class Enemy02(Enemy):
 
     @property
     def sprite_image(self):
+        if self.state == "STRONG_HIT":
+            return config.STRONG_HIT_IMAGE
         return self.image_name
 
     @property

@@ -50,7 +50,7 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
         enemy.target_x = None
         enemy.target_ground_y = None
         if (not player.alive or not enemy.alive or enemy.knockback_started
-                or enemy.counter_move is not None or enemy.leaping):
+                or enemy.counter_move is not None or enemy.leaping or enemy.state == "STRONG_HIT"):
             enemy.formation_slot = None
             continue
         difference = enemy.x - player.x
@@ -128,7 +128,7 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
     walkable = player.walkable if walkable is None else walkable
     active = [enemy for enemy in enemies
               if player.alive and enemy.alive and not enemy.knockback_started
-              and enemy.counter_move is None and not enemy.leaping]
+              and enemy.counter_move is None and not enemy.leaping and enemy.state != "STRONG_HIT"]
     left, right, _ = encounter_envelope(enemies)
     width = right - left + config.ENEMY_SPACING_MARGIN
     crowded = set()

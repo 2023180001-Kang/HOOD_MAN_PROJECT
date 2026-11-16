@@ -251,7 +251,7 @@ def check_player_action_inputs(game):
         push_key(key, down=False)
         tick(game)
         assert player.state == "IDLE" and player.active_move is None
-    for key_name in "qwerhjkl":
+    for key_name in "hjkl":
         game.world = World()
         push_key(getattr(pico2d, f"SDLK_{key_name}"))
         tick(game, 24)
@@ -260,7 +260,7 @@ def check_player_action_inputs(game):
         game.handle_events()
     print("PASS: SDL A jab 32 FPS/~0.250s, S straight 20 FPS/~0.400s, "
           "D/F kicks 14 FPS/~0.571s; windup/active/recovery and held-key limits verified; "
-          "Q/W/E/R and counters without an eligible attacker do not start an action.")
+          "counters without an eligible attacker do not start an action.")
 
 
 def check_player_attack_switches(game):

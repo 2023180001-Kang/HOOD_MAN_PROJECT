@@ -34,8 +34,7 @@ class Assets:
     def draw_sprite(self, name, row, frame, x, feet_y, facing=1, opacity=1.0):
         tile = self.frames[name][row - 1][frame]
         left, bottom, width, height = tile["clip"]
-        scale = (config.WEAPON_POSE_SCALE if name in config.WEAPON_POSE_IMAGES.values()
-                 else config.SPRITE_SCALE)
+        scale = config.SPRITE_IMAGE_SCALES.get(name, config.SPRITE_SCALE)
         image = self.images[name]
         fading = opacity < 1.0
         if fading:

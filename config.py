@@ -101,6 +101,23 @@ WEAPON_HIT_FPS = 40.0  # Brief 8-frame flinch, then equipped IDLE after 0.2 seco
 COMBAT_IMAGE = "HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png"
 STRONG_ATTACK_IMAGE = "HoodMan_StrongAttacks_Uppercut_IDLE_FINAL_2048x1280.png"
 STRONG_HIT_IMAGE = "HoodMan_Enemy_StrongHit_2048x1280.png"
+STRONG_ATTACK_DAMAGE = 50
+STRONG_ATTACK_FPS = 16.0
+STRONG_HIT_FPS = 16.0
+# The new artwork occupies less of each cell; match the existing actor heights.
+SPRITE_IMAGE_SCALES = {
+    **dict.fromkeys(WEAPON_POSE_IMAGES.values(), WEAPON_POSE_SCALE),
+    STRONG_ATTACK_IMAGE: 1.0,
+    STRONG_HIT_IMAGE: 1.0,
+}
+# Key, name, player row, enemy hit row, reach, height, active frames, knockback speed.
+STRONG_MOVE_SPECS = (
+    ("q", "양주먹 내지르기", 1, 1, 140.0, 146.0, (3, 4, 5), 0.0),
+    ("w", "도약 양주먹 넉백", 2, 5, 150.0, 170.0, (3, 4, 5), KNOCKBACK_SPEED),
+    ("e", "공중 연속 발차기", 3, 4, 140.0, 170.0, (3, 4, 5), 0.0),
+    ("r", "양주먹 올려치기", 4, 2, 130.0, 190.0, (4, 5), 0.0),
+    ("t", "어퍼컷", 5, 3, 120.0, 190.0, (3, 4), 0.0),
+)
 COMBAT_JAB_FPS = 32.0
 COMBAT_STRAIGHT_FPS = 20.0
 COMBAT_KICK_FPS = 14.0

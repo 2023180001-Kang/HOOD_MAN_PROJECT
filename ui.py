@@ -3,6 +3,7 @@
 from math import ceil, floor
 
 import config
+from combat import STRONG_MOVES
 from counter import COUNTERS
 from physics import clamp
 
@@ -55,6 +56,14 @@ class UI:
             y = 659 - index // 2 * 24
             assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
                              (218, 228, 240))
+        pico2d.draw_rectangle(688, 508, config.SCREEN_WIDTH - 20, 610,
+                             12, 21, 33, filled=True)
+        assets.font.draw(704, 590, "강화 기본 공격 · 피해량", (126, 218, 255))
+        for index, move in enumerate(STRONG_MOVES.values()):
+            x = 704 + index % 2 * 270
+            y = 565 - index // 2 * 23
+            assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
+                             (218, 228, 240))
 
     def draw_enemy_health(self, assets, world, camera_x, camera_y):
         import pico2d
@@ -63,7 +72,8 @@ class UI:
             if not enemy.alive:
                 continue
             tile = assets.frames[enemy.sprite_image][enemy.animation.row - 1][enemy.animation.frame]
-            height = (tile["clip"][3] + tile.get("offset_y", 0)) * config.SPRITE_SCALE
+            scale = config.SPRITE_IMAGE_SCALES.get(enemy.sprite_image, config.SPRITE_SCALE)
+            height = (tile["clip"][3] + tile.get("offset_y", 0)) * scale
             left = enemy.x - camera_x - config.ENEMY_HP_BAR_WIDTH / 2
             bottom = enemy.y - camera_y + height + config.ENEMY_HP_BAR_GAP
             right = left + config.ENEMY_HP_BAR_WIDTH

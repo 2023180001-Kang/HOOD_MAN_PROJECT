@@ -1,4 +1,4 @@
-"""Unarmed and equipped attack rows, impact windows and shared effect choices."""
+"""Basic, strong and equipped attacks, hit reactions and shared effect choices."""
 
 from dataclasses import dataclass
 
@@ -18,6 +18,8 @@ class Move:
     active_frames: tuple = config.PLAYER_ACTIVE_FRAMES
     hit_image: str = config.PUNCH_KICK_HIT_IMAGE
     jump_attack: bool = False
+    enemy_hit_row: int | None = None
+    knockback_speed: float = 0.0
 
     @property
     def state(self):
@@ -28,6 +30,15 @@ MOVES = {
     f"combat_{key}": Move(key, name, row, damage, reach, height, fps)
     for key, name, row, damage, reach, height, fps in config.COMBAT_MOVE_SPECS
 }
+STRONG_MOVES = {
+    f"combat_{key}": Move(key, name, row, config.STRONG_ATTACK_DAMAGE, reach, height,
+                           config.STRONG_ATTACK_FPS, image_name=config.STRONG_ATTACK_IMAGE,
+                           active_frames=active_frames, enemy_hit_row=enemy_row,
+                           knockback_speed=knockback_speed)
+    for key, name, row, enemy_row, reach, height, active_frames, knockback_speed
+    in config.STRONG_MOVE_SPECS
+}
+ALL_MOVES = {**MOVES, **STRONG_MOVES}
 WEAPON_MOVES = {
     kind: {
         f"combat_{key}": Move(key, name, row, damage, reach, height, fps,

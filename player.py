@@ -5,7 +5,7 @@ from math import hypot
 import config
 from animation import Animation
 from collision import Rect
-from combat import MOVES, moves_for_weapon
+from combat import ALL_MOVES, STRONG_MOVES, moves_for_weapon
 from counter import COUNTERS
 from physics import approach_vector
 from traffic import start_car_hit, update_car_hit
@@ -40,7 +40,7 @@ class Player:
         self.hit_enemies = set()
         definitions = dict(config.PLAYER_ANIMATIONS)
         definitions.update({move.state: (move.row, move.fps, False)
-                            for move in MOVES.values()})
+                            for move in ALL_MOVES.values()})
         definitions.update({move.state: (move.row, move.fps, False)
                             for move in COUNTERS.values()})
         definitions.update({move.hold_state: (move.row, move.fps, False)
@@ -217,6 +217,8 @@ class Player:
                 or not box.overlaps(enemy.body)):
             return False
         self.hit_enemies.add(enemy)
+        if self.active_move.enemy_hit_row is not None:
+            return enemy.take_strong_hit(self.active_move, self.facing)
         return enemy.take_damage(self.active_move.damage)
 
     def take_damage(self, damage):
@@ -274,10 +276,10 @@ class Player:
         if controls.take_press("invincibility") and self.alive:
             self.invincible = not self.invincible
         jump_pressed = controls.take_press("jump")
-        combat_pressed = controls.take_latest_press(MOVES)
+        combat_pressed = controls.take_latest_press(ALL_MOVES)
         if self.counter_move is not None or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD"):
             return
-        move = self.moves.get(combat_pressed)
+        move = STRONG_MOVES.get(combat_pressed) or self.moves.get(combat_pressed)
         if (jump_pressed and self.active_move is None and self.jump_count < 2
                 and (move is None or move.jump_attack)):
             if self.jump_count == 0:

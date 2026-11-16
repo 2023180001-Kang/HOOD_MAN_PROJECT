@@ -94,6 +94,8 @@ class Enemy:
     def sprite_image(self):
         if self.car_hit:
             return config.ENEMY_CAR_HIT_IMAGE
+        if self.state == "STRONG_HIT":
+            return config.STRONG_HIT_IMAGE
         return (config.COUNTER_ENEMY_IMAGE if self.counter_move is not None
                 or self.counter_death is not None else self.image_name)
 
@@ -131,6 +133,38 @@ class Enemy:
         if self.counter_move is None:
             self.animation.set_state("HIT" if self.alive else "DYING")
         return True
+
+    def take_strong_hit(self, move, direction):
+        if not self.take_damage(move.damage):
+            return False
+        if self.counter_move is not None:
+            # An independently finishing counter reaction can be interrupted
+            # once the player is free; it must not overwrite the new hit later.
+            self.finish_counter()
+            self.counter_death = None
+            self.boundary_padding = self.counter_padding
+            self.animation.definitions["DEAD"] = self.animations["DEAD"]
+        self.facing = -direction
+        self.vx = direction * move.knockback_speed
+        self.ground_vy = 0.0
+        self.formation_slot = None
+        self.target_x = self.target_ground_y = None
+        self.cooldown = self.attack_interval
+        self.animation.definitions["STRONG_HIT"] = (move.enemy_hit_row, config.STRONG_HIT_FPS, False)
+        self.animation.set_state("STRONG_HIT")
+        self.animation.elapsed = 0.0
+        return True
+
+    def update_strong_hit(self, dt):
+        self.x += self.vx * dt
+        self.ground_y += self.ground_vy * dt
+        self.walkable.constrain(self, config.ENEMY_HALF_WIDTH)
+        self.vx, self.ground_vy = approach_vector(self.vx, self.ground_vy, 0.0, 0.0,
+                                                 config.KNOCKBACK_FRICTION * dt)
+        self.animation.update(dt)
+        if self.animation.finished:
+            self.vx = self.ground_vy = 0.0
+            self.animation.set_state("IDLE" if self.alive else "DYING")
 
     def hit_by_car(self, direction):
         if not self.alive:
@@ -283,6 +317,9 @@ class Enemy:
     def _update_ai(self, dt, player):
         if self.state == "CAR_HIT":
             update_car_hit(self, dt)
+            return
+        if self.state == "STRONG_HIT":
+            self.update_strong_hit(dt)
             return
         if self.counter_move is not None:
             self.vx = self.ground_vy = 0.0

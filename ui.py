@@ -137,6 +137,15 @@ class UI:
             for index, move in enumerate(COUNTERS.values()):
                 assets.font.draw(22 + index * 310, 74,
                                  f"{move.key.upper()} {move.name} ({move.damage})", (244, 204, 66))
+            if world.player.weapon in config.WEAPON_NAMES:
+                phase = world.player.weapon_leap_phase
+                if phase == "AIM":
+                    help_text = "슬로 모션: 방향키로 공중 조준 / D 다시 눌러 빠르게 내려찍기"
+                elif phase in ("DIVE", "LANDING"):
+                    help_text = "시간 가속: 선택한 방향으로 내려찍기!"
+                else:
+                    help_text = "무기 내려찍기: Space 두 번 → D 슬로 모션 / 방향키 조준 → D 급강하"
+                assets.font.draw(22, 132, help_text, (126, 218, 255))
             if world.player.counter_holding:
                 counter_help = "제압 유지: 방향키로 적을 들고 이동 / A 새 입력으로 후속 공격"
             elif world.stage.image_name in config.ENEMY02_STAGE_IMAGES:

@@ -34,8 +34,7 @@ class Player:
         self.weapon = None
         self.active_move = None
         self.weapon_leap_phase = None
-        self.weapon_leap_elapsed = 0.0
-        self.weapon_leap_boost_pending = False
+        self.weapon_leap_direction = (1.0, 0.0)
         self.weapon_leap_velocity = (0.0, 0.0)
         self.counter_move = None
         self.hit_enemies = set()
@@ -59,6 +58,15 @@ class Player:
     @property
     def moves(self):
         return moves_for_weapon(self.weapon)
+
+    @property
+    def time_scale(self):
+        if self.alive and self.active_move is not None and self.active_move.jump_attack:
+            if self.weapon_leap_phase == "AIM":
+                return config.WEAPON_AIM_TIME_SCALE
+            if self.weapon_leap_phase in ("DIVE", "LANDING"):
+                return config.WEAPON_DIVE_TIME_SCALE
+        return 1.0
 
     @property
     def y(self):
@@ -93,8 +101,7 @@ class Player:
         self.active_move = None
         self.hit_enemies.clear()
         self.weapon_leap_phase = None
-        self.weapon_leap_elapsed = 0.0
-        self.weapon_leap_boost_pending = False
+        self.weapon_leap_direction = (float(self.facing), 0.0)
         self.weapon_leap_velocity = (0.0, 0.0)
 
     def equip_weapon(self, weapon):
@@ -107,6 +114,8 @@ class Player:
             self.animation.set_state("IDLE" if self.grounded else "JUMP")
 
     def start_move(self, move, direction):
+        if move.jump_attack and (self.grounded or self.jump_count != 2):
+            return
         velocity = self.vx, self.ground_vy
         self.cancel_combat()
         self.active_move = move
@@ -118,44 +127,45 @@ class Player:
         self.animation.set_state(move.state)
         self.animation.elapsed = 0.0
         if move.jump_attack:
-            if self.grounded:
-                self.weapon_leap_phase = "WINDUP"
-                self.weapon_leap_velocity = velocity
-            else:
-                # Airborne D uses the current jump, never a third/repeated boost.
-                self.weapon_leap_phase = "AIR"
-                self.vx, self.ground_vy = velocity
+            self.weapon_leap_phase = "AIM"
+            self.weapon_leap_direction = (float(self.facing), 0.0)
+            self.vx, self.ground_vy = velocity
+            self.animation.elapsed = 2.05 / move.fps
+
+    def start_weapon_dive(self, controls):
+        direction = controls.movement if controls.moving else self.weapon_leap_direction
+        if direction[0]:
+            self.facing = 1 if direction[0] > 0 else -1
+        self.weapon_leap_direction = direction
+        self.weapon_leap_velocity = tuple(axis * config.WEAPON_DIVE_SPEED for axis in direction)
+        self.vx, self.ground_vy = self.weapon_leap_velocity
+        self.vy = -config.WEAPON_DIVE_FALL_SPEED
+        self.weapon_leap_phase = "DIVE"
+        self.animation.elapsed = 3.05 / self.active_move.fps
 
     def update_weapon_leap(self, dt, controls):
         move = self.active_move
-        if self.weapon_leap_phase == "WINDUP":
-            self.vx = self.ground_vy = 0.0
-            self.animation.update(dt)
-            if self.animation.elapsed + 1e-9 >= 2 / move.fps:
-                self.weapon_leap_phase = "AIR"
-                self.weapon_leap_elapsed = 0.0
-                self.weapon_leap_boost_pending = True
-                self.vx, self.ground_vy = self.weapon_leap_velocity
-                self.vy, self.jump_count = config.JUMP_SPEED, 1
-                self.animation.elapsed = 2 / move.fps
-            return
-        if self.weapon_leap_phase == "AIR":
+        if self.weapon_leap_phase == "AIM":
             speed = config.RUN_SPEED if controls.running else config.WALK_SPEED
-            self.move_on_ground(dt, controls, speed, turn=False)
-            if (self.weapon_leap_boost_pending
-                    and self.weapon_leap_elapsed + 1e-9 >= config.WEAPON_LEAP_BOOST_DELAY):
-                self.vy = (config.RUN_DOUBLE_JUMP_SPEED if controls.running and controls.moving
-                           else config.DOUBLE_JUMP_SPEED)
-                self.jump_count = 2
-                self.weapon_leap_boost_pending = False
-            self.weapon_leap_elapsed += dt
+            self.move_on_ground(dt, controls, speed)
+            if controls.moving:
+                self.weapon_leap_direction = controls.movement
             self.update_vertical(dt)
-            # The flight outlasts the original eight frames. Keep the airborne
-            # poses until physical landing, then play the downswing and recovery.
             self.animation.elapsed = (2.05 if self.vy >= 0 else 3.05) / move.fps
             if self.grounded:
+                # Waiting out the jump without a second D never releases a hit.
+                self.cancel_combat()
+                self.animation.set_state("IDLE")
+            return
+        if self.weapon_leap_phase == "DIVE":
+            self.vx, self.ground_vy = self.weapon_leap_velocity
+            self.x += self.vx * dt
+            self.ground_y += self.ground_vy * dt
+            self.walkable.constrain(self, config.PLAYER_HALF_WIDTH)
+            self.update_vertical(dt)
+            self.animation.elapsed = 3.05 / move.fps
+            if self.grounded:
                 self.weapon_leap_phase = "LANDING"
-                self.weapon_leap_boost_pending = False
                 self.vx = self.ground_vy = 0.0
                 self.animation.elapsed = 4 / move.fps
             return
@@ -247,21 +257,46 @@ class Player:
                 self.vy = 0.0
                 self.jump_count = 0
 
-    def update(self, dt, controls, walkable=None):
+    def update(self, dt, controls, walkable=None, *, process_input=True):
         if walkable is not None:
             self.walkable = walkable
         self.walkable.constrain(self, config.PLAYER_HALF_WIDTH)
         self.previous_x = self.x
         self.previous_ground_y = self.ground_y
         self.previous_jump_height = self.jump_height
+        if process_input:
+            self.handle_input(controls)
         self._update(dt, controls)
         self.walkable.constrain(self, config.PLAYER_HALF_WIDTH)
 
-    def _update(self, dt, controls):
+    def handle_input(self, controls):
+        """Resolve fresh actions before World samples the simulation time scale."""
         if controls.take_press("invincibility") and self.alive:
             self.invincible = not self.invincible
         jump_pressed = controls.take_press("jump")
         combat_pressed = controls.take_latest_press(MOVES)
+        if self.counter_move is not None or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD"):
+            return
+        move = self.moves.get(combat_pressed)
+        if (jump_pressed and self.active_move is None and self.jump_count < 2
+                and (move is None or move.jump_attack)):
+            if self.jump_count == 0:
+                self.vy = config.JUMP_SPEED
+            elif controls.running and controls.moving:
+                self.vy = config.RUN_DOUBLE_JUMP_SPEED
+            else:
+                self.vy = config.DOUBLE_JUMP_SPEED
+            self.jump_count += 1
+            self.animation.set_state("JUMP")
+            self.animation.elapsed = 0.0
+        if move is not None:
+            if move == self.active_move:
+                if move.jump_attack and self.weapon_leap_phase == "AIM":
+                    self.start_weapon_dive(controls)
+            else:
+                self.start_move(move, controls.direction)
+
+    def _update(self, dt, controls):
         if self.state == "CAR_HIT":
             update_car_hit(self, dt)
             return
@@ -286,10 +321,6 @@ class Player:
                     self.animation.set_state("IDLE")
             return
 
-        if combat_pressed is not None:
-            move = self.moves[combat_pressed]
-            if move != self.active_move:
-                self.start_move(move, controls.direction)
         if self.active_move is not None:
             if self.active_move.jump_attack:
                 self.update_weapon_leap(dt, controls)
@@ -302,17 +333,6 @@ class Player:
                 self.cancel_combat()
                 self.animation.set_state("IDLE")
             return
-
-        if jump_pressed and self.jump_count < 2:
-            if self.jump_count == 0:
-                self.vy = config.JUMP_SPEED
-            elif controls.running and controls.moving:
-                self.vy = config.RUN_DOUBLE_JUMP_SPEED
-            else:
-                self.vy = config.DOUBLE_JUMP_SPEED
-            self.jump_count += 1
-            self.animation.set_state("JUMP")
-            self.animation.elapsed = 0.0
 
         speed = config.RUN_SPEED if controls.running else config.WALK_SPEED
         self.move_on_ground(dt, controls, speed)

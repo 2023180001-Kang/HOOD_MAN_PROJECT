@@ -44,12 +44,21 @@ def scene(game, kind, enemy_type=None, side=1):
     return world
 
 
+def double_jump(game):
+    tap(game, pico2d.SDLK_SPACE)
+    tick(game, 3)
+    tap(game, pico2d.SDLK_SPACE)
+    assert game.world.player.jump_count == 2
+
+
 def check_clips(game):
     for kind, moves in WEAPON_MOVES.items():
         for key, move in moves.items():
             for side in (-1, 1):
                 world = scene(game, kind, side=side)
                 player = world.player
+                if move.jump_attack:
+                    double_jump(game)
                 tap(game, getattr(pico2d, f"SDLK_{move.key}"))
                 assert player.active_move is move
                 texture = game.assets.images[move.image_name]
@@ -73,91 +82,61 @@ def check_clips(game):
           "0.75 scale and D poses without a second height offset.")
 
 
-def measure_jump(game, kind, side, running):
-    if kind is None:
-        game.world = World()
-    else:
-        scene(game, kind, side=side)
-    world, player = game.world, game.world.player
-    player.x = 350 if side > 0 else config.WORLD_WIDTH - 350
-    player.vx = side * (config.RUN_SPEED if running else config.WALK_SPEED)
-    player.facing = side
-    start = player.x
-    direction = pico2d.SDLK_RIGHT if side > 0 else pico2d.SDLK_LEFT
-    push_key(direction)
-    if running:
-        push_key(pico2d.SDLK_LSHIFT)
-    if kind is not None:
-        tap(game, pico2d.SDLK_d)
-        for _ in range(30):
-            if player.weapon_leap_phase == "AIR":
-                break
-            tick(game)
-        assert player.weapon_leap_phase == "AIR" and player.jump_height == 0
-    else:
-        push_key(pico2d.SDLK_SPACE)
-    observed = {"peak": 0.0, "count": 0}
-    original_step = world.step
-
-    def observe_step(dt):
-        original_step(dt)
-        observed["peak"] = max(observed["peak"], player.jump_height)
-        observed["count"] = max(observed["count"], player.jump_count)
-        if player.grounded:
-            observed.setdefault("land_x", player.x)
-
-    apex_captured = False
-    with patch.object(world, "step", side_effect=observe_step):
-        for frame in range(150):
-            if kind is None and frame == 30:
-                push_key(pico2d.SDLK_SPACE, down=False)
-                push_key(pico2d.SDLK_SPACE)
-            elif kind is not None and frame in (10, 20, 40):
-                # Fresh D and Space during flight must not grant another boost.
-                for key in (pico2d.SDLK_d, pico2d.SDLK_SPACE):
-                    push_key(key, down=False)
-                    push_key(key)
-            tick(game)
-            if (not apex_captured and player.jump_count == 2 and 0 < player.vy <= 30
-                    and (kind is not None or side > 0)):
-                label = kind or "reference"
-                capture(game, f"weapon_double_jump_{label}_{side}_{'run' if running else 'walk'}_apex")
-                apex_captured = True
-            if "land_x" in observed:
-                break
-            if kind is not None:
-                assert player.weapon_leap_phase == "AIR" and player.animation.frame in (2, 3)
-                assert player.attack_box is None
-    assert player.grounded and observed["count"] == 2
-    release(game, direction, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE, pico2d.SDLK_d)
-    if kind is not None:
-        assert player.weapon_leap_phase == "LANDING"
-        capture(game, f"weapon_double_jump_{kind}_{side}_{'run' if running else 'walk'}_landed")
-        tick(game, 30)
-        assert player.active_move is None
-    return observed["peak"], (observed["land_x"] - start) * side
-
-
-def check_double_jump_range(game):
-    for running in (False, True):
-        for side in (-1, 1):
-            reference = measure_jump(game, None, side, running)
-            for kind in WEAPON_MOVES:
-                actual = measure_jump(game, kind, side, running)
-                assert all(abs(a - b) < 1e-6 for a, b in zip(actual, reference)), (kind, actual, reference)
-            print(f"PASS: SDL D / real Space double jump, {'run' if running else 'walk'}, "
-                  f"side {side}: peak {reference[0]:.3f}px, first-touchdown range {reference[1]:.1f}px; "
-                  "both weapons match and repeated D/Space adds no extra jump.")
+def check_slow_aim_and_dive(game):
     for kind in WEAPON_MOVES:
-        world = scene(game, kind)
-        tap(game, pico2d.SDLK_d)
-        tick(game, 20)
-        assert world.player.weapon_leap_phase == "AIR" and world.player.weapon_leap_boost_pending
-        tap(game, pico2d.SDLK_g)
-        assert world.player.weapon_leap_phase is None and not world.player.weapon_leap_boost_pending
-        tick(game, 120)
-        assert world.player.grounded and world.player.weapon is None
-    print("PASS: SDL midair G discard cancels the scheduled second boost and lands naturally.")
+        for side in (-1, 1):
+            for enemy_type in (Enemy, Enemy02):
+                world = scene(game, kind, side=side)
+                player = world.player
+                tap(game, pico2d.SDLK_d)
+                assert player.grounded and player.active_move is None and world.time_scale == 1
+                tap(game, pico2d.SDLK_SPACE)
+                tap(game, pico2d.SDLK_d)
+                assert player.jump_count == 1 and player.active_move is None
+                tap(game, pico2d.SDLK_SPACE)
+                enemy = enemy_type(player.x - side * 900, side, ground_y=player.ground_y)
+                world.enemies.append(enemy)
+                direction = pico2d.SDLK_RIGHT if side > 0 else pico2d.SDLK_LEFT
+                opposite = pico2d.SDLK_LEFT if side > 0 else pico2d.SDLK_RIGHT
+                push_key(direction)
+                player.vx = side * config.WALK_SPEED
+                start_x, enemy_x, elapsed = player.x, enemy.x, world.elapsed
+                push_key(pico2d.SDLK_d)
+                tick(game, 30)
+                simulated = 0.5 * config.WEAPON_AIM_TIME_SCALE
+                assert player.weapon_leap_phase == "AIM" and world.time_scale == config.WEAPON_AIM_TIME_SCALE
+                assert abs((player.x - start_x) * side - config.WALK_SPEED * simulated) < 1e-7
+                assert abs((enemy.x - enemy_x) * side - enemy.run_speed * simulated) < 1e-7
+                assert abs(enemy.animation.elapsed - simulated) < 1e-7
+                assert abs(world.elapsed - elapsed - simulated) < 1e-7
+                for repeat in (True, False):
+                    push_key(pico2d.SDLK_d, repeat=repeat)
+                    tick(game, 3)
+                    assert player.weapon_leap_phase == "AIM" and player.jump_count == 2
+                release(game, direction, pico2d.SDLK_d)
+                push_key(opposite)
+                tick(game, 30)
+                assert player.facing == -side and player.vx * side < 0
+                assert player.attack_box is None and not world.effects
+                label = f"{kind}_{side}_{enemy_type.__name__}"
+                with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as font:
+                    capture(game, f"weapon_slow_aim_{label}")
+                assert any(call.args[2].startswith("슬로 모션: 방향키") for call in font.call_args_list)
+                release(game, opposite)
+                start_x, elapsed = player.x, world.elapsed
+                tap(game, pico2d.SDLK_d)
+                assert player.weapon_leap_phase == "DIVE" and player.facing == -side
+                assert world.time_scale == config.WEAPON_DIVE_TIME_SCALE
+                assert abs(world.elapsed - elapsed - config.WEAPON_DIVE_TIME_SCALE / 60) < 1e-7
+                assert abs((player.x - start_x) * -side
+                           - config.WEAPON_DIVE_SPEED * config.WEAPON_DIVE_TIME_SCALE / 60) < 1e-7
+                assert player.vy < -config.WEAPON_DIVE_FALL_SPEED and player.jump_count == 2
+                capture(game, f"weapon_fast_dive_{label}")
+                tick(game, 45)
+                assert player.grounded and player.active_move is None and world.time_scale == 1
+        print(f"PASS: SDL {kind}, both facings/enemy types: Space x2 gates D, "
+              "0.2x player/enemy movement and animation, held/repeated D suppression, "
+              "midair turn, fresh D -> 2x forward dive and normal-time recovery.")
 
 
 def check_damage_effects_and_hud(game):
@@ -168,9 +147,12 @@ def check_damage_effects_and_hud(game):
                     world = scene(game, kind, enemy_type, side)
                     player, enemy = world.player, world.enemies[0]
                     key = getattr(pico2d, f"SDLK_{move.key}")
+                    if move.jump_attack:
+                        double_jump(game)
+                        tap(game, key)
                     push_key(key)
                     hits = 0
-                    for _ in range(180 if move.jump_attack else 60):
+                    for _ in range(60):
                         previous_hp = enemy.hp
                         tick(game)
                         if previous_hp == enemy.hp:
@@ -208,18 +190,27 @@ def check_switches_and_discard(game):
         world = scene(game, kind, Enemy)
         enemy = world.enemies[0]
         for key, frames, hp in ((pico2d.SDLK_a, 5, 190),
-                                (pico2d.SDLK_s, 14, 150), (pico2d.SDLK_d, 119, 100)):
+                                (pico2d.SDLK_s, 14, 150)):
             tap(game, key)
             tick(game, frames)
             assert enemy.hp == hp, (kind, key, enemy.hp)
+        tick(game, 15)
+        double_jump(game)
+        tap(game, pico2d.SDLK_d)
+        tick(game, 6)
+        tap(game, pico2d.SDLK_d)
+        tick(game, 30)
+        assert enemy.hp == 100
         capture(game, f"weapon_combo_{kind}")
         world = scene(game, kind, Enemy)
         enemy = world.enemies[0]
+        double_jump(game)
         tap(game, pico2d.SDLK_d)
         tick(game, 3)
         tap(game, pico2d.SDLK_g)
-        tick(game, 36)
+        tick(game, 90)
         assert world.player.weapon is None and world.player.active_move is None
+        assert world.time_scale == 1 and world.player.grounded
         assert enemy.hp == 200 and not world.effects
         tap(game, pico2d.SDLK_a)
         assert world.player.active_move is MOVES["combat_a"]
@@ -255,8 +246,12 @@ def benchmark(game):
     def attacking_draw(present=True):
         nonlocal frame
         original_draw(present)
-        if frame % 30 == 0:
-            key = (pico2d.SDLK_a, pico2d.SDLK_s, pico2d.SDLK_d)[frame // 30 % 3]
+        actions = {0: pico2d.SDLK_SPACE, 8: pico2d.SDLK_SPACE, 16: pico2d.SDLK_d,
+                   45: pico2d.SDLK_d, 75: pico2d.SDLK_a, 100: pico2d.SDLK_s,
+                   125: pico2d.SDLK_SPACE, 137: pico2d.SDLK_SPACE,
+                   144: pico2d.SDLK_d, 165: pico2d.SDLK_d}
+        if frame in actions:
+            key = actions[frame]
             push_key(key)
             push_key(key, down=False)
         frame += 1
@@ -278,7 +273,7 @@ def main():
         game = Game()
         game.handle_events()
         check_clips(game)
-        check_double_jump_range(game)
+        check_slow_aim_and_dive(game)
         check_damage_effects_and_hud(game)
         check_switches_and_discard(game)
         benchmark(game)

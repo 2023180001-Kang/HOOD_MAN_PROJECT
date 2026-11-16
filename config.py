@@ -90,8 +90,10 @@ WEAPON_POSE_ROWS = {
     "steel_pipe": {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4, "HIT": 5},
 }
 WEAPON_AIRBORNE_ROWS = {"combat_knife": 9, "steel_pipe": 8}
-# Match the existing range reference: first jump, then the second input at 0.5s.
-WEAPON_LEAP_BOOST_DELAY = 0.5
+WEAPON_AIM_TIME_SCALE = 0.2
+WEAPON_DIVE_TIME_SCALE = 2.0
+WEAPON_DIVE_SPEED = 720.0
+WEAPON_DIVE_FALL_SPEED = 1000.0
 WEAPON_HIT_FPS = 40.0  # Brief 8-frame flinch, then equipped IDLE after 0.2 seconds.
 COMBAT_IMAGE = "HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png"
 COMBAT_JAB_FPS = 32.0

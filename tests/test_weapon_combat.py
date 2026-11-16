@@ -29,12 +29,22 @@ def target(world, enemy_type=Enemy, side=1):
     return enemy
 
 
+def double_jump(world):
+    tap(world.controls, "jump")
+    world.step(config.FIXED_DT)
+    advance(world, 0.05)
+    tap(world.controls, "jump")
+    world.step(config.FIXED_DT)
+
+
 class WeaponCombatTests(unittest.TestCase):
     def test_g_pickup_remaps_asd_to_each_weapon_and_keeps_f_as_the_kick(self):
         for kind, rows in (("combat_knife", (7, 8, 9)), ("steel_pipe", (6, 7, 8))):
             for key, row, damage in zip("asd", rows, (10, 40, 50)):
                 world = equipped_world(kind)
                 player = world.player
+                if key == "d":
+                    double_jump(world)
                 world.controls.press(f"combat_{key}")
                 world.step(config.FIXED_DT)
                 self.assertEqual((player.sprite_image, player.sprite_row),
@@ -42,7 +52,9 @@ class WeaponCombatTests(unittest.TestCase):
                 self.assertEqual(player.active_move.damage, damage)
                 self.assertEqual(player.animation.definitions[player.state][1],
                                  MOVES[f"combat_{key}"].fps)
-                advance(world, 2.4 if key == "d" else 0.7)
+                if key == "d":
+                    tap(world.controls, "combat_d")
+                advance(world, 0.7)
                 self.assertIsNone(player.active_move)
                 self.assertEqual((player.state, player.sprite_image, player.sprite_row),
                                  ("IDLE", config.WEAPON_POSE_IMAGES[kind], 1))
@@ -60,9 +72,14 @@ class WeaponCombatTests(unittest.TestCase):
                             world = equipped_world(kind)
                             world.player.facing = side
                             enemy = target(world, enemy_type, side)
+                            if move.jump_attack:
+                                double_jump(world)
                             world.controls.press(key)
+                            if move.jump_attack:
+                                world.step(config.FIXED_DT)
+                                tap(world.controls, key)
                             hits = 0
-                            for _ in range(300 if move.jump_attack else 90):
+                            for _ in range(90):
                                 hp = enemy.hp
                                 world.step(config.FIXED_DT)
                                 if enemy.hp != hp:
@@ -82,11 +99,15 @@ class WeaponCombatTests(unittest.TestCase):
                                   ("combat_knife", "d", 0.3), ("steel_pipe", "d", 0.3)):
             world = equipped_world(kind)
             enemy = target(world)
+            if key == "d":
+                double_jump(world)
             world.controls.press(f"combat_{key}")
             advance(world, before)
             self.assertEqual(enemy.hp, 200)
             self.assertEqual(world.effects, [])
-            advance(world, 2 if key == "d" else 0.1)
+            if key == "d":
+                tap(world.controls, "combat_d")
+            advance(world, 0.5 if key == "d" else 0.1)
             self.assertEqual(enemy.hp, 200 - WEAPON_MOVES[kind][f"combat_{key}"].damage)
 
     def test_depth_facing_height_and_dead_targets_still_filter_weapon_hits(self):
@@ -95,9 +116,12 @@ class WeaponCombatTests(unittest.TestCase):
                 world = equipped_world(kind)
                 player = world.player
                 enemy = target(world)
+                if move.jump_attack:
+                    double_jump(world)
                 player.start_move(move, 1)
                 if move.jump_attack:
                     player.weapon_leap_phase = "LANDING"
+                    player.jump_height = player.vy = 0
                 player.animation.elapsed = (move.active_frames[0] + 0.1) / move.fps
                 self.assertIsNotNone(player.attack_box)
                 enemy.ground_y = player.ground_y + 33
@@ -140,11 +164,11 @@ class WeaponCombatTests(unittest.TestCase):
             world.step(config.FIXED_DT)
             self.assertAlmostEqual(player.animation.elapsed, elapsed + config.FIXED_DT)
             world.controls.press("combat_s")
-            world.controls.press("combat_d")
+            world.controls.press("combat_f")
             world.step(config.FIXED_DT)
-            self.assertIs(player.active_move, WEAPON_MOVES[kind]["combat_d"])
+            self.assertIs(player.active_move, MOVES["combat_f"])
             self.assertEqual(player.animation.elapsed, config.FIXED_DT)
-            advance(world, 2.4)
+            advance(world, 0.7)
             self.assertIsNone(player.active_move)
             self.assertFalse(world.controls.pressed)
 
@@ -153,7 +177,7 @@ class WeaponCombatTests(unittest.TestCase):
             for swap in (False, True):
                 world = equipped_world(kind)
                 enemy = target(world)
-                world.controls.press("combat_d")
+                world.controls.press("combat_s")
                 advance(world, 0.05)
                 other = "steel_pipe" if kind == "combat_knife" else "combat_knife"
                 if swap:
@@ -211,7 +235,10 @@ class WeaponCombatTests(unittest.TestCase):
             for fps in (30, 60, 120, 144):
                 world = equipped_world(kind)
                 enemy = target(world)
-                for key, seconds in (("combat_d", 2.5), ("combat_s", 0.5), ("combat_a", 0.5)):
+                double_jump(world)
+                tap(world.controls, "combat_d")
+                advance(world, 0.1, fps)
+                for key, seconds in (("combat_d", 0.5), ("combat_s", 0.5), ("combat_a", 0.5)):
                     tap(world.controls, key)
                     advance(world, seconds, fps)
                 results.append((enemy.hp, world.player.state, world.player.animation.elapsed,

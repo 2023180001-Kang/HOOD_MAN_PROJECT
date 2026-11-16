@@ -54,6 +54,10 @@ class World:
         return self.pending_stage_index is not None
 
     @property
+    def time_scale(self):
+        return self.player.time_scale
+
+    @property
     def enemies(self):
         return self.stage.enemies
 
@@ -151,7 +155,6 @@ class World:
         if self.stage_loading:
             self.controls.pressed.clear()
             return
-        self.elapsed += dt
         self.cancel_invalid_counter()
         counter_pressed = self.controls.take_latest_press(COUNTERS)
         if counter_pressed is not None:
@@ -166,7 +169,13 @@ class World:
             self.interact_weapon()
         self.try_stage_transition()
         if self.stage_loading:
+            self.elapsed += dt
             return
+        self.player.handle_input(self.controls)
+        # Input stays on the real fixed-step clock, so D can enter/leave slow
+        # motion immediately. Every gameplay clock advances by the same dt.
+        dt *= self.time_scale
+        self.elapsed += dt
         for item in self.stage.drop_items:
             item.update(dt)
         for effect in self.effects:
@@ -180,7 +189,7 @@ class World:
                 self.enemies.extend(self.spawner.spawn(count, self.elapsed))
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
-        self.player.update(dt, self.controls, self.stage.walkable)
+        self.player.update(dt, self.controls, self.stage.walkable, process_input=False)
         self.cancel_invalid_counter()
         self.handle_death()
         prepare_enemy_spacing(self.player, self.enemies, self.stage.walkable)

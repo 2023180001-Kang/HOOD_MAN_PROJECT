@@ -235,6 +235,7 @@ class Player:
                 self.jump_count = max(1, self.jump_count)
                 self.animation.elapsed = (config.RUSH_PLAYER_HOLD_FRAME + 0.05) / move.fps
         elif self.rush_phase == "FLY":
+            # Held W only steers left/right; up/down never changes floor depth.
             self.vx, self.ground_vy = self.facing * config.RUSH_SPEED, 0.0
             self.x += self.vx * dt
             self.animation.elapsed = (config.RUSH_PLAYER_HOLD_FRAME + 0.05) / move.fps

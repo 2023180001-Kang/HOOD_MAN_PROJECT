@@ -284,6 +284,74 @@ def check_rush_flight(game):
           "settles, then restores its own art/AI; all loadouts/types/directions verified.")
 
 
+def check_rush_horizontal_inputs(game):
+    inputs = (("up",), ("down",), ("up", "down"),
+              ("left", "up"), ("left", "down"), ("right", "up"), ("right", "down"),
+              ("left", "right", "up", "down"), ())
+    arrows = (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT, pico2d.SDLK_UP, pico2d.SDLK_DOWN)
+    for enemy_type in (Enemy, Enemy02):
+        for side in (-1, 1):
+            world, enemy = scene(game, enemy_type, side)
+            player = world.player
+            push_key(pico2d.SDLK_w)
+            for _ in range(60):
+                tick(game)
+                if enemy.state == "RUSH_CARRIED":
+                    break
+            assert enemy.state == "RUSH_CARRIED"
+            depth = player.ground_y
+            for keys in inputs:
+                release(game, *arrows)
+                for key in keys:
+                    push_key(getattr(pico2d, f"SDLK_{key.upper()}"))
+                game.handle_events()
+                direction = world.controls.direction or player.facing
+                before = player.x
+                tick(game)
+                assert player.facing == direction and world.rush.direction == direction
+                assert (player.ground_y, enemy.ground_y) == (depth, depth)
+                assert (player.vx, player.ground_vy) == (direction * config.RUSH_SPEED, 0)
+                assert enemy.ground_vy == 0
+                assert abs(player.x - before - direction * config.RUSH_SPEED / 60) < 1e-7
+                assert abs(enemy.x - player.x - direction * config.RUSH_CARRY_DISTANCE) < 1e-7
+                player_image = game.assets.images[player.sprite_image]
+                enemy_image = game.assets.images[enemy.sprite_image]
+                with (patch.object(player_image, "clip_composite_draw",
+                                   wraps=player_image.clip_composite_draw) as player_draw,
+                      patch.object(enemy_image, "clip_composite_draw",
+                                   wraps=enemy_image.clip_composite_draw) as enemy_draw):
+                    if enemy_type is Enemy and side == 1 and keys in (("up",), ("down",), ("left", "up")):
+                        capture(game, "rush_horizontal_" + "_".join(keys))
+                    else:
+                        render_image(game)
+                for actor, draw in ((player, player_draw), (enemy, enemy_draw)):
+                    args = draw.call_args.args
+                    row = player.sprite_row if actor is player else actor.animation.row
+                    tile = game.assets.frames[actor.sprite_image][row - 1][actor.animation.frame]
+                    scale = config.SPRITE_IMAGE_SCALES[actor.sprite_image]
+                    assert args[4] == 0
+                    assert args[5] == ("h" if actor.facing < 0 else "")
+                    assert abs(args[6] - (actor.x - world.camera.render_x
+                                         + tile["offset_x"] * scale * actor.facing)) < 1e-7
+                    assert abs(args[7] - (actor.y - world.camera.render_y
+                                         + (tile["clip"][3] / 2 + tile["offset_y"]) * scale)) < 1e-7
+                assert enemy.hp == 150 and len(world.damage_numbers) <= 1
+            direction = player.facing
+            release(game, *arrows)
+            tick(game)
+            assert player.facing == direction
+            px, py, ex, ey = player.x, player.ground_y, enemy.x, enemy.ground_y
+            release(game, pico2d.SDLK_w)
+            tick(game)
+            assert (player.x, player.ground_y) == (px, py)
+            assert (enemy.x - ex) * direction > 0
+            assert enemy.ground_y == ey and enemy.ground_vy == 0
+            assert world.rush is None
+    print("PASS: SDL held W stays horizontal with up/down, diagonal and opposing inputs; "
+          "full left/right speed and unrotated poses, same-depth captives, "
+          "last-direction retention and horizontal-only release, both enemy types/facings.")
+
+
 def check_switches_death_and_restart(game):
     world, enemy = scene(game)
     tap(game, pico2d.SDLK_a)
@@ -375,6 +443,7 @@ def main():
         check_air_kick_chain(game)
         check_raise_punch(game)
         check_rush_flight(game)
+        check_rush_horizontal_inputs(game)
         check_switches_death_and_restart(game)
         benchmark(game)
     finally:

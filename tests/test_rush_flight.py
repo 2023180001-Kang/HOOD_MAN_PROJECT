@@ -29,6 +29,31 @@ def capture_enemy(world, enemy):
 
 
 class RushFlightTests(unittest.TestCase):
+    def test_held_w_ignores_vertical_input_and_keeps_carrying_horizontally(self):
+        world, enemy = encounter()
+        capture_enemy(world, enemy)
+        player = world.player
+        step_distance = config.RUSH_SPEED * config.FIXED_DT
+
+        for key in ("up", "down"):
+            with self.subTest(key=key):
+                x, y = player.x, player.ground_y
+                world.controls.press(key)
+                world.step(config.FIXED_DT)
+                world.controls.release(key)
+                self.assertAlmostEqual(player.x - x, step_distance)
+                self.assertEqual(player.ground_y, y)
+                self.assertEqual(enemy.ground_y, y)
+
+        x, y = player.x, player.ground_y
+        world.controls.press("right")
+        world.controls.press("up")
+        world.step(config.FIXED_DT)
+        self.assertAlmostEqual(player.x - x, step_distance)
+        self.assertEqual(player.ground_y, y)
+        self.assertEqual(enemy.ground_y, y)
+        self.assertEqual(enemy.hp, 150)
+
     def test_held_w_flies_with_the_contacted_enemy_and_deals_fifty_only_once(self):
         for weapon in (None, *config.WEAPON_POSE_IMAGES):
             for enemy_type in (Enemy, Enemy02):

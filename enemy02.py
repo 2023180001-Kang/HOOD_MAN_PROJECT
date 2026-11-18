@@ -15,6 +15,7 @@ def leap_height():
 
 
 class Enemy02(Enemy):
+    death_drop_kind = None  # The dual-club enemy is not part of single-club drops.
     image_name = config.ENEMY02_IMAGE
     animations = config.ENEMY02_ANIMATIONS
     boundary_padding = config.ENEMY02_BOUNDARY_PADDING

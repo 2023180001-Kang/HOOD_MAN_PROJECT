@@ -7,7 +7,7 @@ from camera import Camera
 from collision import resolve_bodies, same_floor, transit_target, world_rect
 from controls import Controls
 from counter import COUNTERS, CounterSequence, can_counter
-from drop_items import DropItem
+from drop_items import DropItem, MetalClubDrop
 from effects import DamageNumber, HitEffect, SpriteAfterimage
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
@@ -104,7 +104,7 @@ class World:
         if (self.stage_loading or player.staircase is not None or not player.alive or not player.grounded
                 or player.counter_move is not None):
             return None
-        candidates = [item for item in self.stage.drop_items if item.grounded
+        candidates = [item for item in self.stage.drop_items if item.collectible and item.grounded
                       and item.floor == player.floor
                       and abs(item.x - player.x) <= config.WEAPON_PICKUP_RANGE
                       and abs(item.ground_y - player.ground_y) <= config.WEAPON_PICKUP_DEPTH]
@@ -303,7 +303,24 @@ class World:
         self.stage.constrain_actor(self.player)
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
+        self.spawn_enemy_death_drops()
         self.camera.update(dt, self.player.x)
+
+    def spawn_enemy_death_drops(self):
+        """Emit one non-collectible club per defeated single-club enemy."""
+        for enemy in self.enemies:
+            if (enemy.alive or enemy.death_drop_spawned
+                    or enemy.death_drop_kind != "metal_club"):
+                continue
+            area = self.stage.area_for(enemy)
+            x, ground_y = area.project(enemy.x, enemy.ground_y, config.METAL_CLUB_ITEM_HALF_WIDTH)
+            _, bottom, _, top = area.bounds
+            ground_y = clamp(ground_y, bottom, top - config.METAL_CLUB_ITEM_HEIGHT)
+            self.stage.drop_items.append(MetalClubDrop(
+                x, ground_y, enemy.facing, floor=enemy.floor,
+                jump_height=max(0.0, enemy.y + config.METAL_CLUB_DROP_HEIGHT - ground_y),
+            ))
+            enemy.death_drop_spawned = True
 
     def update_afterimages(self, dt):
         for afterimage in self.afterimages:

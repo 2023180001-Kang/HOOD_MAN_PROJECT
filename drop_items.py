@@ -1,4 +1,4 @@
-"""Stage-local weapons, initial floor layouts and gravity-driven discarded items."""
+"""Stage-local weapons, death-only props and gravity-driven falling items."""
 
 from dataclasses import dataclass
 import random
@@ -8,6 +8,9 @@ import config
 
 @dataclass
 class DropItem:
+    collectible = True
+    frame_count = config.DROP_ITEM_FRAMES
+
     kind: str
     x: float
     ground_y: float
@@ -27,7 +30,7 @@ class DropItem:
 
     @property
     def frame(self):
-        return int(self.elapsed * config.DROP_ITEM_FPS + 1e-9) % config.DROP_ITEM_FRAMES
+        return int(self.elapsed * config.DROP_ITEM_FPS + 1e-9) % self.frame_count
 
     def update(self, dt):
         self.elapsed += dt
@@ -36,6 +39,21 @@ class DropItem:
             self.jump_height = max(0.0, self.jump_height + self.vy * dt)
             if self.jump_height == 0:
                 self.vy = 0.0
+
+
+class MetalClubDrop(DropItem):
+    """A single-club enemy's visual death drop, with no pickup/equipment path."""
+
+    collectible = False
+    frame_count = config.METAL_CLUB_ITEM_FRAMES
+
+    def __init__(self, x, ground_y, facing=1, *, jump_height=0.0, floor=0):
+        super().__init__("metal_club", x, ground_y, facing,
+                         jump_height=jump_height, floor=floor)
+
+    @property
+    def image_name(self):
+        return config.METAL_CLUB_ITEM_IMAGE
 
 
 def spawn_drop_items(walkable, *, rng=None):

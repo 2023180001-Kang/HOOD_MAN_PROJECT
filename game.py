@@ -9,6 +9,7 @@ from sdl2 import SDL_Event, SDL_PollEvent, SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCU
 
 import config
 from assets import Assets
+from drop_items import DropItem
 from effects import SpriteAfterimage
 from ui import UI
 from world import World
@@ -134,7 +135,7 @@ class Game:
         for _, actor, image, opacity in sorted(sprites, key=lambda entry: entry[0], reverse=True):
             if image == config.CAR_IMAGE:
                 self.assets.draw_car(actor, camera_x, camera_y)
-            elif image in config.DROP_ITEM_IMAGES.values():
+            elif isinstance(actor, DropItem):
                 self.assets.draw_drop_item(actor, camera_x, camera_y)
             else:
                 if isinstance(actor, SpriteAfterimage):

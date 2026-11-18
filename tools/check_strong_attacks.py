@@ -27,6 +27,8 @@ from world import World
 def scene(game, enemy_type=Enemy, side=1, weapon=None):
     game.world = World(item_rng=random.Random(5))
     world = game.world
+    if enemy_type is Enemy02:
+        world.select_stage(3)
     world.stage.drop_items = []
     if weapon is not None:
         world.stage.drop_items = [DropItem(weapon, world.player.x, world.player.ground_y)]
@@ -42,38 +44,43 @@ def scene(game, enemy_type=Enemy, side=1, weapon=None):
 
 def check_source_clips(game):
     for move in STRONG_MOVES.values():
-        for side in (-1, 1):
-            world, enemy = scene(game, side=side)
-            player = world.player
-            player.start_move(move, side)
-            enemy.take_strong_hit(move, side)
-            for frame in range(8):
-                player.animation.elapsed = (frame + 0.05) / move.fps
-                enemy.animation.elapsed = (frame + 0.05) / config.STRONG_HIT_FPS
-                player_image = game.assets.images[config.STRONG_ATTACK_IMAGE]
-                enemy_image = game.assets.images[config.STRONG_HIT_IMAGE]
-                with (patch.object(player_image, "clip_composite_draw",
-                                   wraps=player_image.clip_composite_draw) as player_draw,
-                      patch.object(enemy_image, "clip_composite_draw",
-                                   wraps=enemy_image.clip_composite_draw) as enemy_draw):
-                    if frame == max(move.active_frames):
-                        capture(game, f"strong_source_{move.key}_{side}")
-                    else:
-                        render_image(game)
-                for actor, name, row, draw in (
-                        (player, config.STRONG_ATTACK_IMAGE, move.row, player_draw),
-                        (enemy, config.STRONG_HIT_IMAGE, move.enemy_hit_row, enemy_draw)):
-                    assert draw.call_count == 1
-                    args = draw.call_args.args
-                    tile = game.assets.frames[name][row - 1][frame]
-                    scale = config.SPRITE_IMAGE_SCALES[name]
-                    assert args[:4] == tuple(tile["clip"])
-                    assert args[5] == ("h" if actor.facing < 0 else "")
-                    assert args[8:10] == (tile["clip"][2] * scale, tile["clip"][3] * scale)
-                    assert abs(args[7] - args[9] / 2 - actor.y
-                               - tile["offset_y"] * scale) < 1e-7
-    print("PASS: 5 player/reaction row pairs x 8 frames x 2 directions: "
-          "exact source clips, 1.0x actor-sized art, shared feet anchors and airborne offsets.")
+        for enemy_type in (Enemy, Enemy02):
+            for side in (-1, 1):
+                world, enemy = scene(game, enemy_type, side)
+                player = world.player
+                player.start_move(move, side)
+                enemy.take_strong_hit(move, side)
+                name, row = ((config.ENEMY02_IMAGE, 6) if enemy_type is Enemy02
+                             else (config.STRONG_HIT_IMAGE, move.enemy_hit_row))
+                assert (enemy.sprite_image, enemy.animation.row) == (name, row)
+                for frame in range(8):
+                    player.animation.elapsed = (frame + 0.05) / move.fps
+                    enemy.animation.elapsed = (frame + 0.05) / config.STRONG_HIT_FPS
+                    player_image = game.assets.images[config.STRONG_ATTACK_IMAGE]
+                    enemy_image = game.assets.images[name]
+                    with (patch.object(player_image, "clip_composite_draw",
+                                       wraps=player_image.clip_composite_draw) as player_draw,
+                          patch.object(enemy_image, "clip_composite_draw",
+                                       wraps=enemy_image.clip_composite_draw) as enemy_draw):
+                        if frame == max(move.active_frames):
+                            suffix = "_Enemy02" if enemy_type is Enemy02 else ""
+                            capture(game, f"strong_source_{move.key}_{side}{suffix}")
+                        else:
+                            render_image(game)
+                    for actor, image_name, source_row, draw in (
+                            (player, config.STRONG_ATTACK_IMAGE, move.row, player_draw),
+                            (enemy, name, row, enemy_draw)):
+                        assert draw.call_count == 1
+                        args = draw.call_args.args
+                        tile = game.assets.frames[image_name][source_row - 1][frame]
+                        scale = config.SPRITE_IMAGE_SCALES.get(image_name, config.SPRITE_SCALE)
+                        assert args[:4] == tuple(tile["clip"])
+                        assert args[5] == ("h" if actor.facing < 0 else "")
+                        assert args[8:10] == (tile["clip"][2] * scale, tile["clip"][3] * scale)
+                        assert abs(args[7] - args[9] / 2 - actor.y
+                                   - tile.get("offset_y", 0) * scale) < 1e-7
+    print("PASS: 5 strong attacks x 2 enemy types x 8 frames x 2 directions: "
+          "exact source clips/scales/anchors; city enemy02 keeps its own row-6 hit art.")
 
 
 def check_inputs_damage_and_recovery(game):
@@ -93,8 +100,10 @@ def check_inputs_damage_and_recovery(game):
                             break
                     assert enemy.hp == 150, (weapon, move.key, enemy_type, side, enemy.hp)
                     assert player.active_move is move and player.sprite_row == move.row
+                    image, row = ((config.ENEMY02_IMAGE, 6) if enemy_type is Enemy02
+                                  else (config.STRONG_HIT_IMAGE, move.enemy_hit_row))
                     assert (enemy.state, enemy.sprite_image, enemy.animation.row) == (
-                        "STRONG_HIT", config.STRONG_HIT_IMAGE, move.enemy_hit_row)
+                        "STRONG_HIT", image, row)
                     assert player.animation.frame in move.active_frames
                     assert [number.damage for number in world.damage_numbers] == [50]
                     assert world.effects[-1].image_name == config.PUNCH_KICK_HIT_IMAGE
@@ -174,7 +183,8 @@ def check_air_kick_chain(game):
                     if behind.hp == 150:
                         break
                 assert (enemy.hp, behind.hp) == (150, 150) and player.animation.frame == 5
-                assert behind.animation.row == 4 and world.damage_numbers[-1].damage == 50
+                assert behind.animation.row == (6 if enemy_type is Enemy02 else 4)
+                assert world.damage_numbers[-1].damage == 50
                 if weapon is None:
                     capture(game, f"air_kick_followup_{enemy_type.__name__}_{side}")
                 push_key(pico2d.SDLK_e)  # Early third input must not queue another kick.
@@ -215,14 +225,15 @@ def check_raise_punch(game):
                 release(game, pico2d.SDLK_r)
                 tap(game, pico2d.SDLK_r)
                 assert player.raise_punch_phase == "STRIKE" and enemy.hp == 150
-                assert enemy.animation.row == 2 and world.time_scale == 1
+                assert enemy.animation.row == (6 if enemy_type is Enemy02 else 2)
+                assert world.time_scale == 1
                 if weapon is None:
                     capture(game, f"raise_punch_strike_{enemy_type.__name__}_{side}")
                 tick(game, 30)
                 assert player.active_move is None and player.raise_punch_phase is None
                 assert player.sprite_image == config.WEAPON_POSE_IMAGES.get(weapon, config.PLAYER_IMAGE)
     print("PASS: SDL first R slows the player, enemies and world clocks to 0.2x; "
-          "held/repeated R does not attack, fresh R releases 50 once with enemy row 2 and normal recovery.")
+          "fresh R releases 50 once with row 2 (street thug) / own row 6 (enemy02) and normal recovery.")
 
 
 def check_rush_flight(game):
@@ -237,6 +248,9 @@ def check_rush_flight(game):
                     if enemy.state == "RUSH_CARRIED":
                         break
                 assert (enemy.hp, enemy.state) == (150, "RUSH_CARRIED")
+                image, row = ((config.ENEMY02_IMAGE, 6) if enemy_type is Enemy02
+                              else (config.STRONG_HIT_IMAGE, 5))
+                assert (enemy.sprite_image, enemy.animation.row) == (image, row)
                 assert player.rush_phase == "FLY" and player.animation.frame == 4
                 start = player.x
                 push_key(pico2d.SDLK_w, repeat=True)
@@ -263,6 +277,7 @@ def check_rush_flight(game):
                 tick(game)
                 assert player.x == px and player.vx == 0 and world.rush is None
                 assert enemy.state == "RUSH_RELEASED" and (enemy.x - ex) * flight_side > 0
+                assert (enemy.sprite_image, enemy.animation.row) == (image, row)
                 if weapon is None:
                     capture(game, f"rush_release_{enemy_type.__name__}_{side}")
                 for _ in range(60):
@@ -328,7 +343,7 @@ def check_rush_horizontal_inputs(game):
                     args = draw.call_args.args
                     row = player.sprite_row if actor is player else actor.animation.row
                     tile = game.assets.frames[actor.sprite_image][row - 1][actor.animation.frame]
-                    scale = config.SPRITE_IMAGE_SCALES[actor.sprite_image]
+                    scale = config.SPRITE_IMAGE_SCALES.get(actor.sprite_image, config.SPRITE_SCALE)
                     assert args[4] == 0
                     assert args[5] == ("h" if actor.facing < 0 else "")
                     assert abs(args[6] - (actor.x - world.camera.render_x

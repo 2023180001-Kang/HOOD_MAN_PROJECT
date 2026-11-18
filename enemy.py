@@ -174,7 +174,7 @@ class Enemy:
             return False
         self.vx = self.ground_vy = self.vy = 0.0
         self.rush_falling = True
-        self.animation.definitions["RUSH_CARRIED"] = (move.enemy_hit_row, config.STRONG_HIT_FPS, False)
+        self.animation.definitions["RUSH_CARRIED"] = (self.animation.row, config.STRONG_HIT_FPS, False)
         self.animation.set_state("RUSH_CARRIED")
         self.animation.elapsed = config.RUSH_ENEMY_HOLD_FRAME / config.STRONG_HIT_FPS
         return True

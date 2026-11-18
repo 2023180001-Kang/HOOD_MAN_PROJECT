@@ -71,9 +71,11 @@ class StrongAttackTests(unittest.TestCase):
                         world, enemy = encounter(enemy_type, side)
                         strike(world, enemy, action)
                         reaction = "RUSH_CARRIED" if move.key == "w" else "STRONG_HIT"
+                        image, row = ((config.ENEMY02_IMAGE, 6) if enemy_type is Enemy02
+                                      else (config.STRONG_HIT_IMAGE, move.enemy_hit_row))
                         self.assertEqual((enemy.hp, enemy.state, enemy.animation.row),
-                                         (150, reaction, move.enemy_hit_row))
-                        self.assertEqual(enemy.sprite_image, config.STRONG_HIT_IMAGE)
+                                         (150, reaction, row))
+                        self.assertEqual(enemy.sprite_image, image)
                         self.assertIn(world.player.animation.frame, move.active_frames)
                         self.assertEqual(enemy.facing, -side)
                         self.assertEqual(enemy.vx, side * config.RUSH_SPEED if move.key == "w" else 0)
@@ -86,6 +88,7 @@ class StrongAttackTests(unittest.TestCase):
                             world.controls.release(action)
                             world.step(config.FIXED_DT)
                         while enemy.state in ("STRONG_HIT", "RUSH_RELEASED"):
+                            self.assertEqual((enemy.sprite_image, enemy.animation.row), (image, row))
                             world.step(config.FIXED_DT)
                         self.assertEqual((enemy.hp, enemy.state, enemy.sprite_image),
                                          (150, "IDLE", enemy.image_name))
@@ -231,6 +234,9 @@ class StrongAttackTests(unittest.TestCase):
                 self.assertFalse(enemy.blocks_movement)
                 frames = set()
                 while enemy.state == "STRONG_HIT":
+                    if enemy_type is Enemy02:
+                        self.assertEqual((enemy.sprite_image, enemy.animation.row),
+                                         (config.ENEMY02_IMAGE, 6))
                     frames.add(enemy.animation.frame)
                     world.step(config.FIXED_DT)
                 self.assertEqual(frames, set(range(8)))
@@ -265,7 +271,7 @@ class StrongAttackTests(unittest.TestCase):
         self.assertGreater(enemy.jump_height, 0)
         enemy.take_strong_hit(STRONG_MOVES["combat_t"], 1)
         self.assertIsNone(enemy.leap_phase)
-        self.assertEqual(enemy.sprite_image, config.STRONG_HIT_IMAGE)
+        self.assertEqual((enemy.sprite_image, enemy.animation.row), (config.ENEMY02_IMAGE, 6))
         advance(world, 1.2)
         self.assertEqual(enemy.jump_height, 0)
         self.assertIsNone(enemy.leap_phase)

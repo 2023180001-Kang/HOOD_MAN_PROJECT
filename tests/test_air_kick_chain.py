@@ -40,7 +40,10 @@ class AirKickChainTests(unittest.TestCase):
                     world, enemy = encounter(enemy_type, side, weapon)
                     for frame, hp in ((3, 150), (5, 100)):
                         self.assertEqual(kick(world, enemy), [(frame, 50)])
-                        self.assertEqual((enemy.hp, enemy.animation.row), (hp, 4))
+                        image, row = ((config.ENEMY02_IMAGE, 6) if enemy_type is Enemy02
+                                      else (config.STRONG_HIT_IMAGE, 4))
+                        self.assertEqual((enemy.hp, enemy.sprite_image, enemy.animation.row),
+                                         (hp, image, row))
                         self.assertIsNone(world.player.attack_box)
                     self.assertEqual(world.player.air_kick_phase, "RECOVERY")
                     advance(world, 0.2)

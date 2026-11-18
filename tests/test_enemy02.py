@@ -4,12 +4,14 @@ from unittest.mock import Mock
 
 import config
 from collision import bodies_overlap
+from combat import STRONG_MOVES
 from counter import can_counter
 from enemy import Enemy
 from enemy02 import Enemy02
 from player import Player
 from tests.helpers import advance, spawn_encounter
 from tests.test_counters import follow_up
+from tests.test_strong_attacks import strike
 from traffic import Car
 from world import World
 
@@ -195,6 +197,46 @@ class Enemy02Tests(unittest.TestCase):
                         self.assertAlmostEqual(enemy.opacity, 0.5)
                         advance(world, 0.5)
                         self.assertNotIn(enemy, world.enemies)
+
+    def test_city_strong_hits_and_rush_release_use_enemy02_hit_art_until_recovery(self):
+        for index in (2, 3):
+            for action, move in STRONG_MOVES.items():
+                for side in (-1, 1):
+                    with self.subTest(stage=index, action=action, side=side):
+                        world = World(rng=random.Random(23))
+                        world.select_stage(index)
+                        world.stage.traffic = None
+                        world.player.invincible = True
+                        world.player.facing = side
+                        enemy = spawn_encounter(world, 1)[0]
+                        enemy.x = enemy.previous_x = world.player.x + side * 80
+                        enemy.ground_y = enemy.previous_ground_y = world.player.ground_y
+                        enemy.animation.set_state("HIT")
+                        enemy.cooldown = 100
+                        strike(world, enemy, action)
+                        reaction = "RUSH_CARRIED" if move.key == "w" else "STRONG_HIT"
+                        self.assertEqual((enemy.hp, enemy.state), (150, reaction))
+                        self.assertEqual((enemy.sprite_image, enemy.animation.row),
+                                         (config.ENEMY02_IMAGE, 6))
+                        if move.key == "w":
+                            advance(world, 0.2)
+                            self.assertEqual((enemy.sprite_image, enemy.animation.row),
+                                             (config.ENEMY02_IMAGE, 6))
+                            world.controls.release(action)
+                            world.step(config.FIXED_DT)
+                            self.assertEqual(enemy.state, "RUSH_RELEASED")
+                        frames = set()
+                        for _ in range(360):  # E's wait slows the reaction clock to 0.2x.
+                            if enemy.state not in ("STRONG_HIT", "RUSH_RELEASED"):
+                                break
+                            self.assertEqual((enemy.sprite_image, enemy.animation.row),
+                                             (config.ENEMY02_IMAGE, 6))
+                            frames.add(enemy.animation.frame)
+                            world.step(config.FIXED_DT)
+                        expected_frames = set(range(5, 8)) if move.key == "w" else set(range(8))
+                        self.assertEqual(frames, expected_frames)
+                        self.assertEqual((enemy.hp, enemy.state, enemy.sprite_image),
+                                         (150, "IDLE", config.ENEMY02_IMAGE))
 
     def test_city_car_hits_the_new_enemy_and_preserves_its_fall_pose(self):
         world = World(rng=random.Random(12))

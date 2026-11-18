@@ -40,8 +40,6 @@ class Enemy02(Enemy):
 
     @property
     def sprite_image(self):
-        if self.state in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED"):
-            return config.STRONG_HIT_IMAGE
         return self.image_name
 
     @property
@@ -248,6 +246,14 @@ class Enemy02(Enemy):
         if applied:
             self._cancel_leap()
         return applied
+
+    def take_strong_hit(self, move, direction):
+        if not super().take_strong_hit(move, direction):
+            return False
+        # Strong hits and rush carry/release must use this enemy's own hit art.
+        row = self.animations["HIT"][0]
+        self.animation.definitions["STRONG_HIT"] = (row, config.STRONG_HIT_FPS, False)
+        return True
 
     def knockback(self, player_x, player_ground_y=None):
         super().knockback(player_x, player_ground_y)

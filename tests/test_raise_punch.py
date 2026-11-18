@@ -41,7 +41,9 @@ class RaisePunchTests(unittest.TestCase):
                     self.assertEqual((world.player.raise_punch_phase, enemy.hp), ("STRIKE", 150))
                     self.assertEqual(world.time_scale, 1)
                     self.assertAlmostEqual(world.elapsed - elapsed_world, config.FIXED_DT)
-                    self.assertEqual(enemy.animation.row, 2)
+                    image, row = ((config.ENEMY02_IMAGE, 6) if enemy_type is Enemy02
+                                  else (config.STRONG_HIT_IMAGE, 2))
+                    self.assertEqual((enemy.sprite_image, enemy.animation.row), (image, row))
                     elapsed = world.player.animation.elapsed
                     tap(world.controls, "combat_r")
                     world.step(config.FIXED_DT)

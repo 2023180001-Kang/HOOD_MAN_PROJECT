@@ -61,9 +61,11 @@ class RushFlightTests(unittest.TestCase):
                     world, enemy = encounter(enemy_type, side, weapon)
                     capture_enemy(world, enemy)
                     self.assertEqual(enemy.hp, 150)
-                    self.assertEqual(enemy.sprite_image, config.STRONG_HIT_IMAGE)
+                    image, row = ((config.ENEMY02_IMAGE, 6) if enemy_type is Enemy02
+                                  else (config.STRONG_HIT_IMAGE, 5))
+                    self.assertEqual(enemy.sprite_image, image)
                     self.assertEqual((world.player.animation.frame, enemy.animation.row,
-                                      enemy.animation.frame), (4, 5, 4))
+                                      enemy.animation.frame), (4, row, 4))
                     self.assertIsNone(enemy.attack_box)
                     self.assertFalse(bodies_overlap(world.player, enemy))
                     start = world.player.x
@@ -80,6 +82,8 @@ class RushFlightTests(unittest.TestCase):
             for side in (-1, 1):
                 world, enemy = encounter(enemy_type, side)
                 capture_enemy(world, enemy)
+                image, row = ((config.ENEMY02_IMAGE, 6) if enemy_type is Enemy02
+                              else (config.STRONG_HIT_IMAGE, 5))
                 px, ex = world.player.x, enemy.x
                 world.controls.release("combat_w")
                 world.step(config.FIXED_DT)
@@ -92,6 +96,7 @@ class RushFlightTests(unittest.TestCase):
                 for _ in range(100):
                     if enemy.state != "RUSH_RELEASED":
                         break
+                    self.assertEqual((enemy.sprite_image, enemy.animation.row), (image, row))
                     before = enemy.x
                     world.step(config.FIXED_DT)
                     if enemy.vx == 0:

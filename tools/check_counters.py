@@ -319,7 +319,8 @@ def check_carry_edges_and_performance(game):
             tick(game, 180)
             for actor in (player, enemy):
                 assert game.world.stage.walkable.contains(actor.x, actor.ground_y, actor.boundary_padding)
-            assert game.world.counter.holding and player.ground_y == 148
+            assert game.world.counter.holding
+            assert player.ground_y == game.world.stage.walkable.bounds[3]
             assert abs(enemy.x - player.x - facing * config.COUNTER_PAIR_DISTANCE) < 1e-8
             capture(game, f"counter_carry_corner_{facing}_{edge}")
             release(game, key)

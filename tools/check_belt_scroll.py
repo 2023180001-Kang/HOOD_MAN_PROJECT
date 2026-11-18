@@ -15,8 +15,9 @@ import pico2d
 import config
 from enemy import Enemy
 from game import Game
-from tools.check_render import capture
+from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, tick
+from ui import ENEMY_BOUNDS_COLOR, PLAYER_BOUNDS_COLOR
 from world import World
 
 
@@ -32,18 +33,77 @@ def inside(world):
 
 
 def shot(game, name):
-    # Diagnostic lines are capture-only; production rendering has no overlay.
-    stage = game.world.stage
-    draw_stage = stage.draw
-
-    def with_floor(*args, **kwargs):
-        draw_stage(*args, **kwargs)
-        left, bottom, right, top = stage.walkable.bounds
-        cx, cy = game.world.camera.render_x, game.world.camera.render_y
-        pico2d.draw_rectangle(left - cx, bottom - cy, right - cx, top - cy, 90, 210, 145)
-
-    with patch.object(stage, "draw", side_effect=with_floor):
+    # Exercise the same floor overlay that F4 enables in normal gameplay.
+    visible = game.ui.floor_bounds_visible
+    game.ui.floor_bounds_visible = True
+    try:
         return capture(game, name)
+    finally:
+        game.ui.floor_bounds_visible = visible
+
+
+def check_floor_toggle(game):
+    game.world = World(item_rng=random.Random(23))
+    assert not game.ui.floor_bounds_visible
+    game.ui.details_visible = False  # F4 lines must also work when U hides help.
+
+    def key(code, down=True, repeat=False):
+        push_key(code, down=down, repeat=repeat)
+        game.handle_events()
+        game.update(0)  # Keep the scene frozen for exact on/off pixel comparisons.
+
+    baseline = render_image(game)
+    key(pico2d.SDLK_F4)
+    assert game.ui.floor_bounds_visible and not game.world.player.invincible
+    image = capture(game, "floor_bounds_enabled")
+    for color in (PLAYER_BOUNDS_COLOR, ENEMY_BOUNDS_COLOR):
+        assert sum(pixel[:3] == color for pixel in image.get_flattened_data()) > 500
+    for repeat in (True, False):
+        key(pico2d.SDLK_F4, repeat=repeat)
+        assert game.ui.floor_bounds_visible
+    key(pico2d.SDLK_F4, down=False)
+    key(pico2d.SDLK_F4)
+    assert not game.ui.floor_bounds_visible
+    assert render_image(game).tobytes() == baseline.tobytes()
+    capture(game, "floor_bounds_disabled")
+    key(pico2d.SDLK_F4, down=False)
+    key(pico2d.SDLK_F4)
+
+    for camera_x in (0, 640, config.WORLD_WIDTH - config.SCREEN_WIDTH):
+        game.world.camera.x = camera_x
+        for shake_y in (-4, 0, 4):
+            game.world.camera.offset_y = shake_y
+            with patch.object(pico2d, "draw_line", wraps=pico2d.draw_line) as draw:
+                if shake_y == 0:
+                    capture(game, f"floor_bounds_camera_{camera_x:g}")
+                else:
+                    render_image(game)
+            lines = [call.args[:4] for call in draw.call_args_list
+                     if call.args[4:] == PLAYER_BOUNDS_COLOR]
+            assert len(lines) == 4
+            xs = [x + camera_x for ax, _, bx, _ in lines for x in (ax, bx)]
+            ys = [y + shake_y for _, ay, _, by in lines for y in (ay, by)]
+            assert (min(xs), max(xs), min(ys), max(ys)) == (68, 2492, 56, 268)
+
+    key(pico2d.SDLK_p)
+    game.update(config.FIXED_DT)
+    key(pico2d.SDLK_p, down=False)
+    assert game.world.player.invincible and game.ui.floor_bounds_visible
+    key(pico2d.SDLK_F4, down=False)
+    key(pico2d.SDLK_F4)
+    assert not game.ui.floor_bounds_visible and game.world.player.invincible
+    key(pico2d.SDLK_F4, down=False)
+    key(pico2d.SDLK_F4)
+    key(pico2d.SDLK_F5)
+    assert game.ui.floor_bounds_visible and not game.world.player.invincible
+    key(pico2d.SDLK_F5, down=False)
+    key(pico2d.SDLK_F4, down=False)
+    key(pico2d.SDLK_F4)
+    key(pico2d.SDLK_F4, down=False)
+    game.ui.details_visible = True
+    print("PASS: SDL F4 toggles real cyan/orange floor pixels on/off, suppresses held/repeated "
+          "inputs, follows all camera views/shake, works with U hidden and survives F5; "
+          "P invincibility remains an independent toggle.")
 
 
 def ready(enemies):
@@ -85,6 +145,7 @@ def check_movement(game):
 
 def check_jump(game):
     game.world = World()
+    floor_top = game.world.stage.walkable.bounds[3]
     reference = World()
     for key in (pico2d.SDLK_UP, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
         push_key(key)
@@ -103,13 +164,13 @@ def check_jump(game):
             reference.player.jump_height, reference.player.vy, reference.player.jump_count)
         inside(game.world)
         if frame == 30:
-            assert player.jump_height > 200 and player.ground_y == 148
+            assert player.jump_height > 200 and player.ground_y == floor_top
             shot(game, "belt_jump_at_floor_boundary")
-    assert game.world.player.grounded and game.world.player.ground_y == 148
+    assert game.world.player.grounded and game.world.player.ground_y == floor_top
     release((pico2d.SDLK_UP, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE))
     game.handle_events()
     print("PASS: SDL upward run + double jump keeps the exact original height/velocity curve, "
-          "third input ignored; landing returns to the moved floor at y=148.")
+          f"third input ignored; landing returns to the moved floor at y={floor_top:g}.")
 
 
 def check_depth_and_order(game):
@@ -245,6 +306,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
+        check_floor_toggle(game)
         check_movement(game)
         check_jump(game)
         check_depth_and_order(game)

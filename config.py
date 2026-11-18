@@ -221,7 +221,7 @@ DROP_ITEM_IMAGES = {
     "combat_knife": "hoodman_drop_combat_knife_8f.png",
     "steel_pipe": "hoodman_drop_steel_pipe_8f.png",
 }
-DROP_ITEM_COUNT_RANGE = (5, 8)  # Combined count per stage, including both kinds.
+DROP_ITEM_COUNT_RANGE = (15, 15)  # Fixed total per stage; kinds and positions stay random.
 DROP_ITEM_FRAMES = 8
 DROP_ITEM_FPS = 8.0
 DROP_ITEM_SCALE = 0.5
@@ -243,7 +243,7 @@ WEAPON_PICKUP_DEPTH = 32.0
 WEAPON_DROP_HAND_HEIGHT = 70.0
 WEAPON_PROMPT_GAP = 14.0
 HP_IMAGE = "HoodMan_HP_pico2d.png"
-STAGE_IMAGE = "newStage.png"
+STAGE_IMAGE = "changed_first_map.png"
 FACTORY_OUTSIDE_IMAGE = "hood_man_factory_loading_dock_1672x941.png"
 FACTORY_EXTERIOR_IMAGE = "HOOD_MAN_Factory_Exterior_1672x941.png"
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
@@ -275,7 +275,8 @@ STAGE_GROUND_ANCHORS = {
 # World-space foot regions, below the buildings/props and above the foreground.
 # Optional convex polygons override a stage's rectangle (counterclockwise vertices).
 STAGE_WALKABLE_BOUNDS = (
-    (0.0, 56.0, WORLD_WIDTH, 148.0),
+    # Expanded first map: source rows 629..841, below props and above the curb.
+    (0.0, 56.0, WORLD_WIDTH, 268.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),

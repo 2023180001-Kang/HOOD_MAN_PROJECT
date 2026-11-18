@@ -112,7 +112,7 @@ def check_all_stages(game):
         assert world.select_stage(index)
         stage.arrows_visible = True
         counts.append(len(stage.drop_items))
-        assert 5 <= counts[-1] <= 8
+        assert counts[-1] == 15
         assert {item.kind for item in stage.drop_items} == {"combat_knife", "steel_pipe"}
         _, bottom, _, top = stage.drop_spawn_area.bounds
         for side in (-1, 1):
@@ -141,7 +141,7 @@ def check_all_stages(game):
                                        ceil(x + config.DROP_ITEM_HALF_WIDTH),
                                        ceil(y + config.DROP_ITEM_SHADOW_HALF_DEPTH)))
                     assert crop.getbbox() is not None
-    print(f"PASS: all {len(world.stages)} stage layouts have 5-8 total drops ({counts}); actual floor pixels "
+    print(f"PASS: all {len(world.stages)} stage layouts have 15 total drops ({counts}); actual floor pixels "
           "fit each map, cityStage-1 weapons/shadows stay on the sidewalk with no road "
           "pixels, both exit areas stay clear, and both map halves render correctly.")
 
@@ -154,7 +154,7 @@ def check_restart(game):
     push_key(pico2d.SDLK_F5, down=False)
     game.handle_events()
     assert game.world.stage_index == 0
-    assert all(stage.drop_items is not old and 5 <= len(stage.drop_items) <= 8
+    assert all(stage.drop_items is not old and len(stage.drop_items) == 15
                for stage, old in zip(game.world.stages, previous))
     city = game.world.stages[config.STAGE_IMAGES.index("cityStage-1.png")]
     assert all(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 123

@@ -352,7 +352,7 @@ class BeltScrollTests(unittest.TestCase):
         world.stage.arrows_visible = True
         player = world.player
         player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
-        player.ground_y = 145
+        player.ground_y = world.stage.walkable.bounds[3]
         player.jump_height, player.vy, player.jump_count = 120, 300, 2
         player.vx = 720
         self.assertTrue(world.try_stage_transition())
@@ -372,7 +372,8 @@ class BeltScrollTests(unittest.TestCase):
 
     def test_camera_shake_never_changes_world_walkable_limits(self):
         world = World()
-        world.player.ground_y = 148
+        top = world.stage.walkable.bounds[3]
+        world.player.ground_y = top
         world.player.x = config.PLAYER_BOUNDARY_PADDING
         world.camera.shake()
         bounds = world.stage.walkable.bounds
@@ -380,7 +381,7 @@ class BeltScrollTests(unittest.TestCase):
             world.camera.update(config.FIXED_DT, 2500)
             world.stage.constrain_actor(world.player)
             self.assertEqual(world.stage.walkable.bounds, bounds)
-            self.assertEqual((world.player.x, world.player.ground_y), (config.PLAYER_BOUNDARY_PADDING, 148))
+            self.assertEqual((world.player.x, world.player.ground_y), (config.PLAYER_BOUNDARY_PADDING, top))
 
     def test_convex_polygon_foot_projection_is_idempotent_and_respects_padding(self):
         area = WalkableArea(((0, 56), (400, 56), (400, 100), (200, 148), (0, 148)))

@@ -1,4 +1,7 @@
+import random
 import unittest
+
+from PIL import Image
 
 import config
 from combat import MOVES
@@ -14,10 +17,43 @@ class StageTests(unittest.TestCase):
         self.assertEqual(actual.animation.elapsed, expected.animation.elapsed)
         self.assertEqual(actual.animation.frame, expected.animation.frame)
 
+    def test_first_stage_uses_expanded_background_on_start_and_restart_without_moving_old_art(self):
+        world = World()
+        self.assertEqual(world.stage.image_name, "changed_first_map.png")
+        self.assertEqual(world.stage.walkable.bounds, (0, 56, config.WORLD_WIDTH, 268))
+        with Image.open(config.ROOT / world.stage.image_name) as image:
+            self.assertEqual(image.size, (1672, 941))
+        self.assertTrue((config.ROOT / "newStage.png").is_file())
+        world.select_stage(1)
+        tap(world.controls, "restart")
+        world.update(config.FIXED_DT)
+        self.assertEqual((world.stage_index, world.stage.image_name), (0, "changed_first_map.png"))
+        self.assertEqual(len(world.stage.drop_items), 15)
+
+    def test_expanded_first_floor_allows_upward_walking_and_spawning_above_the_old_limit(self):
+        world = World(rng=random.Random(29), item_rng=random.Random(13))
+        world.controls.press("up")
+        world.controls.press("left_shift")
+        advance(world, 0.6)
+        self.assertEqual(world.player.ground_y, 268)
+        self.assertEqual(world.player.jump_height, 0)
+        self.assertEqual(world.player.ground_vy, 0)
+        self.assertTrue(any(item.ground_y > 148 for item in world.stage.drop_items))
+        enemies = world.spawner.spawn(40, world.elapsed)
+        self.assertTrue(any(enemy.ground_y > 148 for enemy in enemies))
+        for enemy in enemies:
+            self.assertTrue(world.stage.walkable.contains(enemy.x, enemy.ground_y,
+                                                          enemy.boundary_padding))
+        world.controls.release("up")
+        world.controls.press("down")
+        advance(world, 1)
+        self.assertEqual(world.player.ground_y, 56)
+        self.assertEqual(world.player.jump_height, 0)
+
     def test_n_reveals_only_the_first_stage_right_arrow_and_is_not_a_toggle(self):
         world = World()
         self.assertEqual(world.stage_index, 0)
-        self.assertEqual(world.stage.image_name, "newStage.png")
+        self.assertEqual(world.stage.image_name, "changed_first_map.png")
         self.assertEqual(world.stage.arrow_sides, ())
         world.controls.press("stage_exits")
         advance(world, 0.1)

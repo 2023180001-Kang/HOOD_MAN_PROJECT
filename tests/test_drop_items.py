@@ -14,17 +14,17 @@ def layout(stage):
 
 
 class DropItemTests(unittest.TestCase):
-    def test_every_stage_has_five_to_eight_total_items_including_both_kinds(self):
+    def test_every_stage_has_fifteen_randomly_placed_items_including_both_kinds(self):
         counts, layouts = set(), set()
         for seed in range(32):
             world = World(item_rng=random.Random(seed))
             for stage in world.stages:
-                self.assertIn(len(stage.drop_items), range(5, 9))
+                self.assertEqual(len(stage.drop_items), 15)
                 self.assertEqual({item.kind for item in stage.drop_items},
                                  {"combat_knife", "steel_pipe"})
                 counts.add(len(stage.drop_items))
                 layouts.add(tuple(layout(stage)))
-        self.assertEqual(counts, {5, 6, 7, 8})
+        self.assertEqual(counts, {15})
         self.assertEqual(len(layouts), 32 * len(config.STAGE_IMAGES))
 
     def test_all_visible_frames_and_shadows_fit_the_floor_and_avoid_swaying_arrows(self):
@@ -146,7 +146,7 @@ class DropItemTests(unittest.TestCase):
             self.assertIsNot(old.drop_items, new.drop_items)
             self.assertFalse(any(item is previous for item in new.drop_items
                                  for previous in old.drop_items))
-            self.assertIn(len(new.drop_items), range(5, 9))
+            self.assertEqual(len(new.drop_items), 15)
             if new.image_name == "cityStage-1.png":
                 for item in new.drop_items:
                     self.assertGreaterEqual(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH,

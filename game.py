@@ -25,6 +25,7 @@ KEYS = {
     pico2d.SDLK_F5: "restart",
     pico2d.SDLK_n: "stage_exits",
     pico2d.SDLK_p: "invincibility",
+    pico2d.SDLK_F4: "toggle_floor_bounds",
     pico2d.SDLK_u: "toggle_details",
     pico2d.SDLK_g: "weapon_interact",
 }
@@ -91,6 +92,8 @@ class Game:
         # Presentation remains toggleable while gameplay is loading or dead.
         if self.world.controls.take_press("toggle_details"):
             self.ui.details_visible = not self.ui.details_visible
+        if self.world.controls.take_press("toggle_floor_bounds"):
+            self.ui.floor_bounds_visible = not self.ui.floor_bounds_visible
         # Snapshot HP before simulation so a first-frame hit also leaves a trail.
         self.ui.update(0, self.world.player)
         self.world.update(dt)
@@ -113,6 +116,7 @@ class Game:
         camera_x = self.world.camera.render_x
         camera_y = self.world.camera.render_y
         self.world.stage.draw(self.assets, camera_x, camera_y, elapsed=self.world.elapsed)
+        self.ui.draw_floor_bounds(self.world, camera_x, camera_y)
         player = self.world.player
         # Stable depth sorting puts older echoes behind newer ones and the
         # live actors on the same floor, without sorting by airborne height.

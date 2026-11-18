@@ -287,14 +287,15 @@ def check_city_loading(game):
         push_key(key, down=False)
     game.handle_events()
     print(f"PASS: supplied loading image stays visible for {duration:.3f}s with gameplay frozen; "
-          "newStage -> newStage-2 -> cityStage-1 -> cityStage-2, ignored loading actions, "
+          "changed_first_map -> newStage-2 -> cityStage-1 -> cityStage-2, ignored loading actions, "
           "HP/motion/resource reuse, city return and F5 cancellation verified.")
 
 
-def check_factory_background(game):
+def check_stage_background(game, index, prefix):
     game.world = World()
-    game.world.stage_index = 4
-    with Image.open(config.ROOT / config.FACTORY_OUTSIDE_IMAGE) as source:
+    game.world.stage_index = index
+    name = game.world.stage.image_name
+    with Image.open(config.ROOT / name) as source:
         assert source.size == (1672, 941)
         supplied = source.convert("RGB")
     tiled = Image.new("RGB", (supplied.width * 2, supplied.height))
@@ -305,9 +306,9 @@ def check_factory_background(game):
         game.world.camera.offset_x = 0
         for shake_y in (-8, 0, 8):
             game.world.camera.offset_y = shake_y
-            # The existing 100px floor anchor keeps the image bottom at zero;
-            # downward shake is clamped while upward shake reveals spare rows.
-            bottom = min(0, -shake_y)
+            anchor = config.STAGE_GROUND_ANCHORS.get(name, config.STAGE_GROUND_Y)
+            bottom = config.GROUND_Y - anchor - shake_y
+            bottom = min(0, max(config.SCREEN_HEIGHT - supplied.height, bottom))
             top = int(supplied.height + bottom - config.SCREEN_HEIGHT)
             expected = tiled.crop((camera_x, top,
                                    camera_x + config.SCREEN_WIDTH, top + config.SCREEN_HEIGHT))
@@ -315,9 +316,9 @@ def check_factory_background(game):
                   patch.object(game.assets, "draw_drop_item"),
                   patch.object(game.ui, "draw_pickup_prompt"),
                   patch.object(game.ui, "draw"), patch.object(game.ui, "draw_enemy_health")):
-                image = capture(game, f"factory_loading_dock_background_{camera_x}_{shake_y}")
+                image = capture(game, f"{prefix}_background_{camera_x}_{shake_y}")
             assert ImageChops.difference(image.convert("RGB"), expected).getbbox() is None
-    print("PASS: factory loading dock 1672x941 original-size pixels and mirrored tiling "
+    print(f"PASS: {name} 1672x941 original-size pixels and mirrored tiling "
           "fill left/center/right views during vertical shake without blank strips.")
 
 
@@ -508,6 +509,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
+        check_stage_background(game, 0, "changed_first_map")
         check_markers(game)
         check_motion_continuity(game)
         check_motion_continuity(game, first=4)
@@ -516,7 +518,7 @@ def main():
         check_motion_continuity(game, first=10)
         check_round_trip_and_last_exit(game)
         check_city_loading(game)
-        check_factory_background(game)
+        check_stage_background(game, 4, "factory_loading_dock")
         check_factory_loading(game)
         check_factory_exterior(game)
         check_factory_loading(game, first=5)

@@ -14,6 +14,7 @@ from world import World
 
 def encounter(enemy_type=Enemy, side=1, weapon=None):
     world = World(item_rng=random.Random(5))
+    world.stage.drop_items.clear()  # Isolate attacks/G discard from random nearby pickups.
     world.player.invincible = True
     world.player.facing = side
     world.player.equip_weapon(weapon)

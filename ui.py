@@ -1,6 +1,6 @@
 """Screen-fixed controls/HP and world-space enemy health/damage feedback."""
 
-from math import ceil, floor
+from math import ceil, floor, hypot
 
 import config
 from combat import STRONG_MOVES
@@ -8,9 +8,14 @@ from counter import COUNTERS
 from physics import clamp
 
 
+PLAYER_BOUNDS_COLOR = (80, 220, 255)
+ENEMY_BOUNDS_COLOR = (255, 185, 70)
+
+
 class UI:
     def __init__(self):
         self.details_visible = True
+        self.floor_bounds_visible = False
         self._hp_player = None
         self._hp = config.MAX_HP
         self.damage_hp = float(config.MAX_HP)
@@ -42,6 +47,35 @@ class UI:
         progress = clamp((self._damage_elapsed - config.HP_DAMAGE_HOLD)
                          / config.HP_DAMAGE_DURATION, 0.0, 1.0)
         self.damage_hp = hp + (self._damage_start_hp - hp) * (1 - progress) ** 2
+
+    def draw_floor_bounds(self, world, camera_x, camera_y):
+        """Outline actual foot limits on the floor, independently of jump height."""
+        if not self.floor_bounds_visible:
+            return
+        import pico2d
+
+        outlines = (
+            (world.player.boundary_padding, PLAYER_BOUNDS_COLOR, False),
+            (world.stage.spawner.enemy_type.boundary_padding, ENEMY_BOUNDS_COLOR, True),
+        )
+        for padding, color, dashed in outlines:
+            vertices = world.stage.walkable.inset(padding)
+            for index, (ax, ay) in enumerate(vertices):
+                bx, by = vertices[(index + 1) % len(vertices)]
+                if not dashed:
+                    pico2d.draw_line(ax - camera_x, ay - camera_y,
+                                     bx - camera_x, by - camera_y, *color)
+                    continue
+                # Shared top/bottom limits stay readable as cyan between orange
+                # dashes, while each actor's different side padding is visible.
+                dx, dy = bx - ax, by - ay
+                length = hypot(dx, dy)
+                if length < 1e-9:
+                    continue
+                for offset in range(0, ceil(length), 24):
+                    start, end = offset / length, min(offset + 12, length) / length
+                    pico2d.draw_line(ax + dx * start - camera_x, ay + dy * start - camera_y,
+                                     ax + dx * end - camera_x, ay + dy * end - camera_y, *color)
 
     def draw_attack_help(self, assets, player):
         import pico2d
@@ -151,6 +185,11 @@ class UI:
             if not self.details_visible:
                 return
             self.draw_attack_help(assets, world.player)
+            floor_mode = "ON" if self.floor_bounds_visible else "OFF"
+            assets.font.draw(22, y - 22, f"F4 바닥 이동 범위: {floor_mode}", (205, 218, 231))
+            if self.floor_bounds_visible:
+                assets.font.draw(22, y - 46, "주인공: 하늘색 실선", PLAYER_BOUNDS_COLOR)
+                assets.font.draw(250, y - 46, "적: 주황색 점선", ENEMY_BOUNDS_COLOR)
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
             for index, move in enumerate(COUNTERS.values()):

@@ -11,6 +11,7 @@ from world import World
 class JumpCameraTests(unittest.TestCase):
     def running_double_jump_distance(self, direction=1, running=True):
         world = World()
+        world.select_stage(1)  # General tuning; the first map now has a ledge-height assist.
         world.player.x = 350 if direction > 0 else config.WORLD_WIDTH - 350
         world.controls.press("right" if direction > 0 else "left")
         if running:
@@ -84,13 +85,14 @@ class JumpCameraTests(unittest.TestCase):
 
     def test_shift_alone_does_not_boost_a_stationary_double_jump(self):
         world = World()
+        reference = World()
         world.controls.press("left_shift")
-        world.controls.press("jump")
-        advance(world, 0.2)
-        tap(world.controls, "jump")
-        world.step(config.FIXED_DT)
-        self.assertAlmostEqual(world.player.vy,
-                               config.DOUBLE_JUMP_SPEED - config.GRAVITY * config.FIXED_DT)
+        for scene in (world, reference):
+            scene.controls.press("jump")
+            advance(scene, 0.2)
+            tap(scene.controls, "jump")
+            scene.step(config.FIXED_DT)
+        self.assertEqual(world.player.vy, reference.player.vy)
         self.assertEqual(world.player.x, config.START_X)
 
     def test_double_jump_needs_two_distinct_presses_and_third_is_blocked(self):

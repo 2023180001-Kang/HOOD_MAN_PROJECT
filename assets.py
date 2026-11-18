@@ -22,6 +22,7 @@ class Assets:
                          *config.HIT_EFFECT_IMAGES,
                          *config.DROP_ITEM_IMAGES.values(),
                          *config.WEAPON_POSE_IMAGES.values(),
+                         *config.DOOR_IMAGES.values(),
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
@@ -70,6 +71,23 @@ class Assets:
             car.x - camera_x,
             car.ground_y - camera_y + (config.CAR_GROUND_ANCHOR - height / 2) * scale,
             width * scale, height * scale,
+        )
+
+    def draw_stage_door(self, door, background, tile_x, bottom, scale, *, mirrored=False):
+        image = self.images[door.image_name]
+        cell = config.DOOR_CELL_SIZE
+        left, top, width, height = door.source_rect
+        anchor_x, anchor_y, closed_width, closed_height = config.DOOR_CLOSED_BOUNDS[door.kind]
+        scale_x, scale_y = width / closed_width, height / closed_height
+        center_x = left + (cell / 2 - anchor_x) * scale_x
+        center_y = top + (cell / 2 - anchor_y) * scale_y
+        if mirrored:
+            center_x = background.w - center_x
+        image.clip_composite_draw(
+            door.frame * cell, image.h - door.row * cell, cell, cell,
+            0, "h" if mirrored else "",
+            tile_x + center_x * scale, bottom + (background.h - center_y) * scale,
+            cell * scale_x * scale, cell * scale_y * scale,
         )
 
     def draw_drop_item(self, item, camera_x, camera_y):

@@ -80,10 +80,13 @@ def check_floor_toggle(game):
                     render_image(game)
             lines = [call.args[:4] for call in draw.call_args_list
                      if call.args[4:] == PLAYER_BOUNDS_COLOR]
-            assert len(lines) == 4
-            xs = [x + camera_x for ax, _, bx, _ in lines for x in (ax, bx)]
-            ys = [y + shake_y for _, ay, _, by in lines for y in (ay, by)]
-            assert (min(xs), max(xs), min(ys), max(ys)) == (68, 2492, 56, 268)
+            assert len(lines) == 4 * len(game.world.stage.floor_areas)
+            for index, area in enumerate(game.world.stage.floor_areas):
+                outline = lines[index * 4:(index + 1) * 4]
+                xs = [x + camera_x for ax, _, bx, _ in outline for x in (ax, bx)]
+                ys = [y + shake_y for _, ay, _, by in outline for y in (ay, by)]
+                floor_bottom, floor_top = area.bounds[1::2]
+                assert (min(xs), max(xs), min(ys), max(ys)) == (68, 2492, floor_bottom, floor_top)
 
     key(pico2d.SDLK_p)
     game.update(config.FIXED_DT)
@@ -145,8 +148,10 @@ def check_movement(game):
 
 def check_jump(game):
     game.world = World()
+    game.world.select_stage(1)  # The first map's Up double jump now lands on floor 2.
     floor_top = game.world.stage.walkable.bounds[3]
     reference = World()
+    reference.select_stage(1)
     for key in (pico2d.SDLK_UP, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
         push_key(key)
     for key in ("right", "left_shift", "jump"):
@@ -273,7 +278,8 @@ def check_crowds(game):
 def check_travel(game):
     game.world = World()
     player = game.world.player
-    player.x, player.ground_y = config.WORLD_WIDTH - 85, 145
+    source_top = game.world.stage.walkable.bounds[3]
+    player.x, player.ground_y = config.WORLD_WIDTH - 85, source_top
     player.jump_height, player.vy, player.jump_count = 120, 300, 2
     player.vx = 720
     for key in (pico2d.SDLK_n, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT):
@@ -296,7 +302,8 @@ def check_travel(game):
     release((pico2d.SDLK_n, pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT))
     game.handle_events()
     print("PASS: SDL N/run/airborne travel in both directions preserves the Player and jump "
-          "while projecting floor y=145 to the second stage's y<=116; camera remains independent.")
+          f"while projecting floor y={source_top:g} to the second stage's y<=116; "
+          "camera remains independent.")
 
 
 def main():

@@ -33,7 +33,7 @@ class RushSequence:
         for enemy in enemies:
             if (not enemy.alive or enemy in player.hit_enemies or enemy.counter_linked):
                 continue
-            contact = body_contact_time(player, enemy)
+            contact = body_contact_time(player, enemy, allow_transit=True)
             if contact is None:
                 continue
             px = player.previous_x + (player.x - player.previous_x) * contact
@@ -44,6 +44,8 @@ class RushSequence:
         for _, enemy in sorted(contacts, key=lambda entry: entry[0]):
             hp = enemy.hp
             if enemy.start_rush_carry(STRONG_MOVES["combat_w"], self.direction):
+                enemy.floor = player.floor
+                enemy.walkable = self.walkable
                 player.hit_enemies.add(enemy)
                 self.captives.append(enemy)
                 impacts.append((enemy, hp - enemy.hp))

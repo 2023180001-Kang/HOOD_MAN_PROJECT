@@ -425,6 +425,7 @@ def check_received_damage_and_effects(game):
 
 def running_jump_distance(game, record=False, running=True):
     game.world = World()
+    game.world.select_stage(1)  # Original speed tuning, without the first map's ledge assist.
     game.world.player.x = 350
     push_key(pico2d.SDLK_RIGHT)
     if running:

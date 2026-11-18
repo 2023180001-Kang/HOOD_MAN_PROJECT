@@ -15,6 +15,7 @@ class DropItem:
     elapsed: float = 0.0
     jump_height: float = 0.0
     vy: float = 0.0
+    floor: int = 0
 
     @property
     def grounded(self):

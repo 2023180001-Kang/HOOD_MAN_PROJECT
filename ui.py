@@ -10,6 +10,7 @@ from physics import clamp
 
 PLAYER_BOUNDS_COLOR = (80, 220, 255)
 ENEMY_BOUNDS_COLOR = (255, 185, 70)
+STAIR_BOUNDS_COLOR = (180, 255, 150)
 
 
 class UI:
@@ -58,24 +59,33 @@ class UI:
             (world.player.boundary_padding, PLAYER_BOUNDS_COLOR, False),
             (world.stage.spawner.enemy_type.boundary_padding, ENEMY_BOUNDS_COLOR, True),
         )
-        for padding, color, dashed in outlines:
-            vertices = world.stage.walkable.inset(padding)
-            for index, (ax, ay) in enumerate(vertices):
-                bx, by = vertices[(index + 1) % len(vertices)]
-                if not dashed:
-                    pico2d.draw_line(ax - camera_x, ay - camera_y,
-                                     bx - camera_x, by - camera_y, *color)
-                    continue
-                # Shared top/bottom limits stay readable as cyan between orange
-                # dashes, while each actor's different side padding is visible.
-                dx, dy = bx - ax, by - ay
-                length = hypot(dx, dy)
-                if length < 1e-9:
-                    continue
-                for offset in range(0, ceil(length), 24):
-                    start, end = offset / length, min(offset + 12, length) / length
-                    pico2d.draw_line(ax + dx * start - camera_x, ay + dy * start - camera_y,
-                                     ax + dx * end - camera_x, ay + dy * end - camera_y, *color)
+        for area in world.stage.floor_areas:
+            for padding, color, dashed in outlines:
+                self._draw_floor_outline(area.inset(padding), color, dashed, camera_x, camera_y)
+        for stair in world.stage.stairs:
+            for (ax, ay), (bx, by) in zip(stair.path, stair.path[1:]):
+                pico2d.draw_line(ax - camera_x, ay - camera_y, bx - camera_x, by - camera_y,
+                                 *STAIR_BOUNDS_COLOR)
+
+    @staticmethod
+    def _draw_floor_outline(vertices, color, dashed, camera_x, camera_y):
+        import pico2d
+
+        for index, (ax, ay) in enumerate(vertices):
+            bx, by = vertices[(index + 1) % len(vertices)]
+            if not dashed:
+                pico2d.draw_line(ax - camera_x, ay - camera_y,
+                                 bx - camera_x, by - camera_y, *color)
+                continue
+            # Shared limits stay readable as cyan between orange dashes.
+            dx, dy = bx - ax, by - ay
+            length = hypot(dx, dy)
+            if length < 1e-9:
+                continue
+            for offset in range(0, ceil(length), 24):
+                start, end = offset / length, min(offset + 12, length) / length
+                pico2d.draw_line(ax + dx * start - camera_x, ay + dy * start - camera_y,
+                                 ax + dx * end - camera_x, ay + dy * end - camera_y, *color)
 
     def draw_attack_help(self, assets, player):
         import pico2d
@@ -190,6 +200,16 @@ class UI:
             if self.floor_bounds_visible:
                 assets.font.draw(22, y - 46, "주인공: 하늘색 실선", PLAYER_BOUNDS_COLOR)
                 assets.font.draw(250, y - 46, "적: 주황색 점선", ENEMY_BOUNDS_COLOR)
+            if world.stage.doors:
+                assets.font.draw(22, y - 70, "F3 문 / 창고문 열기·닫기", (205, 218, 231))
+            if world.stage.stairs:
+                floor_label = ("계단 이동 중" if world.player.staircase else
+                               "1층으로 낙하 중" if world.player.falling_from_upper else
+                               f"{world.player.floor + 1}층")
+                assets.font.draw(22, y - 94, f"{floor_label} · 계단 ↑/↓ · 주인공 단독 / 적 줄지어 이동",
+                                 (180, 255, 150))
+                assets.font.draw(22, y - 118, "이단 점프 후 ↑: 2층 착지 · 2층 앞쪽 끝 ↓: 낙하",
+                                 (180, 255, 150))
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
             for index, move in enumerate(COUNTERS.values()):
@@ -214,7 +234,8 @@ class UI:
                 counter_help = (f"적 공격 피해: {config.ENEMY_DAMAGE}   "
                                 f"반격: 쇠파이프 공격 중 {config.COUNTER_RANGE:g}px 내")
             assets.font.draw(22, 48, counter_help, (205, 218, 231))
-            assets.font.draw(740, 48, "1~9: 해당 수만큼 적 소환 (좌우 무작위)", (205, 218, 231))
+            sources = "좌우/열린 문 무작위" if world.stage.doors else "좌우 무작위"
+            assets.font.draw(740, 48, f"1~9: 해당 수만큼 적 소환 ({sources})", (205, 218, 231))
             assets.font.draw(22, 25,
                              "← → ↑ ↓ 이동   Shift 달리기   Space 이단 점프   G 획득/버리기   F5 재시작",
                              (205, 218, 231))

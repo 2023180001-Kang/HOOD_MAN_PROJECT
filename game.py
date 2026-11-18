@@ -25,6 +25,7 @@ KEYS = {
     pico2d.SDLK_F5: "restart",
     pico2d.SDLK_n: "stage_exits",
     pico2d.SDLK_p: "invincibility",
+    pico2d.SDLK_F3: "toggle_doors",
     pico2d.SDLK_F4: "toggle_floor_bounds",
     pico2d.SDLK_u: "toggle_details",
     pico2d.SDLK_g: "weapon_interact",

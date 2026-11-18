@@ -4,7 +4,7 @@ from math import hypot
 
 import config
 from animation import Animation
-from collision import Rect
+from collision import Rect, attack_hits_body
 from combat import ALL_MOVES, STRONG_MOVES, moves_for_weapon
 from counter import COUNTERS
 from physics import approach_vector
@@ -13,6 +13,7 @@ from walkable import default_area
 
 
 class Player:
+    stair_following = False
     boundary_padding = config.PLAYER_BOUNDARY_PADDING
 
     def __init__(self):
@@ -24,6 +25,12 @@ class Player:
         self.previous_jump_height = 0.0
         self.ground_vy = 0.0
         self.walkable = default_area()
+        self.floor = 0
+        self.staircase = None
+        self.stair_arrival = False
+        self.upper_landing_requested = False
+        self.falling_from_upper = False
+        self.navigation_target = None
         self.vx = 0.0
         self.vy = 0.0
         self.jump_count = 0
@@ -331,9 +338,7 @@ class Player:
 
     def try_hit(self, enemy):
         box = self.attack_box
-        if (box is None or not enemy.alive or enemy in self.hit_enemies
-                or abs(self.ground_y - enemy.ground_y) > config.ATTACK_DEPTH_TOLERANCE
-                or not box.overlaps(enemy.body)):
+        if (not enemy.alive or enemy in self.hit_enemies or not attack_hits_body(self, enemy, box)):
             return False
         self.hit_enemies.add(enemy)
         if self.active_move.enemy_hit_row is not None:
@@ -378,6 +383,8 @@ class Player:
                 self.vy = 0.0
                 self.jump_count = 0
                 self.air_kicks_used = 0
+                self.upper_landing_requested = False
+                self.falling_from_upper = False
 
     def update(self, dt, controls, walkable=None, *, process_input=True):
         if walkable is not None:
@@ -397,7 +404,8 @@ class Player:
             self.invincible = not self.invincible
         jump_pressed = controls.take_press("jump")
         combat_pressed = controls.take_latest_press(ALL_MOVES)
-        if self.counter_move is not None or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD"):
+        if (self.staircase is not None or self.counter_move is not None
+                or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD")):
             return
         if self.rush_phase in ("WINDUP", "FLY") and "combat_w" not in controls.held:
             self.release_rush()

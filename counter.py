@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 import config
+from collision import same_floor
 from physics import clamp
 from walkable import WalkableArea
 
@@ -55,7 +56,8 @@ COUNTERS = {
 
 
 def can_counter(player, enemy):
-    return (enemy.alive and enemy.counter_move is None and not enemy.knockback_started
+    return (same_floor(player, enemy) and enemy.alive
+            and enemy.counter_move is None and not enemy.knockback_started
             and enemy.state == "ATTACK" and not enemy.has_hit
             and enemy.animation.frame in config.COUNTER_TRIGGER_FRAMES
             and enemy.jump_height == 0 and not enemy.leaping

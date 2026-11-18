@@ -87,10 +87,13 @@ class FloorBoundsTests(unittest.TestCase):
         camera_x, camera_y = 640, -4
         expected = [
             (68 - camera_x, 56 - camera_y, 2492 - camera_x, 56 - camera_y),
-            (2492 - camera_x, 56 - camera_y, 2492 - camera_x, 268 - camera_y),
-            (2492 - camera_x, 268 - camera_y, 68 - camera_x, 268 - camera_y),
-            (68 - camera_x, 268 - camera_y, 68 - camera_x, 56 - camera_y),
+            (2492 - camera_x, 56 - camera_y, 2492 - camera_x, 136 - camera_y),
+            (2492 - camera_x, 136 - camera_y, 68 - camera_x, 136 - camera_y),
+            (68 - camera_x, 136 - camera_y, 68 - camera_x, 56 - camera_y),
         ]
+        upper = game.world.stage.upper_walkable.inset(68)
+        expected.extend((ax - camera_x, ay - camera_y, bx - camera_x, by - camera_y)
+                        for (ax, ay), (bx, by) in zip(upper, (*upper[1:], upper[0])))
         for height in (0, 240):
             game.world.player.jump_height = height
             with patch("pico2d.draw_line") as draw:
@@ -103,7 +106,8 @@ class FloorBoundsTests(unittest.TestCase):
             self.assertGreater(len(enemy_lines), 4)
             for ax, ay, bx, by in enemy_lines:
                 for x, y in ((ax, ay), (bx, by)):
-                    self.assertTrue(game.world.stage.walkable.contains(x + camera_x, y + camera_y, 88))
+                    self.assertTrue(any(area.contains(x + camera_x, y + camera_y, 88)
+                                        for area in game.world.stage.floor_areas))
 
     def test_city_outline_uses_enemy02_padding_even_before_enemies_are_summoned(self):
         game = scene()
@@ -127,8 +131,9 @@ class FloorBoundsTests(unittest.TestCase):
             game.ui.draw_floor_bounds(game.world, 0, 0)
         lines = [call.args[:4] for call in draw.call_args_list
                  if call.args[4:] == PLAYER_BOUNDS_COLOR]
-        self.assertEqual(lines, [(*point, *vertices[(index + 1) % len(vertices)])
-                                 for index, point in enumerate(vertices)])
+        self.assertEqual(lines[:len(vertices)], [(*point, *vertices[(index + 1) % len(vertices)])
+                                                for index, point in enumerate(vertices)])
+        self.assertEqual(len(lines), len(vertices) + 4)
 
 
 if __name__ == "__main__":

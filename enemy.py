@@ -5,7 +5,7 @@ import random
 
 import config
 from animation import Animation
-from collision import Rect
+from collision import Rect, same_floor
 from counter import COUNTERS
 from physics import approach_vector
 from traffic import start_car_hit, update_car_hit
@@ -13,6 +13,7 @@ from walkable import default_area
 
 
 class Enemy:
+    stair_following = True
     boundary_padding = config.ENEMY_BOUNDARY_PADDING
     image_name = config.ENEMY_IMAGE
     animations = config.ENEMY_ANIMATIONS
@@ -29,6 +30,13 @@ class Enemy:
         self.previous_jump_height = 0.0
         self.ground_vy = 0.0
         self.walkable = default_area()
+        self.floor = 0
+        self.staircase = None
+        self.stair_arrival = False
+        self.navigation_target = None
+        self.descent_route = None
+        self.descent_delay = 0.0
+        self.falling_from_upper = False
         self.vx = 0.0
         self.vy = 0.0
         self.facing = facing
@@ -50,6 +58,7 @@ class Enemy:
         self.attack_speed = attack_speed
         self.attack_interval = config.ENEMY_ATTACK_INTERVAL / attack_speed
         definitions = dict(self.animations)
+        definitions["FALL"] = self.animations["HIT"]
         row, fps, loop = definitions["ATTACK"]
         self.attack_fps = fps * attack_speed
         definitions["ATTACK"] = (row, self.attack_fps, loop)
@@ -135,11 +144,15 @@ class Enemy:
         self.knockback_started = False
         if self.counter_move is None:
             self.animation.set_state("HIT" if self.alive else "DYING")
+        if not self.alive and self.staircase is not None:
+            self.begin_floor_fall(self.staircase.lower_area)
         return True
 
     def take_strong_hit(self, move, direction):
         if not self.take_damage(move.damage):
             return False
+        if self.staircase is not None:
+            self.begin_floor_fall(self.staircase.lower_area)
         if self.counter_move is not None:
             # An independently finishing counter reaction can be interrupted
             # once the player is free; it must not overwrite the new hit later.
@@ -173,6 +186,8 @@ class Enemy:
         if not self.take_strong_hit(move, direction):
             return False
         self.vx = self.ground_vy = self.vy = 0.0
+        self.falling_from_upper = False
+        self.descent_route = None
         self.rush_falling = True
         self.animation.definitions["RUSH_CARRIED"] = (self.animation.row, config.STRONG_HIT_FPS, False)
         self.animation.set_state("RUSH_CARRIED")
@@ -209,6 +224,38 @@ class Enemy:
         if self.jump_height == 0:
             self.vy = 0.0
             self.rush_falling = False
+
+    def begin_floor_fall(self, lower_area, *, ground_y=None):
+        feet = self.y
+        previous_feet = self.previous_ground_y + self.previous_jump_height
+        if self.staircase is not None:
+            self.staircase.detach(self)
+        self.floor, self.walkable = 0, lower_area
+        landing_y = lower_area.bounds[3] if ground_y is None else ground_y
+        self.x, self.ground_y = lower_area.project(self.x, landing_y, self.boundary_padding)
+        self.jump_height = max(0.0, feet - self.ground_y)
+        self.previous_ground_y = self.ground_y
+        self.previous_jump_height = max(0.0, previous_feet - self.ground_y)
+        self.vy = self.vx = self.ground_vy = 0.0
+        self.falling_from_upper = True
+        self.running = False
+        self.has_hit = True
+        self.navigation_target = self.target_x = self.target_ground_y = None
+        self.formation_slot = None
+        self.descent_delay = 0.0
+        if self.state in ("IDLE", "WALK", "RUN"):
+            self.animation.set_state("FALL")
+
+    def update_floor_fall(self, dt):
+        self.vy -= config.GRAVITY * dt
+        self.jump_height = max(0.0, self.jump_height + self.vy * dt)
+        if self.jump_height == 0:
+            self.vy = 0.0
+            self.falling_from_upper = False
+            self.descent_route = None
+            if self.state == "FALL":
+                self.animation.set_state("IDLE" if self.alive else "DYING")
+                self.cooldown = self.attack_interval
 
     def hit_by_car(self, direction):
         if not self.alive:
@@ -288,7 +335,8 @@ class Enemy:
 
     @property
     def attack_box(self):
-        if (not self.alive or self.state != "ATTACK" or self.has_hit
+        if (not self.alive or self.staircase is not None or self.falling_from_upper
+                or self.state != "ATTACK" or self.has_hit
                 or self.animation.frame not in self.attack_active_frames):
             return None
         near = self.x + self.facing * 12
@@ -298,7 +346,8 @@ class Enemy:
 
     def try_hit(self, player):
         box = self.attack_box
-        if (box is not None and abs(self.ground_y - player.ground_y) <= config.ATTACK_DEPTH_TOLERANCE
+        if (box is not None and same_floor(self, player)
+                and abs(self.ground_y - player.ground_y) <= config.ATTACK_DEPTH_TOLERANCE
                 and box.overlaps(player.body)):
             # Per-enemy swing consumption prevents repeated active-frame damage.
             self.has_hit = True
@@ -356,6 +405,8 @@ class Enemy:
         self.previous_x = self.x
         self.previous_ground_y = self.ground_y
         self.previous_jump_height = self.jump_height
+        if self.falling_from_upper:
+            self.update_floor_fall(dt)
         if (self.rush_falling and self.state not in ("RUSH_CARRIED", "RUSH_RELEASED")
                 and not self.car_hit and self.counter_move is None):
             self.fall_from_rush(dt)
@@ -415,6 +466,43 @@ class Enemy:
             self.animation.update(dt)
             if self.animation.finished:
                 self.animation.set_state("IDLE")
+            return
+
+        if self.falling_from_upper:
+            distance = player.x - self.x
+            self.vx = self.ground_vy = 0.0
+            if abs(distance) > config.ENEMY_SPACING_TOLERANCE:
+                self.facing = 1 if distance > 0 else -1
+                self.vx = self.facing * self.run_speed
+                self.x += self.facing * min(abs(distance), self.run_speed * dt)
+            self.animation.set_state("FALL")
+            self.animation.update(dt)
+            return
+
+        if self.navigation_target is not None:
+            dx, dy = self.navigation_target[0] - self.x, self.navigation_target[1] - self.ground_y
+            distance = hypot(dx, dy)
+            # Stair/queue waypoints are transit targets, not melee targets.
+            # Keep running up to entry; only stop once the waiting slot is reached.
+            # Droppers must actually reach the edge, not stop just short of it.
+            tolerance = 1e-9 if self.descent_route == "DROP" else config.ENEMY_SPACING_TOLERANCE
+            moving = distance > tolerance
+            self.vx = self.ground_vy = 0.0
+            if moving:
+                speed = self.run_speed
+                travel = min(distance, speed * dt)
+                self.vx, self.ground_vy = dx / distance * speed, dy / distance * speed
+                self.x += dx / distance * travel
+                self.ground_y += dy / distance * travel
+                if dx:
+                    self.facing = 1 if dx > 0 else -1
+            self.running = moving
+            self.animation.set_state("RUN" if moving else "IDLE")
+            self.animation.update(dt)
+            return
+        if not same_floor(self, player):
+            self.stop()
+            self.animation.update(dt)
             return
 
         distance = player.x - self.x

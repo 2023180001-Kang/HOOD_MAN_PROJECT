@@ -3,7 +3,7 @@
 from math import hypot, sqrt
 
 import config
-from collision import Rect, body_contact_time
+from collision import Rect, body_contact_time, same_floor
 from enemy import Enemy
 from physics import jump_apex
 
@@ -77,7 +77,8 @@ class Enemy02(Enemy):
 
     def start_leap(self, player):
         gap = hypot(player.x - self.x, player.ground_y - self.ground_y)
-        if (not self.alive or not player.alive or self.car_hit or self.knockback_started
+        if (not same_floor(self, player) or not self.alive or not player.alive
+                or self.car_hit or self.knockback_started
                 or self.counter_move is not None or self.jump_height > 0
                 or self.state not in ("IDLE", "WALK", "RUN")
                 or self.cooldown > 0 or self.leap_cooldown > 0
@@ -196,6 +197,8 @@ class Enemy02(Enemy):
         self.air_contact_attack = self.air_contact_pending = False
 
     def try_hit(self, player):
+        if not same_floor(self, player):
+            return False
         if self.air_contact_pending and self.attack_box is not None:
             # The swept contact was already validated at one common instant.
             # Preserve that hit even if separation or fast motion ends overlap.
@@ -212,6 +215,9 @@ class Enemy02(Enemy):
                 self.vy = 0.0
 
     def _update_ai(self, dt, player):
+        if self.falling_from_upper:
+            super()._update_ai(dt, player)
+            return
         if self.state in ("RUSH_CARRIED", "RUSH_RELEASED"):
             super()._update_ai(dt, player)
             return

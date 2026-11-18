@@ -87,6 +87,10 @@ class BeltScrollTests(unittest.TestCase):
         for running in (False, True):
             with self.subTest(running=running):
                 actual, reference = World(), World()
+                # A two-floor Up landing intentionally ends a jump earlier.
+                # Compare the original free-flight curve on a single-floor map.
+                actual.select_stage(1)
+                reference.select_stage(1)
                 actual.enemies.clear()
                 reference.enemies.clear()
                 actual.controls.press("up")

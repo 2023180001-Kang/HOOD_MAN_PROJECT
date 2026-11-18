@@ -4,7 +4,7 @@ from itertools import count
 
 import config
 from camera import Camera
-from collision import resolve_bodies
+from collision import resolve_bodies, same_floor, transit_target, world_rect
 from controls import Controls
 from counter import COUNTERS, CounterSequence, can_counter
 from drop_items import DropItem
@@ -30,6 +30,10 @@ class World:
         if getattr(self, "counter", None) is not None:
             self.counter.finish()
         for stage in getattr(self, "stages", ()):
+            for stair in stage.stairs:
+                for actor in tuple(stair.occupants):
+                    stair.release(actor)
+                stair.queue.clear()
             for enemy in stage.enemies:
                 if enemy.counter_move is not None:
                     enemy.finish_counter()
@@ -97,10 +101,11 @@ class World:
     @property
     def pickup_item(self):
         player = self.player
-        if (self.stage_loading or not player.alive or not player.grounded
+        if (self.stage_loading or player.staircase is not None or not player.alive or not player.grounded
                 or player.counter_move is not None):
             return None
         candidates = [item for item in self.stage.drop_items if item.grounded
+                      and item.floor == player.floor
                       and abs(item.x - player.x) <= config.WEAPON_PICKUP_RANGE
                       and abs(item.ground_y - player.ground_y) <= config.WEAPON_PICKUP_DEPTH]
         return min(candidates, key=lambda item: (item.x - player.x) ** 2
@@ -108,7 +113,7 @@ class World:
 
     def drop_weapon(self, kind):
         player = self.player
-        area = self.stage.drop_spawn_area
+        area = (self.stage.drop_spawn_area if player.floor == 0 else self.stage.area_for(player))
         x, ground_y = area.project(player.x, player.ground_y, config.DROP_ITEM_HALF_WIDTH)
         left, bottom, right, top = area.bounds
         exit_edge = (config.STAGE_EXIT_MARGIN + config.STAGE_ARROW_WIDTH / 2
@@ -118,13 +123,15 @@ class World:
         ground_y = clamp(ground_y, bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH,
                          top - config.DROP_ITEM_HEIGHT)
         item = DropItem(kind, x, ground_y, player.facing,
-                        jump_height=max(0.0, player.y + config.WEAPON_DROP_HAND_HEIGHT - ground_y))
+                        jump_height=max(0.0, player.y + config.WEAPON_DROP_HAND_HEIGHT - ground_y),
+                        floor=player.floor)
         self.stage.drop_items.append(item)
         return item
 
     def interact_weapon(self):
         player = self.player
-        if self.stage_loading or not player.alive or player.counter_move is not None:
+        if (self.stage_loading or player.staircase is not None
+                or not player.alive or player.counter_move is not None):
             return False
         item = self.pickup_item
         if item is not None:
@@ -164,6 +171,8 @@ class World:
         if self.stage_loading:
             self.controls.pressed.clear()
             return
+        for actor in [self.player, *self.enemies]:
+            actor.stair_arrival = False
         self.cancel_invalid_counter()
         counter_pressed = self.controls.take_latest_press(COUNTERS)
         if counter_pressed is not None:
@@ -173,6 +182,8 @@ class World:
             self.counter.start_follow_up()
         if self.controls.take_press("stage_exits") and self.player.alive:
             self.stage.arrows_visible = True
+        if self.controls.take_press("toggle_doors"):
+            self.stage.toggle_doors()
         self.stage.constrain_actor(self.player)
         if self.controls.take_press("weapon_interact"):
             self.interact_weapon()
@@ -180,12 +191,16 @@ class World:
         if self.stage_loading:
             self.elapsed += dt
             return
+        previous_jump_count = self.player.jump_count
         self.player.handle_input(self.controls)
+        if previous_jump_count == 1 and self.player.jump_count == 2:
+            self.stage.prepare_player_double_jump(self.player)
         self.cancel_invalid_rush()
         # Input stays on the real fixed-step clock, so D can enter/leave slow
         # motion immediately. Every gameplay clock advances by the same dt.
         dt *= self.time_scale
         self.elapsed += dt
+        self.stage.update_doors(dt)
         self.update_afterimages(dt)
         for item in self.stage.drop_items:
             item.update(dt)
@@ -200,15 +215,20 @@ class World:
                 self.enemies.extend(self.spawner.spawn(count, self.elapsed))
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
-        self.player.update(dt, self.controls, self.stage.walkable, process_input=False)
+        stair_moved = self.stage.update_navigation(dt, self.player, self.controls)
+        if self.player not in stair_moved:
+            self.player.update(dt, self.controls, self.stage.area_for(self.player), process_input=False)
+            self.stage.resolve_player_platforms(self.player, self.controls)
         self.cancel_invalid_counter()
         self.cancel_invalid_rush()
         if self.player.rush_phase == "FLY" and self.rush is None:
-            self.rush = RushSequence(self.player, self.stage.walkable)
+            self.rush = RushSequence(self.player, self.stage.area_for(self.player))
         self.handle_death()
-        prepare_enemy_spacing(self.player, self.enemies, self.stage.walkable)
+        prepare_enemy_spacing(self.player, self.enemies, self.stage.area_for(self.player))
         for enemy in self.enemies:
-            enemy.update(dt, self.player, self.stage.walkable)
+            if enemy not in stair_moved:
+                enemy.update(dt, self.player, self.stage.area_for(enemy))
+                self.stage.resolve_enemy_drop(enemy, self.player)
         if self.counter is not None:
             self.counter.sync_pair()
         traffic_updated = self.rush is not None
@@ -230,8 +250,9 @@ class World:
                 self.camera.shake()
         self.enemies[:] = [enemy for enemy in self.enemies if not enemy.faded_out]
         if self.player.alive:
-            resolve_bodies(self.player, self.enemies, self.stage.walkable)
-            resolve_enemy_spacing(self.player, self.enemies, dt, self.stage.walkable)
+            area = self.stage.area_for(self.player)
+            resolve_bodies(self.player, self.enemies, area)
+            resolve_enemy_spacing(self.player, self.enemies, dt, area)
         if not traffic_updated:
             self.update_traffic(dt)
         self.handle_death()
@@ -253,13 +274,17 @@ class World:
             if player_box is not None:
                 for enemy in self.enemies:
                     previous_hp = enemy.hp
+                    transit = transit_target(enemy)
                     if self.player.try_hit(enemy):
                         self.damage_numbers.append(
                             DamageNumber.above_body(enemy.body, previous_hp - enemy.hp,
                                                      depth=enemy.ground_y - config.GROUND_Y))
-                        self.effects.append(HitEffect.at_contact(player_box, enemy.body,
+                        contact_box = world_rect(player_box, self.player) if transit else player_box
+                        contact_body = world_rect(enemy.body, enemy) if transit else enemy.body
+                        contact_depth = 0.0 if transit else enemy.ground_y - config.GROUND_Y
+                        self.effects.append(HitEffect.at_contact(contact_box, contact_body,
                                                                  self.player.facing,
-                                                                 depth=enemy.ground_y - config.GROUND_Y,
+                                                                 depth=contact_depth,
                                                                  image_name=self.player.active_move.hit_image))
                         self.camera.shake()
             for enemy in self.enemies:
@@ -333,14 +358,15 @@ class World:
 
     def try_start_counter(self, action):
         player = self.player
-        if (self.counter is not None or self.stage_loading or not player.alive or not player.grounded
+        if (self.counter is not None or self.stage_loading or player.staircase is not None
+                or not player.alive or not player.grounded
                 or player.state in ("HIT", "DYING", "DEAD")):
             return False
         candidates = [enemy for enemy in self.enemies if can_counter(player, enemy)]
         candidates.sort(key=lambda enemy: (abs(enemy.x - player.x),
                                            abs(enemy.ground_y - player.ground_y)))
         for enemy in candidates:
-            sequence = CounterSequence.start(player, enemy, COUNTERS[action], self.stage.walkable)
+            sequence = CounterSequence.start(player, enemy, COUNTERS[action], self.stage.area_for(player))
             if sequence is not None:
                 self.counter = sequence
                 return True
@@ -348,7 +374,8 @@ class World:
 
     def try_stage_transition(self):
         player = self.player
-        if (self.stage_loading or not player.alive or player.active_move is not None
+        if (self.stage_loading or player.floor != 0 or player.staircase is not None
+                or not player.alive or player.active_move is not None
                 or player.counter_move is not None
                 or player.state in ("HIT", "DYING", "DEAD")):
             return False
@@ -381,7 +408,7 @@ class World:
         self.accumulator = 0.0
         self.controls.pressed.clear()
         self._enter_stage(destination, entry_x=config.START_X)
-        resolve_bodies(self.player, self.enemies, self.stage.walkable)
+        resolve_bodies(self.player, self.enemies, self.stage.area_for(self.player))
         self.player.previous_x = self.player.x
         self.player.previous_ground_y = self.player.ground_y
         self.camera = Camera(self.player.x)
@@ -397,8 +424,13 @@ class World:
         # enter far enough inside the next scene to avoid an immediate return.
         side = 1 if destination > self.stage_index else -1
         self._dive_afterimage_remaining = 0.0
+        self.stage.release_actor(self.player)
         self.stage_index = destination
         player = self.player
+        player.floor = 0
+        player.stair_arrival = False
+        player.upper_landing_requested = False
+        player.falling_from_upper = False
         player.x = (entry_x if entry_x is not None else
                     config.STAGE_ENTRY_MARGIN if side > 0 else
                     config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
@@ -416,7 +448,8 @@ class World:
                 dx = enemy.x - self.player.x
                 dy = enemy.ground_y - self.player.ground_y
                 height = enemy.jump_height - self.player.jump_height
-                if dx * dx + dy * dy + height * height <= config.KNOCKBACK_RADIUS ** 2:
+                if (same_floor(self.player, enemy)
+                        and dx * dx + dy * dy + height * height <= config.KNOCKBACK_RADIUS ** 2):
                     enemy.knockback(self.player.x, self.player.ground_y)
                 else:
                     enemy.stop()

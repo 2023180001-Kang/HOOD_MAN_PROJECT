@@ -20,14 +20,51 @@ class Rect:
     def overlaps_vertically(self, other):
         return self.bottom < other.top and self.top > other.bottom
 
+    def translated(self, dx=0.0, dy=0.0):
+        return Rect(self.left + dx, self.bottom + dy, self.right + dx, self.top + dy)
+
+
+def world_rect(rect, actor):
+    return rect.translated(dy=actor.ground_y - config.GROUND_Y)
+
+
+def transit_target(actor):
+    return (getattr(actor, "staircase", None) is not None
+            or getattr(actor, "falling_from_upper", False))
+
+
+def attack_hits_body(attacker, target, box):
+    if box is None:
+        return False
+    if transit_target(target):
+        # Stairs change elevation, not melee depth. Compare the visible bodies
+        # instead of rejecting the target merely because it is between floors.
+        return (attacker.staircase is None
+                and world_rect(box, attacker).overlaps(world_rect(target.body, target)))
+    return (same_floor(attacker, target)
+            and abs(attacker.ground_y - target.ground_y) <= config.ATTACK_DEPTH_TOLERANCE
+            and box.overlaps(target.body))
+
+
+def same_floor(first, second):
+    return (getattr(first, "floor", 0) == getattr(second, "floor", 0)
+            and getattr(first, "staircase", None) is None
+            and getattr(second, "staircase", None) is None
+            and not getattr(first, "stair_arrival", False)
+            and not getattr(second, "stair_arrival", False))
+
 
 def bodies_overlap(first, second):
-    return (abs(first.ground_y - second.ground_y) < config.BODY_DEPTH_TOLERANCE - 1e-9
+    return (same_floor(first, second)
+            and abs(first.ground_y - second.ground_y) < config.BODY_DEPTH_TOLERANCE - 1e-9
             and first.body.overlaps(second.body))
 
 
-def body_contact_time(first, second):
+def body_contact_time(first, second, *, allow_transit=False):
     """First simultaneous x/depth/height body contact during the current step."""
+    transit = allow_transit and first.staircase is None and transit_target(second)
+    if not transit and not same_floor(first, second):
+        return None
     half_width = (first.body.right - first.body.left + second.body.right - second.body.left) / 2
     first_height = first.body.top - first.body.bottom
     second_height = second.body.top - second.body.bottom
@@ -39,6 +76,13 @@ def body_contact_time(first, second):
         (second.previous_jump_height - first.previous_jump_height,
          second.jump_height - first.jump_height, -second_height, first_height),
     )
+    if transit:
+        axes = (
+            axes[0],
+            (second.previous_ground_y + second.previous_jump_height
+             - first.previous_ground_y - first.previous_jump_height,
+             second.y - first.y, -second_height, first_height),
+        )
     enter, leave = 0.0, 1.0
     for start, end, low, high in axes:
         delta = end - start
@@ -55,6 +99,9 @@ def body_contact_time(first, second):
 
 def resolve_bodies(player, enemies, walkable=None):
     """Constrain player motion, then let enemies yield; bounded, non-iterative."""
+    if player.staircase is not None:
+        return
+    enemies = [enemy for enemy in enemies if same_floor(player, enemy)]
     walkable = player.walkable if walkable is None else walkable
     walkable.constrain(player, config.PLAYER_HALF_WIDTH)
     for enemy in enemies:

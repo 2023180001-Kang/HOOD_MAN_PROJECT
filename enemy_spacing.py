@@ -6,6 +6,7 @@ from math import exp, hypot
 
 import config
 from combat import MOVES
+from collision import same_floor
 from physics import clamp
 
 
@@ -49,7 +50,8 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
     for enemy in enemies:
         enemy.target_x = None
         enemy.target_ground_y = None
-        if (not player.alive or not enemy.alive or enemy.knockback_started
+        if (not same_floor(player, enemy) or enemy.navigation_target is not None or enemy.falling_from_upper
+                or not player.alive or not enemy.alive or enemy.knockback_started
                 or enemy.counter_move is not None or enemy.leaping
                 or enemy.state in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")):
             enemy.formation_slot = None
@@ -128,7 +130,8 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
     """Ease severe overlap on the floor, then constrain every state and path."""
     walkable = player.walkable if walkable is None else walkable
     active = [enemy for enemy in enemies
-              if player.alive and enemy.alive and not enemy.knockback_started
+              if same_floor(player, enemy) and enemy.navigation_target is None and not enemy.falling_from_upper
+              and player.alive and enemy.alive and not enemy.knockback_started
               and enemy.counter_move is None and not enemy.leaping
               and enemy.state not in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")]
     left, right, _ = encounter_envelope(enemies)
@@ -173,4 +176,6 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
         enemy.x += error_x
         enemy.ground_y += error_y
     for enemy in enemies:
-        walkable.constrain(enemy, config.ENEMY_HALF_WIDTH)
+        if enemy.staircase is None:
+            area = walkable if same_floor(player, enemy) else enemy.walkable
+            area.constrain(enemy, config.ENEMY_HALF_WIDTH)

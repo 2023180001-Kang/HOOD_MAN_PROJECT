@@ -287,7 +287,7 @@ def check_city_loading(game):
         push_key(key, down=False)
     game.handle_events()
     print(f"PASS: supplied loading image stays visible for {duration:.3f}s with gameplay frozen; "
-          "changed_first_map -> newStage-2 -> cityStage-1 -> cityStage-2, ignored loading actions, "
+          "HoodMan_2F -> newStage-2 -> cityStage-1 -> cityStage-2, ignored loading actions, "
           "HP/motion/resource reuse, city return and F5 cancellation verified.")
 
 
@@ -313,6 +313,7 @@ def check_stage_background(game, index, prefix):
             expected = tiled.crop((camera_x, top,
                                    camera_x + config.SCREEN_WIDTH, top + config.SCREEN_HEIGHT))
             with (patch.object(game.assets, "draw_sprite"),
+                  patch.object(game.assets, "draw_stage_door"),
                   patch.object(game.assets, "draw_drop_item"),
                   patch.object(game.ui, "draw_pickup_prompt"),
                   patch.object(game.ui, "draw"), patch.object(game.ui, "draw_enemy_health")):
@@ -509,7 +510,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
-        check_stage_background(game, 0, "changed_first_map")
+        check_stage_background(game, 0, "hoodman_2f")
         check_markers(game)
         check_motion_continuity(game)
         check_motion_continuity(game, first=4)

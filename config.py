@@ -242,7 +242,45 @@ WEAPON_PICKUP_DEPTH = 32.0
 WEAPON_DROP_HAND_HEIGHT = 70.0
 WEAPON_PROMPT_GAP = 14.0
 HP_IMAGE = "HoodMan_HP_pico2d.png"
-STAGE_IMAGE = "changed_first_map.png"
+STAGE_IMAGE = "HoodMan_2F_Map_1672x941.png"
+DOOR_IMAGES = {
+    "door": "HoodMan_Door_pico2d.png",
+    "warehouse_shutter": "HoodMan_Warehouse_Shutter_pico2d.png",
+}
+DOOR_CELL_SIZE = 256
+DOOR_FRAMES = 8
+DOOR_FPS = 12.0
+# Closed artwork bounds within a cell: left, top, width, height. Keep the hinge
+# and shutter header fixed while the full transparent cell changes pose.
+DOOR_CLOSED_BOUNDS = {
+    "door": (69, 11, 110, 210),
+    "warehouse_shutter": (17, 11, 219, 215),
+}
+# Opening rectangles measured in the background's top-left source coordinates.
+STAGE_DOOR_SPECS = {
+    STAGE_IMAGE: (
+        ("door", (182, 567, 83, 137)),
+        ("door", (412, 253, 83, 137)),
+        ("door", (1366, 253, 85, 137)),
+        ("warehouse_shutter", (1334, 544, 214, 201)),
+    ),
+}
+STAGE_DOOR_FLOORS = {STAGE_IMAGE: (0, 1, 1, 0)}
+TWO_FLOOR_MAP_SIZE = (1672, 941)
+# Upper walkway: source rows 395..445, above the metal fascia.
+STAGE_UPPER_FLOOR_BOUNDS = {STAGE_IMAGE: (0.0, 452.0, WORLD_WIDTH, 502.0)}
+UPPER_PLATFORM_JUMP_CLEARANCE = 24.0
+# Feet follow the steps, not a vertical teleport. Both endpoints are on a floor.
+STAGE_STAIR_PATHS = {
+    STAGE_IMAGE: (((238.0, 136.0), (252.0, 168.0),
+                   (484.0, 454.0), (500.0, 476.0)),),
+}
+STAIR_SPEED = 240.0
+STAIR_FOLLOW_DISTANCE = 100.0  # Enemy spacing along the steps, not on the waiting floor.
+STAIR_ENTRY_RADIUS = 40.0
+STAIR_QUEUE_RADIUS = 200.0
+STAIR_QUEUE_GAP = 100.0
+ENEMY_DROP_DELAY_RANGE = (0.0, 0.35)
 FACTORY_OUTSIDE_IMAGE = "hood_man_factory_loading_dock_1672x941.png"
 FACTORY_EXTERIOR_IMAGE = "HOOD_MAN_Factory_Exterior_1672x941.png"
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
@@ -274,8 +312,8 @@ STAGE_GROUND_ANCHORS = {
 # World-space foot regions, below the buildings/props and above the foreground.
 # Optional convex polygons override a stage's rectangle (counterclockwise vertices).
 STAGE_WALKABLE_BOUNDS = (
-    # Expanded first map: source rows 629..841, below props and above the curb.
-    (0.0, 56.0, WORLD_WIDTH, 268.0),
+    # Two-floor first map: ground-floor source rows 761..841, below stairs/props.
+    (0.0, 56.0, WORLD_WIDTH, 136.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),

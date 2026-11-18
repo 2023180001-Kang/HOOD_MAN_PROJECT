@@ -1,4 +1,4 @@
-"""Verify city road traffic with actual SDL input, textures and render targets."""
+"""Verify retired city traffic stays absent; legacy fixtures are opt-in helpers."""
 
 from pathlib import Path
 import random
@@ -18,13 +18,17 @@ from enemy import Enemy
 from game import Game
 from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, tick
-from traffic import Car
+from traffic import Car, Traffic
 from world import World
 
 
 def city(game, *, ground_y=148):
+    """Manually construct a legacy vehicle scene; normal gameplay never does this."""
     game.world = World(rng=random.Random(5), traffic_rng=random.Random(5))
     game.world.stage_index = 2
+    game.world.stage.traffic = Traffic(rng=random.Random(5))
+    if config.CAR_IMAGE not in game.assets.images:
+        game.assets.images[config.CAR_IMAGE] = pico2d.load_image(str(config.ROOT / config.CAR_IMAGE))
     game.world.player.ground_y = ground_y
     game.world.stage.traffic.spawn_remaining = 100
     return game.world
@@ -167,7 +171,7 @@ def check_road_input_jump_and_restart(game):
     tick(game)
     assert world is game.world and world.stage_index == 0
     assert world.player.hp == 500 and world.player.sprite_image == config.PLAYER_IMAGE
-    assert world.stages[2].traffic.car is None
+    assert world.stages[2].traffic is None
     assert all(game.assets.images[name] is image for name, image in textures.items())
     release(game, pico2d.SDLK_F5)
     world = city(game, ground_y=config.CAR_GROUND_Y)
@@ -201,6 +205,59 @@ def benchmark(game):
           f"{frames} frames / {seconds:.3f}s = {frames / seconds:.2f} FPS.")
 
 
+def check_removed_traffic(game):
+    game.world = World(rng=random.Random(5), item_rng=random.Random(5))
+    world = game.world
+    assert all(stage.traffic is None for stage in world.stages)
+    assert config.CAR_IMAGE not in game.assets.images
+    archived = config.ROOT / config.CAR_IMAGE
+    assert archived.parent == config.ROOT / "before_sheets" and archived.is_file()
+    assert not (config.ROOT / archived.name).exists()
+    textures = dict(game.assets.images)
+
+    world.select_stage(2)
+    world.player.ground_y = config.CAR_GROUND_Y
+    tick(game, 30 * 60)
+    assert world.player.hp == 500 and not world.player.car_hit
+    assert world.stage.traffic is None and not world.effects
+    for side in (-1, 1):
+        world.player.x = 100 if side < 0 else config.WORLD_WIDTH - 100
+        world.camera.update(0, world.player.x)
+        with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as font:
+            capture(game, f"city_no_traffic_{'left' if side < 0 else 'right'}")
+        assert not any("도로 주의!" in call.args[2] for call in font.call_args_list)
+
+    push_key(pico2d.SDLK_p)
+    push_key(pico2d.SDLK_4)
+    tick(game)
+    release(game, pico2d.SDLK_p, pico2d.SDLK_4)
+    tick(game, 8 * 60)
+    assert world.player.hp == 500 and world.player.invincible
+    assert len(world.enemies) == 4
+    assert all(enemy.hp == 200 and not enemy.car_hit for enemy in world.enemies)
+    assert len(world.stage.drop_items) == 15 and world.stage.traffic is None
+    capture(game, "city_no_traffic_enemies")
+
+    world.select_stage(3)
+    tick(game, 30)
+    world.select_stage(2)
+    assert world.stage.traffic is None
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    release(game, pico2d.SDLK_F5)
+    assert world.stage_index == 0 and world.player.hp == 500
+    assert all(stage.traffic is None for stage in world.stages)
+    assert all(game.assets.images[name] is image for name, image in textures.items())
+    world.select_stage(2)
+    world.player.ground_y = config.CAR_GROUND_Y
+    tick(game, 5 * 60)
+    assert world.player.hp == 500 and world.stage.traffic is None
+    capture(game, "city_no_traffic_after_restart")
+    print("PASS: archived car sheet is absent from runtime textures; city road stays safe "
+          "for 30s, both views omit vehicles/warnings, four enemies and 15 drops remain, "
+          "P still works, and revisits/F5 never restore traffic.")
+
+
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()
@@ -208,11 +265,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
-        check_driving_frames(game)
-        check_sidewalk_spawns(game)
-        check_impacts_and_fade(game)
-        check_road_input_jump_and_restart(game)
-        benchmark(game)
+        check_removed_traffic(game)
     finally:
         if game is not None:
             game.close()

@@ -12,7 +12,7 @@ from player import Player
 from tests.helpers import advance, spawn_encounter
 from tests.test_counters import follow_up
 from tests.test_strong_attacks import strike
-from traffic import Car
+from traffic import Car, Traffic
 from world import World
 
 
@@ -246,6 +246,7 @@ class Enemy02Tests(unittest.TestCase):
         enemy = spawn_encounter(world, 1)[0]
         enemy.x = enemy.previous_x = world.player.x
         enemy.ground_y = enemy.previous_ground_y = config.CAR_GROUND_Y
+        world.stage.traffic = Traffic()  # Explicit legacy reaction fixture.
         world.stage.traffic.car = Car(world.player.x, 1, 1400)
         world.step(config.FIXED_DT)
         self.assertEqual((world.player.hp, enemy.hp, enemy.state), (0, 0, "CAR_HIT"))

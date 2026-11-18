@@ -20,7 +20,6 @@ from game import Game
 from tools.check_counters import release, start_follow_up, wait_for_hold
 from tools.check_render import capture
 from tools.check_runtime import push_key, tick
-from traffic import Car
 from world import World
 
 
@@ -284,23 +283,20 @@ def check_counters_and_death(game):
           "single 80 damage; own row-7 death/fade and shared texture alpha restoration verified.")
 
 
-def check_city_car(game):
+def check_city_road(game):
     world, enemy = encounter(game)
     world.stage_index = 2
     world.enemies = [enemy]
     world.player.ground_y = enemy.ground_y = config.CAR_GROUND_Y
     enemy.x = enemy.previous_x = world.player.x
-    world.stage.traffic.car = Car(world.player.x, 1, 1400)
     world.player.invincible = True
-    tick(game)
-    assert world.player.hp == enemy.hp == 0 and enemy.state == "CAR_HIT"
-    assert enemy.sprite_image == config.ENEMY02_IMAGE and enemy.animation.row == 7
-    capture(game, "enemy02_car_hit")
     tick(game, 60)
-    assert (enemy.state, enemy.animation.row, enemy.animation.frame) == ("DEAD", 7, 7)
-    capture(game, "enemy02_car_dead")
-    print("PASS: city road collision still kills player/new enemy immediately, including P; "
-          "enemy02 keeps its own fall and final pose.")
+    assert world.stage.traffic is None and (world.player.hp, enemy.hp) == (500, 200)
+    assert not world.player.car_hit and not enemy.car_hit
+    assert enemy.sprite_image == config.ENEMY02_IMAGE
+    capture(game, "enemy02_city_road_no_traffic")
+    print("PASS: retired city traffic stays absent; road pursuit keeps enemy02's own art "
+          "and causes no vehicle deaths.")
 
 
 def check_natural_encounter_and_restart(game):
@@ -359,7 +355,7 @@ def main():
         check_midair_collisions(game)
         check_damage(game)
         check_counters_and_death(game)
-        check_city_car(game)
+        check_city_road(game)
         check_natural_encounter_and_restart(game)
     finally:
         if game is not None:

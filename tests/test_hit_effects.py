@@ -8,7 +8,7 @@ from enemy02 import Enemy02
 from tests.helpers import advance
 from tests.test_counters import attacker, follow_up
 from tests.test_enemy02 import at_frame
-from traffic import Car
+from traffic import Car, Traffic
 from world import World
 
 
@@ -183,6 +183,7 @@ class HitEffectTests(unittest.TestCase):
         world.player.ground_y = config.CAR_GROUND_Y
         enemy = Enemy02(world.player.x, ground_y=config.CAR_GROUND_Y)
         world.enemies = [enemy]
+        world.stage.traffic = Traffic()  # Explicit legacy impact fixture.
         world.stage.traffic.car = Car(world.player.x, 1, 1400)
         world.step(config.FIXED_DT)
         self.assertEqual((world.player.hp, enemy.hp), (0, 0))

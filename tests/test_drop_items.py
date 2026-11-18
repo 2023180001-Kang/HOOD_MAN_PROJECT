@@ -105,9 +105,9 @@ class DropItemTests(unittest.TestCase):
         self.assertEqual([(enemy.x, enemy.ground_y, enemy.attack_speed) for enemy in world.enemies],
                          [(enemy.x, enemy.ground_y, enemy.attack_speed)
                           for enemy in different_items.enemies])
-        for attribute in ("x", "previous_x", "facing", "speed", "ground_y"):
-            self.assertEqual(getattr(world.stage.traffic.car, attribute),
-                             getattr(different_items.stage.traffic.car, attribute))
+        for scene in (world, different_items):
+            self.assertIsNone(scene.stage.traffic)
+            self.assertEqual(scene.traffic_rng.getstate(), traffic_state)
 
     def test_scene_return_keeps_items_and_loading_pauses_their_clocks(self):
         world = World(item_rng=random.Random(1))

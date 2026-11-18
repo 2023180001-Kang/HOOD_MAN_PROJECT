@@ -5,7 +5,7 @@ import config
 from counter import COUNTERS
 from tests.helpers import advance, tap
 from tests.test_counters import attacker, follow_up, hold_counter
-from traffic import Car
+from traffic import Car, Traffic
 from walkable import WalkableArea
 from world import World
 
@@ -195,6 +195,7 @@ class CounterCarryTests(unittest.TestCase):
         world.enemies = [enemy]
         world.player.ground_y = config.CAR_GROUND_Y
         world.counter.sync_pair()
+        world.stage.traffic = Traffic()  # Explicit legacy interruption fixture.
         world.stage.traffic.car = Car(world.player.x, 1, 1400)
         world.step(config.FIXED_DT)
         self.assertIsNone(world.counter)

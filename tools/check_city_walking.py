@@ -14,7 +14,6 @@ import config
 from game import Game
 from tools.check_render import capture
 from tools.check_runtime import push_key, tick
-from traffic import Car
 from world import World
 
 
@@ -70,14 +69,10 @@ def check_road_pursuit(game):
     tick(game, 90)
     victim = min(world.enemies, key=lambda enemy: enemy.ground_y)
     assert victim.ground_y <= config.CAR_GROUND_Y + config.CAR_DEPTH_TOLERANCE
-    # Walking support must not create immunity to the existing road hazard.
-    traffic = World().stages[2].traffic
-    traffic.car = Car(victim.x, 1, 1400)
-    world.stage.traffic = traffic
     tick(game)
-    assert victim.hp == 0 and victim.car_hit
+    assert world.stage.traffic is None and victim.hp == 200 and not victim.car_hit
     capture(game, "city_walk_road_pursuit")
-    print("PASS: SDL down still lures enemies onto the road, where a car can hit them.")
+    print("PASS: SDL down still lures enemies onto the road without restoring retired vehicles.")
 
 
 def main():

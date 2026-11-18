@@ -6,7 +6,7 @@ from combat import MOVES
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
 from tests.helpers import advance, clear_encounters, spawn_encounter, tap
-from traffic import Car
+from traffic import Car, Traffic
 from world import World
 
 
@@ -263,7 +263,7 @@ class CityStageTests(unittest.TestCase):
     def test_pavement_formations_can_still_follow_a_player_onto_the_road(self):
         world = World(rng=random.Random(32))
         world.stage_index = 2
-        traffic = world.stage.traffic
+        traffic = Traffic()  # Legacy hazard fixture; production city traffic is retired.
         world.stage.traffic = None
         world.player.ground_y = 56
         world.player.invincible = True
@@ -288,6 +288,7 @@ class CityStageTests(unittest.TestCase):
                 edge = (config.ENEMY_BOUNDARY_PADDING if side < 0 else
                         config.WORLD_WIDTH - config.ENEMY_BOUNDARY_PADDING)
                 car = Car(edge, -side, config.CAR_SPEED_RANGE[1])
+                world.stage.traffic = Traffic()
                 world.stage.traffic.car = car
                 world.controls.press("spawn_4")
                 world.step(config.FIXED_DT)

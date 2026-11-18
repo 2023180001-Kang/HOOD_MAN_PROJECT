@@ -7,7 +7,6 @@ from drop_items import spawn_drop_items
 from enemy import Enemy
 from enemy02 import Enemy02
 from spawn_manager import SpawnManager
-from traffic import Traffic
 from walkable import WalkableArea, for_stage
 
 
@@ -31,7 +30,7 @@ class Stage:
                                     attack_sequence=attack_sequence,
                                     enemy_type=Enemy02 if self.image_name in config.ENEMY02_STAGE_IMAGES
                                     else Enemy)
-        self.traffic = Traffic(rng=traffic_rng) if self.image_name == config.CAR_STAGE_IMAGE else None
+        self.traffic = None  # Road traffic is retired; no stage creates cars.
 
     def constrain_actor(self, actor):
         actor.walkable = self.walkable

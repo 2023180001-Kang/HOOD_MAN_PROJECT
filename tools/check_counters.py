@@ -18,7 +18,6 @@ from enemy import Enemy
 from game import Game
 from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, tick
-from traffic import Car
 from world import World
 
 
@@ -293,14 +292,13 @@ def check_hold_inputs_and_interruptions(game):
     push_key(pico2d.SDLK_j)
     tick(game)
     wait_for_hold(game)
-    game.world.stage.traffic.car = Car(game.world.player.x, 1, 1400)
-    tick(game)
-    assert game.world.counter is None and game.world.player.hp == enemy.hp == 0
-    assert game.world.player.state == enemy.state == "CAR_HIT"
-    capture(game, "counter_carried_pair_vehicle_hit")
+    tick(game, 60)
+    assert game.world.stage.traffic is None and game.world.counter.holding
+    assert (game.world.player.hp, enemy.hp) == (500, 200)
+    capture(game, "counter_carried_pair_city_no_traffic")
     release(game, pico2d.SDLK_j)
     print("PASS: early/held/repeated A and other attacks do not finish automatically; "
-          "normal damage releases the hold, F5 clears it, vehicles kill the carried pair.")
+          "normal damage releases the hold, F5 clears it, and the retired city traffic stays absent.")
 
 
 def check_carry_edges_and_performance(game):

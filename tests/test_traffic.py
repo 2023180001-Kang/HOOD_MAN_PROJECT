@@ -11,8 +11,10 @@ from world import World
 
 
 def city_world():
+    """Explicitly inject retired traffic to retain legacy collision coverage."""
     world = World(rng=random.Random(7), traffic_rng=random.Random(11))
     world.stage_index = 2
+    world.stage.traffic = Traffic(rng=world.traffic_rng)
     world.enemies.clear()  # Vehicle scenarios arrange their own collision targets.
     world.player.ground_y = config.CAR_GROUND_Y
     return world
@@ -25,11 +27,8 @@ def place_car(world, direction=1, *, x=None, speed=600):
 
 
 class TrafficTests(unittest.TestCase):
-    def test_only_city_stage_one_has_traffic_and_it_waits_before_the_first_pass(self):
-        world = World()
-        self.assertEqual([index for index, stage in enumerate(world.stages)
-                          if stage.traffic is not None], [2])
-        traffic = world.stages[2].traffic
+    def test_explicit_legacy_traffic_waits_before_the_first_pass(self):
+        traffic = Traffic()
         traffic.update(config.CAR_INITIAL_DELAY - config.FIXED_DT)
         self.assertIsNone(traffic.car)
         traffic.update(config.FIXED_DT)
@@ -285,8 +284,7 @@ class TrafficTests(unittest.TestCase):
         self.assertFalse(world.player.car_hit)
         self.assertEqual(world.player.sprite_image, config.PLAYER_IMAGE)
         self.assertIsNot(world.stages[2].traffic, traffic)
-        self.assertIsNone(world.stages[2].traffic.car)
-        self.assertEqual(world.stages[2].traffic.spawn_remaining, config.CAR_INITIAL_DELAY)
+        self.assertIsNone(world.stages[2].traffic)
 
     def test_seeded_traffic_and_death_are_identical_at_different_render_frame_rates(self):
         results = []

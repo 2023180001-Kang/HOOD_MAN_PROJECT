@@ -245,9 +245,19 @@ METAL_CLUB_ITEM_SCALE = 0.25
 METAL_CLUB_ITEM_BODY_BOUNDS = (
     (50, 211), (50, 204), (46, 199), (48, 202), (53, 209), (52, 211),
 )
-METAL_CLUB_ITEM_HALF_WIDTH = 28.0
-METAL_CLUB_ITEM_HEIGHT = (max(bottom - top for top, bottom in METAL_CLUB_ITEM_BODY_BOUNDS)
-                         * METAL_CLUB_ITEM_SCALE)
+# Counterclockwise radians and rotated alpha bounds about each source clip's
+# center: angle, left, bottom, right, top. Level the original diagonal artwork
+# without changing the PNG, then center its visible width and pin it to the floor.
+METAL_CLUB_ITEM_HORIZONTAL_POSES = (
+    (0.54830745, -119.44, -35.96, 120.82, 35.39),
+    (0.51862127, -117.35, -35.40, 120.69, 35.53),
+    (0.50965952, -117.17, -35.10, 119.92, 35.87),
+    (0.51067907, -117.79, -35.69, 119.85, 36.11),
+    (0.52597726, -119.21, -35.75, 120.35, 34.88),
+    (0.54092073, -118.94, -36.23, 120.82, 35.03),
+)
+METAL_CLUB_ITEM_HALF_WIDTH = 31.0
+METAL_CLUB_ITEM_HEIGHT = 19.0
 METAL_CLUB_DROP_HEIGHT = 70.0
 WEAPON_PICKUP_RANGE = 72.0
 WEAPON_PICKUP_DEPTH = 32.0

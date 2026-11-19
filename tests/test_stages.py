@@ -40,7 +40,7 @@ class StageTests(unittest.TestCase):
         self.assertEqual(world.player.jump_height, 0)
         self.assertEqual(world.player.ground_vy, 0)
         self.assertTrue(all(world.stage.drop_spawn_area.contains(item.x, item.ground_y)
-                            for item in world.stage.drop_items))
+                            for item in world.stage.drop_items if item.floor == 0))
         enemies = world.spawner.spawn(40, world.elapsed)
         self.assertTrue(any(enemy.ground_y > 120 for enemy in enemies))
         for enemy in enemies:

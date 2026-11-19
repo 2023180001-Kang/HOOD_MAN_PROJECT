@@ -30,6 +30,13 @@ def difference(image, baseline):
     return ImageChops.difference(image.convert("RGB"), baseline.convert("RGB"))
 
 
+def tap(game, key):
+    push_key(key)
+    tick(game)
+    push_key(key, down=False)
+    game.handle_events()
+
+
 def check_city_sidewalk_pixels(game, image, baseline):
     # Measure against the artwork's paving, independently of the spawn bounds:
     # source rows 736..774 exclude the buildings, curb lip and roadway.
@@ -105,6 +112,10 @@ def check_sheets(game):
 def check_all_stages(game):
     game.world = World(item_rng=random.Random(20261115))
     world = game.world
+    # The attack/help panels cover part of the upper walkway, so inspect the
+    # floor pixels with the existing U-hide mode rather than testing the HUD.
+    details_visible = game.ui.details_visible
+    game.ui.details_visible = False
     arrow_edge = ceil(config.STAGE_EXIT_MARGIN + config.STAGE_ARROW_WIDTH / 2
                       + config.STAGE_ARROW_SWAY_AMPLITUDE)
     counts = []
@@ -114,7 +125,11 @@ def check_all_stages(game):
         counts.append(len(stage.drop_items))
         assert counts[-1] == 15
         assert {item.kind for item in stage.drop_items} == {"combat_knife", "steel_pipe"}
-        _, bottom, _, top = stage.drop_spawn_area.bounds
+        areas = (stage.drop_spawn_area, *stage.floor_areas[1:])
+        for floor_index, area in enumerate(areas):
+            items = [item for item in stage.drop_items if item.floor == floor_index]
+            assert len(items) == (8 - floor_index if len(areas) == 2 else 15)
+            assert {item.kind for item in items} == set(config.DROP_ITEM_IMAGES)
         for side in (-1, 1):
             game.handle_events()
             world.player.x = 80 if side < 0 else config.WORLD_WIDTH - 80
@@ -124,8 +139,16 @@ def check_all_stages(game):
             delta = difference(image, baseline)
             box = delta.getbbox()
             assert box is not None
-            assert box[1] >= floor(config.SCREEN_HEIGHT - top) - 1
-            assert box[3] <= ceil(config.SCREEN_HEIGHT - bottom) + 1
+            draw_item = game.assets.draw_drop_item
+            for floor_index, area in enumerate(areas):
+                with patch.object(game.assets, "draw_drop_item", side_effect=lambda item, cx, cy:
+                                  draw_item(item, cx, cy) if item.floor == floor_index else None):
+                    floor_delta = difference(render_image(game), baseline)
+                box = floor_delta.getbbox()
+                assert box is not None
+                _, bottom, _, top = area.bounds
+                assert box[1] >= floor(config.SCREEN_HEIGHT - top) - 1
+                assert box[3] <= ceil(config.SCREEN_HEIGHT - bottom) + 1
             if stage.image_name == "cityStage-1.png":
                 check_city_sidewalk_pixels(game, image, baseline)
             exit_box = ((0, 0, arrow_edge + 1, config.SCREEN_HEIGHT) if side < 0 else
@@ -140,10 +163,49 @@ def check_all_stages(game):
                                        floor(y - config.DROP_ITEM_HEIGHT),
                                        ceil(x + config.DROP_ITEM_HALF_WIDTH),
                                        ceil(y + config.DROP_ITEM_SHADOW_HALF_DEPTH)))
-                    assert crop.getbbox() is not None
+                    assert crop.getbbox() is not None, (stage.image_name, item.floor, item.x, item.ground_y)
+    game.ui.details_visible = details_visible
     print(f"PASS: all {len(world.stages)} stage layouts have 15 total drops ({counts}); actual floor pixels "
-          "fit each map, cityStage-1 weapons/shadows stay on the sidewalk with no road "
+          "fit each floor (8 downstairs / 7 upstairs on the first map), cityStage-1 "
+          "weapons/shadows stay on the sidewalk with no road "
           "pixels, both exit areas stay clear, and both map halves render correctly.")
+
+
+def check_upper_floor_pickup(game):
+    for kind in config.DROP_ITEM_IMAGES:
+        game.world = World(item_rng=random.Random(20261119))
+        world = game.world
+        item = next(item for item in world.stage.drop_items if item.floor == 1 and item.kind == kind)
+        player = world.player
+        player.floor = 1
+        player.x = player.previous_x = item.x
+        player.ground_y = player.previous_ground_y = item.ground_y
+        world.stage.constrain_actor(player)
+        world.camera.update(0, player.x)
+        assert world.pickup_item is item
+        with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
+            capture(game, f"drop_upstairs_{kind}_pickup")
+        assert any(call.args[2] == "G" for call in text.call_args_list)
+        tap(game, pico2d.SDLK_g)
+        assert (player.floor, player.weapon) == (1, kind)
+        assert item not in world.stage.drop_items and len(world.stage.drop_items) == 14
+        capture(game, f"drop_upstairs_{kind}_equipped")
+        tap(game, pico2d.SDLK_g)
+        discarded = world.stage.drop_items[-1]
+        assert player.weapon is None and discarded.floor == 1 and not discarded.grounded
+        tick(game, 60)
+        assert discarded.grounded and world.pickup_item is discarded
+        tap(game, pico2d.SDLK_g)
+        assert player.weapon == kind and discarded not in world.stage.drop_items
+        items = world.stage.drop_items
+        clocks = [item.elapsed for item in items]
+        world.select_stage(1)
+        tick(game, 30)
+        world.select_stage(0)
+        assert world.stage.drop_items is items and len(items) == 14
+        assert [item.elapsed for item in items] == clocks
+    print("PASS: generated upstairs knife/pipe show G, equip through real SDL G, "
+          "discard/fall/re-equip on floor 2, and stay depleted/paused across stage visits.")
 
 
 def check_restart(game):
@@ -156,6 +218,8 @@ def check_restart(game):
     assert game.world.stage_index == 0
     assert all(stage.drop_items is not old and len(stage.drop_items) == 15
                for stage, old in zip(game.world.stages, previous))
+    assert [sum(item.floor == floor for item in game.world.stage.drop_items)
+            for floor in (0, 1)] == [8, 7]
     city = game.world.stages[config.STAGE_IMAGES.index("cityStage-1.png")]
     assert all(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 123
                and item.ground_y + config.DROP_ITEM_HEIGHT <= 161
@@ -171,7 +235,8 @@ def check_restart(game):
         image = capture(game, f"city_sidewalk_drops_restarted_{'left' if side < 0 else 'right'}")
         check_city_sidewalk_pixels(game, image, baseline)
     print(f"PASS: actual SDL F5 replaces all {len(game.world.stages)} item lists "
-          "and reuses both shared textures; city drops stay above the curb in both views.")
+          "and restores both first-map floors with shared textures; city drops stay above "
+          "the curb in both views.")
 
 
 def main():
@@ -183,6 +248,7 @@ def main():
         game.handle_events()
         check_sheets(game)
         check_all_stages(game)
+        check_upper_floor_pickup(game)
         check_restart(game)
     finally:
         if game is not None:

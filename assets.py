@@ -98,11 +98,12 @@ class Assets:
             top, bottom = config.METAL_CLUB_ITEM_BODY_BOUNDS[item.frame]
             height = bottom - top
             scale = config.METAL_CLUB_ITEM_SCALE
+            angle, left, base, right, _ = config.METAL_CLUB_ITEM_HORIZONTAL_POSES[item.frame]
             image.clip_composite_draw(
                 item.frame * cell, image.h - bottom, cell, height,
-                0, "h" if item.facing < 0 else "",
-                item.x - camera_x,
-                item.ground_y + item.jump_height - camera_y + height * scale / 2,
+                angle * item.facing, "h" if item.facing < 0 else "",
+                item.x - camera_x - (left + right) * scale / 2 * item.facing,
+                item.ground_y + item.jump_height - camera_y - base * scale,
                 cell * scale, height * scale,
             )
             return

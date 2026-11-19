@@ -10,7 +10,8 @@ from world import World
 
 
 def layout(stage):
-    return [(item.kind, item.x, item.ground_y, item.facing) for item in stage.drop_items]
+    return [(item.kind, item.x, item.ground_y, item.facing, item.floor)
+            for item in stage.drop_items]
 
 
 class DropItemTests(unittest.TestCase):
@@ -26,6 +27,83 @@ class DropItemTests(unittest.TestCase):
                 layouts.add(tuple(layout(stage)))
         self.assertEqual(counts, {15})
         self.assertEqual(len(layouts), 32 * len(config.STAGE_IMAGES))
+
+    def test_first_stage_splits_items_between_both_floors_and_keeps_both_kinds_on_each(self):
+        for seed in range(32):
+            world = World(item_rng=random.Random(seed))
+            for floor, count in ((0, 8), (1, 7)):
+                items = [item for item in world.stage.drop_items if item.floor == floor]
+                self.assertEqual(len(items), count)
+                self.assertEqual({item.kind for item in items}, set(config.DROP_ITEM_IMAGES))
+                self.assertTrue(all(item.grounded for item in items))
+            self.assertTrue(all(item.floor == 0 for stage in world.stages[1:]
+                                for item in stage.drop_items))
+
+    def test_generated_upper_floor_weapons_can_be_picked_up_with_g(self):
+        for kind in config.DROP_ITEM_IMAGES:
+            with self.subTest(kind=kind):
+                world = World(item_rng=random.Random(5))
+                upstairs = [item for item in world.stage.drop_items if item.floor == 1]
+                self.assertTrue(upstairs)
+                item = next(item for item in upstairs if item.kind == kind)
+                player = world.player
+                player.floor = 1
+                player.x, player.ground_y = item.x, item.ground_y
+                world.stage.constrain_actor(player)
+                self.assertIs(world.pickup_item, item)
+                world.controls.press("weapon_interact")
+                world.step(config.FIXED_DT)
+                self.assertEqual((player.floor, player.weapon), (1, kind))
+                self.assertNotIn(item, world.stage.drop_items)
+                self.assertEqual(len(world.stage.drop_items), 14)
+
+    def test_generated_weapons_cannot_be_picked_up_from_a_different_floor(self):
+        for floor in (0, 1):
+            world = World(item_rng=random.Random(5))
+            candidates = [item for item in world.stage.drop_items if item.floor != floor]
+            self.assertTrue(candidates)
+            item = candidates[0]
+            world.player.floor = floor
+            # Equal coordinates deliberately isolate the floor-ID check.
+            world.player.x, world.player.ground_y = item.x, item.ground_y
+            self.assertIsNone(world.pickup_item)
+            self.assertFalse(world.interact_weapon())
+            self.assertIn(item, world.stage.drop_items)
+
+    def test_upper_floor_pickup_is_preserved_on_return_and_reset_by_f5(self):
+        world = World(item_rng=random.Random(5))
+        upstairs = [item for item in world.stage.drop_items if item.floor == 1]
+        self.assertTrue(upstairs)
+        item = upstairs[0]
+        world.player.floor = 1
+        world.player.x, world.player.ground_y = item.x, item.ground_y
+        world.controls.press("weapon_interact")
+        world.step(config.FIXED_DT)
+        items = world.stage.drop_items
+        original = layout(world.stage)
+        clocks = [item.elapsed for item in items]
+        world.select_stage(1)
+        advance(world, 0.5)
+        world.select_stage(0)
+        self.assertIs(world.stage.drop_items, items)
+        self.assertEqual(layout(world.stage), original)
+        self.assertEqual([item.elapsed for item in items], clocks)
+        self.assertNotIn(item, items)
+        self.assertEqual(len(items), 14)
+        tap(world.controls, "restart")
+        world.update(config.FIXED_DT)
+        self.assertEqual([sum(item.floor == floor for item in world.stage.drop_items)
+                          for floor in (0, 1)], [8, 7])
+        self.assertIsNone(world.player.weapon)
+        self.assertFalse(any(new is old for new in world.stage.drop_items for old in items))
+
+    def test_items_on_both_floors_stay_grounded_without_falling_or_moving_between_floors(self):
+        world = World(item_rng=random.Random(5))
+        self.assertEqual({item.floor for item in world.stage.drop_items}, {0, 1})
+        original = layout(world.stage)
+        advance(world, 2)
+        self.assertEqual(layout(world.stage), original)
+        self.assertTrue(all(item.grounded for item in world.stage.drop_items))
 
     def test_all_visible_frames_and_shadows_fit_the_floor_and_avoid_swaying_arrows(self):
         bounds = {}
@@ -58,9 +136,11 @@ class DropItemTests(unittest.TestCase):
                 self.assertFalse(stage.arrows_visible)
                 if stage.image_name != "cityStage-1.png":
                     self.assertIs(stage.drop_spawn_area, stage.walkable)
-                previous_right = None
+                previous_right = {}
                 for item in stage.drop_items:
-                    self.assertTrue(stage.walkable.contains(item.x, item.ground_y))
+                    area = (stage.drop_spawn_area if item.floor == 0
+                            else stage.floor_areas[item.floor])
+                    self.assertTrue(stage.floor_areas[item.floor].contains(item.x, item.ground_y))
                     for parts in bounds[item.kind]:
                         for (left, top, right, bottom), anchor in parts:
                             xs = [(left - 128) * config.DROP_ITEM_SCALE * item.facing,
@@ -70,7 +150,7 @@ class DropItemTests(unittest.TestCase):
                             visible_top = item.ground_y + (anchor - top) * config.DROP_ITEM_SCALE
                             for x in (visible_left, visible_right):
                                 for y in (visible_bottom, visible_top):
-                                    self.assertTrue(stage.drop_spawn_area.contains(x, y))
+                                    self.assertTrue(area.contains(x, y))
                             if stage.image_name == "cityStage-1.png":
                                 # Source pavement rows 736..774 map to y=123..161,
                                 # above the curb; the old y=100 floor line is too low.
@@ -79,9 +159,10 @@ class DropItemTests(unittest.TestCase):
                             self.assertGreaterEqual(visible_left, arrow_edge + config.DROP_ITEM_EXIT_GAP)
                             self.assertLessEqual(visible_right,
                                                  config.WORLD_WIDTH - arrow_edge - config.DROP_ITEM_EXIT_GAP)
-                    if previous_right is not None:
-                        self.assertGreater(item.x - config.DROP_ITEM_HALF_WIDTH, previous_right)
-                    previous_right = item.x + config.DROP_ITEM_HALF_WIDTH
+                    if item.floor in previous_right:
+                        self.assertGreater(item.x - config.DROP_ITEM_HALF_WIDTH,
+                                           previous_right[item.floor])
+                    previous_right[item.floor] = item.x + config.DROP_ITEM_HALF_WIDTH
                 original = layout(stage)
                 stage.arrows_visible = True
                 self.assertEqual(layout(stage), original)

@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 import pico2d
 
 import config
-from drop_items import MetalClubDrop
+from drop_items import DropItem, MetalClubDrop
 from enemy import Enemy
 from enemy02 import Enemy02
 from game import Game
@@ -38,7 +38,7 @@ def check_source_frames(game):
     assert (texture.w, texture.h) == (1536, 256)
     world.camera.offset_x, world.camera.offset_y = 4, -3
     for facing in (-1, 1):
-        item = MetalClubDrop(world.player.x - 220, 90, facing)
+        item = MetalClubDrop(world.player.x - 220, 90, facing, jump_height=70)
         world.stage.drop_items = [item]
         with patch.object(game.assets, "draw_drop_item"):
             baseline = render_image(game)
@@ -49,19 +49,31 @@ def check_source_frames(game):
                          if frame == 3 else render_image(game))
             draw.assert_called_once()
             args = draw.call_args.args
+            angle, left, base, right, _ = config.METAL_CLUB_ITEM_HORIZONTAL_POSES[frame]
+            scale = config.METAL_CLUB_ITEM_SCALE
             assert args[:4] == (frame * 256, 256 - bottom, 256, bottom - top)
+            assert args[4] == angle * facing
             assert args[5] == ("h" if facing < 0 else "")
-            assert args[6] == item.x - world.camera.render_x
-            assert args[7] - args[9] / 2 == item.ground_y - world.camera.render_y
+            assert args[6] == item.x - world.camera.render_x - (left + right) * scale / 2 * facing
+            assert abs(args[7] + base * scale
+                       - item.ground_y - item.jump_height + world.camera.render_y) < 1e-9
             delta = ImageChops.difference(image.convert("RGB"), baseline.convert("RGB"))
             box = delta.getbbox()
             assert box is not None
-            assert abs(box[3] - (config.SCREEN_HEIGHT - item.ground_y
+            assert box[2] - box[0] >= 3 * (box[3] - box[1])
+            assert abs(box[3] - (config.SCREEN_HEIGHT - item.ground_y - item.jump_height
                                 + world.camera.render_y)) <= 2
     item.jump_height = 70
     capture(game, "metal_club_airborne")
-    print("PASS: supplied MetalClub 1536x256 sheet, all 6 frames/both facings; "
-          "exact clips, 0.25 scale, fixed floor contact and camera offsets; airborne drawing works.")
+    world.stage.drop_items = [
+        DropItem("combat_knife", world.player.x - 360, 90),
+        DropItem("steel_pipe", world.player.x - 240, 90),
+        MetalClubDrop(world.player.x - 120, 90),
+    ]
+    capture(game, "metal_club_horizontal_comparison")
+    print("PASS: supplied MetalClub 1536x256 sheet, all 6 airborne frames/both facings; "
+          "horizontal silhouettes, mirrored rotations, exact clips, 0.25 scale, "
+          "floor contact and camera offsets; knife/pipe/club align on the same floor.")
 
 
 def kill_with_s(game, enemy_type=Enemy, *, floor=0):
@@ -103,6 +115,16 @@ def check_death_and_no_pickup(game):
     capture(game, "metal_club_death_landed")
     # Isolate the new non-collectible club from the existing collectible layout.
     world.stage.drop_items[:] = [item]
+    position = item.x, item.ground_y
+    with patch.object(game.assets, "draw_sprite"), patch.object(game.ui, "draw"):
+        baseline = render_image(game).convert("RGB")
+        for _ in range(12):
+            tick(game, 10)
+            assert item.frame == 0 and (item.x, item.ground_y) == position
+            assert ImageChops.difference(render_image(game).convert("RGB"), baseline).getbbox() is None
+    capture(game, "metal_club_grounded_still")
+    print("PASS: landed MetalClub stays on frame 0 at the same position; "
+          "rendered pixels remain identical across 2 seconds of simulation.")
     world.player.x, world.player.ground_y = item.x, item.ground_y
     world.player.vx = world.player.ground_vy = 0
     assert world.pickup_item is None
@@ -124,7 +146,7 @@ def check_type_floor_and_restart(game):
     item = clubs(world)[0]
     assert item.floor == 1
     tick(game, 40)
-    assert item.grounded and item.floor == 1
+    assert item.grounded and item.floor == 1 and item.frame == 0
     capture(game, "metal_club_upstairs")
     textures = dict(game.assets.images)
     push_key(pico2d.SDLK_F5)

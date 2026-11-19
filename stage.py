@@ -35,7 +35,8 @@ class Stage:
         drop_bounds = config.STAGE_DROP_ITEM_SPAWN_BOUNDS.get(self.image_name)
         self.drop_spawn_area = (WalkableArea.rectangle(*drop_bounds) if drop_bounds is not None
                                 else self.walkable)
-        self.drop_items = spawn_drop_items(self.drop_spawn_area, rng=item_rng)
+        self.drop_items = spawn_drop_items(self.drop_spawn_area, rng=item_rng,
+                                          upper_walkable=self.upper_walkable)
         spawn_bounds = config.STAGE_ENEMY_SPAWN_BOUNDS.get(self.image_name)
         self.spawn_area = (WalkableArea.rectangle(*spawn_bounds) if spawn_bounds is not None
                            else self.walkable)
@@ -160,6 +161,9 @@ class Stage:
             for actor in tuple(stair.occupants):
                 if actor not in actors or not actor.alive or not player.alive:
                     stair.release(actor)
+        if player.staircase is not None:
+            # Route enemies toward the new destination on the reversal tick.
+            player.staircase.set_player_direction(player, controls.depth_direction)
         destination = (player.staircase.destination_floor if player.staircase else player.floor)
         if player.alive:
             self.assign_descent_routes(destination)
@@ -208,7 +212,7 @@ class Stage:
             stair.start_next()
         moved = set()
         for stair in self.stairs:
-            moved.update(stair.update(dt))
+            moved.update(stair.update(dt, player=player, direction=controls.depth_direction))
         for actor in moved:
             self.constrain_actor(actor)
         return moved

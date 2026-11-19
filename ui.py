@@ -203,10 +203,11 @@ class UI:
             if world.stage.doors:
                 assets.font.draw(22, y - 70, "F3 문 / 창고문 열기·닫기", (205, 218, 231))
             if world.stage.stairs:
-                floor_label = ("계단 이동 중" if world.player.staircase else
+                floor_label = ("계단 정지 중" if world.player.staircase and world.player.state == "IDLE" else
+                               "계단 이동 중" if world.player.staircase else
                                "1층으로 낙하 중" if world.player.falling_from_upper else
                                f"{world.player.floor + 1}층")
-                assets.font.draw(22, y - 94, f"{floor_label} · 계단 ↑/↓ · 주인공 단독 / 적 줄지어 이동",
+                assets.font.draw(22, y - 94, f"{floor_label} · 계단 ↑/↓ 이동·반전 / 키 놓기: 정지",
                                  (180, 255, 150))
                 assets.font.draw(22, y - 118, "이단 점프 후 ↑: 2층 착지 · 2층 앞쪽 끝 ↓: 낙하",
                                  (180, 255, 150))

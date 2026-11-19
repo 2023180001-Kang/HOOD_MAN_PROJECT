@@ -32,9 +32,11 @@ def opened_world(seed=41):
 def begin_player_stairs(world, floor=0):
     stair = world.stage.stairs[0]
     place(world, world.player, floor, *stair.entrance(floor))
+    world.controls.release("up")
+    world.controls.release("down")
     world.controls.press("up" if floor == 0 else "down")
     world.step(config.FIXED_DT)
-    world.controls.release("up" if floor == 0 else "down")
+    # A full-trip fixture keeps the direction held; releasing now pauses.
     return stair
 
 
@@ -518,6 +520,7 @@ class StairAndFloorTests(unittest.TestCase):
 
     def test_weapon_drop_and_pickup_stay_on_the_second_floor(self):
         world = World()
+        world.stage.drop_items.clear()  # Isolate discarding from nearby initial weapons.
         place(world, world.player, 1, 1280, 476)
         world.player.equip_weapon("steel_pipe")
         self.assertTrue(world.interact_weapon())
@@ -529,7 +532,7 @@ class StairAndFloorTests(unittest.TestCase):
         self.assertTrue(world.interact_weapon())
         self.assertEqual(world.player.weapon, "steel_pipe")
         self.assertNotIn(item, world.stage.drop_items)
-        self.assertEqual(len(world.stage.drop_items), 15)
+        self.assertEqual(len(world.stage.drop_items), 0)
 
     def test_f4_includes_the_stair_path_and_both_floors_without_changing_gameplay(self):
         world = World()

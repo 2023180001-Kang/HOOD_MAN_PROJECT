@@ -1,4 +1,5 @@
 import random
+from math import cos, sin
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock
@@ -276,14 +277,114 @@ class EnemyDeathDropTests(unittest.TestCase):
 
 
 class MetalClubDropRenderingTests(unittest.TestCase):
-    def test_original_six_frame_sheet_bounds_and_loop(self):
+    def test_club_long_axis_is_horizontal_in_both_facings_on_the_floor_and_in_the_air(self):
+        image = SimpleNamespace(h=256, clip_composite_draw=Mock())
+        assets = Assets.__new__(Assets)
+        assets.images = {config.METAL_CLUB_ITEM_IMAGE: image}
+        with Image.open(config.ROOT / config.METAL_CLUB_ITEM_IMAGE) as source:
+            alpha = source.getchannel("A")
+            for facing in (-1, 1):
+                for height, frame in [(0, 0), *[(60, f) for f in range(6)]]:
+                    with self.subTest(facing=facing, height=height, frame=frame):
+                        item = MetalClubDrop(500, 90, facing, jump_height=height)
+                        item.elapsed = frame / config.DROP_ITEM_FPS
+                        assets.draw_drop_item(item, 120, -3)
+                        angle = image.clip_composite_draw.call_args.args[4]
+                        top, bottom = config.METAL_CLUB_ITEM_BODY_BOUNDS[frame]
+                        tile = alpha.crop((frame * 256, top, (frame + 1) * 256, bottom))
+                        points = []
+                        for y in range(bottom - top):
+                            for x in range(256):
+                                if tile.getpixel((x, y)) < 64:
+                                    continue
+                                px = (x + 0.5 - 128) * facing
+                                py = (bottom - top) / 2 - y - 0.5
+                                points.append((px * cos(angle) - py * sin(angle),
+                                               px * sin(angle) + py * cos(angle)))
+                        mean_x = sum(x for x, _ in points) / len(points)
+                        mean_y = sum(y for _, y in points) / len(points)
+                        spread_x = sum((x - mean_x) ** 2 for x, _ in points)
+                        spread_y = sum((y - mean_y) ** 2 for _, y in points)
+                        covariance = sum((x - mean_x) * (y - mean_y) for x, y in points)
+                        self.assertGreater(spread_x, spread_y * 10)
+                        self.assertLess(abs(covariance), spread_x * 0.001)
+
+    def test_grounded_club_keeps_one_pose_as_its_clock_advances(self):
+        for facing in (-1, 1):
+            item = MetalClubDrop(500, 90, facing)
+            for _ in range(24):
+                item.update(1 / config.DROP_ITEM_FPS)
+                self.assertEqual(item.frame, 0)
+                self.assertEqual((item.x, item.ground_y, item.jump_height, item.vy),
+                                 (500, 90, 0, 0))
+
+    def test_horizontal_silhouettes_stay_centered_and_inside_the_landing_envelope(self):
+        image = SimpleNamespace(h=256, clip_composite_draw=Mock())
+        assets = Assets.__new__(Assets)
+        assets.images = {config.METAL_CLUB_ITEM_IMAGE: image}
+        with Image.open(config.ROOT / config.METAL_CLUB_ITEM_IMAGE) as source:
+            alpha = source.getchannel("A")
+            for facing in (-1, 1):
+                for frame, (top, bottom) in enumerate(config.METAL_CLUB_ITEM_BODY_BOUNDS):
+                    item = MetalClubDrop(500, 90, facing, jump_height=60)
+                    item.elapsed = frame / config.DROP_ITEM_FPS
+                    assets.draw_drop_item(item, 120, -3)
+                    args = image.clip_composite_draw.call_args.args
+                    angle, center_x, center_y = args[4], args[6], args[7]
+                    scale = config.METAL_CLUB_ITEM_SCALE
+                    tile = alpha.crop((frame * 256, top, (frame + 1) * 256, bottom))
+                    points = []
+                    for y in range(bottom - top):
+                        for x in range(256):
+                            if tile.getpixel((x, y)) == 0:
+                                continue
+                            for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)):
+                                px = (x + dx - 128) * facing * scale
+                                py = ((bottom - top) / 2 - y - dy) * scale
+                                points.append((center_x + px * cos(angle) - py * sin(angle),
+                                               center_y + px * sin(angle) + py * cos(angle)))
+                    left, right = min(x for x, _ in points), max(x for x, _ in points)
+                    base, high = min(y for _, y in points), max(y for _, y in points)
+                    self.assertAlmostEqual((left + right) / 2, 380, delta=0.01)
+                    self.assertAlmostEqual(base, 153, delta=0.01)
+                    self.assertGreaterEqual(left, 380 - config.METAL_CLUB_ITEM_HALF_WIDTH)
+                    self.assertLessEqual(right, 380 + config.METAL_CLUB_ITEM_HALF_WIDTH)
+                    self.assertLessEqual(high, 153 + config.METAL_CLUB_ITEM_HEIGHT)
+
+    def test_landing_stops_animation_from_every_airborne_frame(self):
+        for frame in range(config.METAL_CLUB_ITEM_FRAMES):
+            with self.subTest(frame=frame):
+                item = MetalClubDrop(500, 90, jump_height=1)
+                item.elapsed = frame / config.DROP_ITEM_FPS
+                item.vy = -100
+                self.assertEqual(item.frame, frame)
+                item.update(1 / 60)
+                self.assertTrue(item.grounded)
+                self.assertEqual(item.frame, 0)
+                item.update(2)
+                self.assertEqual(item.frame, 0)
+
+    def test_grounded_draw_calls_remain_identical_between_animation_ticks(self):
+        image = SimpleNamespace(h=256, clip_composite_draw=Mock())
+        assets = Assets.__new__(Assets)
+        assets.images = {config.METAL_CLUB_ITEM_IMAGE: image}
+        for facing in (-1, 1):
+            item = MetalClubDrop(500, 90, facing)
+            assets.draw_drop_item(item, 120, -3)
+            original = image.clip_composite_draw.call_args
+            for _ in range(12):
+                item.update(1 / config.DROP_ITEM_FPS)
+                assets.draw_drop_item(item, 120, -3)
+                self.assertEqual(image.clip_composite_draw.call_args, original)
+
+    def test_original_six_frame_sheet_bounds_and_airborne_loop(self):
         with Image.open(config.ROOT / config.METAL_CLUB_ITEM_IMAGE) as image:
             self.assertEqual((image.size, image.mode), ((1536, 256), "RGBA"))
             alpha = image.getchannel("A")
             for frame, (top, bottom) in enumerate(config.METAL_CLUB_ITEM_BODY_BOUNDS):
                 bounds = alpha.crop((frame * 256, 0, (frame + 1) * 256, 256)).getbbox()
                 self.assertEqual((bounds[1], bounds[3]), (top, bottom))
-        item = MetalClubDrop(500, 90)
+        item = MetalClubDrop(500, 90, jump_height=2000)
         frames = []
         for _ in range(8):
             frames.append(item.frame)
@@ -301,10 +402,12 @@ class MetalClubDropRenderingTests(unittest.TestCase):
                 assets.draw_drop_item(item, 120, -3)
                 height = bottom - top
                 scale = config.METAL_CLUB_ITEM_SCALE
+                angle, left, base, right, _ = config.METAL_CLUB_ITEM_HORIZONTAL_POSES[frame]
                 image.clip_composite_draw.assert_called_with(
                     frame * 256, 256 - bottom, 256, height,
-                    0, "h" if facing < 0 else "", 380,
-                    153 + height * scale / 2, 256 * scale, height * scale,
+                    angle * facing, "h" if facing < 0 else "",
+                    380 - (left + right) * scale / 2 * facing,
+                    153 - base * scale, 256 * scale, height * scale,
                 )
 
 

@@ -34,7 +34,8 @@ def floor_bounds(world):
         progress = list(stair.occupants.values())
         assert all(a - b >= config.STAIR_FOLLOW_DISTANCE - 1e-8
                    for a, b in zip(progress, progress[1:]))
-        assert all(actor.floor == 1 - stair.destination_floor for actor in stair.occupants)
+        assert all(actor is world.player or actor.floor == 1 - stair.destination_floor
+                   for actor in stair.occupants)
         if world.player in stair.occupants:
             assert len(stair.occupants) == 1
 
@@ -83,14 +84,17 @@ def check_player(game):
     player.x, player.ground_y = 238, 110
     push_key(pico2d.SDLK_UP)
     tick(game)
-    release(game, pico2d.SDLK_UP)
     assert player.staircase is not None
     tick(game, 55)
     floor_bounds(game.world)
     capture(game, "two_floors_player_climbing")
-    tick(game, 70)
+    for _ in range(180):
+        tick(game)
+        if player.staircase is None:
+            break
+    release(game, pico2d.SDLK_UP)
     assert player.floor == 1 and player.staircase is None
-    assert player.ground_y == 476
+    assert abs(player.ground_y - 476) < 1
     capture(game, "two_floors_player_upstairs")
     push_key(pico2d.SDLK_RIGHT)
     tick(game, 50)
@@ -114,13 +118,16 @@ def check_player(game):
     player.vx = player.ground_vy = 0
     push_key(pico2d.SDLK_DOWN)
     tick(game)
-    release(game, pico2d.SDLK_DOWN)
     assert player.staircase is not None
     tick(game, 55)
     capture(game, "two_floors_player_descending")
-    tick(game, 70)
+    for _ in range(180):
+        tick(game)
+        if player.staircase is None:
+            break
+    release(game, pico2d.SDLK_DOWN)
     floor_bounds(game.world)
-    assert player.floor == 0 and player.ground_y == 136
+    assert player.floor == 0 and abs(player.ground_y - 136) < 1
     print("PASS: SDL Up/Down follows the visible stairs in both directions; upstairs "
           "left/right/up/down and jumping stay on the independent upper walkway.")
 
@@ -131,7 +138,6 @@ def check_enemy_queue_and_reset(game):
     push_key(pico2d.SDLK_UP)
     push_key(pico2d.SDLK_p)
     tick(game)
-    release(game, pico2d.SDLK_UP)
     release(game, pico2d.SDLK_p)
     enemies = [Enemy(238 + 100 * index, ground_y=112) for index in range(5)]
     game.world.enemies = enemies
@@ -143,6 +149,8 @@ def check_enemy_queue_and_reset(game):
         tick(game)
         floor_bounds(game.world)
         if game.world.player.floor == 1 and game.world.player.staircase is None:
+            if "up" in game.world.controls.held:
+                release(game, pico2d.SDLK_UP)
             game.world.player.x = max(game.world.player.x, 1000)
         stair = game.world.stage.stairs[0]
         if len(stair.queue) >= 2:

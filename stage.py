@@ -8,6 +8,7 @@ from doors import StageDoor
 from drop_items import spawn_drop_items
 from enemy import Enemy
 from enemy02 import Enemy02
+from physics import clamp
 from spawn_manager import SpawnManager, SpawnPoint
 from stairs import Staircase, can_use_stairs
 from walkable import WalkableArea, for_stage
@@ -91,6 +92,45 @@ class Stage:
         for stair in self.stairs:
             stair.release(actor)
         actor.navigation_target = None
+
+    def exit_player_stairs(self, player, controls):
+        """Fresh Space/left/right detaches without changing the visible feet."""
+        if player.staircase is None:
+            return False
+        lateral = controls.take_latest_press(("left", "right"))
+        jumping = controls.take_press("jump")
+        if (not player.alive or player.state not in ("IDLE", "WALK")
+                or not (jumping or (lateral is not None and controls.direction))):
+            return False
+        feet = player.y
+        player.staircase.detach(player)
+        player.floor = int(self.upper_walkable is not None and feet >= self.upper_walkable.bounds[1])
+        area = self.area_for(player)
+        _, bottom, _, top = area.bounds
+        player.ground_y = clamp(feet, bottom, top)
+        player.previous_x = player.x
+        player.previous_ground_y = player.ground_y
+        player.jump_height = player.previous_jump_height = max(0.0, feet - player.ground_y)
+        player.walkable = area
+        player.vx = player.ground_vy = 0.0
+        player.vy = config.JUMP_SPEED if jumping else 0.0
+        player.jump_count = 1 if jumping else 2
+        player.air_kicks_used = 0
+        player.upper_landing_requested = False
+        player.falling_from_upper = not jumping and player.jump_height > 0
+        player.stair_regrab_remaining = config.STAIR_REGRAB_DELAY
+        player.animation.set_state("JUMP" if jumping or not player.grounded else "IDLE")
+        player.animation.elapsed = 0.0
+        return True
+
+    def try_player_stair_catch(self, player):
+        if (not player.alive or player.staircase is not None or player.stair_regrab_remaining > 0
+                or player.jump_count != 1 or player.vy > 0
+                or player.jump_height < config.STAIR_JUMP_CATCH_MIN_HEIGHT
+                or player.falling_from_upper or player.counter_move is not None
+                or player.active_move is not None or player.state != "JUMP"):
+            return False
+        return any(stair.catch_player(player) for stair in self.stairs)
 
     def prepare_player_double_jump(self, player):
         """Reach the upper ledge even with an early second Space press."""
@@ -188,7 +228,8 @@ class Stage:
             if enemy.floor != destination and (
                     enemy in stair.queue or stair.distance_to_entry(enemy) <= config.STAIR_QUEUE_RADIUS):
                 requests[stair].append(enemy)
-        if can_use_stairs(player) and controls.direction == 0:
+        if (can_use_stairs(player) and player.stair_regrab_remaining <= 0
+                and controls.direction == 0):
             direction = 1 if player.floor == 0 else -1
             if controls.depth_direction == direction:
                 for stair in self.stairs:

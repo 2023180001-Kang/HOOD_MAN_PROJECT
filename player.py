@@ -28,6 +28,7 @@ class Player:
         self.floor = 0
         self.staircase = None
         self.stair_arrival = False
+        self.stair_regrab_remaining = 0.0
         self.upper_landing_requested = False
         self.falling_from_upper = False
         self.navigation_target = None

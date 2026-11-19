@@ -61,15 +61,52 @@ class Staircase:
                     or min(self.occupants.values()) + 1e-9 < config.STAIR_FOLLOW_DISTANCE):
                 return
         self.queue.pop(0)
-        self.occupants[actor] = 0.0
+        self._enter(actor, 0.0)
+
+    def _enter(self, actor, progress):
+        self.occupants[actor] = progress
         self.destination_floor = 1 - actor.floor
         actor.staircase = self
         actor.stair_arrival = False
-        actor.x, actor.ground_y = self.entrance(actor.floor)
+        distance = progress if actor.floor == 0 else self.length - progress
+        actor.x, actor.ground_y = self.point_at(distance)
         actor.previous_x, actor.previous_ground_y = actor.x, actor.ground_y
         actor.vx = actor.ground_vy = actor.vy = actor.jump_height = 0.0
         actor.navigation_target = None
+        if not actor.stair_following:
+            actor.previous_jump_height = 0.0
+            actor.jump_count = actor.air_kicks_used = 0
+            actor.upper_landing_requested = actor.falling_from_upper = False
         actor.animation.set_state("WALK")
+
+    def point_at(self, distance):
+        remaining = max(0.0, min(self.length, distance))
+        for (ax, ay), (bx, by), length in zip(self.path, self.path[1:], self.lengths):
+            if remaining <= length + 1e-9:
+                t = min(1.0, remaining / length)
+                return ax + (bx - ax) * t, ay + (by - ay) * t
+            remaining -= length
+        return self.path[-1]
+
+    def catch_player(self, player):
+        """Land a normal descending jump on the nearest unoccupied step."""
+        if self.occupants or self.queue:
+            return False
+        nearest, travelled = None, 0.0
+        for (ax, ay), (bx, by), length in zip(self.path, self.path[1:], self.lengths):
+            dx, dy = bx - ax, by - ay
+            t = max(0.0, min(1.0, ((player.x - ax) * dx + (player.y - ay) * dy) / length ** 2))
+            x, y = ax + dx * t, ay + dy * t
+            candidate = (hypot(player.x - x, player.y - y), travelled + t * length)
+            if nearest is None or candidate[0] < nearest[0]:
+                nearest = candidate
+            travelled += length
+        if nearest is None or nearest[0] > config.STAIR_JUMP_CATCH_RADIUS:
+            return False
+        progress = nearest[1] if player.floor == 0 else self.length - nearest[1]
+        self._enter(player, progress)
+        player.animation.set_state("IDLE")
+        return True
 
     def set_player_direction(self, actor, direction):
         """Change the exclusive player's destination without changing position."""
@@ -107,13 +144,8 @@ class Staircase:
             progress = max(0.0, min(self.length, before + travel_direction * travel))
         self.occupants[actor] = progress
         # Progress stays relative to the original entry even after a player turns.
-        remaining = progress if actor.floor == 0 else self.length - progress
-        for (ax, ay), (bx, by), length in zip(self.path, self.path[1:], self.lengths):
-            if remaining <= length + 1e-9:
-                t = min(1.0, remaining / length)
-                actor.x, actor.ground_y = ax + (bx - ax) * t, ay + (by - ay) * t
-                break
-            remaining -= length
+        distance = progress if actor.floor == 0 else self.length - progress
+        actor.x, actor.ground_y = self.point_at(distance)
         if abs(actor.x - actor.previous_x) > 1e-9:
             actor.facing = 1 if actor.x > actor.previous_x else -1
         actor.vx = actor.ground_vy = actor.vy = actor.jump_height = 0.0

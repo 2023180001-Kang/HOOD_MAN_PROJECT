@@ -173,6 +173,8 @@ class World:
             return
         for actor in [self.player, *self.enemies]:
             actor.stair_arrival = False
+        self.player.stair_regrab_remaining = max(0.0, self.player.stair_regrab_remaining - dt)
+        self.stage.exit_player_stairs(self.player, self.controls)
         self.cancel_invalid_counter()
         counter_pressed = self.controls.take_latest_press(COUNTERS)
         if counter_pressed is not None:
@@ -218,6 +220,9 @@ class World:
         stair_moved = self.stage.update_navigation(dt, self.player, self.controls)
         if self.player not in stair_moved:
             self.player.update(dt, self.controls, self.stage.area_for(self.player), process_input=False)
+            if self.stage.try_player_stair_catch(self.player):
+                # The held approach direction predates entry, not a fresh exit.
+                self.controls.take_latest_press(("left", "right"))
             self.stage.resolve_player_platforms(self.player, self.controls)
         self.cancel_invalid_counter()
         self.cancel_invalid_rush()
@@ -446,6 +451,7 @@ class World:
         player = self.player
         player.floor = 0
         player.stair_arrival = False
+        player.stair_regrab_remaining = 0.0
         player.upper_landing_requested = False
         player.falling_from_upper = False
         player.x = (entry_x if entry_x is not None else

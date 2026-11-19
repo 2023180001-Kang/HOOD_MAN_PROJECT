@@ -222,11 +222,11 @@ class StairAndFloorTests(unittest.TestCase):
         self.assertTrue(world.player.grounded)
         self.assertEqual((world.player.floor, world.player.ground_y), (1, 476))
 
-    def test_stair_movement_consumes_attack_jump_counter_and_weapon_input_without_buffering(self):
+    def test_stair_movement_consumes_attack_counter_and_weapon_input_without_buffering(self):
         world = World()
         begin_player_stairs(world)
         world.player.equip_weapon("steel_pipe")
-        for key in ("jump", "combat_a", "counter_h", "weapon_interact", "invincibility"):
+        for key in ("combat_a", "counter_h", "weapon_interact", "invincibility"):
             world.controls.press(key)
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.weapon, "steel_pipe")
@@ -234,7 +234,7 @@ class StairAndFloorTests(unittest.TestCase):
         self.assertEqual(world.player.jump_height, 0)
         self.assertIsNone(world.player.active_move)
         self.assertIsNone(world.counter)
-        for key in ("jump", "combat_a", "counter_h", "weapon_interact", "invincibility"):
+        for key in ("combat_a", "counter_h", "weapon_interact", "invincibility"):
             self.assertNotIn(key, world.controls.pressed)
         advance(world, 3)
         self.assertEqual(world.player.floor, 1)

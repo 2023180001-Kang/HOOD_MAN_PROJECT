@@ -209,7 +209,7 @@ class UI:
                                f"{world.player.floor + 1}층")
                 assets.font.draw(22, y - 94, f"{floor_label} · 계단 ↑/↓ 이동·반전 / 키 놓기: 정지",
                                  (180, 255, 150))
-                assets.font.draw(22, y - 118, "이단 점프 후 ↑: 2층 착지 · 2층 앞쪽 끝 ↓: 낙하",
+                assets.font.draw(22, y - 118, "점프로 계단 진입 · Space/←/→: 이탈 · 이단 점프 후 ↑: 2층 착지",
                                  (180, 255, 150))
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))

@@ -126,18 +126,14 @@ class StairControlTests(unittest.TestCase):
         self.assertAlmostEqual(stair.progress - before, -config.STAIR_SPEED * config.FIXED_DT)
         self.assertEqual(stair.destination_floor, 0)
 
-    def test_lateral_keys_alone_pause_instead_of_detaching_or_leaving_the_path(self):
+    def test_lateral_keys_detach_instead_of_trapping_the_player_on_the_path(self):
         for key in ("left", "right"):
             world, stair = stair_world()
             steer(world, 0)
-            before = world.player.x, world.player.ground_y, stair.progress
             world.controls.press(key)
-            advance(world, 0.5)
-            self.assertEqual((world.player.x, world.player.ground_y, stair.progress), before)
-            self.assertIs(world.player.staircase, stair)
-            world.controls.press("up")
             world.step(config.FIXED_DT)
-            self.assertAlmostEqual(stair.progress - before[2], config.STAIR_SPEED * config.FIXED_DT)
+            self.assertIsNone(world.player.staircase)
+            self.assertFalse(stair.occupants)
 
     def test_shift_does_not_change_stair_speed_in_either_direction(self):
         world, stair = stair_world()
@@ -203,7 +199,7 @@ class StairControlTests(unittest.TestCase):
         world, stair = stair_world()
         steer(world, 0)
         world.player.equip_weapon("steel_pipe")
-        for key in ("jump", "combat_q", "counter_h", "weapon_interact"):
+        for key in ("combat_q", "counter_h", "weapon_interact"):
             world.controls.press(key)
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.state, "IDLE")
@@ -213,7 +209,7 @@ class StairControlTests(unittest.TestCase):
         self.assertEqual(world.player.jump_height, 0)
         self.assertIs(world.player.staircase, stair)
         self.assertTrue(all(key not in world.controls.pressed
-                            for key in ("jump", "combat_q", "counter_h", "weapon_interact")))
+                             for key in ("combat_q", "counter_h", "weapon_interact")))
         steer(world, 1)
         advance(world, 3)
         self.assertIsNone(world.player.active_move)

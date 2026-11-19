@@ -53,6 +53,11 @@ class World:
         self.elapsed = 0.0
         self.accumulator = 0.0
         self._dive_afterimage_remaining = 0.0
+        self.update_camera(0)
+
+    def update_camera(self, dt):
+        self.camera.update(dt, self.player.x, player_y=self.player.y,
+                           vertical_bounds=self.stage.camera_y_bounds)
 
     @property
     def stage(self):
@@ -309,7 +314,7 @@ class World:
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         self.spawn_enemy_death_drops()
-        self.camera.update(dt, self.player.x)
+        self.update_camera(dt)
 
     def spawn_enemy_death_drops(self):
         """Emit one non-collectible club per defeated single-club enemy."""
@@ -434,6 +439,7 @@ class World:
         self.player.previous_x = self.player.x
         self.player.previous_ground_y = self.player.ground_y
         self.camera = Camera(self.player.x)
+        self.update_camera(0)
         return True
 
     def _enter_stage(self, destination, *, entry_x=None):
@@ -461,6 +467,7 @@ class World:
         player.previous_x = player.x
         player.previous_ground_y = player.ground_y
         self.camera = Camera(player.x)
+        self.update_camera(0)
 
     def handle_death(self):
         if not self.player.alive and not self.death_handled:

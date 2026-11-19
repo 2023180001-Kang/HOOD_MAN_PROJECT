@@ -62,6 +62,9 @@ ENEMY_SEPARATION_RATE = 10.0
 SHAKE_DURATION = 0.2
 SHAKE_STRENGTH = 8.0
 PLAYER_HIT_SHAKE_STRENGTH = 16.0
+CAMERA_PLAYER_HEIGHT = 192.0  # Covers every current player/weapon/attack sprite.
+CAMERA_TOP_MARGIN = 100.0
+CAMERA_BOTTOM_MARGIN = 80.0
 UI_SCALE = 0.25
 UI_MARGIN = 20
 # Source PNG coordinates, converted from top-left (420, 145)-(1989, 234).
@@ -326,6 +329,7 @@ STAGE_ARROW_SWAY_PERIOD = 1.6
 STAGE_EXIT_MARGIN = 80.0
 STAGE_ENTRY_MARGIN = 128.0
 STAGE_SCALE = 1.0
+STAGE_IMAGE_HEIGHT = 941.0
 # Walking line measured upward from the source image's bottom edge (941 - 797).
 STAGE_GROUND_Y = 144.0
 STAGE_GROUND_ANCHORS = {

@@ -27,6 +27,8 @@
 .\.venv\Scripts\python.exe tools/check_stages.py
 .\.venv\Scripts\python.exe tools/check_two_floors.py
 .\.venv\Scripts\python.exe tools/check_stair_controls.py
+.\.venv\Scripts\python.exe tools/check_stair_jump_exit.py
+.\.venv\Scripts\python.exe tools/check_vertical_camera.py
 .\.venv\Scripts\python.exe tools/check_platform_jumps.py
 .\.venv\Scripts\python.exe tools/check_stair_combat_and_drops.py
 .\.venv\Scripts\python.exe tools/check_enemy_death_drops.py
@@ -804,3 +806,15 @@ PRD 대응: AC-19(공격별 속도·유효 프레임), AC-20(지정 피해·중�
 - 캡처: `artifacts/stair_jump_caught.png`, `stair_jump_reversed.png`, `stair_exit_1_jump.png`, `stair_exit_1_left.png`, `stair_exit_2_jump.png`, `stair_exit_2_right.png`.
 
 직접 확인: 계단 아래에서 일반 점프 한 번과 좌우 조향으로 계단에 착지한다. ↑/↓로 움직이고 중간에 Space 또는 ←/→를 새로 눌러 이탈한다. Space로 나와 조향하지 않으면 다시 계단에 착지할 수 있으므로 왼쪽으로 조향해 바닥까지 내려오는 것도 확인한다.
+
+## 39. 전체 맵 높이·2층 점프 상하 카메라 (2026-11-19)
+
+- 원인: 카메라에 세로 추적이 없고 세로 오프셋은 피격 흔들림뿐이었다. 2층 y=452~502에 점프/스프라이트 높이를 더하면 720px 창 위로 벗어났다.
+- 수정: 실제 발 높이·모든 주인공 시트의 192px 외형 포락선·상단 100px/하단 80px 여백으로 세로 추적한다. 배경 941px 전체와 가장 높은 바닥의 달리기 이단 점프를 포함한 경계를 계산하며 첫 맵은 약 -44~485.14px다. 배율/좌우 범위/점프 물리/충돌을 변경하지 않는다.
+- 배경/UI: 높이 추적 중 배경을 별도로 화면에 고정하지 않아 바닥/문/아이템/배우가 같은 월드 변환을 따른다. 원본 위로 넘어간 공간은 최상단 1px 행만 연장해 빈 띠를 채운다. 오른쪽 끝 캐릭터를 덮던 공격·계단/F3/F4 설명은 높은 뷰에서만 300px 아래로 이동하고 HP/수치는 기존 위치를 유지한다.
+- 로직: 신규 `tests/test_vertical_camera.py` **13개**를 포함한 전체 **615개 통과**(42.099초). 2층 일반/이단/달리기 양 끝 점프·전체 외형/발·맵 전체/확장 경계·흔들림·1층/기존 API·맵/F5·배경 정렬/상단 채우기·HP 고정/설명 복원·물리/FPS 독립성을 통과했다.
+- 실제 SDL: `tools/check_vertical_camera.py`에서 **기본 설명 표시 상태**로 비무장/단검/쇠파이프×일반/이단/달리기 좌/우 끝의 12개 조건을 확인했다. 정점에서 실제 캐릭터 픽셀의 전체 높이를 검증하고 2층 착지/F5를 통과했다. 카메라 y=400의 좌/중앙/우 화면은 원본/반전 배경과 상단 연장을 합친 기대 이미지에 픽셀 단위로 일치했다.
+- 회귀/실행: `tools/check_stair_jump_exit.py`, `check_stair_controls.py`, `check_platform_jumps.py`, `check_drop_items.py`, `check_stages.py`를 모두 통과했다. 계단 진입/이탈·정지/반전·층간 점프/낙하·12개 맵의 층별 아이템/배경 픽셀·전체 왕복과 구역별 2초 로딩을 유지했다. `main.py --smoke-test 120`은 정상 종료했다.
+- 캡처: `artifacts/camera_upstairs_unarmed_normal_apex.png`, `camera_upstairs_unarmed_double_apex.png`, `camera_upstairs_steel_pipe_running_right_apex.png`, `camera_roof_extension_640.png`, `camera_reset_ground_floor.png`.
+
+직접 확인: 계단으로 2층에 올라가 Space 한 번/두 번으로 점프하고 Shift+좌우 달리기 이단 점프도 한다. 맵 양 끝에서도 주인공의 머리·몸·발이 모두 보여야 하며 설명 패널이 주인공을 덮지 않아야 한다. 1층으로 돌아오면 카메라/설명이 기본 높이로 복귀하고 HP UI는 계속 같은 위치여야 한다.

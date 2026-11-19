@@ -63,6 +63,19 @@ class Stage:
     def area_for(self, actor):
         return self.floor_areas[actor.floor]
 
+    @property
+    def camera_y_bounds(self):
+        anchor = config.STAGE_GROUND_ANCHORS.get(self.image_name, config.STAGE_GROUND_Y)
+        bottom = config.GROUND_Y - anchor * config.STAGE_SCALE
+        # Include the complete artwork and the highest possible running double
+        # jump, not just the lower floor or the original 720px viewport.
+        jump = (config.JUMP_SPEED ** 2 + config.RUN_DOUBLE_JUMP_SPEED ** 2) / (2 * config.GRAVITY)
+        player_top = (max(area.bounds[3] for area in self.floor_areas) + jump
+                      + config.CAMERA_PLAYER_HEIGHT + config.CAMERA_TOP_MARGIN
+                      + config.PLAYER_HIT_SHAKE_STRENGTH)
+        top = max(bottom + config.STAGE_IMAGE_HEIGHT * config.STAGE_SCALE, player_top)
+        return min(0.0, bottom), max(0.0, top - config.SCREEN_HEIGHT)
+
     def open_door_spawns(self):
         if not self.doors:
             return ()
@@ -322,9 +335,9 @@ class Stage:
         height = image.h * scale
         anchor = config.STAGE_GROUND_ANCHORS.get(self.image_name, config.STAGE_GROUND_Y)
         bottom = config.GROUND_Y - anchor * scale - camera_y
-        # Clamp vertical shake at image edges so backgrounds never expose a
-        # blank strip above or below the viewport.
-        bottom = min(0.0, max(config.SCREEN_HEIGHT - height, bottom))
+        bottom = min(0.0, bottom)
+        roof = bottom + height
+        headroom = max(0.0, config.SCREEN_HEIGHT - roof)
         first = max(0, floor(camera_x / width))
         last = min(ceil(config.WORLD_WIDTH / width),
                    ceil((camera_x + config.SCREEN_WIDTH) / width))
@@ -334,6 +347,14 @@ class Stage:
                 index * width + width / 2 - camera_x,
                 bottom + height / 2, width, height,
             )
+            if headroom:
+                # The jump can rise above the supplied artwork. Extend only
+                # its top edge; keep the actual map/floors at their world y.
+                image.clip_composite_draw(
+                    0, image.h - 1, image.w, 1, 0, "h" if index % 2 else "",
+                    index * width + width / 2 - camera_x, roof + headroom / 2,
+                    width, headroom,
+                )
             for door in self.doors:
                 assets.draw_stage_door(door, image, index * width - camera_x, bottom,
                                        scale, mirrored=bool(index % 2))

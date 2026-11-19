@@ -87,36 +87,36 @@ class UI:
                 pico2d.draw_line(ax + dx * start - camera_x, ay + dy * start - camera_y,
                                  ax + dx * end - camera_x, ay + dy * end - camera_y, *color)
 
-    def draw_attack_help(self, assets, player):
+    def draw_attack_help(self, assets, player, *, offset_y=0):
         import pico2d
 
-        pico2d.draw_rectangle(688, 616, config.SCREEN_WIDTH - 20, 704,
+        pico2d.draw_rectangle(688, 616 - offset_y, config.SCREEN_WIDTH - 20, 704 - offset_y,
                               12, 21, 33, filled=True)
         title = (f"{config.WEAPON_NAMES[player.weapon]} 공격 · 피해량"
                  if player.weapon in config.WEAPON_NAMES else "기본 공격 · 피해량")
-        assets.font.draw(704, 686, title, (244, 204, 66))
+        assets.font.draw(704, 686 - offset_y, title, (244, 204, 66))
         for index, move in enumerate(player.moves.values()):
             x = 704 + index % 2 * 270
-            y = 659 - index // 2 * 24
+            y = 659 - offset_y - index // 2 * 24
             assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
                              (218, 228, 240))
-        pico2d.draw_rectangle(688, 436, config.SCREEN_WIDTH - 20, 610,
+        pico2d.draw_rectangle(688, 436 - offset_y, config.SCREEN_WIDTH - 20, 610 - offset_y,
                              12, 21, 33, filled=True)
-        assets.font.draw(704, 590, "강화 기본 공격 · 피해량", (126, 218, 255))
+        assets.font.draw(704, 590 - offset_y, "강화 기본 공격 · 피해량", (126, 218, 255))
         for index, move in enumerate(STRONG_MOVES.values()):
             x = 704 + index % 2 * 270
-            y = 565 - index // 2 * 23
+            y = 565 - offset_y - index // 2 * 23
             assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
                              (218, 228, 240))
         kick_help = ("슬로 대기 중: ←/→ 전환 · E 두 번째 발차기 (1/2)"
                      if player.air_kick_phase == "WAIT" else
                      "E: ←/→ 공중 방향 전환 · 최대 2회 후 복귀")
-        assets.font.draw(704, 493, kick_help, (126, 218, 255))
+        assets.font.draw(704, 493 - offset_y, kick_help, (126, 218, 255))
         punch_help = ("R 슬로 모션: R 다시 눌러 공격"
                       if player.raise_punch_phase == "RAISE" else
                       "R: 주변 슬로 모션 → R 재입력으로 타격")
-        assets.font.draw(704, 470, punch_help, (126, 218, 255))
-        assets.font.draw(704, 447, "W 유지: ←/→ 비행 전환 · 적 동반 / 놓으면 해제", (126, 218, 255))
+        assets.font.draw(704, 470 - offset_y, punch_help, (126, 218, 255))
+        assets.font.draw(704, 447 - offset_y, "W 유지: ←/→ 비행 전환 · 적 동반 / 놓으면 해제", (126, 218, 255))
 
     def draw_enemy_health(self, assets, world, camera_x, camera_y):
         import pico2d
@@ -194,22 +194,26 @@ class UI:
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
             if not self.details_visible:
                 return
-            self.draw_attack_help(assets, world.player)
+            # High tracking puts the player in the old upper help panels.
+            # Move only those panels/labels below the player, never the HP UI.
+            help_offset = 300 if world.camera.y > 0 else 0
+            help_y = y - help_offset
+            self.draw_attack_help(assets, world.player, offset_y=help_offset)
             floor_mode = "ON" if self.floor_bounds_visible else "OFF"
-            assets.font.draw(22, y - 22, f"F4 바닥 이동 범위: {floor_mode}", (205, 218, 231))
+            assets.font.draw(22, help_y - 22, f"F4 바닥 이동 범위: {floor_mode}", (205, 218, 231))
             if self.floor_bounds_visible:
-                assets.font.draw(22, y - 46, "주인공: 하늘색 실선", PLAYER_BOUNDS_COLOR)
-                assets.font.draw(250, y - 46, "적: 주황색 점선", ENEMY_BOUNDS_COLOR)
+                assets.font.draw(22, help_y - 46, "주인공: 하늘색 실선", PLAYER_BOUNDS_COLOR)
+                assets.font.draw(250, help_y - 46, "적: 주황색 점선", ENEMY_BOUNDS_COLOR)
             if world.stage.doors:
-                assets.font.draw(22, y - 70, "F3 문 / 창고문 열기·닫기", (205, 218, 231))
+                assets.font.draw(22, help_y - 70, "F3 문 / 창고문 열기·닫기", (205, 218, 231))
             if world.stage.stairs:
                 floor_label = ("계단 정지 중" if world.player.staircase and world.player.state == "IDLE" else
                                "계단 이동 중" if world.player.staircase else
                                "1층으로 낙하 중" if world.player.falling_from_upper else
                                f"{world.player.floor + 1}층")
-                assets.font.draw(22, y - 94, f"{floor_label} · 계단 ↑/↓ 이동·반전 / 키 놓기: 정지",
+                assets.font.draw(22, help_y - 94, f"{floor_label} · 계단 ↑/↓ 이동·반전 / 키 놓기: 정지",
                                  (180, 255, 150))
-                assets.font.draw(22, y - 118, "점프로 계단 진입 · Space/←/→: 이탈 · 이단 점프 후 ↑: 2층 착지",
+                assets.font.draw(22, help_y - 118, "점프로 계단 진입 · Space/←/→: 이탈 · 이단 점프 후 ↑: 2층 착지",
                                  (180, 255, 150))
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))

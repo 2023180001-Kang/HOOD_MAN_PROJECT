@@ -32,6 +32,7 @@ KEYS = {
     pico2d.SDLK_F4: "toggle_floor_bounds",
     pico2d.SDLK_u: "toggle_details",
     pico2d.SDLK_g: "weapon_interact",
+    pico2d.SDLK_m: "cycle_spawn_enemy",
 }
 KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
              for key, *_ in config.COMBAT_MOVE_SPECS})

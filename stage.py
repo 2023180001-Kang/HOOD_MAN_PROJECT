@@ -17,10 +17,25 @@ from stairs import Staircase, can_use_stairs
 from walkable import WalkableArea, for_stage
 
 
+def enemy_type_for_stage(index):
+    """Resolve a stage's native enemy, independently of its current spawn selection."""
+    image_name = config.STAGE_IMAGES[index]
+    if image_name == config.FACTORY_OUTSIDE_IMAGE:
+        return AxeEnemy
+    if image_name in config.ENEMY02_STAGE_IMAGES:
+        return Enemy02
+    if image_name in config.FACTORY_INSIDE_IMAGES:
+        return Researcher
+    if image_name in config.LAB_STAGE_IMAGES:
+        return ShieldSoldier
+    return Enemy
+
+
 class Stage:
     def __init__(self, index=0, *, rng=None, attack_sequence=None, traffic_rng=None, item_rng=None):
         self.index = index
         self.arrows_visible = False
+        self.spawn_cycle_index = None  # None preserves this map's native default.
         self.enemies = []
         self.effects = []
         self.afterimages = []
@@ -45,19 +60,23 @@ class Stage:
         spawn_bounds = config.STAGE_ENEMY_SPAWN_BOUNDS.get(self.image_name)
         self.spawn_area = (WalkableArea.rectangle(*spawn_bounds) if spawn_bounds is not None
                            else self.walkable)
-        enemy_type = Enemy
-        if self.image_name == config.FACTORY_OUTSIDE_IMAGE:
-            enemy_type = AxeEnemy
-        elif self.image_name in config.ENEMY02_STAGE_IMAGES:
-            enemy_type = Enemy02
-        elif self.image_name in config.FACTORY_INSIDE_IMAGES:
-            enemy_type = Researcher
-        elif self.image_name in config.LAB_STAGE_IMAGES:
-            enemy_type = ShieldSoldier
         self.spawner = SpawnManager(rng=rng, walkable=self.walkable, spawn_area=self.spawn_area,
                                     attack_sequence=attack_sequence,
-                                    enemy_type=enemy_type, extra_sources=self.open_door_spawns)
+                                    enemy_type=enemy_type_for_stage(index), extra_sources=self.open_door_spawns)
         self.traffic = None  # Road traffic is retired; no stage creates cars.
+
+    @property
+    def spawn_enemy_stage_index(self):
+        return self.index if self.spawn_cycle_index is None else self.spawn_cycle_index
+
+    def cycle_spawn_enemy_type(self):
+        """M selects stage 1 first, then follows the full route; it never spawns."""
+        if self.index == 0:
+            return False
+        self.spawn_cycle_index = (0 if self.spawn_cycle_index is None else
+                                  (self.spawn_cycle_index + 1) % len(config.STAGE_IMAGES))
+        self.spawner.enemy_type = enemy_type_for_stage(self.spawn_cycle_index)
+        return True
 
     def constrain_actor(self, actor):
         if actor.staircase is not None:

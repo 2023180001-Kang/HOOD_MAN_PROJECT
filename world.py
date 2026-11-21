@@ -205,6 +205,8 @@ class World:
         for number in self.damage_numbers:
             number.update(dt)
         self.damage_numbers = [number for number in self.damage_numbers if not number.finished]
+        if self.controls.take_press("cycle_spawn_enemy") and self.player.alive:
+            self.stage.cycle_spawn_enemy_type()
         for count in config.SPAWN_COUNTS:
             if self.controls.take_press(f"spawn_{count}") and self.player.alive:
                 self.enemies.extend(self.spawner.spawn(count, self.elapsed))

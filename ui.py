@@ -222,20 +222,30 @@ class UI:
                 else:
                     help_text = "무기 내려찍기: Space 두 번 → D 슬로 모션 / 방향키 조준 → D 급강하"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))
-            if world.stage.image_name in config.ENEMY02_STAGE_IMAGES:
+            source_index = world.stage.spawn_enemy_stage_index
+            source_image = config.STAGE_IMAGES[source_index]
+            if source_image in config.ENEMY02_STAGE_IMAGES:
+                enemy_name = "도시 적"
                 clubs, slam = config.ENEMY02_ATTACKS["clubs"][1], config.ENEMY02_ATTACKS["slam"][1]
                 enemy_help = f"적 공격: 몽둥이 {clubs} / 착지 {slam}"
-            elif world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE:
+            elif source_image == config.FACTORY_OUTSIDE_IMAGE:
+                enemy_name = "도끼 적"
                 enemy_help = f"적 공격: 도끼 {config.AXE_ENEMY_DAMAGE}"
-            elif world.stage.image_name in config.FACTORY_INSIDE_IMAGES:
+            elif source_image in config.FACTORY_INSIDE_IMAGES:
+                enemy_name = "연구원"
                 enemy_help = (f"적 권총 {config.RESEARCHER_DAMAGE} · "
                               f"{config.RESEARCHER_MAGAZINE_SIZE}발 후 재장전")
-            elif world.stage.image_name in config.LAB_STAGE_IMAGES:
+            elif source_image in config.LAB_STAGE_IMAGES:
+                enemy_name = "방패 병사"
                 enemy_help = (f"적 공격: 방패 {config.SHIELD_SOLDIER_DAMAGE} · "
                               f"HP {config.SHIELD_SOLDIER_MAX_HP} · 방어 중 받는 피해 50%")
             else:
+                enemy_name = "기본 적"
                 enemy_help = f"적 공격 피해: {config.ENEMY_DAMAGE}"
             assets.font.draw(22, 48, enemy_help, (205, 218, 231))
+            cycle_label = "M 소환 적 고정" if world.stage.index == 0 else "M 소환 적 순환"
+            assets.font.draw(740, 72, f"{cycle_label}: {source_index + 1}번 맵 · {enemy_name}",
+                             (205, 218, 231))
             sources = "좌우/열린 문 무작위" if world.stage.doors else "좌우 무작위"
             assets.font.draw(740, 48, f"1~9: 해당 수만큼 적 소환 ({sources})", (205, 218, 231))
             assets.font.draw(22, 25,

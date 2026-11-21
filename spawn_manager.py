@@ -71,6 +71,9 @@ class SpawnManager:
             enemy = self.enemy_type(x, facing=facing, spawned_at=elapsed, run_speed=run_speed,
                                    ground_y=ground_y, attack_speed=attack_speed, rng=enemy_rng)
             enemy.floor, enemy.walkable, enemy.spawn_source = floor, area, source
+            if enemy.formation_ground_min is not None:
+                # City pavement height belongs to this map, not the old y=100 line.
+                enemy.formation_ground_min = self.spawn_area.bounds[1]
             enemies.append(enemy)
             self.spawned_count += 1
         return enemies

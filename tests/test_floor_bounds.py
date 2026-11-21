@@ -133,6 +133,22 @@ class FloorBoundsTests(unittest.TestCase):
                                (2492 - camera_x, 258 - camera_y, 68 - camera_x, 258 - camera_y),
                                (68 - camera_x, 258 - camera_y, 68 - camera_x, 45 - camera_y)])
 
+    def test_both_new_city_outlines_cover_the_full_sidewalk_and_road(self):
+        game = scene()
+        game.ui.floor_bounds_visible = True
+        for index, top in ((2, 247), (3, 279)):
+            game.world.select_stage(index)
+            for camera_x, camera_y in ((0, -44), (640, 8), (1280, 120)):
+                with patch("pico2d.draw_line") as draw:
+                    game.ui.draw_floor_bounds(game.world, camera_x, camera_y)
+                player_lines = [call.args[:4] for call in draw.call_args_list
+                                if call.args[4:] == PLAYER_BOUNDS_COLOR]
+                self.assertCountEqual(player_lines,
+                                      [(68 - camera_x, -44 - camera_y, 2492 - camera_x, -44 - camera_y),
+                                       (2492 - camera_x, -44 - camera_y, 2492 - camera_x, top - camera_y),
+                                       (2492 - camera_x, top - camera_y, 68 - camera_x, top - camera_y),
+                                       (68 - camera_x, top - camera_y, 68 - camera_x, -44 - camera_y)])
+
     def test_convex_floor_uses_its_actual_inset_polygon_not_a_bounding_rectangle(self):
         game = scene()
         game.ui.floor_bounds_visible = True

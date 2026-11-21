@@ -115,7 +115,7 @@ def check_motion_continuity(game, first=0):
             assert game.world.elapsed == reference.elapsed
             assert not game.world.stage.arrows_visible
             assert all(game.assets.images[name] is image for name, image in textures.items())
-            prefix = {4: "factory_travel", 6: "factory_inside_travel",
+            prefix = {2: "city_travel", 4: "factory_travel", 6: "factory_inside_travel",
                       8: "lab_travel", 10: "boss_travel"}.get(first, "stage_travel")
             capture(game, f"{prefix}_{'next' if side > 0 else 'previous'}_{mode}")
             assert abs(player.x - player.previous_x) <= config.RUN_SPEED * config.FIXED_DT + 1e-6
@@ -287,7 +287,7 @@ def check_city_loading(game):
         push_key(key, down=False)
     game.handle_events()
     print(f"PASS: supplied loading image stays visible for {duration:.3f}s with gameplay frozen; "
-          "changed_first_map_no_door -> newStage-2 -> cityStage-1 -> cityStage-2, ignored loading actions, "
+          f"changed_first_map_no_door -> newStage-2 -> {config.CITY_STAGE_IMAGES}, ignored loading actions, "
           "HP/motion/resource reuse, city return and F5 cancellation verified.")
 
 
@@ -513,8 +513,11 @@ def main():
         game = Game()
         game.handle_events()
         check_stage_background(game, 0, "changed_first_map_no_door")
+        check_stage_background(game, 2, "city_ground_300_1")
+        check_stage_background(game, 3, "city_ground_300_2")
         check_markers(game)
         check_motion_continuity(game)
+        check_motion_continuity(game, first=2)
         check_motion_continuity(game, first=4)
         check_motion_continuity(game, first=6)
         check_motion_continuity(game, first=8)

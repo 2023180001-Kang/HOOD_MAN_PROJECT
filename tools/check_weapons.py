@@ -197,8 +197,8 @@ def check_air_drop_and_lifetime(game):
     world.player.ground_y = config.CAR_GROUND_Y
     tap(game, pico2d.SDLK_g)
     item = world.stage.drop_items[0]
-    assert item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 123
-    assert item.ground_y + config.DROP_ITEM_HEIGHT <= 161
+    assert item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 203
+    assert item.ground_y + config.DROP_ITEM_HEIGHT <= 241
     tick(game, 60)
     assert item.grounded
     baseline = without_items(game)

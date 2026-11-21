@@ -44,6 +44,7 @@ class Enemy02Tests(unittest.TestCase):
             for index, stage in enumerate(world.stages):
                 self.assertEqual(stage.enemies, [])
                 world.stage_index = index
+                world.player.ground_y = sum(stage.spawn_area.bounds[1::2]) / 2
                 world.controls.press("spawn_4")
                 world.update(config.FIXED_DT)
                 world.controls.release("spawn_4")

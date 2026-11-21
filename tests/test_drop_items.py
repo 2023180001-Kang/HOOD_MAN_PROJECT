@@ -148,7 +148,7 @@ class DropItemTests(unittest.TestCase):
             world = World(item_rng=random.Random(seed))
             for stage in world.stages:
                 self.assertFalse(stage.arrows_visible)
-                if stage.image_name != "cityStage-1.png":
+                if stage.image_name != config.CITY_STAGE_IMAGES[0]:
                     self.assertIs(stage.drop_spawn_area, stage.walkable)
                 previous_right = {}
                 for item in stage.drop_items:
@@ -165,11 +165,10 @@ class DropItemTests(unittest.TestCase):
                             for x in (visible_left, visible_right):
                                 for y in (visible_bottom, visible_top):
                                     self.assertTrue(area.contains(x, y))
-                            if stage.image_name == "cityStage-1.png":
-                                # Source pavement rows 736..774 map to y=123..161,
-                                # above the curb; the old y=100 floor line is too low.
-                                self.assertGreaterEqual(visible_bottom, 123)
-                                self.assertLessEqual(visible_top, 161)
+                            if stage.image_name == config.CITY_STAGE_IMAGES[0]:
+                                # New source pavement rows 656..694 map to y=203..241.
+                                self.assertGreaterEqual(visible_bottom, 203)
+                                self.assertLessEqual(visible_top, 241)
                             self.assertGreaterEqual(visible_left, arrow_edge + config.DROP_ITEM_EXIT_GAP)
                             self.assertLessEqual(visible_right,
                                                  config.WORLD_WIDTH - arrow_edge - config.DROP_ITEM_EXIT_GAP)
@@ -242,12 +241,12 @@ class DropItemTests(unittest.TestCase):
             self.assertFalse(any(item is previous for item in new.drop_items
                                  for previous in old.drop_items))
             self.assertEqual(len(new.drop_items), 15)
-            if new.image_name == "cityStage-1.png":
+            if new.image_name == config.CITY_STAGE_IMAGES[0]:
                 for item in new.drop_items:
                     self.assertGreaterEqual(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH,
-                                            123)
+                                             203)
                     self.assertLessEqual(item.ground_y + config.DROP_ITEM_HEIGHT,
-                                         161)
+                                          241)
                     self.assertTrue(new.walkable.contains(item.x, item.ground_y))
 
     def test_walking_over_and_attacking_items_does_not_collect_move_or_destroy_them(self):

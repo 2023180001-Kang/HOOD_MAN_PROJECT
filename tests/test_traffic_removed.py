@@ -51,7 +51,7 @@ class RemovedTrafficTests(unittest.TestCase):
         self.assertNotIn(config.CAR_IMAGE, assets.images)
         self.assertNotIn(CAR_SHEET, [Path(call.args[0]).name for call in load_image.call_args_list])
         self.assertIn(config.ENEMY02_IMAGE, assets.images)
-        self.assertIn("cityStage-1.png", assets.images)
+        self.assertIn(config.CITY_STAGE_IMAGES[0], assets.images)
 
 
 if __name__ == "__main__":

@@ -60,6 +60,7 @@ def check_city_summons(game):
     for number in range(1, len(config.STAGE_IMAGES) + 1):
         game.world.select_stage(number - 1)
         assert not game.world.enemies and game.world.spawner.spawned_count == 0
+        game.world.player.ground_y = sum(game.world.stage.spawn_area.bounds[1::2]) / 2
         push_key(pico2d.SDLK_4)
         tick(game)
         release(game, pico2d.SDLK_4)

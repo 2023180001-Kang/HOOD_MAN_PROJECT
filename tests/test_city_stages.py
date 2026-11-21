@@ -1,10 +1,16 @@
+import hashlib
 import random
 import unittest
+from unittest.mock import Mock, patch
+
+from PIL import Image
 
 import config
+from assets import Assets
 from combat import MOVES
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
+from enemy02 import Enemy02
 from tests.helpers import advance, clear_encounters, spawn_encounter, tap
 from traffic import Car, Traffic
 from world import World
@@ -25,7 +31,7 @@ class CityStageTests(unittest.TestCase):
     def test_twelve_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
         world = World()
         self.assertEqual([stage.image_name for stage in world.stages],
-                         ["changed_first_map_no_door.png", "newStage-2.png", "cityStage-1.png", "cityStage-2.png",
+                         ["changed_first_map_no_door.png", "newStage-2.png", *config.CITY_STAGE_IMAGES,
                           config.FACTORY_OUTSIDE_IMAGE, config.FACTORY_EXTERIOR_IMAGE,
                           "factoryInside-1.png", "factoryStage-2.png",
                           "labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png",
@@ -34,6 +40,126 @@ class CityStageTests(unittest.TestCase):
             stage.arrows_visible = True
             self.assertEqual(stage.destination(-1), index - 1 if index else None)
             self.assertEqual(stage.destination(1), index + 1 if index < len(world.stages) - 1 else None)
+
+    def test_replacement_cities_load_in_order_and_old_pngs_are_archived_without_changes(self):
+        self.assertEqual(config.CITY_STAGE_IMAGES,
+                         ("cityStage1_ground_300px_1672x941.png", "cityStage2_ground_300px_1672x941.png"))
+        self.assertEqual(config.STAGE_IMAGES[2:4], config.CITY_STAGE_IMAGES)
+        hashes = (
+            "3e1b8ca6cf971e703eaf30ffeb060ceabaa2a1b8f77a02c9fd53413ae3b9e01c",
+            "2058b68dea74ba2a84a0ac7e45da7206f983a6919fb1ca8ef6a3740d5b2356a3",
+            "c784ed4c6cdd2145605f949d416ad5f4fdeda832989c47670a2b3d30da9a9d84",
+            "e01bc9427117f43d68aca30c9c17d614ddb6b5e9a7d34597f118a522756a6ebd",
+        )
+        for name, digest in zip((*config.CITY_STAGE_IMAGES, *config.ARCHIVED_CITY_STAGE_IMAGES), hashes):
+            path = config.ROOT / name
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest)
+            with Image.open(path) as image:
+                self.assertEqual(image.size, (1672, 941))
+        with patch("pico2d.load_image", return_value=Mock()), patch("pico2d.load_font", return_value=None):
+            assets = Assets()
+        for active, archived in zip(config.CITY_STAGE_IMAGES, config.ARCHIVED_CITY_STAGE_IMAGES):
+            self.assertIn(active, assets.images)
+            self.assertNotIn(archived, assets.images)
+            self.assertFalse((config.ROOT / archived.removeprefix("before_sheets/")).exists())
+
+    def test_city_floors_cover_every_sidewalk_and_road_row_without_entering_buildings(self):
+        world = World()
+        for index, source_top, world_top in ((2, 650, 247), (3, 618, 279)):
+            stage = world.stages[index]
+            self.assertEqual(stage.walkable.bounds, (0, -44, 2560, world_top))
+            self.assertEqual((897 - world_top, 897 - stage.walkable.bounds[1]), (source_top, 941))
+            self.assertIsNone(stage.upper_walkable)
+            self.assertEqual((stage.stairs, stage.doors), ([], []))
+            self.assertIsNone(stage.traffic)
+            for x in (68, 300, 1280, 1672, 2260, 2492):
+                for y in (-44, 0, 56, 100, 200, world_top):
+                    self.assertTrue(stage.walkable.contains(x, y, 68))
+            self.assertFalse(stage.walkable.contains(1280, -44.01, 68))
+            self.assertFalse(stage.walkable.contains(1280, world_top + 0.01, 68))
+
+    def test_all_loadouts_walk_and_run_to_all_four_corners_of_both_city_floors(self):
+        for index, top in ((2, 247), (3, 279)):
+            for weapon in (None, *config.WEAPON_POSE_IMAGES):
+                for running in (False, True):
+                    for side in (-1, 1):
+                        for depth in (-1, 1):
+                            with self.subTest(stage=index, weapon=weapon, running=running, side=side, depth=depth):
+                                world = World()
+                                world.select_stage(index)
+                                player = world.player
+                                player.equip_weapon(weapon)
+                                player.x = player.previous_x = 300 if side < 0 else 2260
+                                world.controls.press("left" if side < 0 else "right")
+                                world.controls.press("down" if depth < 0 else "up")
+                                if running:
+                                    world.controls.press("left_shift")
+                                advance(world, 1.5)
+                                self.assertEqual((player.x, player.ground_y, player.floor, player.jump_height),
+                                                 (68 if side < 0 else 2492, -44 if depth < 0 else top, 0, 0))
+                                self.assertTrue(player.grounded)
+                                self.assertIsNone(player.staircase)
+                                self.assertGreaterEqual(player.y - world.camera.render_y, 0)
+
+    def test_expanded_city_depth_edges_keep_double_jumps_and_weapon_interaction_on_the_floor(self):
+        for index, top in ((2, 247), (3, 279)):
+            for depth in (-44, top):
+                for weapon in config.WEAPON_POSE_IMAGES:
+                    world = World()
+                    world.select_stage(index)
+                    player = world.player
+                    player.ground_y = player.previous_ground_y = depth
+                    world.controls.press("jump")
+                    advance(world, 0.05)
+                    tap(world.controls, "jump")
+                    advance(world, 1.5)
+                    self.assertTrue(player.grounded)
+                    self.assertEqual((player.ground_y, player.floor, player.jump_height), (depth, 0, 0))
+                    world.stage.drop_items.clear()
+                    player.equip_weapon(weapon)
+                    tap(world.controls, "weapon_interact")
+                    world.step(config.FIXED_DT)
+                    self.assertIsNone(player.weapon)
+                    item = world.stage.drop_items[0]
+                    advance(world, 1)
+                    self.assertTrue(item.grounded)
+                    self.assertTrue(world.stage.drop_spawn_area.contains(item.x, item.ground_y))
+                    player.x, player.ground_y = item.x, item.ground_y
+                    tap(world.controls, "weapon_interact")
+                    world.step(config.FIXED_DT)
+                    self.assertEqual(player.weapon, weapon)
+
+    def test_new_city_art_preserves_enemy02_items_revisit_and_f5(self):
+        world = World(rng=random.Random(32), item_rng=random.Random(23))
+        for index in (2, 3):
+            world.select_stage(index)
+            stage = world.stage
+            self.assertEqual(len(stage.drop_items), 15)
+            self.assertTrue(all(item.floor == 0 and stage.walkable.contains(item.x, item.ground_y)
+                                for item in stage.drop_items))
+            tap(world.controls, "spawn_9")
+            world.step(config.FIXED_DT)
+            self.assertEqual(len(world.enemies), 9)
+            self.assertTrue(all(type(enemy) is Enemy02 and enemy.hp == 200
+                                and enemy.formation_ground_min == stage.spawn_area.bounds[1]
+                                for enemy in world.enemies))
+            enemy, items = world.enemies[0], stage.drop_items
+            enemy.take_damage(40)
+            world.select_stage(4)
+            advance(world, 1)
+            world.select_stage(index)
+            self.assertIs(world.stage, stage)
+            self.assertIs(world.stage.drop_items, items)
+            self.assertEqual(enemy.hp, 160)
+        tap(world.controls, "restart")
+        world.update(config.FIXED_DT)
+        for index, top in ((2, 247), (3, 279)):
+            stage = world.stages[index]
+            self.assertEqual(stage.image_name, config.CITY_STAGE_IMAGES[index - 2])
+            self.assertEqual(stage.walkable.bounds, (0, -44, 2560, top))
+            self.assertEqual(stage.enemies, [])
+            self.assertEqual(len(stage.drop_items), 15)
+            self.assertIsNone(stage.traffic)
 
     def test_travel_inside_each_pair_preserves_motion_without_loading(self):
         for first in (0, 2, 4, 6, 8, 10):
@@ -214,7 +340,7 @@ class CityStageTests(unittest.TestCase):
             for enemy in enemies:
                 self.assertTrue(stage.spawn_area.contains(enemy.x, enemy.ground_y,
                                                           enemy.boundary_padding))
-                self.assertGreaterEqual(enemy.ground_y, config.GROUND_Y)
+                self.assertGreaterEqual(enemy.ground_y, 200)
                 self.assertGreater(enemy.ground_y - config.CAR_GROUND_Y, config.CAR_DEPTH_TOLERANCE)
                 self.assertIs(enemy.walkable, stage.walkable)
                 self.assertEqual(enemy.hp, config.ENEMY_MAX_HP)
@@ -225,7 +351,7 @@ class CityStageTests(unittest.TestCase):
 
     def test_both_cities_summon_on_the_pavement_only_after_numeric_input(self):
         world = World(rng=random.Random(32))
-        for index, top in ((2, 148), (3, 116)):
+        for index, bottom, top in ((2, 200, 247), (3, 208, 279)):
             stage = world.stages[index]
             self.assertEqual(stage.enemies, [])
             world.stage_index = index
@@ -233,14 +359,15 @@ class CityStageTests(unittest.TestCase):
             world.update(config.FIXED_DT)
             self.assertEqual(len(stage.enemies), 4)
             for enemy in stage.enemies:
-                self.assertGreaterEqual(enemy.ground_y, 100)
+                self.assertGreaterEqual(enemy.ground_y, bottom)
                 self.assertLessEqual(enemy.ground_y, top)
                 self.assertIs(enemy.walkable, stage.walkable)
 
     def test_city_front_rows_do_not_step_below_the_pavement_when_the_player_is_on_it(self):
         for index in (2, 3):
             for side in (-1, 1):
-                for player_y in (100, config.STAGE_WALKABLE_BOUNDS[index][3]):
+                bottom, top = config.STAGE_ENEMY_SPAWN_BOUNDS[config.STAGE_IMAGES[index]][1::2]
+                for player_y in (bottom, top):
                     with self.subTest(stage=index, side=side, player_y=player_y):
                         world = World(rng=random.Random(32))
                         world.stage_index = index
@@ -250,14 +377,14 @@ class CityStageTests(unittest.TestCase):
                         spawn_encounter(world)
                         for number, enemy in enumerate(world.enemies):
                             enemy.x = enemy.previous_x = world.player.x + side * (220 + number * 5)
-                            enemy.ground_y = enemy.previous_ground_y = 100
+                            enemy.ground_y = enemy.previous_ground_y = bottom
                             enemy.facing = -side
                         for _ in range(240):
                             world.step(config.FIXED_DT)
                             for enemy in world.enemies:
-                                self.assertGreaterEqual(enemy.ground_y, 100 - 1e-8)
+                                self.assertGreaterEqual(enemy.ground_y, bottom - 1e-8)
                                 if enemy.target_ground_y is not None:
-                                    self.assertGreaterEqual(enemy.target_ground_y, 100)
+                                    self.assertGreaterEqual(enemy.target_ground_y, bottom)
                         self.assertEqual(world.spawner.spawned_count, 4)
 
     def test_pavement_formations_can_still_follow_a_player_onto_the_road(self):

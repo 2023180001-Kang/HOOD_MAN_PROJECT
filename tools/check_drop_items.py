@@ -39,12 +39,13 @@ def tap(game, key):
 
 def check_city_sidewalk_pixels(game, image, baseline):
     # Measure against the artwork's paving, independently of the spawn bounds:
-    # source rows 736..774 exclude the buildings, curb lip and roadway.
-    source = game.assets.images["cityStage-1.png"]
-    anchor = config.STAGE_GROUND_ANCHORS.get("cityStage-1.png", config.STAGE_GROUND_Y)
+    # New source rows 656..694 exclude the buildings, curb lip and roadway.
+    name = config.CITY_STAGE_IMAGES[0]
+    source = game.assets.images[name]
+    anchor = config.STAGE_GROUND_ANCHORS.get(name, config.STAGE_GROUND_Y)
     bottom = config.GROUND_Y - anchor * config.STAGE_SCALE - game.world.camera.render_y
-    sidewalk_bottom = bottom + (source.h - 774) * config.STAGE_SCALE
-    sidewalk_top = bottom + (source.h - 736) * config.STAGE_SCALE
+    sidewalk_bottom = bottom + (source.h - 694) * config.STAGE_SCALE
+    sidewalk_top = bottom + (source.h - 656) * config.STAGE_SCALE
     delta = difference(image, baseline)
     assert delta.getbbox() is not None
     assert delta.crop((0, 0, config.SCREEN_WIDTH,
@@ -149,7 +150,7 @@ def check_all_stages(game):
                 _, bottom, _, top = area.bounds
                 assert box[1] >= floor(config.SCREEN_HEIGHT - top) - 1
                 assert box[3] <= ceil(config.SCREEN_HEIGHT - bottom) + 1
-            if stage.image_name == "cityStage-1.png":
+            if stage.image_name == config.CITY_STAGE_IMAGES[0]:
                 check_city_sidewalk_pixels(game, image, baseline)
             exit_box = ((0, 0, arrow_edge + 1, config.SCREEN_HEIGHT) if side < 0 else
                         (config.SCREEN_WIDTH - arrow_edge - 1, 0,
@@ -166,7 +167,7 @@ def check_all_stages(game):
                     assert crop.getbbox() is not None, (stage.image_name, item.floor, item.x, item.ground_y)
     game.ui.details_visible = details_visible
     print(f"PASS: all {len(world.stages)} stage layouts have 15 total drops ({counts}); actual floor pixels "
-          "fit each floor (all 15 on the flat first map), cityStage-1 "
+          "fit each floor (all 15 on the flat first map), the new first city's "
           "weapons/shadows stay on the sidewalk with no road "
           "pixels, both exit areas stay clear, and both map halves render correctly.")
 
@@ -220,9 +221,9 @@ def check_restart(game):
                for stage, old in zip(game.world.stages, previous))
     assert [sum(item.floor == floor for item in game.world.stage.drop_items)
             for floor in (0, 1)] == ([8, 7] if game.world.stage.upper_walkable else [15, 0])
-    city = game.world.stages[config.STAGE_IMAGES.index("cityStage-1.png")]
-    assert all(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 123
-               and item.ground_y + config.DROP_ITEM_HEIGHT <= 161
+    city = game.world.stages[config.STAGE_IMAGES.index(config.CITY_STAGE_IMAGES[0])]
+    assert all(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 203
+               and item.ground_y + config.DROP_ITEM_HEIGHT <= 241
                and city.walkable.contains(item.x, item.ground_y)
                for item in city.drop_items)
     assert all(game.assets.images[name] is texture for name, texture in textures.items())

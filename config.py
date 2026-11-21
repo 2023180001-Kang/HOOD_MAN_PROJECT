@@ -198,7 +198,9 @@ RESEARCHER_BULLET_SPEED = 900.0
 RESEARCHER_BULLET_FPS = 16.0
 RESEARCHER_BULLET_LIFETIME = 1.25
 ENEMY02_IMAGE = "HOOD_MAN_enemy02.png"
-ENEMY02_STAGE_IMAGES = ("cityStage-1.png", "cityStage-2.png")
+CITY_STAGE_IMAGES = ("cityStage1_ground_300px_1672x941.png", "cityStage2_ground_300px_1672x941.png")
+ARCHIVED_CITY_STAGE_IMAGES = ("before_sheets/cityStage-1.png", "before_sheets/cityStage-2.png")
+ENEMY02_STAGE_IMAGES = CITY_STAGE_IMAGES
 ENEMY02_BOUNDARY_PADDING = 128.0  # Living attack/effect envelope reaches 126.75px.
 # Attack name: (one-based source row, damage for the whole motion, active frames).
 ENEMY02_ATTACKS = {
@@ -330,7 +332,7 @@ FACTORY_EXTERIOR_IMAGE = "HOOD_MAN_Factory_Exterior_1672x941.png"
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
 LAB_STAGE_IMAGES = ("labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png")
 BOSS_STAGE_IMAGES = ("bossStage-1.png", "bossStage-2.png")
-STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png", "cityStage-1.png", "cityStage-2.png",
+STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png", *CITY_STAGE_IMAGES,
                 FACTORY_OUTSIDE_IMAGE, FACTORY_EXTERIOR_IMAGE, *FACTORY_INSIDE_IMAGES,
                 *LAB_STAGE_IMAGES, *BOSS_STAGE_IMAGES)
 STAGE_LOADING_IMAGE = "HOOD_MAN_STAGE_LOADING_1280x720.png"
@@ -361,8 +363,10 @@ STAGE_WALKABLE_BOUNDS = (
     # World y = 100 - 144 + 941 - source_y; stop before the foreground curb/drain.
     (0.0, -3.0, WORLD_WIDTH, 277.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
-    (0.0, 56.0, WORLD_WIDTH, 148.0),
-    (0.0, 56.0, WORLD_WIDTH, 116.0),
+    # New cities: the complete sidewalk and road, down to the source bottom edge.
+    # World y = 100 - 144 + 941 - source_y; building feet are at rows 650 / 618.
+    (0.0, -44.0, WORLD_WIDTH, 247.0),
+    (0.0, -44.0, WORLD_WIDTH, 279.0),
     # Stair-free loading dock: full concrete floor, source rows 683..896.
     # The raised loading platform/fascia and foreground drainage grate are not floor.
     (0.0, 45.0, WORLD_WIDTH, 258.0),
@@ -378,13 +382,13 @@ STAGE_WALKABLE_BOUNDS = (
 STAGE_WALKABLE_POLYGONS = {}
 # Spawn on the sidewalk, while pursuit can still use the full city floor.
 STAGE_ENEMY_SPAWN_BOUNDS = {
-    "cityStage-1.png": (0.0, GROUND_Y, WORLD_WIDTH, 148.0),
-    "cityStage-2.png": (0.0, GROUND_Y, WORLD_WIDTH, 116.0),
+    CITY_STAGE_IMAGES[0]: (0.0, 200.0, WORLD_WIDTH, 247.0),
+    CITY_STAGE_IMAGES[1]: (0.0, 208.0, WORLD_WIDTH, 279.0),
 }
-# cityStage-1's paved sidewalk is above the curb, not the y=100 actor floor line.
-# Source rows 737..769 keep the whole weapon and shadow clear of the curb/road.
+# City 1's pavement moved upward in the replacement art.
+# Source rows 657..689 keep the whole weapon and shadow clear of the curb/road.
 STAGE_DROP_ITEM_SPAWN_BOUNDS = {
-    "cityStage-1.png": (0.0, 128.0, WORLD_WIDTH, 160.0),
+    CITY_STAGE_IMAGES[0]: (0.0, 208.0, WORLD_WIDTH, 240.0),
 }
 
 # State: (one-based source row, frames per second, loop).

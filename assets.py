@@ -16,7 +16,6 @@ class Assets:
             for name in (config.TITLE_IMAGE, config.STAGE_LOADING_IMAGE,
                          config.PLAYER_IMAGE, config.COMBAT_IMAGE,
                          config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
-                         config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
                          config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,
                          config.HP_IMAGE,
@@ -27,6 +26,7 @@ class Assets:
                          *config.DOOR_IMAGES.values(),
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
+        # Archived car-hit clips remain for opt-in diagnostics, without textures.
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             self.frames = json.load(file)
         font_path = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "malgun.ttf"

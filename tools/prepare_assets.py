@@ -23,8 +23,8 @@ SHEETS = {
     config.COMBAT_IMAGE: 4,
     config.STRONG_ATTACK_IMAGE: 5,
     config.STRONG_HIT_IMAGE: 5,
-    config.PLAYER_CAR_HIT_IMAGE: 1,
-    config.ENEMY_CAR_HIT_IMAGE: 1,
+    # Keep legacy vehicle clips reproducible without preloading their textures.
+    **dict.fromkeys(config.ARCHIVED_CAR_HIT_IMAGES, 1),
     **{name: config.WEAPON_SHEET_ROWS[kind] for kind, name in config.WEAPON_POSE_IMAGES.items()},
 }
 AIRBORNE_WEAPON_ROWS = {config.WEAPON_POSE_IMAGES[kind]: row

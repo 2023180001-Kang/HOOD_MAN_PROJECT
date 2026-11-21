@@ -27,8 +27,9 @@ def city(game, *, ground_y=148):
     game.world = World(rng=random.Random(5), traffic_rng=random.Random(5))
     game.world.stage_index = 2
     game.world.stage.traffic = Traffic(rng=random.Random(5))
-    if config.CAR_IMAGE not in game.assets.images:
-        game.assets.images[config.CAR_IMAGE] = pico2d.load_image(str(config.ROOT / config.CAR_IMAGE))
+    for name in (config.CAR_IMAGE, *config.ARCHIVED_CAR_HIT_IMAGES):
+        if name not in game.assets.images:
+            game.assets.images[name] = pico2d.load_image(str(config.ROOT / name))
     game.world.player.ground_y = ground_y
     game.world.stage.traffic.spawn_remaining = 100
     return game.world
@@ -210,6 +211,12 @@ def check_removed_traffic(game):
     world = game.world
     assert all(stage.traffic is None for stage in world.stages)
     assert config.CAR_IMAGE not in game.assets.images
+    assert all(name not in game.assets.images for name in config.ARCHIVED_CAR_HIT_IMAGES)
+    for name in config.ARCHIVED_CAR_HIT_IMAGES:
+        path = config.ROOT / name
+        assert path.parent == config.ROOT / "before_sheets" and path.is_file()
+        assert not (config.ROOT / path.name).exists()
+        assert len(game.assets.frames[name]) == 1 and len(game.assets.frames[name][0]) == 8
     archived = config.ROOT / config.CAR_IMAGE
     assert archived.parent == config.ROOT / "before_sheets" and archived.is_file()
     assert not (config.ROOT / archived.name).exists()
@@ -248,12 +255,13 @@ def check_removed_traffic(game):
     assert world.stage_index == 0 and world.player.hp == 500
     assert all(stage.traffic is None for stage in world.stages)
     assert all(game.assets.images[name] is image for name, image in textures.items())
+    assert all(name not in game.assets.images for name in config.ARCHIVED_CAR_HIT_IMAGES)
     world.select_stage(2)
     world.player.ground_y = config.CAR_GROUND_Y
     tick(game, 5 * 60)
     assert world.player.hp == 500 and world.stage.traffic is None
     capture(game, "city_no_traffic_after_restart")
-    print("PASS: archived car sheet is absent from runtime textures; city road stays safe "
+    print("PASS: archived car and both car-hit sheets are absent from runtime textures; city road stays safe "
           "for 30s, both views omit vehicles/warnings, four enemies and 15 drops remain, "
           "P still works, and revisits/F5 never restore traffic.")
 

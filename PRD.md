@@ -94,8 +94,8 @@
 | 연구원 권총 총알 | bullet_for_researcher | `bullet_for_researcher.png` | 2048×256 RGBA·256px 셀·8프레임, 배율 0.125·탄두 약 10×5px, 총구와 크기/방향 정렬 |
 | 도시 전용 신규 적 | HOOD_MAN_enemy02 | `HOOD_MAN_enemy02.png` | 3072×2688, 384px 셀의 8열×7행·공유 로딩, 두 공격의 원본 행을 분리 |
 | 이전 도로 차량 | HOOD_MAN_car_attached_wheels | `before_sheets/HOOD_MAN_car_attached_wheels_8f_pico2d.png` | 원본 보관, 일반 게임에서 차량 생성·이미지 로딩 안 함 |
-| 주인공 차량 피격 | hoodman_car_hit_8frames | `hoodman_car_hit_8frames_2048x256.png` | 8열×1행, 12 FPS·약 0.667초의 즉사 전용 모션 |
-| 적 차량 피격 | street_thug_car_hit | `street_thug_car_hit_8frames_2048x256.png` | 8열×1행, 주인공과 같은 속도로 재생 후 마지막 자세·페이드 |
+| 이전 주인공 차량 피격 | hoodman_car_hit_8frames | `before_sheets/hoodman_car_hit_8frames_2048x256.png` | 원본 보관·일반 이미지 로딩 제외, 명시적인 이전 차량 회귀에서만 사용 |
+| 이전 기본 적 차량 피격 | street_thug_car_hit | `before_sheets/street_thug_car_hit_8frames_2048x256.png` | 원본 보관·일반 이미지 로딩 제외, 기존 8프레임/발 오프셋은 보관 경로 메타데이터로 유지 |
 | 바닥 드랍 단검 | combat_knife | `hoodman_drop_combat_knife_8f.png` | 2048×256 RGBA·8열×1행, 8 FPS 반복·배율 0.5·근처에서 G로 획득 |
 | 바닥 드랍 쇠파이프 | steel_pipe | `hoodman_drop_steel_pipe_8f.png` | 같은 규격·원본 보존, 각 맵의 이동 화살표를 피해서 배치 |
 | 단일 몽둥이 적 사망 드롭 | HoodMan_MetalClub | `HoodMan_MetalClub_Item_6frames_1536x256.png` | 1536×256 RGBA·6열×1행, 낙하 중 8 FPS·착지 후 0번 고정·배율 0.25·사망당 1개·획득/장착 불가 |
@@ -127,7 +127,7 @@
 
 교체한 연구소 배경 원본은 `before_sheets/labStage-1_1672x941.png`, `before_sheets/labStage-2_1672x941.png`에 보관한다.
 
-기존 9Moves 시트는 `before_sheets/HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png`에 원본 그대로 보관한다. 기존 무기 시트는 `before_sheets/HOOD_MAN_DAGGER_new.png`, `before_sheets/HOOD_MAN_STEEL_PIPE_new.png`에 보관한다. `tools/prepare_assets.py`는 반격 시트 2개·64프레임을 제외한 **캐릭터/총알 13개 시트·536프레임**을 생성한다. 나머지 클립 데이터는 변경하지 않는다. 도끼 적 기절 행은 메타데이터에만 보존하며 상태에 연결하지 않는다. enemy02는 384×384 셀, 나머지는 256×256 셀이다. 차량/바닥 아이템/문은 기존 직접 클립을 유지하며 두 Counter PNG는 before_sheets 보관만 한다.
+기존 9Moves 시트는 `before_sheets/HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png`에 원본 그대로 보관한다. 기존 무기 시트는 `before_sheets/HOOD_MAN_DAGGER_new.png`, `before_sheets/HOOD_MAN_STEEL_PIPE_new.png`에 보관한다. `tools/prepare_assets.py`는 반격 시트 2개·64프레임을 제외한 **총 13개 시트·536프레임**을 생성한다. 이는 **활성 캐릭터/총알 11개·520프레임 + 보관 차량 피격 2개·16프레임**이며, 후자의 이미지 텍스처는 일반 로딩에서 제외한다. 두 차량 피격 PNG는 `before_sheets/`의 원본과 보관 경로 메타데이터로만 유지하고 클립 좌표/발 오프셋은 바꾸지 않는다. 도끼 적 기절 행은 메타데이터에만 보존하며 상태에 연결하지 않는다. enemy02는 384×384 셀, 나머지는 256×256 셀이다. 차량/바닥 아이템/문은 기존 직접 클립을 유지하며 두 Counter PNG는 before_sheets 보관만 한다.
 
 - 이미지의 실제 크기, 투명 영역, 프레임 경계, 발 위치를 확인한 뒤 클립 좌표를 정의한다.
 - 좌우 방향은 동일 프레임의 수평 반전을 기본으로 한다.
@@ -424,7 +424,7 @@
 
 ### FR-09. 사망과 적 넉백
 
-- 일반 적 공격으로 HP가 0이 되면 비무장/쇠파이프는 공통 주인공 5행, 단검은 보유 시트 6행의 쓰러짐 모션을 1회 재생한다. 차량 즉사는 FR-24의 전용 시트를 사용하며 기존 근거리 적 넉백 이벤트는 동일하게 한 번 처리한다.
+- 일반 적 공격으로 HP가 0이 되면 비무장/쇠파이프는 공통 주인공 5행, 단검은 보유 시트 6행의 쓰러짐 모션을 1회 재생한다. 차량 즉사와 보관 전용 시트는 FR-24의 명시적인 이전 차량 회귀에만 해당하며 일반 게임에서 로딩/발동하지 않는다. 기존 근거리 적 넉백 이벤트는 동일하게 한 번 처리한다.
 - 사망 전이 순간 주인공의 **반경 160px 이내에 살아 있는 적들만** 바닥 평면에서 주인공으로부터 멀어지는 방향으로 한 번 넉백한다.
 - 거리는 `Δx² + Δground_y² + Δjump_height² <= 160²`로 계산한다. 경계를 포함하고 공중 높이와 바닥 깊이를 따로 반영한다. 넉백의 전체 초기 속도는 450px/s·감속은 900px/s²이며 매 이동 후 보행 경계에서 바깥쪽 속도를 제거한다.
 - 범위 밖의 적은 넉백 모션·속도·이동을 적용하지 않고 현재 위치·바라보는 방향을 유지한 채 즉시 추적과 공격을 취소하고 대기한다.
@@ -627,7 +627,7 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 
 ### FR-24. cityStage-1 도로 차량·충돌 즉사 (폐기된 이전 사양)
 
-2026-11-19 요청에 따라 차량 통행을 제거했다. 현재 모든 `Stage.traffic`은 기본 `None`이며 자동차 본체 시트는 `before_sheets`로 이동해 기본 리소스 로딩에서도 제외한다. 아래 차량 속도·충돌·연출 규칙과 관련 인수 기준은 이전 구현/명시적 테스트 주입에만 해당하며 현재 일반 게임에는 적용하지 않는다. 재방문/F5에도 차량을 복원하지 않고 도시의 보행/적/아이템과 P/F4는 유지한다.
+2026-11-19 요청에 따라 차량 통행을 제거했다. 현재 모든 `Stage.traffic`은 기본 `None`이며 자동차 본체 시트는 `before_sheets`로 이동해 기본 리소스 로딩에서도 제외한다. 2026-11-21에는 주인공/기본 적의 `hoodman_car_hit_8frames_2048x256.png`·`street_thug_car_hit_8frames_2048x256.png`도 `before_sheets/`로 옮겨 일반 이미지 로딩에서 제외했다. 아래 차량 속도·충돌·연출 규칙과 관련 인수 기준은 이전 구현/명시적 테스트 주입에만 해당하며 현재 일반 게임에는 적용하지 않는다. 보관 피격 시트의 기존 16개 클립은 보관 경로로 재현 가능하게 유지하고 `tools/check_traffic.py`의 이전 차량 장면에서만 본체/피격 텍스처를 명시적으로 로딩한다. 재방문/F5에도 차량이나 피격 이미지를 복원하지 않고 도시의 보행/적/아이템과 P/F4는 유지한다.
 
 - 차량은 `cityStage-1.png`에만 존재한다. 활성 맵 플레이 시간 0.35초 후 첫 차량을 맵 바깥에서 생성하고, 한 번에 한 대씩 도로 전체를 가로질러 반대편으로 빠져나간다. 화면/카메라 끝이 아닌 월드 양 끝 바깥 220px를 시작·제거 기준으로 사용한다.
 - 매 통행마다 좌→우 또는 우→좌를 독립 추첨하고 속도는 1120~1680px/s에서 추첨한다. 통과 후 0.4~1.0초를 무작위로 기다린 뒤 다음 통행을 시작한다. 방향·속도는 통행 중 바뀌지 않으며 적 소환의 난수/공격 속도 배정과 독립적이다.
@@ -845,7 +845,7 @@ H/J/K/L 기능 삭제에 따라 아래 HOLD/이동/A 후속 공격 사양도 함
 
 - H/J/K/L의 SDL 입력 매핑을 삭제한다. 새 입력·유지·반복·동시 입력 모두 동작/피해/효과를 발생시키지 않고 이동·점프·ASDF·QWERT·무기·슬로 모션을 취소하지 않는다. 로딩/사망/포커스 전환/F5 뒤에도 반격 입력을 예약하지 않는다.
 - 근거리 반격, CAPTURE/HOLD/FOLLOW_UP, 적을 든 이동, A 후속 피해 80, 임시 짝 여백/높이/보호, SUBDUED/HELD 반응을 제거한다. `counter.py`와 주인공/적/월드의 관련 상태·호출 경로도 제거하며 단순 키 비활성화로만 남기지 않는다.
-- `HoodMan_Counter_Player_2048x1024.png`와 `HoodMan_Counter_Enemy_2048x1024.png`는 before_sheets에 원본 그대로 옮긴다. 일반 이미지 로딩과 `tools/prepare_assets.py`/`assets/frames.json`에서 제외하여 현재 프레임은 13개 시트·536개다. 나머지 PNG와 클립 수치는 변경하지 않는다.
+- `HoodMan_Counter_Player_2048x1024.png`와 `HoodMan_Counter_Enemy_2048x1024.png`는 before_sheets에 원본 그대로 옮긴다. 일반 이미지 로딩과 `tools/prepare_assets.py`/`assets/frames.json`에서 제외하여 현재 메타데이터는 총 13개 시트·536개다. 이 중 차량 피격 2개·16개 클립은 FR-24의 보관 전용이며 활성 캐릭터/총알 텍스처는 11개·520개 클립이다. 나머지 PNG와 클립 수치는 변경하지 않는다.
 - 모든 맵 HUD의 H/J/K/L 기술명/80 피해·반격 조건·제압 유지/A 후속 안내를 제거한다. HP·ASDF/QWERT·무기·적 공격 피해/7발 재장전·숫자 소환·F3/F4/N/P/U/F5 안내는 유지한다.
 - H/J/K/L로 적의 공격이나 연구원 총알을 막을 수 없다. P 무적 외에 삭제된 반격의 보호/공격 취소는 남기지 않고, A는 비무장/보유 무기에 따른 기존 10 피해 기본 공격으로 처리한다. 일반/강화 피격·사망/페이드·숫자 소환/열린 문은 기존대로다.
 - **W의 50 피해 접촉 동반 비행/방향 전환/해제 관성과 Q/E/R/T는 유지**한다. 폐기 반격만을 검증하던 테스트/SDL 도구는 삭제 사양에 맞게 정리하고 무동작·보호 없음·원본 보관/미로딩·HUD 제거 회귀를 추가한다.
@@ -1131,6 +1131,7 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 | AC-100 | 첫 스테이지 전체 포장 바닥 이동/F4 | 첫 맵의 실제 보행/F4 경계가 x=0~2560·y=-3~277(원본 y=620~900), 주인공 좌우 여백 68 유지. 세 보유 상태·걷기/달리기로 네 모서리 도달·앞쪽 전체 폭 이동·점프/착지/G/F5 정상, 벽/연석/배수로 제외·다른 맵 범위 불변 |
 | AC-101 | 계단 없는 하역장 교체·원본 보관·전체 바닥/F4 | 다섯 번째 배경은 factory_loading_dock_no_stairs, 이전 hood_man_factory_loading_dock은 before_sheets에 해시 불변 보관·일반 로딩 제외. 원본 y=683~896의 콘크리트 바닥 전체(월드 x=0~2560·y=45~258), 세 보유 상태×걷기/달리기×네 모서리 도달·F4 발 경계 일치·상하 경계 이단 점프 착지·숨은 계단/상층 없음. 도끼 적 400/60·15개 아이템·재방문/F5·도시 로딩/공장 외부 즉시 왕복 유지 |
 | AC-102 | 도시 두 배경 순차 교체·원본 보관·보도/차도 전체/F4 | 세 번째·네 번째 맵은 cityStage1_ground_300px→cityStage2_ground_300px, 이전 두 PNG는 before_sheets 원본 보관·일반 미로딩. 원본 y=650~941/618~941 전체(월드 x=0~2560·y=-44~247/-44~279), 세 보유 상태×걷기/달리기×네 모서리 48개 경우·상하 경계 횡단/이단 점프·F4 일치. 새 보도 적 소환/대열·첫 도시 보도 무기·enemy02 200/60/80·15개 아이템·무차량·왕복/로딩/F5 유지 |
+| AC-103 | 주인공/기본 적 차량 피격 시트 보관·일반 미로딩 | 두 car_hit PNG는 before_sheets에 SHA-256 불변 보관·루트 없음·일반 Assets/F5 미로딩. 기존 16개 클립의 좌표/발 오프셋과 나머지 520개 클립 불변, 보관 경로로 생성기 재현 가능. 이전 차량 진단만 명시적 텍스처 로딩/재사용하며 일반 차량 제거·피격/사망/무기·맵/바닥 유지 |
 
 ### 9.2 경계 및 반복 검증
 
@@ -1175,6 +1176,7 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 - 새 첫 맵은 `python -m unittest tests.test_stage_doors tests.test_stages tests.test_drop_items tests.test_floor_bounds -v`·`python tools/check_doors.py`·`python tools/check_drop_items.py`·`python tools/check_stages.py`로 일반/창고 문 위치·전체 프레임/반전/완료 픽셀·숫자 소환 좌표/개수·단층 점프/아이템·맵 왕복/초기화를 확인한다. 이전 계단/2층/상층 카메라 전용 테스트와 `check_two_floors.py`·`check_stair_*.py`·`check_platform_jumps.py`·`check_vertical_camera.py`는 보관 맵 fixture를 명시해 유지한다.
 - 첫 맵 바닥 전체 접근은 `python tools/check_belt_scroll.py`로 F4의 실제 표시/입력과 세 보유 상태×걷기/달리기×네 모서리 도달을 검증한다. 발 좌표를 원본 포장 바닥 y=620/900에 비교하고 새 앞쪽 영역의 전체 폭 달리기·이단 점프 착지/F5, 기존 8방향/깊이/집단/맵 경계도 확인한다.
 - 도시 새 배경/전체 바닥은 `python -m unittest tests.test_city_stages tests.test_floor_bounds tests.test_drop_items tests.test_weapon_pickup tests.test_traffic_removed tests.test_stages tests.test_enemy02`로 보관 해시/미로딩·진행 순서·바닥 좌표/48개 모서리 경우·경계 점프/G·맵별 보도 적/드랍·보존/F5를 확인한다. `python tools/check_city_walking.py`의 실제 SDL F4·원본/반전 타일 전체 폭 달리기·상하 경계 이단 점프·새 보도 걷기 8프레임/차도 유인, `check_stages.py`의 두 배경 픽셀/흔들림·도시 즉시 왕복/구역 로딩, `check_enemy02.py`·`check_drop_items.py`·`check_weapons.py`의 기존 전투/아이템 회귀를 함께 검증한다.
+- 차량 피격 이미지 보관은 `python -m unittest tests.test_traffic_removed tests.test_traffic tests.test_integration tests.test_weapon_pickup tests.test_removed_counters`로 원본 해시/루트 제외·일반 이미지 미로딩·보관 클립/기존 피격 수명·진단의 명시적 1회 로딩/재사용을 검증한다. `python tools/check_traffic.py`는 정상 게임의 본체/두 피격 시트 미로딩·도로 30초 안전·재방문/F5를 확인한다. 이전 시트 렌더링은 같은 도구의 `city(game)`·`check_impacts_and_fade(game)`를 명시적으로 호출한 진단에서만 검증하며 일반 실행 경로에는 연결하지 않는다.
 - 무기 전투는 `python -m unittest tests.test_weapon_combat -v`와 `python tools/check_weapon_combat.py`로 G 획득 후 6개 A/S/D 공격의 원본 행/클립·지정 유효 프레임·두 적/양방향/단발 피해·기존 타격 효과 실제 픽셀·피해 숫자/HUD·G 취소/교체·F/F5·FPS 독립성을 검증한다. H/J/K/L과 함께 누른 A의 기본 10 피해는 삭제 회귀에서 확인한다.
 - 무기 D는 `python -m unittest tests.test_weapon_leap -v`로 수동 이단 점프 조건·0.2배 주인공/적/환경 시계·공중 방향 전환·D 재입력의 2배 방향 고정 급강하·착지 단발·중단/자연 착지의 시간 복원·전 맵 모서리·로딩/F5·30/60/120/144 FPS를 검증한다. `tools/check_weapon_combat.py`에서도 실제 SDL Space 두 번/D 유지·반복/해제 후 재입력과 두 적 종류/양방향의 이동/모션 배율·HUD·착지 타격을 확인하고 조준/급강하를 캡처한다.
 - 무기 D의 강화 흔들림은 같은 로직/SDL 도구로 착지 적중 때만 16/8px·기존 대비 양축 2배·같은 감쇠/지속 시간·HP 픽셀 고정과 일반 A/S의 8px 유지, 헛공격 무흔들림·후속 기본 공격/F5 복원을 확인한다.
@@ -2075,3 +2077,13 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 - 맵/아이템/회귀 실행: `check_stages.py`로 두 새 배경 각각 좌/중앙/우×세로 흔들림의 9개 뷰를 원본 픽셀과 비교하고, 도시 사이 걷기/달리기/이단 점프 상승/하강의 양방향 8개 전환·동일 Player/HP/입력·기존 양쪽 구역 2초 로딩/맵별 객체 보존/F5 취소를 통과했다. 도시 왕복 캡처는 `city_travel_*`로 분리해 첫 두 맵의 캡처를 덮어쓰지 않는다. `check_drop_items.py`·`check_weapons.py`의 전체 12개 맵 아이템 15개/접지·첫 도시 새 보도 픽셀·G 획득/버리기/재획득·보존/F5, `check_axe_enemy.py`의 기존 하역장/도끼 적, `check_belt_scroll.py`의 첫 맵 전체 바닥/F4/집단 경계도 통과했다. 별도 작업 폴더에서 전체 경로 `main.py --smoke-test 120` 정상 종료를 확인했다.
 - 화면 검토: `artifacts/city_ground_300_1_walk_-1_1.png`·`city_ground_300_2_walk_1_1.png`의 건물 아래 보도 경계와 `city_ground_300_1_walk_1_-1.png`·`city_ground_300_2_walk_-1_-1.png`의 이미지 하단 차도/발/F4 경계를 검토했다. `drop_stage_3_left.png`의 새 보도 무기 배치와 `city_walk_2_1_natural.png`의 적 보도 접지도 확인했다. 캡처는 Git 제외 대상이며 자동 SDL 입력/화면 검증을 수행했다. 장시간 직접 키보드 플레이는 수행하지 않았다.
 - 문서/기록 정책: 현재 리소스/진행·FR-04/15/16/18/19/21/26/30/31/33·설정 표·AC-42/52/53/59/66/71/74/78/102·검증 방법과 이 이력을 PRD.md에만 반영한다. 이전 이력과 사용자 커밋 `9f905ea`를 보존하며 **스테이징·커밋·푸시 없이 작업 트리에 유지**한다.
+
+### 주인공/기본 적 차량 피격 car_hit 시트를 before_sheets로 보관 (2026-11-21, 커밋 없음)
+
+- 요청: 차량이 제거된 현재 게임에서 사용하지 않는 주인공/기본 적의 차량 피격 이미지를 `before_sheets/`로 옮기며 별도 커밋은 만들지 않는다. 일반 피격/사망 시트와 다른 적의 리소스는 이동하지 않는다.
+- 원본 보관: `hoodman_car_hit_8frames_2048x256.png` → `before_sheets/hoodman_car_hit_8frames_2048x256.png`, `street_thug_car_hit_8frames_2048x256.png` → `before_sheets/street_thug_car_hit_8frames_2048x256.png`로 이동했다. 각각 2048×256 RGBA·8프레임 원본을 수정하지 않았으며 SHA-256은 `defc3f097f767b8e6049e3683b4a04bca50baf9ae2b3a24506e4f5ecc640b6b4`·`003328722278f678e53c4e9c65f8b3f0a5c630f6becbe4a7f157455bcbd66314`다.
+- 로딩/경로: `PLAYER_CAR_HIT_IMAGE`·`ENEMY_CAR_HIT_IMAGE`를 보관 경로로 갱신하고 `ARCHIVED_CAR_HIT_IMAGES`로 구분했다. 일반 `Assets`의 두 텍스처 선행 로딩을 제거하여 새 게임·도시 진입·F5에도 열지 않는다. 차량 통행은 계속 모든 맵에서 기본 `None`이며 일반 피격/사망·무기·적 종류·맵/바닥은 바꾸지 않는다.
+- 보관 진단 유지: 기존 차량 물리/상태 회귀는 삭제하지 않는다. `assets/frames.json`의 두 시트 키만 보관 경로로 바꾸고 기존 16개 클립의 좌표/발 오프셋·나머지 520개 클립은 유지한다. `tools/prepare_assets.py`도 같은 보관 원본에서 재현하므로 총 메타데이터는 13개·536프레임(활성 11개·520 + 보관 2개·16)이다. `tools/check_traffic.py`의 수동 `city(game)` 진단만 차량 본체/피격 텍스처를 명시적으로 1회 로딩해 재사용하며 정상 검증 `main()`에는 이 진단을 연결하지 않는다.
+- 집중 검증: 원본 해시/크기·루트 제외, 일반 텍스처 미로딩/보관 클립 경로, 명시적인 차량 진단의 1회 로딩/기존 텍스처 재사용의 3개 회귀를 추가했다. `.\.venv\Scripts\python.exe -m unittest tests.test_traffic_removed tests.test_traffic tests.test_integration tests.test_weapon_pickup tests.test_removed_counters` **57개 통과**(2.255초).
+- 전체/실제 SDL 검증: `.\.venv\Scripts\python.exe -m unittest discover -s tests` **650개 통과**(48.385초). 실제 창에서 일반 게임의 본체/두 피격 이미지 미로딩·도로 30초 안전·적 4명/아이템 15개·P·재방문/F5를 확인했다. 명시적 보관 진단에서만 두 피격 이미지를 로딩해 양방향 8프레임·마지막 자세·3초 대기/1초 페이드를 통과했고, 진단 종료 후 새 `Game`은 다시 두 텍스처를 로딩하지 않았다. `check_runtime.py`·`check_weapons.py`의 일반 이동/점프/전투/HP/HUD·숫자 소환·일반 피격/사망·G/무기/F5와 별도 작업 폴더의 `main.py --smoke-test 120`도 통과했다. 자동 SDL 입력/화면 검증이며 장시간 직접 키보드 플레이는 수행하지 않았다.
+- 문서/기록 정책: 리소스 경로/활성·보관 클립 구분·FR-10/24/40·AC-103·검증 방법과 이 이력을 PRD.md에만 반영한다. 이전 변경 이력과 사용자 커밋 `e766858`을 보존하며 **스테이징·커밋·푸시 없이 작업 트리에 유지**한다.

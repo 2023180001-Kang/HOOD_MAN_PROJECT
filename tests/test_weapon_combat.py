@@ -90,6 +90,9 @@ class WeaponCombatTests(unittest.TestCase):
                                     self.assertEqual(world.effects[-1].facing, side)
                                     self.assertEqual(world.damage_numbers[-1].damage, move.damage)
                                     self.assertGreater(world.camera.shake_remaining, 0)
+                                    self.assertEqual(world.camera.shake_strength,
+                                                     config.WEAPON_DIVE_SHAKE_STRENGTH
+                                                     if move.jump_attack else config.SHAKE_STRENGTH)
                             self.assertEqual((hits, enemy.hp, world.player.hp),
                                              (1, 200 - move.damage, 500))
 

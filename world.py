@@ -268,7 +268,9 @@ class World:
                                                                  self.player.facing,
                                                                  depth=contact_depth,
                                                                  image_name=self.player.active_move.hit_image))
-                        self.camera.shake()
+                        strength = (config.WEAPON_DIVE_SHAKE_STRENGTH
+                                    if self.player.active_move.jump_attack else config.SHAKE_STRENGTH)
+                        self.camera.shake(strength=strength)
             for enemy in self.enemies:
                 enemy_box = enemy.attack_box
                 if enemy_box is not None and enemy.try_hit(self.player):

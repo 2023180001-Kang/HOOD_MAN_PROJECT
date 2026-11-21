@@ -2,11 +2,14 @@ import unittest
 from math import hypot
 
 import config
+from axe_enemy import AxeEnemy
+from camera import Camera
 from drop_items import DropItem
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
 from enemy02 import Enemy02
 from player import Player
+from researcher import Researcher
 from tests.helpers import advance, tap
 from tests.test_weapon_combat import double_jump, equipped_world, target
 from traffic import Car, Traffic
@@ -216,6 +219,91 @@ class WeaponLeapTests(unittest.TestCase):
             self.assertEqual((world.time_scale, enemy.hp), (1, 200))
             self.assertFalse(world.effects)
             self.assertFalse(world.damage_numbers)
+            self.assertEqual(world.camera.shake_remaining, 0)
+
+    def test_dive_hit_shake_doubles_both_axes_without_changing_duration_or_decay(self):
+        for kind in config.WEAPON_POSE_IMAGES:
+            for enemy_type in (Enemy, Enemy02, AxeEnemy, Researcher):
+                for side in (-1, 1):
+                    with self.subTest(kind=kind, enemy=enemy_type.__name__, side=side):
+                        world = aim(kind)
+                        player = world.player
+                        player.facing = side
+                        world.controls.press("right" if side > 0 else "left")
+                        enemy = target(world, enemy_type, side)
+                        hp = enemy.hp
+                        advance(world, 0.1)
+                        self.assertEqual(world.camera.shake_remaining, 0)
+                        tap(world.controls, "combat_d")
+                        for _ in range(120):
+                            world.step(config.FIXED_DT)
+                            if enemy.hp != hp:
+                                break
+                        self.assertEqual(enemy.hp, hp - 50)
+                        self.assertEqual(player.weapon_leap_phase, "LANDING")
+                        self.assertEqual(world.camera.shake_strength, config.SHAKE_STRENGTH * 2)
+                        self.assertAlmostEqual(world.camera.shake_remaining,
+                                               config.SHAKE_DURATION
+                                               - config.FIXED_DT * config.WEAPON_DIVE_TIME_SCALE)
+                        baseline = Camera(player.x)
+                        baseline.shake()
+                        baseline.update(config.SHAKE_DURATION - world.camera.shake_remaining, player.x)
+                        position = player.x, player.ground_y, enemy.x, enemy.ground_y
+                        for _ in range(26):
+                            self.assertAlmostEqual(world.camera.shake_remaining, baseline.shake_remaining)
+                            self.assertAlmostEqual(world.camera.offset_x, baseline.offset_x * 2)
+                            self.assertAlmostEqual(world.camera.offset_y, baseline.offset_y * 2)
+                            world.camera.update(config.FIXED_DT, player.x)
+                            baseline.update(config.FIXED_DT, player.x)
+                        self.assertEqual((world.camera.shake_remaining, world.camera.offset_x,
+                                          world.camera.offset_y), (0, 0, 0))
+                        self.assertEqual((player.x, player.ground_y, enemy.x, enemy.ground_y), position)
+
+    def test_aim_airborne_dive_and_missed_landing_do_not_start_shake(self):
+        for kind in config.WEAPON_POSE_IMAGES:
+            world = aim(kind)
+            phases = {world.player.weapon_leap_phase}
+            advance(world, 0.1)
+            self.assertEqual(world.camera.shake_remaining, 0)
+            tap(world.controls, "combat_d")
+            for _ in range(120):
+                world.step(config.FIXED_DT)
+                phases.add(world.player.weapon_leap_phase)
+                self.assertEqual((world.camera.shake_remaining, world.camera.offset_x,
+                                  world.camera.offset_y), (0, 0, 0))
+                if world.player.active_move is None:
+                    break
+            self.assertTrue({"AIM", "DIVE", "LANDING", None} <= phases)
+
+    def test_dive_boost_does_not_leak_into_the_next_basic_hit_or_restart(self):
+        for kind in config.WEAPON_POSE_IMAGES:
+            for action in ("basic_hit", "restart"):
+                world = aim(kind)
+                enemy = target(world)
+                tap(world.controls, "combat_d")
+                for _ in range(120):
+                    world.step(config.FIXED_DT)
+                    if enemy.hp < 200:
+                        break
+                self.assertEqual(world.camera.shake_strength, config.SHAKE_STRENGTH * 2)
+                if action == "restart":
+                    tap(world.controls, "restart")
+                    world.update(config.FIXED_DT)
+                    self.assertEqual((world.camera.shake_strength, world.camera.shake_remaining,
+                                      world.camera.offset_x, world.camera.offset_y),
+                                     (config.SHAKE_STRENGTH, 0, 0, 0))
+                    continue
+                advance(world, 0.5)
+                enemy.x = world.player.x + 80
+                enemy.ground_y = world.player.ground_y
+                hp = enemy.hp
+                tap(world.controls, "combat_a")
+                for _ in range(60):
+                    world.step(config.FIXED_DT)
+                    if enemy.hp < hp:
+                        break
+                self.assertEqual(enemy.hp, hp - 10)
+                self.assertEqual(world.camera.shake_strength, config.SHAKE_STRENGTH)
 
     def test_interruptions_clear_slow_or_fast_time_and_allow_natural_falling(self):
         for kind in config.WEAPON_POSE_IMAGES:

@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 import pico2d
 
 import config
+from camera import Camera
 from combat import MOVES, WEAPON_MOVES
 from drop_items import DropItem
 from enemy import Enemy
@@ -105,6 +106,7 @@ def check_slow_aim_and_dive(game):
                 tick(game, 30)
                 simulated = 0.5 * config.WEAPON_AIM_TIME_SCALE
                 assert player.weapon_leap_phase == "AIM" and world.time_scale == config.WEAPON_AIM_TIME_SCALE
+                assert world.camera.shake_remaining == 0
                 assert abs((player.x - start_x) * side - config.WALK_SPEED * simulated) < 1e-7
                 assert abs((enemy.x - enemy_x) * side - enemy.run_speed * simulated) < 1e-7
                 assert abs(enemy.animation.elapsed - simulated) < 1e-7
@@ -131,6 +133,7 @@ def check_slow_aim_and_dive(game):
                 assert abs((player.x - start_x) * -side
                            - config.WEAPON_DIVE_SPEED * config.WEAPON_DIVE_TIME_SCALE / 60) < 1e-7
                 assert player.vy < -config.WEAPON_DIVE_FALL_SPEED and player.jump_count == 2
+                assert world.camera.shake_remaining == 0
                 capture(game, f"weapon_fast_dive_{label}")
                 tick(game, 45)
                 assert player.grounded and player.active_move is None and world.time_scale == 1
@@ -166,6 +169,8 @@ def check_damage_effects_and_hud(game):
                         assert world.effects[-1].facing == side
                         assert world.damage_numbers[-1].damage == move.damage
                         assert world.camera.shake_remaining > 0
+                        assert world.camera.shake_strength == (
+                            config.WEAPON_DIVE_SHAKE_STRENGTH if move.jump_attack else config.SHAKE_STRENGTH)
                         with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as font:
                             shown = capture(game, f"weapon_hit_{kind}_{move.key}_{enemy_type.__name__}_{side}")
                         texts = [call.args[2] for call in font.call_args_list]
@@ -176,13 +181,29 @@ def check_damage_effects_and_hud(game):
                             baseline = render_image(game)
                         assert ImageChops.difference(shown.convert("RGB"),
                                                     baseline.convert("RGB")).getbbox() is not None
+                        if move.jump_attack:
+                            previous = Camera(player.x)
+                            previous.shake()
+                            previous.update(config.SHAKE_DURATION - world.camera.shake_remaining, player.x)
+                            assert abs(world.camera.offset_x - previous.offset_x * 2) < 1e-8
+                            assert abs(world.camera.offset_y - previous.offset_y * 2) < 1e-8
+                            with (patch.object(world.camera, "offset_x", previous.offset_x),
+                                  patch.object(world.camera, "offset_y", previous.offset_y)):
+                                weaker = capture(game, f"weapon_dive_shake_previous_{kind}_{enemy_type.__name__}_{side}")
+                            assert ImageChops.difference(shown.convert("RGB"),
+                                                        weaker.convert("RGB")).getbbox() is not None
+                            assert shown.crop((126, 58, 516, 77)).tobytes() == weaker.crop(
+                                (126, 58, 516, 77)).tobytes()
                     assert hits == 1 and enemy.hp == 200 - move.damage
                     assert player.active_move is None and player.state == "IDLE"
                     assert player.sprite_image == config.WEAPON_POSE_IMAGES[kind]
                     release(game, key)
     print("PASS: SDL G+ASD, both weapons/enemy types/facings: 10/40/50 damage once, "
-          "correct source impact frames, existing hit-effect pixels, damage numbers/shake, "
-          "equipped HUD labels and return to weapon IDLE.")
+           "correct source impact frames, existing hit-effect pixels, damage numbers/shake, "
+           "equipped HUD labels and return to weapon IDLE.")
+    print("PASS: double-jump D landing-hit shake is 16px/8px, exactly twice the previous "
+          "8px/4px on both axes; same decay, real rendered differences and fixed HP pixels; "
+          "weapon A/S remain 8px and AIM/airborne D have no new shake.")
 
 
 def check_dive_afterimages(game):
@@ -275,6 +296,8 @@ def check_switches_and_discard(game):
     textures = dict(game.assets.images)
     tap(game, pico2d.SDLK_F5)
     assert game.world.player.weapon is None and game.world.player.moves is MOVES
+    assert game.world.camera.shake_strength == config.SHAKE_STRENGTH
+    assert game.world.camera.shake_remaining == 0
     assert all(game.assets.images[name] is image for name, image in textures.items())
     print("PASS: real ASD combo switching; G discard cancels pending damage/restores unarmed A, "
           "same-update G+A selects the new weapon, F remains the kick, and F5 reuses textures.")

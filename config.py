@@ -303,6 +303,9 @@ STAGE_DOOR_SPECS = {
 }
 STAGE_DOOR_FLOORS = {STAGE_IMAGE: (0, 0), ARCHIVED_TWO_FLOOR_IMAGE: (0, 1, 1, 0)}
 STAGE_DOOR_MAP_SIZE = (1672, 941)
+# Source-background foreground props that must stay in front of animated doors.
+# Preserve the warehouse air conditioner, its lower edge and mounting shadow.
+STAGE_DOOR_FOREGROUND_RECTS = {STAGE_IMAGE: ((1482, 375, 78, 60),)}
 # Archived map only: source rows 395..445, above the metal fascia.
 STAGE_UPPER_FLOOR_BOUNDS = {ARCHIVED_TWO_FLOOR_IMAGE: (0.0, 452.0, WORLD_WIDTH, 502.0)}
 UPPER_PLATFORM_JUMP_CLEARANCE = 24.0

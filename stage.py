@@ -367,6 +367,22 @@ class Stage:
             for door in self.doors:
                 assets.draw_stage_door(door, image, index * width - camera_x, bottom,
                                        scale, mirrored=bool(index % 2))
+            for left, top, prop_width, prop_height in config.STAGE_DOOR_FOREGROUND_RECTS.get(
+                    self.image_name, ()):
+                center_x = left + prop_width / 2
+                if index % 2:
+                    center_x = image.w - center_x
+                # Match SDL's integer background origin, including fractional
+                # camera shake, so the restored prop never shifts by a pixel.
+                rendered_left = int(index * width - camera_x)
+                rendered_top = int(config.SCREEN_HEIGHT - bottom - height)
+                image.clip_composite_draw(
+                    left, image.h - top - prop_height, prop_width, prop_height,
+                    0, "h" if index % 2 else "",
+                    rendered_left + center_x * scale,
+                    config.SCREEN_HEIGHT - rendered_top - (top + prop_height / 2) * scale,
+                    prop_width * scale, prop_height * scale,
+                )
         # Flat floor props stay underneath characters, vehicles and exit markers.
         for item in self.drop_items:
             if item.grounded:

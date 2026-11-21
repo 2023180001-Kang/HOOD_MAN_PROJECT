@@ -5,6 +5,8 @@ import random
 import sys
 from unittest.mock import patch
 
+from PIL import ImageChops
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
@@ -96,6 +98,64 @@ def check_source_clips(game):
                            for call in draw.call_args_list)
     print("PASS: both sheets use all 16 exact source clips; both background tiles mirror "
           "the original hinges/header anchors without trimming or double offsets.")
+
+
+def check_air_conditioner_foreground(game):
+    game.world = World(item_rng=random.Random(23))
+    world = game.world
+    background = game.assets.images[world.stage.image_name]
+    protected_source = (1482, 375, 78, 60)
+    left, top, width, height = protected_source
+    views = 0
+    for camera_x in (640, 1000, 1280):
+        for camera_y in (0, 120.75):
+            for shake_x, shake_y in ((0, 0), (5.387, 6.569), (-5.387, -6.569)):
+                world.camera.x, world.camera.y = camera_x, camera_y
+                world.camera.offset_x, world.camera.offset_y = shake_x, shake_y
+                bottom = min(0, config.GROUND_Y - config.STAGE_GROUND_Y - world.camera.render_y)
+                rendered_top = int(config.SCREEN_HEIGHT - bottom - background.h)
+                boxes = []
+                for tile in (0, 1):
+                    source_left = background.w - left - width if tile else left
+                    x = int(tile * background.w - world.camera.render_x) + source_left
+                    y = rendered_top + top
+                    boxes.append((x, y, x + width, y + height))
+                for door in world.stage.doors:
+                    door.moving = door.target_open = False
+                with (patch.object(world.stage, "doors", []),
+                      patch.dict(config.STAGE_DOOR_FOREGROUND_RECTS, {}, clear=True)):
+                    original = backdrop(game)
+                with patch.dict(config.STAGE_DOOR_FOREGROUND_RECTS, {}, clear=True):
+                    covered = backdrop(game)
+                assert all(covered.crop(box).tobytes() != original.crop(box).tobytes()
+                           for box in boxes), (camera_x, camera_y, shake_x, shake_y)
+                for row in (1, 2):
+                    for frame in range(8):
+                        for door in world.stage.doors:
+                            door.target_open = row == 1
+                            door.moving = True
+                            door.animation.set_state("OPENING" if row == 1 else "CLOSING")
+                            door.animation.elapsed = (frame + 0.1) / config.DOOR_FPS
+                        image = backdrop(game)
+                        for box in boxes:
+                            assert image.crop(box).tobytes() == original.crop(box).tobytes(), (
+                                camera_x, camera_y, shake_x, shake_y, row, frame, box)
+                        if row == 1 and frame == 0:
+                            difference = ImageChops.difference(
+                                image.convert("RGB"), covered.convert("RGB"))
+                            for box in boxes:
+                                difference.paste((0, 0, 0), box)
+                            assert difference.getbbox() is None
+                views += 1
+    game.world = World(item_rng=random.Random(23))
+    game.world.camera.x = 1000
+    image = backdrop(game, "shutter_ac_fixed")
+    image.crop((280, 175, 920, 470)).resize((1280, 590)).save(
+        ROOT / "artifacts" / "shutter_ac_fixed_detail.png")
+    game.world = World(item_rng=random.Random(23))
+    print(f"PASS: both air conditioners retain exact original pixels through all 16 shutter poses "
+          f"and {views} scrolled/vertical/shaken views; the closed-door fix changes no pixels "
+          "outside the foreground props, and the unprotected rendering reproduces the overlap.")
 
 
 def check_numeric_spawns(game):
@@ -221,6 +281,7 @@ def main():
         assert all(door.state == "CLOSED" for door in game.world.stage.doors)
         assert (config.ROOT / "changed_first_map.png").is_file()
         assert (config.ROOT / "newStage.png").is_file()
+        check_air_conditioner_foreground(game)
         capture(game, "doors_gameplay_start")
         closed = check_endpoints(game, False, "initial_closed")
         animate(game, True)

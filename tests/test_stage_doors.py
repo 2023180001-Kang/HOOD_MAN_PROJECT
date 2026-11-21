@@ -266,6 +266,57 @@ class StageDoorTests(unittest.TestCase):
                 self.assertAlmostEqual(closed_w / 256 * args[8], rect[2])
                 self.assertAlmostEqual(closed_h / 256 * args[9], rect[3])
 
+    def test_air_conditioner_foreground_draws_after_doors_in_both_tiles_for_every_pose(self):
+        world = World()
+        background = Mock(w=1672, h=941)
+        assets = Mock(images={world.stage.image_name: background})
+        order = Mock()
+        order.attach_mock(background.composite_draw, "background")
+        order.attach_mock(assets.draw_stage_door, "door")
+        order.attach_mock(background.clip_composite_draw, "foreground")
+        for row in (1, 2):
+            for frame in range(8):
+                order.reset_mock()
+                for door in world.stage.doors:
+                    door.target_open = row == 1
+                    door.moving = True
+                    door.animation.set_state("OPENING" if row == 1 else "CLOSING")
+                    door.animation.elapsed = (frame + 0.1) / config.DOOR_FPS
+                world.stage.draw(assets, 640, 0)
+                self.assertEqual([call[0] for call in order.mock_calls],
+                                 ["background", "door", "door", "foreground"] * 2)
+                calls = background.clip_composite_draw.call_args_list
+                for index, call in enumerate(calls):
+                    self.assertEqual(call.args[:4], (1482, 506, 78, 60))
+                    self.assertEqual(call.args[5], "h" if index else "")
+
+    def test_air_conditioner_foreground_matches_background_pixels_during_scroll_and_shake(self):
+        world = World()
+        background = Mock(w=1672, h=941)
+        assets = Mock(images={world.stage.image_name: background})
+        for camera_x in (640, 645.387, 1274.613):
+            for camera_y in (0, 6.569, -6.569, 120.75):
+                background.reset_mock()
+                world.stage.draw(assets, camera_x, camera_y)
+                bottom = min(0, config.GROUND_Y - config.STAGE_GROUND_Y - camera_y)
+                for index, call in enumerate(background.clip_composite_draw.call_args_list):
+                    args = call.args
+                    destination_left = int(args[6] - args[8] / 2)
+                    destination_top = int(config.SCREEN_HEIGHT - args[7] - args[9] / 2)
+                    source_left = 1672 - 1482 - 78 if index else 1482
+                    self.assertEqual(destination_left, int(index * 1672 - camera_x) + source_left)
+                    self.assertEqual(destination_top, int(config.SCREEN_HEIGHT - bottom - 941) + 375)
+
+    def test_air_conditioner_foreground_is_only_applied_to_the_current_first_map(self):
+        self.assertEqual(config.STAGE_DOOR_FOREGROUND_RECTS,
+                         {"changed_first_map_no_door.png": ((1482, 375, 78, 60),)})
+        world = World()
+        world.select_stage(1)
+        background = Mock(w=1672, h=941)
+        assets = Mock(images={world.stage.image_name: background})
+        world.stage.draw(assets, 640, 0)
+        background.clip_composite_draw.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -127,6 +127,10 @@ def check_all_stages(game):
         assert counts[-1] == 15
         assert {item.kind for item in stage.drop_items} == {"combat_knife", "steel_pipe"}
         areas = (stage.drop_spawn_area, *stage.floor_areas[1:])
+        # Frame the complete foreground too; expanded floors can reach y=-44.
+        # Inspect the real camera-transformed pixels, not an assumed camera_y=0.
+        world.player.ground_y = world.player.previous_ground_y = min(area.bounds[1] for area in areas)
+        stage.constrain_actor(world.player)
         for floor_index, area in enumerate(areas):
             items = [item for item in stage.drop_items if item.floor == floor_index]
             assert len(items) == (8 - floor_index if len(areas) == 2 else 15)
@@ -134,7 +138,7 @@ def check_all_stages(game):
         for side in (-1, 1):
             game.handle_events()
             world.player.x = 80 if side < 0 else config.WORLD_WIDTH - 80
-            world.camera.update(0, world.player.x)
+            world.update_camera(0)
             baseline = without_items(game)
             image = capture(game, f"drop_stage_{index + 1}_{'left' if side < 0 else 'right'}")
             delta = difference(image, baseline)
@@ -148,8 +152,8 @@ def check_all_stages(game):
                 box = floor_delta.getbbox()
                 assert box is not None
                 _, bottom, _, top = area.bounds
-                assert box[1] >= floor(config.SCREEN_HEIGHT - top) - 1
-                assert box[3] <= ceil(config.SCREEN_HEIGHT - bottom) + 1
+                assert box[1] >= floor(config.SCREEN_HEIGHT - top + world.camera.render_y) - 1
+                assert box[3] <= ceil(config.SCREEN_HEIGHT - bottom + world.camera.render_y) + 1
             if stage.image_name == config.CITY_STAGE_IMAGES[0]:
                 check_city_sidewalk_pixels(game, image, baseline)
             exit_box = ((0, 0, arrow_edge + 1, config.SCREEN_HEIGHT) if side < 0 else
@@ -159,7 +163,7 @@ def check_all_stages(game):
             for item in stage.drop_items:
                 x = item.x - world.camera.render_x
                 if 64 <= x <= config.SCREEN_WIDTH - 64:
-                    y = config.SCREEN_HEIGHT - item.ground_y
+                    y = config.SCREEN_HEIGHT - item.ground_y + world.camera.render_y
                     crop = delta.crop((floor(x - config.DROP_ITEM_HALF_WIDTH),
                                        floor(y - config.DROP_ITEM_HEIGHT),
                                        ceil(x + config.DROP_ITEM_HALF_WIDTH),
@@ -172,25 +176,27 @@ def check_all_stages(game):
           "pixels, both exit areas stay clear, and both map halves render correctly.")
 
 
-def check_floor_pickup(game, floor=0):
+def check_floor_pickup(game, floor=0, index=0):
+    prefix = f"drop_floor_{floor}" if index == 0 else f"second_alley_floor_{floor}"
     for kind in config.DROP_ITEM_IMAGES:
         game.world = World(item_rng=random.Random(20261119))
         world = game.world
+        world.select_stage(index)
         item = next(item for item in world.stage.drop_items if item.floor == floor and item.kind == kind)
         player = world.player
         player.floor = floor
         player.x = player.previous_x = item.x
         player.ground_y = player.previous_ground_y = item.ground_y
         world.stage.constrain_actor(player)
-        world.camera.update(0, player.x)
+        world.update_camera(0)
         assert world.pickup_item is item
         with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
-            capture(game, f"drop_floor_{floor}_{kind}_pickup")
+            capture(game, f"{prefix}_{kind}_pickup")
         assert any(call.args[2] == "G" for call in text.call_args_list)
         tap(game, pico2d.SDLK_g)
         assert (player.floor, player.weapon) == (floor, kind)
         assert item not in world.stage.drop_items and len(world.stage.drop_items) == 14
-        capture(game, f"drop_floor_{floor}_{kind}_equipped")
+        capture(game, f"{prefix}_{kind}_equipped")
         tap(game, pico2d.SDLK_g)
         discarded = world.stage.drop_items[-1]
         assert player.weapon is None and discarded.floor == floor and not discarded.grounded
@@ -200,12 +206,12 @@ def check_floor_pickup(game, floor=0):
         assert player.weapon == kind and discarded not in world.stage.drop_items
         items = world.stage.drop_items
         clocks = [item.elapsed for item in items]
-        world.select_stage(1)
+        world.select_stage(0 if index else 1)
         tick(game, 30)
-        world.select_stage(0)
+        world.select_stage(index)
         assert world.stage.drop_items is items and len(items) == 14
         assert [item.elapsed for item in items] == clocks
-    print(f"PASS: generated floor-{floor} knife/pipe show G, equip through real SDL G, "
+    print(f"PASS: stage {index + 1}, generated floor-{floor} knife/pipe show G, equip through real SDL G, "
           "discard/fall/re-equip on that floor, and stay depleted/paused across stage visits.")
 
 
@@ -250,6 +256,7 @@ def main():
         check_sheets(game)
         check_all_stages(game)
         check_floor_pickup(game)
+        check_floor_pickup(game, index=1)
         check_restart(game)
     finally:
         if game is not None:

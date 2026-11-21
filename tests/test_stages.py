@@ -69,7 +69,7 @@ class StageTests(unittest.TestCase):
         self.assertFalse(world.stage.walkable.contains(1280, -3.01, 68))
         self.assertFalse(world.stage.walkable.contains(1280, 277.01, 68))
         self.assertEqual(config.STAGE_WALKABLE_BOUNDS[1:],
-                          ((0, 56, 2560, 116), (0, -44, 2560, 247), (0, -44, 2560, 279),
+                          ((0, -44, 2560, 239), (0, -44, 2560, 247), (0, -44, 2560, 279),
                           (0, 45, 2560, 258), (0, 56, 2560, 100), (0, 56, 2560, 148),
                           (0, 16, 2560, 200), (0, 56, 2560, 148), (0, 56, 2560, 116),
                           (0, 56, 2560, 148), (0, 56, 2560, 116)))
@@ -146,7 +146,7 @@ class StageTests(unittest.TestCase):
     def test_second_stage_has_both_markers_and_connects_to_the_city(self):
         world = World()
         world.stage_index = 1
-        self.assertEqual(world.stage.image_name, "newStage-2.png")
+        self.assertEqual(world.stage.image_name, "newStage-2_floor300_1672x941.png")
         self.assertEqual(world.stage.arrow_sides, ())
         world.controls.press("stage_exits")
         world.step(config.FIXED_DT)

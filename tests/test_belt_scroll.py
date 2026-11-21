@@ -362,16 +362,16 @@ class BeltScrollTests(unittest.TestCase):
         self.assertTrue(world.try_stage_transition())
         self.assertIs(world.player, player)
         self.assertEqual(world.stage_index, 1)
-        self.assertEqual(player.ground_y, 116)
+        self.assertEqual(player.ground_y, 239)
         self.assertEqual((player.jump_height, player.vy, player.jump_count, player.vx), (120, 300, 2, 720))
-        self.assertEqual(player.previous_ground_y, 116)
+        self.assertEqual(player.previous_ground_y, 239)
         self.assert_inside(world)
         self.assertEqual(world.camera.x, 0)
         world.stage.arrows_visible = True
         player.x, player.vx = 80, -720
         self.assertTrue(world.try_stage_transition())
         self.assertEqual(world.stage_index, 0)
-        self.assertEqual(player.ground_y, 116)
+        self.assertEqual(player.ground_y, 239)
         self.assert_inside(world)
 
     def test_camera_shake_never_changes_world_walkable_limits(self):

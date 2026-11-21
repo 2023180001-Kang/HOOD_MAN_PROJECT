@@ -281,6 +281,8 @@ WEAPON_DROP_HAND_HEIGHT = 70.0
 WEAPON_PROMPT_GAP = 14.0
 HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "changed_first_map_no_door.png"
+SECOND_STAGE_IMAGE = "newStage-2_floor300_1672x941.png"
+ARCHIVED_SECOND_STAGE_IMAGE = "before_sheets/newStage-2.png"
 ARCHIVED_TWO_FLOOR_IMAGE = "before_sheets/HoodMan_2F_Map_1672x941.png"
 ARCHIVED_TWO_FLOOR_WALKABLE_BOUNDS = (0.0, 56.0, WORLD_WIDTH, 136.0)
 DOOR_IMAGES = {
@@ -337,7 +339,7 @@ FACTORY_EXTERIOR_IMAGE = "HOOD_MAN_Factory_Exterior_1672x941.png"
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
 LAB_STAGE_IMAGES = ("labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png")
 BOSS_STAGE_IMAGES = ("bossStage-1.png", "bossStage-2.png")
-STAGE_IMAGES = (STAGE_IMAGE, "newStage-2.png", *CITY_STAGE_IMAGES,
+STAGE_IMAGES = (STAGE_IMAGE, SECOND_STAGE_IMAGE, *CITY_STAGE_IMAGES,
                 FACTORY_OUTSIDE_IMAGE, FACTORY_EXTERIOR_IMAGE, *FACTORY_INSIDE_IMAGES,
                 *LAB_STAGE_IMAGES, *BOSS_STAGE_IMAGES)
 STAGE_LOADING_IMAGE = "HOOD_MAN_STAGE_LOADING_1280x720.png"
@@ -367,7 +369,9 @@ STAGE_WALKABLE_BOUNDS = (
     # Flat first map: the full paved floor, source rows 620..900.
     # World y = 100 - 144 + 941 - source_y; stop before the foreground curb/drain.
     (0.0, -3.0, WORLD_WIDTH, 277.0),
-    (0.0, 56.0, WORLD_WIDTH, 116.0),
+    # Expanded second alley: source rows 658..941, below the entrance step bases.
+    # The floor reaches the source bottom edge; pictured steps are background only.
+    (0.0, -44.0, WORLD_WIDTH, 239.0),
     # New cities: the complete sidewalk and road, down to the source bottom edge.
     # World y = 100 - 144 + 941 - source_y; building feet are at rows 650 / 618.
     (0.0, -44.0, WORLD_WIDTH, 247.0),

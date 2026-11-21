@@ -109,7 +109,15 @@ def check_floor_toggle(game):
           "P invincibility remains an independent toggle.")
 
 
-def check_full_first_floor(game):
+def check_full_alley_floor(game, index=0):
+    if index == 1:
+        assert config.SECOND_STAGE_IMAGE in game.assets.images
+        assert config.ARCHIVED_SECOND_STAGE_IMAGE not in game.assets.images
+        assert "newStage-2.png" not in game.assets.images
+    bottom, top, source_top, source_bottom, prefix = (
+        (-3, 277, 620, 900, "first_floor_full") if index == 0 else
+        (-44, 239, 658, 941, "second_alley_floor300")
+    )
     visible, details = game.ui.floor_bounds_visible, game.ui.details_visible
     game.ui.floor_bounds_visible, game.ui.details_visible = True, False
     try:
@@ -118,8 +126,9 @@ def check_full_first_floor(game):
                 for side in (-1, 1):
                     for depth in (-1, 1):
                         game.world = World(item_rng=random.Random(23))
+                        game.world.select_stage(index)
                         world, player = game.world, game.world.player
-                        assert world.stage.walkable.bounds == (0, -3, 2560, 277)
+                        assert world.stage.walkable.bounds == (0, bottom, 2560, top)
                         player.equip_weapon(weapon)
                         player.x = player.previous_x = 300 if side < 0 else 2260
                         keys = (pico2d.SDLK_LEFT if side < 0 else pico2d.SDLK_RIGHT,
@@ -134,11 +143,11 @@ def check_full_first_floor(game):
                         release(keys)
                         game.handle_events()
                         assert (player.x, player.ground_y, player.jump_height, player.floor) == (
-                            68 if side < 0 else 2492, -3 if depth < 0 else 277, 0, 0)
+                            68 if side < 0 else 2492, bottom if depth < 0 else top, 0, 0)
                         assert 0 <= player.y - world.camera.render_y < config.SCREEN_HEIGHT
                         with patch.object(pico2d, "draw_line", wraps=pico2d.draw_line) as draw:
                             if weapon is None:
-                                capture(game, f"first_floor_full_{'run' if running else 'walk'}_{side}_{depth}")
+                                capture(game, f"{prefix}_{'run' if running else 'walk'}_{side}_{depth}")
                             else:
                                 render_image(game)
                         endpoints = {point for call in draw.call_args_list
@@ -148,43 +157,60 @@ def check_full_first_floor(game):
                                 player.ground_y - world.camera.render_y) in endpoints
                         source_y = (config.GROUND_Y - config.STAGE_GROUND_Y
                                     + config.STAGE_IMAGE_HEIGHT - player.ground_y)
-                        assert source_y == (900 if depth < 0 else 620)
+                        assert source_y == (source_bottom if depth < 0 else source_top)
         game.world = World(item_rng=random.Random(23))
+        game.world.select_stage(index)
         world, player = game.world, game.world.player
         player.x = player.previous_x = 68
-        player.ground_y = player.previous_ground_y = -3
+        player.ground_y = player.previous_ground_y = bottom
         push_key(pico2d.SDLK_RIGHT)
         push_key(pico2d.SDLK_LSHIFT)
         for frame in range(240):
             tick(game)
             inside(world)
-            assert player.ground_y == -3 and player.grounded
+            assert player.ground_y == bottom and player.grounded
             if frame == 120:
-                capture(game, "first_floor_full_front_traverse")
+                capture(game, f"{prefix}_front_traverse")
         release((pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT))
         game.handle_events()
         assert player.x == 2492
-        for _ in range(2):
-            push_key(pico2d.SDLK_SPACE)
-            tick(game, 3)
-            release((pico2d.SDLK_SPACE,))
+        for depth in (bottom, top):
+            player.ground_y = player.previous_ground_y = depth
+            direction = pico2d.SDLK_DOWN if depth == bottom else pico2d.SDLK_UP
+            push_key(direction)
+            push_key(pico2d.SDLK_LSHIFT)
+            for _ in range(2):
+                push_key(pico2d.SDLK_SPACE)
+                tick(game, 3)
+                release((pico2d.SDLK_SPACE,))
+                game.handle_events()
+            assert player.jump_count == 2
+            tick(game, 20)
+            assert player.ground_y == depth and player.jump_height > 0 and player.floor == 0
+            capture(game, f"{prefix}_jump_{'front' if depth == bottom else 'rear'}")
+            tick(game, 100)
+            assert player.grounded and player.ground_y == depth and player.floor == 0
+            assert player.staircase is None
+            release((direction, pico2d.SDLK_LSHIFT))
             game.handle_events()
-        assert player.jump_count == 2
-        tick(game, 120)
-        assert player.grounded and player.ground_y == -3 and player.floor == 0
         push_key(pico2d.SDLK_F5)
         tick(game)
         release((pico2d.SDLK_F5,))
         game.handle_events()
-        assert world.stage.walkable.bounds == (0, -3, 2560, 277)
+        assert world.stage_index == 0
+        assert world.stages[index].walkable.bounds == (0, bottom, 2560, top)
+        world.select_stage(index)
+        assert world.stage.walkable.bounds == (0, bottom, 2560, top)
+        assert not world.enemies and len(world.stage.drop_items) == 15
         assert game.ui.floor_bounds_visible and not world.player.invincible
-        capture(game, "first_floor_full_restarted")
+        capture(game, f"{prefix}_restarted")
     finally:
         game.ui.floor_bounds_visible, game.ui.details_visible = visible, details
         game.world = World()
-    print("PASS: all three loadouts walk/run to all four full-pavement corners; F4 matches "
-          "real feet at source rows 620/900, the formerly blocked front band is traversable "
-          "across both map tiles, double jumps land there, and F5 keeps the expanded floor.")
+    print(f"PASS: alley {index + 1}, all three loadouts walk/run to all four full-floor corners; "
+          f"F4 matches real feet at source rows {source_top}/{source_bottom}, the formerly "
+          "blocked front band is traversable across both map tiles, double jumps land at "
+          "both depth edges without hidden stairs, and F5 keeps the expanded floor.")
 
 
 def ready(enemies):
@@ -226,7 +252,7 @@ def check_movement(game):
 
 def check_jump(game):
     game.world = World()
-    game.world.select_stage(1)  # The first map's Up double jump now lands on floor 2.
+    game.world.select_stage(1)  # Exercise the second alley's rear edge without upper floors.
     floor_top = game.world.stage.walkable.bounds[3]
     reference = World()
     reference.select_stage(1)
@@ -364,7 +390,7 @@ def check_travel(game):
         push_key(key)
     tick(game)
     assert game.world.stage_index == 1 and game.world.player is player
-    assert player.ground_y == 116 and player.jump_count == 2
+    assert player.ground_y == 239 and player.jump_count == 2
     assert abs(player.jump_height - 124.625) < 1e-8 and player.vy == 270
     inside(game.world)
     shot(game, "belt_transition_next")
@@ -374,13 +400,13 @@ def check_travel(game):
     player.x, player.vx = 85, -720
     tick(game)
     assert game.world.stage_index == 0 and game.world.player is player
-    assert player.ground_y == 116 and player.jump_count == 2 and player.vy == 240
+    assert player.ground_y == 239 and player.jump_count == 2 and player.vy == 240
     inside(game.world)
     shot(game, "belt_transition_previous")
     release((pico2d.SDLK_n, pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT))
     game.handle_events()
     print("PASS: SDL N/run/airborne travel in both directions preserves the Player and jump "
-          f"while projecting floor y={source_top:g} to the second stage's y<=116; "
+          f"while projecting floor y={source_top:g} to the second stage's y<=239; "
           "camera remains independent.")
 
 
@@ -392,7 +418,8 @@ def main():
         game = Game()
         game.handle_events()
         check_floor_toggle(game)
-        check_full_first_floor(game)
+        check_full_alley_floor(game)
+        check_full_alley_floor(game, index=1)
         check_movement(game)
         check_jump(game)
         check_depth_and_order(game)

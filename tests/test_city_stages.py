@@ -31,7 +31,8 @@ class CityStageTests(unittest.TestCase):
     def test_twelve_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
         world = World()
         self.assertEqual([stage.image_name for stage in world.stages],
-                         ["changed_first_map_no_door.png", "newStage-2.png", *config.CITY_STAGE_IMAGES,
+                         ["changed_first_map_no_door.png", "newStage-2_floor300_1672x941.png",
+                          *config.CITY_STAGE_IMAGES,
                           config.FACTORY_OUTSIDE_IMAGE, config.FACTORY_EXTERIOR_IMAGE,
                           "factoryInside-1.png", "factoryStage-2.png",
                           "labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png",
@@ -271,7 +272,7 @@ class CityStageTests(unittest.TestCase):
             with self.subTest(index=index):
                 world = self.at_exit(index, side)
                 player = world.player
-                player.ground_y = 116 if index == 1 else 145
+                player.ground_y = 239 if index == 1 else 247
                 player.jump_height, player.vy, player.jump_count = 150, -100, 2
                 player.animation.set_state("JUMP")
                 player.animation.elapsed = 0.25
@@ -281,10 +282,10 @@ class CityStageTests(unittest.TestCase):
                 self.assertEqual(world.stage_index, target)
                 self.assertEqual(player.x, config.STAGE_ENTRY_MARGIN if side > 0 else
                                  config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
-                self.assertEqual(player.ground_y, 116)
+                self.assertEqual(player.ground_y, 239)
                 self.assertEqual((player.jump_height, player.vy, player.jump_count,
                                   player.animation.elapsed), (150, -100, 2, 0.25))
-                self.assertEqual(player.previous_ground_y, 116)
+                self.assertEqual(player.previous_ground_y, 239)
                 self.assertEqual(player.previous_x, player.x)
                 self.assertFalse(world.try_stage_transition())
 

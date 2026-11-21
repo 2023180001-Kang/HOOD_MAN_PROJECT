@@ -118,6 +118,28 @@ class FloorBoundsTests(unittest.TestCase):
         xs = [x for ax, _, bx, _ in lines for x in (ax, bx)]
         self.assertEqual((min(xs), max(xs)), (128, config.WORLD_WIDTH - 128))
 
+    def test_second_alley_outline_matches_full_tiles_and_both_actor_paddings(self):
+        game = scene()
+        game.world.select_stage(1)
+        game.ui.floor_bounds_visible = True
+        for camera_x, camera_y in ((0, -44), (640, 8), (1280, 120)):
+            for height in (0, 240):
+                game.world.player.jump_height = height
+                with patch("pico2d.draw_line") as draw:
+                    game.ui.draw_floor_bounds(game.world, camera_x, camera_y)
+                player_lines = [call.args[:4] for call in draw.call_args_list
+                                if call.args[4:] == PLAYER_BOUNDS_COLOR]
+                self.assertCountEqual(player_lines,
+                                      [(68 - camera_x, -44 - camera_y, 2492 - camera_x, -44 - camera_y),
+                                       (2492 - camera_x, -44 - camera_y, 2492 - camera_x, 239 - camera_y),
+                                       (2492 - camera_x, 239 - camera_y, 68 - camera_x, 239 - camera_y),
+                                       (68 - camera_x, 239 - camera_y, 68 - camera_x, -44 - camera_y)])
+                enemy_lines = [call.args[:4] for call in draw.call_args_list
+                               if call.args[4:] == ENEMY_BOUNDS_COLOR]
+                xs = [x + camera_x for ax, _, bx, _ in enemy_lines for x in (ax, bx)]
+                ys = [y + camera_y for _, ay, _, by in enemy_lines for y in (ay, by)]
+                self.assertEqual((min(xs), max(xs), min(ys), max(ys)), (88, 2472, -44, 239))
+
     def test_stair_free_loading_dock_outline_matches_the_full_concrete_floor(self):
         game = scene()
         game.world.select_stage(4)

@@ -103,7 +103,7 @@ class EnemyDeathDropTests(unittest.TestCase):
                 enemy.take_damage(enemy.max_hp)
             world.step(config.FIXED_DT)
             excluded = (*config.ENEMY02_STAGE_IMAGES, config.FACTORY_OUTSIDE_IMAGE,
-                        *config.FACTORY_INSIDE_IMAGES)
+                        *config.FACTORY_INSIDE_IMAGES, *config.LAB_STAGE_IMAGES)
             expected = 0 if world.stage.image_name in excluded else 3
             self.assertEqual(len(clubs(world)), expected)
             self.assertEqual(len(world.stage.drop_items), initial + expected)

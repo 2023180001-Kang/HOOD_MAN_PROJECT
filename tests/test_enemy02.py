@@ -10,6 +10,7 @@ from enemy import Enemy
 from enemy02 import Enemy02
 from player import Player
 from researcher import Researcher
+from shield_soldier import ShieldSoldier
 from tests.helpers import advance, spawn_encounter
 from tests.test_strong_attacks import strike
 from traffic import Car, Traffic
@@ -55,6 +56,8 @@ class Enemy02Tests(unittest.TestCase):
                     expected = Enemy02
                 elif stage.image_name in config.FACTORY_INSIDE_IMAGES:
                     expected = Researcher
+                elif stage.image_name in config.LAB_STAGE_IMAGES:
+                    expected, hp = ShieldSoldier, 400
                 self.assertEqual(len(stage.enemies), 4)
                 self.assertEqual(stage.spawner.spawned_count, 4)
                 self.assertTrue(all(type(enemy) is expected for enemy in stage.enemies))

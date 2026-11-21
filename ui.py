@@ -230,6 +230,9 @@ class UI:
             elif world.stage.image_name in config.FACTORY_INSIDE_IMAGES:
                 enemy_help = (f"적 권총 {config.RESEARCHER_DAMAGE} · "
                               f"{config.RESEARCHER_MAGAZINE_SIZE}발 후 재장전")
+            elif world.stage.image_name in config.LAB_STAGE_IMAGES:
+                enemy_help = (f"적 공격: 방패 {config.SHIELD_SOLDIER_DAMAGE} · "
+                              f"HP {config.SHIELD_SOLDIER_MAX_HP} · 방어 중 받는 피해 50%")
             else:
                 enemy_help = f"적 공격 피해: {config.ENEMY_DAMAGE}"
             assets.font.draw(22, 48, enemy_help, (205, 218, 231))

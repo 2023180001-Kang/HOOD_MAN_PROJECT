@@ -459,6 +459,11 @@ def check_factory_exterior(game):
 
 def check_indoor_backgrounds(game, first=6):
     region = {6: "factory_inside", 8: "lab", 10: "boss"}[first]
+    if first == 8:
+        assert config.STAGE_IMAGES[8:10] == config.LAB_STAGE_IMAGES == (
+            "labStage-1_floor300_1672x941.png", "labStage-2_floor300_1672x941.png")
+        for archived in config.ARCHIVED_LAB_STAGE_IMAGES:
+            assert archived not in game.assets.images and Path(archived).name not in game.assets.images
     for index in (first, first + 1):
         game.world = World()
         game.world.stage_index = index
@@ -468,7 +473,7 @@ def check_indoor_backgrounds(game, first=6):
         tiled = Image.new("RGB", (supplied.width * 2, supplied.height))
         tiled.paste(supplied, (0, 0))
         tiled.paste(supplied.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (supplied.width, 0))
-        for camera_x in (0, config.WORLD_WIDTH - config.SCREEN_WIDTH):
+        for camera_x in (0, 640, config.WORLD_WIDTH - config.SCREEN_WIDTH):
             game.world.camera.x = camera_x
             game.world.camera.offset_x = 0
             for shake_y in (-8, 0, 8):

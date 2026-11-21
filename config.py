@@ -179,6 +179,12 @@ ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 AXE_ENEMY_IMAGE = "axe_enemy_pico2d_2048x1792.png"
 AXE_ENEMY_MAX_HP = 400
 AXE_ENEMY_DAMAGE = 60
+SHIELD_SOLDIER_IMAGE = "hoodman_shield_soldier.png"
+SHIELD_SOLDIER_MAX_HP = 400
+SHIELD_SOLDIER_DAMAGE = 40
+SHIELD_SOLDIER_ACTIVE_FRAMES = (3, 4)  # Fifth-row shield swing, zero-based columns.
+SHIELD_SOLDIER_GUARD_CHANCE = 0.5
+SHIELD_SOLDIER_GUARD_DAMAGE_SCALE = 0.5
 RESEARCHER_IMAGE = "hoodman_researcher_.png"  # Preserve the supplied filename.
 RESEARCHER_MAX_HP = 200
 RESEARCHER_DAMAGE = 30
@@ -339,7 +345,9 @@ ARCHIVED_FACTORY_OUTSIDE_IMAGE = "before_sheets/hood_man_factory_loading_dock_16
 FACTORY_EXTERIOR_IMAGE = "factoryOutside_floor300.px.png"
 ARCHIVED_FACTORY_EXTERIOR_IMAGE = "before_sheets/HOOD_MAN_Factory_Exterior_1672x941.png"
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
-LAB_STAGE_IMAGES = ("labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png")
+LAB_STAGE_IMAGES = ("labStage-1_floor300_1672x941.png", "labStage-2_floor300_1672x941.png")
+ARCHIVED_LAB_STAGE_IMAGES = ("before_sheets/labStage-1_new_1672x941.png",
+                            "before_sheets/labStage-2_new_1672x941.png")
 BOSS_STAGE_IMAGES = ("bossStage-1.png", "bossStage-2.png")
 STAGE_IMAGES = (STAGE_IMAGE, SECOND_STAGE_IMAGE, *CITY_STAGE_IMAGES,
                 FACTORY_OUTSIDE_IMAGE, FACTORY_EXTERIOR_IMAGE, *FACTORY_INSIDE_IMAGES,
@@ -387,8 +395,10 @@ STAGE_WALKABLE_BOUNDS = (
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     # factoryStage-2: source rows 697..881, below equipment and inside the viewport.
     (0.0, 16.0, WORLD_WIDTH, 200.0),
-    (0.0, 56.0, WORLD_WIDTH, 148.0),
-    (0.0, 56.0, WORLD_WIDTH, 116.0),
+    # New lab floors: below equipment/platform bases, before foreground metal grates.
+    # Keep anchor 280: world y = 761 - source_y; source rows 583..870 / 522..809.
+    (0.0, -109.0, WORLD_WIDTH, 178.0),
+    (0.0, -48.0, WORLD_WIDTH, 239.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
 )
@@ -434,6 +444,16 @@ AXE_ENEMY_ANIMATIONS = {
 RESEARCHER_ANIMATIONS = {
     **ENEMY_ANIMATIONS,
     "RELOAD": (5, RESEARCHER_RELOAD_FPS, False),
+    "HIT": (6, 12.0, False),
+    "KNOCKBACK": (6, 12.0, False),
+    "DYING": (7, 10.0, False),
+    "DEAD": (7, 10.0, False),
+    "CAR_HIT": (7, CAR_HIT_FPS, False),
+}
+SHIELD_SOLDIER_ANIMATIONS = {
+    **ENEMY_ANIMATIONS,
+    "GUARD": (4, 12.0, False),
+    "ATTACK": (5, 12.0, False),
     "HIT": (6, 12.0, False),
     "KNOCKBACK": (6, 12.0, False),
     "DYING": (7, 10.0, False),

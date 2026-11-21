@@ -35,7 +35,7 @@ class CityStageTests(unittest.TestCase):
                           *config.CITY_STAGE_IMAGES,
                           config.FACTORY_OUTSIDE_IMAGE, config.FACTORY_EXTERIOR_IMAGE,
                           "factoryInside-1.png", "factoryStage-2.png",
-                          "labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png",
+                          "labStage-1_floor300_1672x941.png", "labStage-2_floor300_1672x941.png",
                           "bossStage-1.png", "bossStage-2.png"])
         for index, stage in enumerate(world.stages):
             stage.arrows_visible = True

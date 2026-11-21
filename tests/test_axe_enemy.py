@@ -11,6 +11,7 @@ from enemy import Enemy
 from enemy02 import Enemy02
 from player import Player
 from researcher import Researcher
+from shield_soldier import ShieldSoldier
 from tests.helpers import advance, spawn_encounter, tap
 from tests.test_strong_attacks import strike
 from ui import UI
@@ -46,6 +47,8 @@ class AxeEnemyTests(unittest.TestCase):
                 expected = Enemy02
             elif stage.image_name in config.FACTORY_INSIDE_IMAGES:
                 expected = Researcher
+            elif stage.image_name in config.LAB_STAGE_IMAGES:
+                expected, hp = ShieldSoldier, 400
             self.assertEqual(len(world.enemies), 4)
             for enemy in world.enemies:
                 self.assertIs(type(enemy), expected)

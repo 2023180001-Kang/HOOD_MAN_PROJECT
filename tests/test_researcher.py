@@ -13,6 +13,7 @@ from enemy02 import Enemy02
 from player import Player
 from projectiles import ResearcherBullet
 from researcher import Researcher
+from shield_soldier import ShieldSoldier
 from tests.helpers import advance, tap
 from tests.test_strong_attacks import strike
 from ui import UI
@@ -60,6 +61,8 @@ class ResearcherTests(unittest.TestCase):
                 expected, hp = AxeEnemy, 400
             elif stage.image_name in config.ENEMY02_STAGE_IMAGES:
                 expected = Enemy02
+            elif stage.image_name in config.LAB_STAGE_IMAGES:
+                expected, hp = ShieldSoldier, 400
             self.assertEqual(len(world.enemies), 4)
             self.assertTrue(all(type(enemy) is expected and enemy.hp == enemy.max_hp == hp
                                 for enemy in world.enemies))

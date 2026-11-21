@@ -19,6 +19,7 @@ from enemy import Enemy
 from enemy02 import Enemy02, leap_height
 from game import Game
 from researcher import Researcher
+from shield_soldier import ShieldSoldier
 from tools.check_render import capture
 from tools.check_runtime import push_key, release, tick
 from world import World
@@ -67,6 +68,7 @@ def check_city_summons(game):
         world = game.world
         expected = (AxeEnemy if world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE else
                     Researcher if world.stage.image_name in config.FACTORY_INSIDE_IMAGES else
+                    ShieldSoldier if world.stage.image_name in config.LAB_STAGE_IMAGES else
                     Enemy02 if world.stage.image_name in config.ENEMY02_STAGE_IMAGES else Enemy)
         assert world.stage_index == number - 1
         assert len(world.enemies) == world.spawner.spawned_count == 4
@@ -80,7 +82,7 @@ def check_city_summons(game):
                     capture(game, f"enemy02_city_{number - 2}_{side}")
                 assert any("몽둥이 60 / 착지 80" in call.args[2] for call in draw.call_args_list)
         assert all(game.assets.images[name] is image for name, image in textures.items())
-    print("PASS: SDL 4 summons city enemy02, dock axe enemies, interior researchers and old actors elsewhere; "
+    print("PASS: SDL 4 summons city enemy02, dock axes, interior researchers, lab shields and thugs elsewhere; "
           "spawn floors/texture reuse and the real 60/80 HUD text verified.")
 
 
@@ -323,6 +325,7 @@ def check_natural_encounter_and_restart(game):
         assert len(stage.enemies) == stage.spawner.spawned_count == (4 if index in (0, 3) else 0)
         expected = (AxeEnemy if stage.image_name == config.FACTORY_OUTSIDE_IMAGE else
                     Researcher if stage.image_name in config.FACTORY_INSIDE_IMAGES else
+                    ShieldSoldier if stage.image_name in config.LAB_STAGE_IMAGES else
                     Enemy02 if stage.image_name in config.ENEMY02_STAGE_IMAGES else Enemy)
         assert all(type(enemy) is expected and enemy not in old_enemies and enemy.hp == enemy.max_hp
                    for enemy in stage.enemies)

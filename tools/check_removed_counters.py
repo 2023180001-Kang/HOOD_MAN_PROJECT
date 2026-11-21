@@ -36,8 +36,8 @@ def check_ignored_keys_and_hud(game):
                for name in (path, (config.ROOT / path).name)}
     assert not retired & game.assets.images.keys()
     assert not retired & game.assets.frames.keys()
-    assert len(game.assets.frames) == 13
-    assert sum(len(row) for rows in game.assets.frames.values() for row in rows) == 536
+    assert len(game.assets.frames) == 14
+    assert sum(len(row) for rows in game.assets.frames.values() for row in rows) == 592
     for index in range(len(config.STAGE_IMAGES)):
         game.world = World(item_rng=random.Random(23))
         game.world.select_stage(index)

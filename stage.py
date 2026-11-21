@@ -11,6 +11,7 @@ from enemy import Enemy
 from enemy02 import Enemy02
 from physics import clamp
 from researcher import Researcher
+from shield_soldier import ShieldSoldier
 from spawn_manager import SpawnManager, SpawnPoint
 from stairs import Staircase, can_use_stairs
 from walkable import WalkableArea, for_stage
@@ -51,6 +52,8 @@ class Stage:
             enemy_type = Enemy02
         elif self.image_name in config.FACTORY_INSIDE_IMAGES:
             enemy_type = Researcher
+        elif self.image_name in config.LAB_STAGE_IMAGES:
+            enemy_type = ShieldSoldier
         self.spawner = SpawnManager(rng=rng, walkable=self.walkable, spawn_area=self.spawn_area,
                                     attack_sequence=attack_sequence,
                                     enemy_type=enemy_type, extra_sources=self.open_door_spawns)

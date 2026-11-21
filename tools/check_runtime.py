@@ -144,7 +144,8 @@ def check_numeric_spawns(game):
             for enemy in enemies:
                 sides.add(enemy.facing)
                 assert type(enemy) is world.spawner.enemy_type
-                hp = 400 if world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE else 200
+                hp = (400 if world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE
+                      or world.stage.image_name in config.LAB_STAGE_IMAGES else 200)
                 assert enemy.hp == hp and enemy.spawned_at == config.FIXED_DT
                 assert min(enemy.x, config.WORLD_WIDTH - enemy.x) <= (
                     enemy.boundary_padding + max(config.ENEMY_RUN_SPEEDS) / 60 + 1e-6)

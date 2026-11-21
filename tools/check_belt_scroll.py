@@ -118,10 +118,16 @@ def check_full_floor(game, index=0):
         assert config.FACTORY_EXTERIOR_IMAGE in game.assets.images
         assert config.ARCHIVED_FACTORY_EXTERIOR_IMAGE not in game.assets.images
         assert "HOOD_MAN_Factory_Exterior_1672x941.png" not in game.assets.images
+    elif index in (8, 9):
+        assert config.LAB_STAGE_IMAGES[index - 8] in game.assets.images
+        archived = config.ARCHIVED_LAB_STAGE_IMAGES[index - 8]
+        assert archived not in game.assets.images and Path(archived).name not in game.assets.images
     bottom, top, source_top, source_bottom, prefix = {
         0: (-3, 277, 620, 900, "first_floor_full"),
         1: (-44, 239, 658, 941, "second_alley_floor300"),
         5: (0, 284, 657, 941, "factory_floor300"),
+        8: (-109, 178, 583, 870, "lab_1_floor300"),
+        9: (-48, 239, 522, 809, "lab_2_floor300"),
     }[index]
     visible, details = game.ui.floor_bounds_visible, game.ui.details_visible
     game.ui.floor_bounds_visible, game.ui.details_visible = True, False
@@ -134,6 +140,7 @@ def check_full_floor(game, index=0):
                         game.world.select_stage(index)
                         world, player = game.world, game.world.player
                         assert world.stage.walkable.bounds == (0, bottom, 2560, top)
+                        assert not world.stage.stairs and world.stage.upper_walkable is None
                         player.equip_weapon(weapon)
                         player.x = player.previous_x = 300 if side < 0 else 2260
                         keys = (pico2d.SDLK_LEFT if side < 0 else pico2d.SDLK_RIGHT,
@@ -429,6 +436,8 @@ def main():
         check_full_floor(game)
         check_full_floor(game, index=1)
         check_full_floor(game, index=5)
+        check_full_floor(game, index=8)
+        check_full_floor(game, index=9)
         check_movement(game)
         check_jump(game)
         check_depth_and_order(game)

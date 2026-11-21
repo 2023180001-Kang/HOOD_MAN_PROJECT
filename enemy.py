@@ -14,6 +14,7 @@ from walkable import default_area
 
 class Enemy:
     stair_following = True
+    uses_melee_slots = True
     death_drop_kind = "metal_club"
     max_hp = config.ENEMY_MAX_HP
     boundary_padding = config.ENEMY_BOUNDARY_PADDING
@@ -356,6 +357,9 @@ class Enemy:
             self.has_hit = True
             return player.take_damage(self.attack_damage)
         return False
+
+    def take_projectile(self):
+        return None  # Melee enemies never emit a projectile.
 
     def knockback(self, player_x, player_ground_y=None):
         if not self.alive or self.knockback_started or self.counter_move is not None:

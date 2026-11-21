@@ -194,6 +194,24 @@ ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 AXE_ENEMY_IMAGE = "axe_enemy_pico2d_2048x1792.png"
 AXE_ENEMY_MAX_HP = 400
 AXE_ENEMY_DAMAGE = 60
+RESEARCHER_IMAGE = "hoodman_researcher_.png"  # Preserve the supplied filename.
+RESEARCHER_MAX_HP = 200
+RESEARCHER_DAMAGE = 30
+RESEARCHER_MAGAZINE_SIZE = 7
+RESEARCHER_SHOOT_RANGE = 480.0
+RESEARCHER_SHOOT_FRAME = 3  # Muzzle flash in the fourth row, zero-based column.
+RESEARCHER_RELOAD_FPS = 8.0
+# Source firing pose: cell center x=128, barrel exit (190, 120), feet y=231.
+RESEARCHER_MUZZLE_X = 46.5
+RESEARCHER_MUZZLE_HEIGHT = 83.25
+RESEARCHER_BULLET_IMAGE = "bullet_for_researcher.png"
+RESEARCHER_BULLET_SCALE = 0.125  # Copper body about 10x5px; trail grows backward.
+RESEARCHER_BULLET_ANCHOR_Y = 127.5
+RESEARCHER_BULLET_HALF_WIDTH = 5.0
+RESEARCHER_BULLET_HALF_HEIGHT = 2.5
+RESEARCHER_BULLET_SPEED = 900.0
+RESEARCHER_BULLET_FPS = 16.0
+RESEARCHER_BULLET_LIFETIME = 1.25
 ENEMY02_IMAGE = "HOOD_MAN_enemy02.png"
 ENEMY02_STAGE_IMAGES = ("cityStage-1.png", "cityStage-2.png")
 ENEMY02_BOUNDARY_PADDING = 128.0  # Living attack/effect envelope reaches 126.75px.
@@ -398,6 +416,15 @@ ENEMY_ANIMATIONS = {
 AXE_ENEMY_ANIMATIONS = {
     **ENEMY_ANIMATIONS,
     "CAR_HIT": (6, CAR_HIT_FPS, False),
+}
+RESEARCHER_ANIMATIONS = {
+    **ENEMY_ANIMATIONS,
+    "RELOAD": (5, RESEARCHER_RELOAD_FPS, False),
+    "HIT": (6, 12.0, False),
+    "KNOCKBACK": (6, 12.0, False),
+    "DYING": (7, 10.0, False),
+    "DEAD": (7, 10.0, False),
+    "CAR_HIT": (7, CAR_HIT_FPS, False),
 }
 ENEMY02_ANIMATIONS = {
     **ENEMY_ANIMATIONS,

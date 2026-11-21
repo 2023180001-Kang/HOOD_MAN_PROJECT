@@ -235,6 +235,10 @@ class UI:
             elif world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE:
                 counter_help = (f"적 공격: 도끼 {config.AXE_ENEMY_DAMAGE}   "
                                 f"반격: 도끼 공격 중 {config.COUNTER_RANGE:g}px 내")
+            elif world.stage.image_name in config.FACTORY_INSIDE_IMAGES:
+                counter_help = (f"적 권총 {config.RESEARCHER_DAMAGE} · "
+                                f"{config.RESEARCHER_MAGAZINE_SIZE}발 후 재장전 / "
+                                "반격: 근거리 사격 준비 중")
             else:
                 counter_help = (f"적 공격 피해: {config.ENEMY_DAMAGE}   "
                                 f"반격: 쇠파이프 공격 중 {config.COUNTER_RANGE:g}px 내")

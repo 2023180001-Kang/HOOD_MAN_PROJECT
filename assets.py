@@ -19,6 +19,7 @@ class Assets:
                          config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
                          config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
+                         config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,
                          config.HP_IMAGE,
                          *config.HIT_EFFECT_IMAGES,
                          *config.DROP_ITEM_IMAGES.values(),
@@ -72,6 +73,22 @@ class Assets:
             0, "h" if car.facing < 0 else "",
             car.x - camera_x,
             car.ground_y - camera_y + (config.CAR_GROUND_ANCHOR - height / 2) * scale,
+            width * scale, height * scale,
+        )
+
+    def draw_projectile(self, bullet, camera_x, camera_y):
+        image = self.images[bullet.image_name]
+        tile = self.frames[bullet.image_name][0][bullet.frame]
+        left, bottom, width, height = tile["clip"]
+        scale = config.RESEARCHER_BULLET_SCALE
+        # Keep the copper nose on the physics body while the animated trail
+        # extends backward, never moving the impact point as clips get wider.
+        image.clip_composite_draw(
+            left, bottom, width, height, 0, "h" if bullet.facing < 0 else "",
+            bullet.x - camera_x + bullet.facing * (
+                config.RESEARCHER_BULLET_HALF_WIDTH - width * scale / 2),
+            bullet.y - camera_y + (
+                bottom + height / 2 - image.h + config.RESEARCHER_BULLET_ANCHOR_Y) * scale,
             width * scale, height * scale,
         )
 

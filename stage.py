@@ -10,6 +10,7 @@ from drop_items import spawn_drop_items
 from enemy import Enemy
 from enemy02 import Enemy02
 from physics import clamp
+from researcher import Researcher
 from spawn_manager import SpawnManager, SpawnPoint
 from stairs import Staircase, can_use_stairs
 from walkable import WalkableArea, for_stage
@@ -23,6 +24,7 @@ class Stage:
         self.effects = []
         self.afterimages = []
         self.damage_numbers = []
+        self.projectiles = []
         self.doors = [StageDoor(kind, rect)
                       for kind, rect in config.STAGE_DOOR_SPECS.get(self.image_name, ())]
         self.walkable = for_stage(index)
@@ -47,6 +49,8 @@ class Stage:
             enemy_type = AxeEnemy
         elif self.image_name in config.ENEMY02_STAGE_IMAGES:
             enemy_type = Enemy02
+        elif self.image_name in config.FACTORY_INSIDE_IMAGES:
+            enemy_type = Researcher
         self.spawner = SpawnManager(rng=rng, walkable=self.walkable, spawn_area=self.spawn_area,
                                     attack_sequence=attack_sequence,
                                     enemy_type=enemy_type, extra_sources=self.open_door_spawns)

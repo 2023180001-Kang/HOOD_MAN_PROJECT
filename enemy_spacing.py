@@ -50,7 +50,8 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
     for enemy in enemies:
         enemy.target_x = None
         enemy.target_ground_y = None
-        if (not same_floor(player, enemy) or enemy.navigation_target is not None or enemy.falling_from_upper
+        if (not enemy.uses_melee_slots or not same_floor(player, enemy)
+                or enemy.navigation_target is not None or enemy.falling_from_upper
                 or not player.alive or not enemy.alive or enemy.knockback_started
                 or enemy.counter_move is not None or enemy.leaping
                 or enemy.state in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")):
@@ -130,7 +131,8 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
     """Ease severe overlap on the floor, then constrain every state and path."""
     walkable = player.walkable if walkable is None else walkable
     active = [enemy for enemy in enemies
-              if same_floor(player, enemy) and enemy.navigation_target is None and not enemy.falling_from_upper
+              if enemy.uses_melee_slots and same_floor(player, enemy)
+              and enemy.navigation_target is None and not enemy.falling_from_upper
               and player.alive and enemy.alive and not enemy.knockback_started
               and enemy.counter_move is None and not enemy.leaping
               and enemy.state not in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")]

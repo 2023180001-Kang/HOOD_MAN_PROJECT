@@ -11,6 +11,7 @@ import config
 from assets import Assets
 from drop_items import DropItem
 from effects import SpriteAfterimage
+from projectiles import ResearcherBullet
 from ui import UI
 from world import World
 
@@ -127,6 +128,8 @@ class Game:
         sprites.extend((enemy.ground_y, enemy, enemy.sprite_image, enemy.opacity)
                        for enemy in self.world.enemies)
         sprites.append((player.ground_y, player, player.sprite_image, 1.0))
+        sprites.extend((bullet.ground_y, bullet, bullet.image_name, 1.0)
+                       for bullet in self.world.projectiles)
         sprites.extend((item.ground_y, item, item.image_name, 1.0)
                        for item in self.world.stage.drop_items if not item.grounded)
         traffic = self.world.stage.traffic
@@ -135,6 +138,8 @@ class Game:
         for _, actor, image, opacity in sorted(sprites, key=lambda entry: entry[0], reverse=True):
             if image == config.CAR_IMAGE:
                 self.assets.draw_car(actor, camera_x, camera_y)
+            elif isinstance(actor, ResearcherBullet):
+                self.assets.draw_projectile(actor, camera_x, camera_y)
             elif isinstance(actor, DropItem):
                 self.assets.draw_drop_item(actor, camera_x, camera_y)
             else:

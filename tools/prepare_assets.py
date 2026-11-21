@@ -17,6 +17,8 @@ SHEETS = {
     config.PLAYER_IMAGE: 6,
     config.ENEMY_IMAGE: 6,
     config.AXE_ENEMY_IMAGE: 7,
+    config.RESEARCHER_IMAGE: 7,
+    config.RESEARCHER_BULLET_IMAGE: 1,
     config.ENEMY02_IMAGE: 7,
     config.COMBAT_IMAGE: 4,
     config.STRONG_ATTACK_IMAGE: 5,

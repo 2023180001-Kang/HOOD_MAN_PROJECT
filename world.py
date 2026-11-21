@@ -92,6 +92,10 @@ class World:
         return self.stage.afterimages
 
     @property
+    def projectiles(self):
+        return self.stage.projectiles
+
+    @property
     def damage_numbers(self):
         return self.stage.damage_numbers
 
@@ -309,12 +313,38 @@ class World:
                     if not self.player.alive:
                         self.handle_death()
                         break
+        self.update_projectiles(dt)
+        self.handle_death()
         self.cancel_invalid_rush()
         self.stage.constrain_actor(self.player)
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         self.spawn_enemy_death_drops()
         self.update_camera(dt)
+
+    def update_projectiles(self, dt):
+        # Existing rounds survive their shooter's death. New shots are emitted
+        # only after melee/counter priority has had a chance to interrupt them.
+        for bullet in self.projectiles:
+            if bullet.update(dt, self.player):
+                self.projectile_impact(bullet)
+        if self.player.alive:
+            for enemy in self.enemies:
+                bullet = enemy.take_projectile()
+                if bullet is None:
+                    continue
+                self.projectiles.append(bullet)
+                if bullet.update(0, self.player):
+                    self.projectile_impact(bullet)
+                if not self.player.alive:
+                    break
+        self.projectiles[:] = [bullet for bullet in self.projectiles if not bullet.finished]
+
+    def projectile_impact(self, bullet):
+        self.cancel_invalid_counter()
+        self.effects.append(HitEffect(bullet.impact_x, bullet.y, bullet.facing,
+                                      image_name=config.CLUB_HIT_IMAGE))
+        self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
 
     def spawn_enemy_death_drops(self):
         """Emit one non-collectible club per defeated single-club enemy."""

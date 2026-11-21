@@ -20,6 +20,7 @@ from game import Game
 from tools.check_damage_numbers import capture_number
 from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, release, tick
+from ui import PLAYER_BOUNDS_COLOR
 from world import World
 
 
@@ -40,6 +41,82 @@ def encounter(game, side=1, *, hp=400, weapon=None):
     enemy.facing = -side
     enemy.hp, enemy.cooldown = hp, 100
     return world, enemy
+
+
+def check_stair_free_dock_floor(game):
+    assert config.FACTORY_OUTSIDE_IMAGE == "factory_loading_dock_no_stairs_1672x941.png"
+    assert config.FACTORY_OUTSIDE_IMAGE in game.assets.images
+    assert config.ARCHIVED_FACTORY_OUTSIDE_IMAGE not in game.assets.images
+    assert Path(config.ARCHIVED_FACTORY_OUTSIDE_IMAGE).name not in game.assets.images
+    visible, details = game.ui.floor_bounds_visible, game.ui.details_visible
+    game.ui.floor_bounds_visible, game.ui.details_visible = False, False
+    try:
+        push_key(pico2d.SDLK_F4)
+        tick(game)
+        release(game, pico2d.SDLK_F4)
+        assert game.ui.floor_bounds_visible
+        for weapon in (None, *config.WEAPON_POSE_IMAGES):
+            for running in (False, True):
+                for side in (-1, 1):
+                    for depth in (-1, 1):
+                        game.world = World(item_rng=random.Random(23))
+                        world = game.world
+                        world.select_stage(DOCK)
+                        player = world.player
+                        assert world.stage.walkable.bounds == (0, 45, 2560, 258)
+                        assert not world.stage.stairs and world.stage.upper_walkable is None
+                        player.equip_weapon(weapon)
+                        player.x = player.previous_x = 300 if side < 0 else 2260
+                        keys = (pico2d.SDLK_LEFT if side < 0 else pico2d.SDLK_RIGHT,
+                                pico2d.SDLK_DOWN if depth < 0 else pico2d.SDLK_UP)
+                        if running:
+                            keys += (pico2d.SDLK_LSHIFT,)
+                        for key in keys:
+                            push_key(key)
+                        tick(game, 90)
+                        for key in keys:
+                            release(game, key)
+                        assert (player.x, player.ground_y, player.jump_height, player.floor) == (
+                            68 if side < 0 else 2492, 45 if depth < 0 else 258, 0, 0)
+                        with patch.object(pico2d, "draw_line", wraps=pico2d.draw_line) as draw:
+                            if weapon is None:
+                                capture(game, f"dock_no_stairs_{'run' if running else 'walk'}_{side}_{depth}")
+                            else:
+                                render_image(game)
+                        endpoints = {point for call in draw.call_args_list
+                                     if call.args[4:] == PLAYER_BOUNDS_COLOR
+                                     for point in (call.args[:2], call.args[2:4])}
+                        assert (player.x - world.camera.render_x,
+                                player.ground_y - world.camera.render_y) in endpoints
+                        assert 941 - player.ground_y == (896 if depth < 0 else 683)
+        for depth in (45, 258):
+            game.world = World(item_rng=random.Random(23))
+            world = game.world
+            world.select_stage(DOCK)
+            player = world.player
+            player.ground_y = player.previous_ground_y = depth
+            for _ in range(2):
+                push_key(pico2d.SDLK_SPACE)
+                tick(game, 3)
+                release(game, pico2d.SDLK_SPACE)
+            assert player.jump_count == 2
+            tick(game, 120)
+            assert player.grounded and player.ground_y == depth and player.floor == 0
+            capture(game, f"dock_no_stairs_jump_landed_{depth}")
+        push_key(pico2d.SDLK_F5)
+        tick(game)
+        release(game, pico2d.SDLK_F5)
+        assert world.stage_index == 0 and game.ui.floor_bounds_visible
+        world.select_stage(DOCK)
+        assert world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE
+        assert world.stage.walkable.bounds == (0, 45, 2560, 258)
+        assert len(world.stage.drop_items) == 15 and not world.enemies
+        capture(game, "dock_no_stairs_restarted")
+    finally:
+        game.ui.floor_bounds_visible, game.ui.details_visible = visible, details
+    print("PASS: new stair-free dock is loaded, archived art is not; all 3 loadouts walk/run "
+          "to all 4 concrete-floor corners, F4 matches source rows 683/896, double jumps "
+          "land on both depth edges without ghost stairs/platforms, and F5 preserves the new map.")
 
 
 def check_summons(game):
@@ -250,6 +327,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
+        check_stair_free_dock_floor(game)
         check_summons(game)
         check_source_frames(game)
         check_health_pixels(game)

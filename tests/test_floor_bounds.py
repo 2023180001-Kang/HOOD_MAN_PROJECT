@@ -118,6 +118,21 @@ class FloorBoundsTests(unittest.TestCase):
         xs = [x for ax, _, bx, _ in lines for x in (ax, bx)]
         self.assertEqual((min(xs), max(xs)), (128, config.WORLD_WIDTH - 128))
 
+    def test_stair_free_loading_dock_outline_matches_the_full_concrete_floor(self):
+        game = scene()
+        game.world.select_stage(4)
+        game.ui.floor_bounds_visible = True
+        camera_x, camera_y = 640, 8
+        with patch("pico2d.draw_line") as draw:
+            game.ui.draw_floor_bounds(game.world, camera_x, camera_y)
+        player_lines = [call.args[:4] for call in draw.call_args_list
+                        if call.args[4:] == PLAYER_BOUNDS_COLOR]
+        self.assertCountEqual(player_lines,
+                              [(68 - camera_x, 45 - camera_y, 2492 - camera_x, 45 - camera_y),
+                               (2492 - camera_x, 45 - camera_y, 2492 - camera_x, 258 - camera_y),
+                               (2492 - camera_x, 258 - camera_y, 68 - camera_x, 258 - camera_y),
+                               (68 - camera_x, 258 - camera_y, 68 - camera_x, 45 - camera_y)])
+
     def test_convex_floor_uses_its_actual_inset_polygon_not_a_bounding_rectangle(self):
         game = scene()
         game.ui.floor_bounds_visible = True

@@ -1,8 +1,14 @@
+import hashlib
+import random
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+
+from PIL import Image
 
 import config
+from assets import Assets
+from axe_enemy import AxeEnemy
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
 from tests.helpers import advance, clear_encounters
@@ -22,6 +28,91 @@ def at_factory_boundary(side=1, first=3):
 
 
 class FactoryStageTests(unittest.TestCase):
+    def test_stair_free_dock_loads_new_art_and_archives_the_old_png_byte_identically(self):
+        self.assertEqual(config.FACTORY_OUTSIDE_IMAGE, "factory_loading_dock_no_stairs_1672x941.png")
+        self.assertEqual(config.STAGE_IMAGES[4], config.FACTORY_OUTSIDE_IMAGE)
+        expected = {
+            config.FACTORY_OUTSIDE_IMAGE: "be43a67389ada502c862880b4a73f28406de01f537bf07e8819af6c22bddadbf",
+            config.ARCHIVED_FACTORY_OUTSIDE_IMAGE: "a2884d63b029bad7f92331015edb183a1023d09b0824e8cca0accb7f69059514",
+        }
+        for name, digest in expected.items():
+            path = config.ROOT / name
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest)
+            with Image.open(path) as image:
+                self.assertEqual(image.size, (1672, 941))
+        self.assertFalse((config.ROOT / "hood_man_factory_loading_dock_1672x941.png").exists())
+        with patch("pico2d.load_image", return_value=Mock()), patch("pico2d.load_font"):
+            assets = Assets()
+        self.assertIn(config.FACTORY_OUTSIDE_IMAGE, assets.images)
+        self.assertNotIn(config.ARCHIVED_FACTORY_OUTSIDE_IMAGE, assets.images)
+        self.assertNotIn("hood_man_factory_loading_dock_1672x941.png", assets.images)
+
+    def test_stair_free_dock_uses_all_concrete_between_the_fascia_and_drain(self):
+        stage = World().stages[4]
+        self.assertEqual(stage.walkable.bounds, (0, 45, 2560, 258))
+        anchor = config.STAGE_GROUND_ANCHORS[stage.image_name]
+        source_world_top = config.GROUND_Y - anchor + config.STAGE_IMAGE_HEIGHT
+        self.assertEqual((source_world_top - stage.walkable.bounds[3],
+                          source_world_top - stage.walkable.bounds[1]), (683, 896))
+        self.assertIsNone(stage.upper_walkable)
+        self.assertEqual((stage.stairs, stage.doors), ([], []))
+        for x in (68, 250, 1280, 1672, 2260, 2492):
+            for y in (45, 48, 100, 240, 258):
+                self.assertTrue(stage.walkable.contains(x, y, 68))
+        self.assertFalse(stage.walkable.contains(1280, 44.99, 68))
+        self.assertFalse(stage.walkable.contains(1280, 258.01, 68))
+
+    def test_each_loadout_walks_and_runs_to_every_stair_free_dock_corner(self):
+        for weapon in (None, *config.WEAPON_POSE_IMAGES):
+            for running in (False, True):
+                for side in (-1, 1):
+                    for depth in (-1, 1):
+                        with self.subTest(weapon=weapon, running=running, side=side, depth=depth):
+                            world = World()
+                            world.select_stage(4)
+                            player = world.player
+                            player.equip_weapon(weapon)
+                            player.x = player.previous_x = 300 if side < 0 else 2260
+                            world.controls.press("left" if side < 0 else "right")
+                            world.controls.press("down" if depth < 0 else "up")
+                            if running:
+                                world.controls.press("left_shift")
+                            advance(world, 1.5)
+                            self.assertEqual((player.x, player.ground_y),
+                                             (68 if side < 0 else 2492, 45 if depth < 0 else 258))
+                            self.assertEqual((player.floor, player.jump_height), (0, 0))
+                            self.assertIsNone(player.staircase)
+                            self.assertTrue(player.grounded)
+
+    def test_new_dock_retains_axe_spawns_items_revisit_state_and_restart(self):
+        world = World(rng=random.Random(41), item_rng=random.Random(23))
+        world.select_stage(4)
+        stage = world.stage
+        self.assertEqual(len(stage.drop_items), 15)
+        self.assertTrue(all(item.floor == 0 and stage.walkable.contains(item.x, item.ground_y)
+                            for item in stage.drop_items))
+        world.controls.press("spawn_9")
+        world.step(config.FIXED_DT)
+        self.assertEqual(len(world.enemies), 9)
+        self.assertTrue(all(type(enemy) is AxeEnemy and enemy.hp == 400 and enemy.attack_damage == 60
+                            and stage.walkable.contains(enemy.x, enemy.ground_y, 88)
+                            for enemy in world.enemies))
+        first, items = world.enemies[0], stage.drop_items
+        first.take_damage(40)
+        world.select_stage(5)
+        advance(world, 1)
+        world.select_stage(4)
+        self.assertIs(world.stage, stage)
+        self.assertIs(world.stage.drop_items, items)
+        self.assertEqual(first.hp, 360)
+        world.controls.press("restart")
+        world.update(config.FIXED_DT)
+        world.select_stage(4)
+        self.assertEqual(world.stage.image_name, "factory_loading_dock_no_stairs_1672x941.png")
+        self.assertEqual(world.stage.walkable.bounds, (0, 45, 2560, 258))
+        self.assertEqual(world.enemies, [])
+        self.assertEqual(len(world.stage.drop_items), 15)
+
     def test_factory_zone_boundaries_wait_two_seconds_and_preserve_the_same_player_both_ways(self):
         for first, side in ((3, -1), (3, 1), (5, -1), (5, 1),
                             (7, -1), (7, 1), (9, -1), (9, 1)):

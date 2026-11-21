@@ -521,7 +521,7 @@ def main():
         check_motion_continuity(game, first=10)
         check_round_trip_and_last_exit(game)
         check_city_loading(game)
-        check_stage_background(game, 4, "factory_loading_dock")
+        check_stage_background(game, 4, "factory_loading_dock_no_stairs")
         check_factory_loading(game)
         check_factory_exterior(game)
         check_factory_loading(game, first=5)

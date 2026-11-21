@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 import config
 from enemy import Enemy
-from tests.helpers import advance
+from tests.helpers import ArchivedTwoFloorTests, advance
 from tests.test_two_floors import place
 from ui import UI
 from world import World
@@ -30,7 +30,7 @@ def stair_world(floor=0, seconds=0.6):
     return world, stair
 
 
-class StairControlTests(unittest.TestCase):
+class StairControlTests(ArchivedTwoFloorTests):
     def test_releasing_the_key_pauses_both_upward_and_downward_travel(self):
         for floor in (0, 1):
             world, stair = stair_world(floor)

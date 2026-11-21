@@ -5,7 +5,7 @@ from PIL import Image
 
 import config
 from drop_items import DropItem
-from tests.helpers import advance, tap
+from tests.helpers import advance, archived_two_floor_map, tap
 from world import World
 
 
@@ -28,7 +28,17 @@ class DropItemTests(unittest.TestCase):
         self.assertEqual(counts, {15})
         self.assertEqual(len(layouts), 32 * len(config.STAGE_IMAGES))
 
-    def test_first_stage_splits_items_between_both_floors_and_keeps_both_kinds_on_each(self):
+    def test_flat_first_stage_places_all_fifteen_items_on_its_only_floor(self):
+        for seed in range(32):
+            world = World(item_rng=random.Random(seed))
+            self.assertEqual(len(world.stage.drop_items), 15)
+            self.assertEqual({item.floor for item in world.stage.drop_items}, {0})
+            self.assertEqual({item.kind for item in world.stage.drop_items}, set(config.DROP_ITEM_IMAGES))
+            self.assertTrue(all(item.grounded and world.stage.walkable.contains(item.x, item.ground_y)
+                                for item in world.stage.drop_items))
+
+    @archived_two_floor_map()
+    def test_archived_first_stage_splits_items_between_both_floors_and_keeps_both_kinds_on_each(self):
         for seed in range(32):
             world = World(item_rng=random.Random(seed))
             for floor, count in ((0, 8), (1, 7)):
@@ -39,6 +49,7 @@ class DropItemTests(unittest.TestCase):
             self.assertTrue(all(item.floor == 0 for stage in world.stages[1:]
                                 for item in stage.drop_items))
 
+    @archived_two_floor_map()
     def test_generated_upper_floor_weapons_can_be_picked_up_with_g(self):
         for kind in config.DROP_ITEM_IMAGES:
             with self.subTest(kind=kind):
@@ -57,6 +68,7 @@ class DropItemTests(unittest.TestCase):
                 self.assertNotIn(item, world.stage.drop_items)
                 self.assertEqual(len(world.stage.drop_items), 14)
 
+    @archived_two_floor_map()
     def test_generated_weapons_cannot_be_picked_up_from_a_different_floor(self):
         for floor in (0, 1):
             world = World(item_rng=random.Random(5))
@@ -70,6 +82,7 @@ class DropItemTests(unittest.TestCase):
             self.assertFalse(world.interact_weapon())
             self.assertIn(item, world.stage.drop_items)
 
+    @archived_two_floor_map()
     def test_upper_floor_pickup_is_preserved_on_return_and_reset_by_f5(self):
         world = World(item_rng=random.Random(5))
         upstairs = [item for item in world.stage.drop_items if item.floor == 1]
@@ -97,6 +110,7 @@ class DropItemTests(unittest.TestCase):
         self.assertIsNone(world.player.weapon)
         self.assertFalse(any(new is old for new in world.stage.drop_items for old in items))
 
+    @archived_two_floor_map()
     def test_items_on_both_floors_stay_grounded_without_falling_or_moving_between_floors(self):
         world = World(item_rng=random.Random(5))
         self.assertEqual({item.floor for item in world.stage.drop_items}, {0, 1})

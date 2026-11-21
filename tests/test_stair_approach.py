@@ -3,7 +3,7 @@ import unittest
 
 import config
 from enemy import Enemy
-from tests.helpers import advance
+from tests.helpers import ArchivedTwoFloorTests, advance
 from tests.test_two_floors import place
 from world import World
 
@@ -19,7 +19,7 @@ def encounter(floor=1, x=1000, y=476, speed=360):
     return world, enemy
 
 
-class StairApproachTests(unittest.TestCase):
+class StairApproachTests(ArchivedTwoFloorTests):
     def assert_runs_to_entry(self, world, enemy):
         for _ in range(360):
             before = enemy.x, enemy.ground_y

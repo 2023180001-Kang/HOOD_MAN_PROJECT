@@ -13,6 +13,7 @@ import pico2d
 import config
 from enemy import Enemy
 from game import Game
+from tests.helpers import archived_two_floor_map
 from tools.check_render import capture
 from tools.check_runtime import push_key, tick
 from world import World
@@ -255,6 +256,7 @@ def check_descending_column(game):
           "3 simultaneous travellers; each keeps separate progress and lands on floor 1.")
 
 
+@archived_two_floor_map()
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()

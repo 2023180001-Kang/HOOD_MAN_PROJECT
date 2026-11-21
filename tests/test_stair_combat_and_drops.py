@@ -6,7 +6,7 @@ from collision import body_contact_time, same_floor, world_rect
 from combat import MOVES, STRONG_MOVES
 from enemy import Enemy
 from rush import RushSequence
-from tests.helpers import advance
+from tests.helpers import ArchivedTwoFloorTests, advance
 from tests.test_two_floors import place
 from world import World
 
@@ -44,7 +44,7 @@ def upper_group(count=8, seed=41):
     return world
 
 
-class StairCombatTests(unittest.TestCase):
+class StairCombatTests(ArchivedTwoFloorTests):
     def test_upstairs_player_can_hit_an_ascending_enemy_before_it_reaches_floor_two(self):
         world = World()
         enemy = on_stairs(world)
@@ -209,7 +209,7 @@ class StairCombatTests(unittest.TestCase):
         self.assertLess(enemy.y, before)
 
 
-class RandomDescentTests(unittest.TestCase):
+class RandomDescentTests(ArchivedTwoFloorTests):
     def test_groups_are_split_into_a_random_nonempty_drop_and_stair_subset(self):
         for count in (2, 3, 5, 9):
             for seed in range(8):

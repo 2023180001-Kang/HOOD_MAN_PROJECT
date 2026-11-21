@@ -5,13 +5,13 @@ from unittest.mock import Mock, patch
 
 import config
 from camera import Camera
-from tests.helpers import advance, tap
+from tests.helpers import ArchivedTwoFloorTests, advance, tap
 from tests.test_two_floors import place
 from ui import UI
 from world import World
 
 
-class VerticalCameraTests(unittest.TestCase):
+class VerticalCameraTests(ArchivedTwoFloorTests):
     def assert_player_visible(self, world):
         feet = world.player.y - world.camera.render_y
         self.assertGreaterEqual(feet, 0)

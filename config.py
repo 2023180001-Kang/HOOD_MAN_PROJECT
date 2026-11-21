@@ -288,7 +288,9 @@ WEAPON_PICKUP_DEPTH = 32.0
 WEAPON_DROP_HAND_HEIGHT = 70.0
 WEAPON_PROMPT_GAP = 14.0
 HP_IMAGE = "HoodMan_HP_pico2d.png"
-STAGE_IMAGE = "HoodMan_2F_Map_1672x941.png"
+STAGE_IMAGE = "changed_first_map_no_door.png"
+ARCHIVED_TWO_FLOOR_IMAGE = "before_sheets/HoodMan_2F_Map_1672x941.png"
+ARCHIVED_TWO_FLOOR_WALKABLE_BOUNDS = (0.0, 56.0, WORLD_WIDTH, 136.0)
 DOOR_IMAGES = {
     "door": "HoodMan_Door_pico2d.png",
     "warehouse_shutter": "HoodMan_Warehouse_Shutter_pico2d.png",
@@ -305,21 +307,25 @@ DOOR_CLOSED_BOUNDS = {
 # Opening rectangles measured in the background's top-left source coordinates.
 STAGE_DOOR_SPECS = {
     STAGE_IMAGE: (
+        ("door", (250, 400, 83, 173)),
+        ("warehouse_shutter", (1333, 417, 211, 202)),
+    ),
+    ARCHIVED_TWO_FLOOR_IMAGE: (
         ("door", (182, 567, 83, 137)),
         ("door", (412, 253, 83, 137)),
         ("door", (1366, 253, 85, 137)),
         ("warehouse_shutter", (1334, 544, 214, 201)),
     ),
 }
-STAGE_DOOR_FLOORS = {STAGE_IMAGE: (0, 1, 1, 0)}
-TWO_FLOOR_MAP_SIZE = (1672, 941)
-# Upper walkway: source rows 395..445, above the metal fascia.
-STAGE_UPPER_FLOOR_BOUNDS = {STAGE_IMAGE: (0.0, 452.0, WORLD_WIDTH, 502.0)}
+STAGE_DOOR_FLOORS = {STAGE_IMAGE: (0, 0), ARCHIVED_TWO_FLOOR_IMAGE: (0, 1, 1, 0)}
+STAGE_DOOR_MAP_SIZE = (1672, 941)
+# Archived map only: source rows 395..445, above the metal fascia.
+STAGE_UPPER_FLOOR_BOUNDS = {ARCHIVED_TWO_FLOOR_IMAGE: (0.0, 452.0, WORLD_WIDTH, 502.0)}
 UPPER_PLATFORM_JUMP_CLEARANCE = 24.0
 # Feet follow the steps, not a vertical teleport. Both endpoints are on a floor.
 STAGE_STAIR_PATHS = {
-    STAGE_IMAGE: (((238.0, 136.0), (252.0, 168.0),
-                   (484.0, 454.0), (500.0, 476.0)),),
+    ARCHIVED_TWO_FLOOR_IMAGE: (((238.0, 136.0), (252.0, 168.0),
+                               (484.0, 454.0), (500.0, 476.0)),),
 }
 STAIR_SPEED = 240.0
 STAIR_FOLLOW_DISTANCE = 100.0  # Enemy spacing along the steps, not on the waiting floor.
@@ -362,8 +368,8 @@ STAGE_GROUND_ANCHORS = {
 # World-space foot regions, below the buildings/props and above the foreground.
 # Optional convex polygons override a stage's rectangle (counterclockwise vertices).
 STAGE_WALKABLE_BOUNDS = (
-    # Two-floor first map: ground-floor source rows 761..841, below stairs/props.
-    (0.0, 56.0, WORLD_WIDTH, 136.0),
+    # Flat first map: source rows 629..841, below the storefront openings.
+    (0.0, 56.0, WORLD_WIDTH, 268.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),

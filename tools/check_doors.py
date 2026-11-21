@@ -90,12 +90,118 @@ def check_source_clips(game):
                 texture = game.assets.images[name]
                 with patch.object(texture, "clip_composite_draw", wraps=texture.clip_composite_draw) as draw:
                     backdrop(game)
-                assert draw.call_count == (6 if name == config.DOOR_IMAGES["door"] else 2)
+                assert draw.call_count == 2
                 assert {call.args[5] for call in draw.call_args_list} == {"", "h"}
                 assert all(call.args[:4] == (frame * 256, 512 - row * 256, 256, 256)
                            for call in draw.call_args_list)
     print("PASS: both sheets use all 16 exact source clips; both background tiles mirror "
           "the original hinges/header anchors without trimming or double offsets.")
+
+
+def check_numeric_spawns(game):
+    expected = {("door", 0, 0): (291.5, 268),
+                ("door", 1, 0): (1438.5, 266),
+                ("door", 1, 1): (1905.5, 266)}
+    observed_sources = set()
+    for prefix in ("", "KP_"):
+        for count in config.SPAWN_COUNTS:
+            game.world = World(rng=random.Random(41), item_rng=random.Random(23))
+            world = game.world
+            world.player.invincible = True
+            push_key(pico2d.SDLK_F3)
+            tick(game, 45)
+            release(game, pico2d.SDLK_F3)
+            assert all(door.state == "OPEN" for door in world.stage.doors)
+            assert not world.enemies
+            assert {point.source: (point.x, point.ground_y)
+                    for point in world.stage.open_door_spawns()} == expected
+            spawn = world.spawner.spawn
+            samples = []
+
+            def record(batch, elapsed):
+                enemies = spawn(batch, elapsed)
+                samples.extend((enemy.spawn_source, enemy.x, enemy.ground_y, enemy.floor)
+                               for enemy in enemies)
+                return enemies
+
+            key = getattr(pico2d, f"SDLK_{prefix}{count}")
+            with patch.object(world.spawner, "spawn", side_effect=record):
+                push_key(key)
+                tick(game)
+                assert len(world.enemies) == count
+                push_key(key, repeat=True)
+                tick(game, 2)
+                assert len(world.enemies) == count
+                release(game, key)
+                push_key(key)
+                tick(game)
+                release(game, key)
+                assert len(world.enemies) == world.spawner.spawned_count == count * 2
+            for source, x, y, floor in samples:
+                observed_sources.add(source)
+                assert floor == 0
+                if source[0] == "door":
+                    assert (x, y) == expected[source], (source, x, y)
+                else:
+                    assert x in (88, 2472) and 56 <= y <= 268
+            assert all(enemy.floor == 0 and enemy.staircase is None
+                       and world.stage.walkable.contains(enemy.x, enemy.ground_y, 88)
+                       for enemy in world.enemies)
+            if count == 9:
+                for camera_x in (0, 1280):
+                    world.camera.x = camera_x
+                    capture(game, f"flat_map_spawn_{prefix or 'top'}_{camera_x}")
+            push_key(pico2d.SDLK_F3)
+            tick(game)
+            release(game, pico2d.SDLK_F3)
+            assert not world.stage.open_door_spawns()
+            later = world.spawner.spawn(9, world.elapsed)
+            assert all(enemy.spawn_source[0] == "edge" for enemy in later)
+    assert observed_sources == set(expected) | {("edge", -1), ("edge", 1)}
+    print("PASS: all 18 SDL digit/keypad keys summon exact fresh-input counts at both edges, "
+          "the ordinary door and original/mirrored shutters; exact spawn coordinates, floor 0, "
+          "no auto-spawn, held/repeat suppression and immediate closing exclusion.")
+
+
+def check_single_floor_and_revisit(game):
+    game.world = World(item_rng=random.Random(23))
+    world = game.world
+    world.player.x = world.player.previous_x = 238  # Former invisible staircase.
+    push_key(pico2d.SDLK_UP)
+    push_key(pico2d.SDLK_LSHIFT)
+    tick(game, 45)
+    release(game, pico2d.SDLK_LSHIFT)
+    assert world.player.ground_y == 268 and world.player.staircase is None
+    push_key(pico2d.SDLK_SPACE)
+    tick(game, 3)
+    release(game, pico2d.SDLK_SPACE)
+    push_key(pico2d.SDLK_SPACE)
+    tick(game)
+    release(game, pico2d.SDLK_SPACE)
+    assert world.player.jump_count == 2
+    for _ in range(120):
+        tick(game)
+        assert world.player.floor == 0 and world.player.staircase is None
+        assert not world.player.falling_from_upper
+    release(game, pico2d.SDLK_UP)
+    assert world.player.grounded and world.player.ground_y == 268
+    assert len(world.stage.drop_items) == 15
+    assert all(item.floor == 0 and item.grounded for item in world.stage.drop_items)
+    capture(game, "flat_map_jump_landed")
+    push_key(pico2d.SDLK_F3)
+    tick(game, 10)
+    release(game, pico2d.SDLK_F3)
+    doors = world.stage.doors
+    snapshot = [(door.state, door.animation.elapsed) for door in doors]
+    world.select_stage(1)
+    tick(game, 30)
+    world.select_stage(0)
+    assert world.stage.doors is doors
+    assert [(door.state, door.animation.elapsed) for door in doors] == snapshot
+    tick(game, 40)
+    assert all(door.state == "OPEN" for door in doors)
+    print("PASS: SDL up/run and double-jump at the former stairs stay on the flat floor; "
+          "15 floor-0 items, inactive door-clock pause and identical door objects on revisit.")
 
 
 def main():
@@ -106,7 +212,12 @@ def main():
         game = Game()
         game.handle_events()
         game.world = World(item_rng=random.Random(23))
-        assert game.world.stage.image_name == "HoodMan_2F_Map_1672x941.png"
+        assert game.world.stage.image_name == "changed_first_map_no_door.png"
+        assert [door.kind for door in game.world.stage.doors] == ["door", "warehouse_shutter"]
+        assert game.world.stage.stairs == [] and game.world.stage.upper_walkable is None
+        assert all(item.floor == 0 for item in game.world.stage.drop_items)
+        assert (config.ROOT / config.ARCHIVED_TWO_FLOOR_IMAGE).is_file()
+        assert config.ARCHIVED_TWO_FLOOR_IMAGE not in game.assets.images
         assert all(door.state == "CLOSED" for door in game.world.stage.doors)
         assert (config.ROOT / "changed_first_map.png").is_file()
         assert (config.ROOT / "newStage.png").is_file()
@@ -117,6 +228,8 @@ def main():
         animate(game, False)
         assert check_endpoints(game, False, "closed_again") == closed
         check_source_clips(game)
+        check_numeric_spawns(game)
+        check_single_floor_and_revisit(game)
 
         game.world = World()
         push_key(pico2d.SDLK_p)

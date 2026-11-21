@@ -1,3 +1,34 @@
+from contextlib import contextmanager
+import unittest
+from unittest.mock import patch
+
+import config
+from walkable import default_area
+
+
+@contextmanager
+def archived_two_floor_map():
+    """Opt legacy regressions into the archived scene for their entire lifetime."""
+    default_area.cache_clear()
+    try:
+        with patch.multiple(
+            config,
+            STAGE_IMAGE=config.ARCHIVED_TWO_FLOOR_IMAGE,
+            STAGE_IMAGES=(config.ARCHIVED_TWO_FLOOR_IMAGE, *config.STAGE_IMAGES[1:]),
+            STAGE_WALKABLE_BOUNDS=(config.ARCHIVED_TWO_FLOOR_WALKABLE_BOUNDS,
+                                   *config.STAGE_WALKABLE_BOUNDS[1:]),
+        ):
+            yield
+    finally:
+        default_area.cache_clear()
+
+
+class ArchivedTwoFloorTests(unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.enterContext(archived_two_floor_map())
+
+
 def advance(world, seconds, fps=60):
     for _ in range(round(seconds * fps)):
         world.update(1 / fps)

@@ -9,7 +9,7 @@ from counter import can_counter
 from enemy import Enemy
 from rush import RushSequence
 from spawn_manager import SpawnManager
-from tests.helpers import advance, tap
+from tests.helpers import ArchivedTwoFloorTests, advance, tap
 from ui import STAIR_BOUNDS_COLOR, UI
 from world import World
 
@@ -40,7 +40,7 @@ def begin_player_stairs(world, floor=0):
     return stair
 
 
-class OpenDoorSpawnTests(unittest.TestCase):
+class OpenDoorSpawnTests(ArchivedTwoFloorTests):
     def test_only_fully_open_doors_are_eligible_and_closing_excludes_them_immediately(self):
         world = World()
         self.assertEqual(world.stage.open_door_spawns(), [])
@@ -132,7 +132,7 @@ class OpenDoorSpawnTests(unittest.TestCase):
                                 for e in world.spawner.spawn(5, 0)))
 
 
-class StairAndFloorTests(unittest.TestCase):
+class StairAndFloorTests(ArchivedTwoFloorTests):
     def assert_on_floor_or_stairs(self, world, actor):
         if actor.staircase is None:
             self.assertTrue(world.stage.area_for(actor).contains(

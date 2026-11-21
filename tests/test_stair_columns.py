@@ -5,7 +5,7 @@ import config
 from enemy import Enemy
 from player import Player
 from stairs import Staircase
-from tests.helpers import advance
+from tests.helpers import ArchivedTwoFloorTests, advance
 from tests.test_two_floors import place
 from world import World
 
@@ -29,8 +29,9 @@ def column_world():
     raise AssertionError("No following enemy entered the staircase")
 
 
-class StairColumnTests(unittest.TestCase):
+class StairColumnTests(ArchivedTwoFloorTests):
     def setUp(self):
+        super().setUp()
         self.stair = Staircase(config.STAGE_STAIR_PATHS[config.STAGE_IMAGE][0])
 
     def assert_column(self, stair):

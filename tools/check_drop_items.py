@@ -166,33 +166,33 @@ def check_all_stages(game):
                     assert crop.getbbox() is not None, (stage.image_name, item.floor, item.x, item.ground_y)
     game.ui.details_visible = details_visible
     print(f"PASS: all {len(world.stages)} stage layouts have 15 total drops ({counts}); actual floor pixels "
-          "fit each floor (8 downstairs / 7 upstairs on the first map), cityStage-1 "
+          "fit each floor (all 15 on the flat first map), cityStage-1 "
           "weapons/shadows stay on the sidewalk with no road "
           "pixels, both exit areas stay clear, and both map halves render correctly.")
 
 
-def check_upper_floor_pickup(game):
+def check_floor_pickup(game, floor=0):
     for kind in config.DROP_ITEM_IMAGES:
         game.world = World(item_rng=random.Random(20261119))
         world = game.world
-        item = next(item for item in world.stage.drop_items if item.floor == 1 and item.kind == kind)
+        item = next(item for item in world.stage.drop_items if item.floor == floor and item.kind == kind)
         player = world.player
-        player.floor = 1
+        player.floor = floor
         player.x = player.previous_x = item.x
         player.ground_y = player.previous_ground_y = item.ground_y
         world.stage.constrain_actor(player)
         world.camera.update(0, player.x)
         assert world.pickup_item is item
         with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
-            capture(game, f"drop_upstairs_{kind}_pickup")
+            capture(game, f"drop_floor_{floor}_{kind}_pickup")
         assert any(call.args[2] == "G" for call in text.call_args_list)
         tap(game, pico2d.SDLK_g)
-        assert (player.floor, player.weapon) == (1, kind)
+        assert (player.floor, player.weapon) == (floor, kind)
         assert item not in world.stage.drop_items and len(world.stage.drop_items) == 14
-        capture(game, f"drop_upstairs_{kind}_equipped")
+        capture(game, f"drop_floor_{floor}_{kind}_equipped")
         tap(game, pico2d.SDLK_g)
         discarded = world.stage.drop_items[-1]
-        assert player.weapon is None and discarded.floor == 1 and not discarded.grounded
+        assert player.weapon is None and discarded.floor == floor and not discarded.grounded
         tick(game, 60)
         assert discarded.grounded and world.pickup_item is discarded
         tap(game, pico2d.SDLK_g)
@@ -204,8 +204,8 @@ def check_upper_floor_pickup(game):
         world.select_stage(0)
         assert world.stage.drop_items is items and len(items) == 14
         assert [item.elapsed for item in items] == clocks
-    print("PASS: generated upstairs knife/pipe show G, equip through real SDL G, "
-          "discard/fall/re-equip on floor 2, and stay depleted/paused across stage visits.")
+    print(f"PASS: generated floor-{floor} knife/pipe show G, equip through real SDL G, "
+          "discard/fall/re-equip on that floor, and stay depleted/paused across stage visits.")
 
 
 def check_restart(game):
@@ -219,7 +219,7 @@ def check_restart(game):
     assert all(stage.drop_items is not old and len(stage.drop_items) == 15
                for stage, old in zip(game.world.stages, previous))
     assert [sum(item.floor == floor for item in game.world.stage.drop_items)
-            for floor in (0, 1)] == [8, 7]
+            for floor in (0, 1)] == ([8, 7] if game.world.stage.upper_walkable else [15, 0])
     city = game.world.stages[config.STAGE_IMAGES.index("cityStage-1.png")]
     assert all(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 123
                and item.ground_y + config.DROP_ITEM_HEIGHT <= 161
@@ -235,7 +235,7 @@ def check_restart(game):
         image = capture(game, f"city_sidewalk_drops_restarted_{'left' if side < 0 else 'right'}")
         check_city_sidewalk_pixels(game, image, baseline)
     print(f"PASS: actual SDL F5 replaces all {len(game.world.stages)} item lists "
-          "and restores both first-map floors with shared textures; city drops stay above "
+          "and restores every first-map floor with shared textures; city drops stay above "
           "the curb in both views.")
 
 
@@ -248,7 +248,7 @@ def main():
         game.handle_events()
         check_sheets(game)
         check_all_stages(game)
-        check_upper_floor_pickup(game)
+        check_floor_pickup(game)
         check_restart(game)
     finally:
         if game is not None:

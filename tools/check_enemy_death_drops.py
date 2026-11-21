@@ -141,13 +141,14 @@ def check_death_and_no_pickup(game):
 def check_type_floor_and_restart(game):
     world, _ = kill_with_s(game, Enemy02)
     assert not clubs(world) and len(world.stage.drop_items) == 15
-    world, _ = kill_with_s(game, floor=1)
+    floor = int(config.STAGE_IMAGE in config.STAGE_UPPER_FLOOR_BOUNDS)
+    world, _ = kill_with_s(game, floor=floor)
     assert len(clubs(world)) == 1
     item = clubs(world)[0]
-    assert item.floor == 1
+    assert item.floor == floor
     tick(game, 40)
-    assert item.grounded and item.floor == 1 and item.frame == 0
-    capture(game, "metal_club_upstairs")
+    assert item.grounded and item.floor == floor and item.frame == 0
+    capture(game, f"metal_club_floor_{floor}")
     textures = dict(game.assets.images)
     push_key(pico2d.SDLK_F5)
     tick(game)
@@ -158,7 +159,7 @@ def check_type_floor_and_restart(game):
         assert not any(isinstance(drop, MetalClubDrop) for drop in stage.drop_items)
     assert all(game.assets.images[name] is image for name, image in textures.items())
     capture(game, "metal_club_restart")
-    print("PASS: dual-club enemy excluded; upper-floor death drops/lands on its own floor; "
+    print("PASS: dual-club enemy excluded; death drops/lands on its victim's floor; "
           "F5 clears death drops, restores 15 initial items and reuses every texture.")
 
 

@@ -287,7 +287,7 @@ def check_city_loading(game):
         push_key(key, down=False)
     game.handle_events()
     print(f"PASS: supplied loading image stays visible for {duration:.3f}s with gameplay frozen; "
-          "HoodMan_2F -> newStage-2 -> cityStage-1 -> cityStage-2, ignored loading actions, "
+          "changed_first_map_no_door -> newStage-2 -> cityStage-1 -> cityStage-2, ignored loading actions, "
           "HP/motion/resource reuse, city return and F5 cancellation verified.")
 
 
@@ -512,7 +512,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
-        check_stage_background(game, 0, "hoodman_2f")
+        check_stage_background(game, 0, "changed_first_map_no_door")
         check_markers(game)
         check_motion_continuity(game)
         check_motion_continuity(game, first=4)

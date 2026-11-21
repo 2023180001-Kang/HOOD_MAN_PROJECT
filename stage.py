@@ -88,7 +88,7 @@ class Stage:
     def open_door_spawns(self):
         if not self.doors:
             return ()
-        width, height = config.TWO_FLOOR_MAP_SIZE
+        width, height = config.STAGE_DOOR_MAP_SIZE
         scale = config.STAGE_SCALE
         anchor = config.STAGE_GROUND_ANCHORS.get(self.image_name, config.STAGE_GROUND_Y)
         bottom = config.GROUND_Y - anchor * scale

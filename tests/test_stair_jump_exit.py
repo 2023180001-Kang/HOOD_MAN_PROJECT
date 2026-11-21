@@ -4,13 +4,13 @@ import unittest
 import config
 from combat import MOVES
 from enemy import Enemy
-from tests.helpers import advance, tap
+from tests.helpers import ArchivedTwoFloorTests, advance, tap
 from tests.test_stair_controls import stair_world, steer
 from tests.test_two_floors import place
 from world import World
 
 
-class StairJumpExitTests(unittest.TestCase):
+class StairJumpExitTests(ArchivedTwoFloorTests):
     def test_single_jump_toward_the_steps_catches_without_up_or_a_second_jump(self):
         world = World(item_rng=random.Random(5))
         player = world.player

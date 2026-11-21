@@ -15,6 +15,7 @@ from sdl2 import SDL_Event, SDL_PushEvent, SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCU
 import config
 from enemy import Enemy
 from game import Game
+from tests.helpers import archived_two_floor_map
 from tools.check_render import capture
 from tools.check_runtime import push_key, tick
 from tools.check_two_floors import floor_bounds, release
@@ -156,6 +157,7 @@ def check_focus_and_restart(game):
           "restoring 15 items and reusing textures.")
 
 
+@archived_two_floor_map()
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()

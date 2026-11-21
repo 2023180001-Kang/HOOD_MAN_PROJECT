@@ -2,7 +2,7 @@ import unittest
 
 import config
 from enemy import Enemy
-from tests.helpers import advance, tap
+from tests.helpers import ArchivedTwoFloorTests, advance, tap
 from tests.test_two_floors import begin_player_stairs, place
 from world import World
 
@@ -22,7 +22,7 @@ def until(world, condition, frames=600):
     raise AssertionError("Expected movement did not complete")
 
 
-class PlatformJumpTests(unittest.TestCase):
+class PlatformJumpTests(ArchivedTwoFloorTests):
     def test_double_jump_then_reverse_and_steer_up_lands_on_the_upper_floor(self):
         for running in (False, True):
             for direction in (-1, 1):

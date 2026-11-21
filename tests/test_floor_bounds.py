@@ -87,13 +87,10 @@ class FloorBoundsTests(unittest.TestCase):
         camera_x, camera_y = 640, -4
         expected = [
             (68 - camera_x, 56 - camera_y, 2492 - camera_x, 56 - camera_y),
-            (2492 - camera_x, 56 - camera_y, 2492 - camera_x, 136 - camera_y),
-            (2492 - camera_x, 136 - camera_y, 68 - camera_x, 136 - camera_y),
-            (68 - camera_x, 136 - camera_y, 68 - camera_x, 56 - camera_y),
+            (2492 - camera_x, 56 - camera_y, 2492 - camera_x, 268 - camera_y),
+            (2492 - camera_x, 268 - camera_y, 68 - camera_x, 268 - camera_y),
+            (68 - camera_x, 268 - camera_y, 68 - camera_x, 56 - camera_y),
         ]
-        upper = game.world.stage.upper_walkable.inset(68)
-        expected.extend((ax - camera_x, ay - camera_y, bx - camera_x, by - camera_y)
-                        for (ax, ay), (bx, by) in zip(upper, (*upper[1:], upper[0])))
         for height in (0, 240):
             game.world.player.jump_height = height
             with patch("pico2d.draw_line") as draw:
@@ -103,7 +100,7 @@ class FloorBoundsTests(unittest.TestCase):
             self.assertCountEqual(player_lines, expected)
             enemy_lines = [call.args[:4] for call in draw.call_args_list
                            if call.args[4:] == ENEMY_BOUNDS_COLOR]
-            self.assertGreater(len(enemy_lines), 4)
+            self.assertGreater(len(enemy_lines), 4)  # Dashed segments along the single floor.
             for ax, ay, bx, by in enemy_lines:
                 for x, y in ((ax, ay), (bx, by)):
                     self.assertTrue(any(area.contains(x + camera_x, y + camera_y, 88)
@@ -133,7 +130,7 @@ class FloorBoundsTests(unittest.TestCase):
                  if call.args[4:] == PLAYER_BOUNDS_COLOR]
         self.assertEqual(lines[:len(vertices)], [(*point, *vertices[(index + 1) % len(vertices)])
                                                 for index, point in enumerate(vertices)])
-        self.assertEqual(len(lines), len(vertices) + 4)
+        self.assertEqual(len(lines), len(vertices))
 
 
 if __name__ == "__main__":

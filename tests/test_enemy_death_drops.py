@@ -12,7 +12,7 @@ from combat import MOVES
 from drop_items import DropItem, MetalClubDrop
 from enemy import Enemy
 from enemy02 import Enemy02
-from tests.helpers import advance, tap
+from tests.helpers import advance, archived_two_floor_map, tap
 from tests.test_counters import attacker, follow_up
 from tests.test_stair_combat_and_drops import on_stairs
 from tests.test_strong_attacks import encounter, strike
@@ -138,6 +138,7 @@ class EnemyDeathDropTests(unittest.TestCase):
         self.assertEqual(len(clubs(world)), 1)
         self.assertIsNone(world.stage.traffic)
 
+    @archived_two_floor_map()
     def test_upper_floor_drop_stays_on_the_victims_floor_and_fits_its_bounds(self):
         world, enemy = drop_world()
         place(world, world.player, 1, 1200, 476)
@@ -156,6 +157,7 @@ class EnemyDeathDropTests(unittest.TestCase):
             for y in (item.ground_y, item.ground_y + config.METAL_CLUB_ITEM_HEIGHT):
                 self.assertTrue(area.contains(x, y))
 
+    @archived_two_floor_map()
     def test_lethal_stair_hit_drops_from_visible_height_to_the_lower_floor(self):
         world, _ = drop_world()
         world.enemies.clear()

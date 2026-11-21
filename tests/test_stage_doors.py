@@ -7,16 +7,23 @@ from PIL import Image
 import config
 from assets import Assets
 from doors import StageDoor
+from spawn_manager import SpawnManager
 from tests.helpers import advance, tap
 from world import World
 
 
 class StageDoorTests(unittest.TestCase):
-    def test_first_map_has_three_closed_doors_and_one_closed_shutter_only(self):
+    def test_first_map_has_one_closed_door_and_one_closed_shutter_on_a_single_floor(self):
         world = World()
-        self.assertEqual(world.stage.image_name, "HoodMan_2F_Map_1672x941.png")
+        self.assertEqual(world.stage.image_name, "changed_first_map_no_door.png")
         self.assertEqual([door.kind for door in world.stage.doors],
-                         ["door", "door", "door", "warehouse_shutter"])
+                         ["door", "warehouse_shutter"])
+        self.assertEqual([door.source_rect for door in world.stage.doors],
+                         [(250, 400, 83, 173), (1333, 417, 211, 202)])
+        self.assertEqual(config.STAGE_DOOR_FLOORS[world.stage.image_name], (0, 0))
+        self.assertEqual(world.stage.floor_areas, (world.stage.walkable,))
+        self.assertIsNone(world.stage.upper_walkable)
+        self.assertEqual(world.stage.stairs, [])
         self.assertTrue(all((door.state, door.row, door.frame) == ("CLOSED", 1, 0)
                             for door in world.stage.doors))
         self.assertTrue(all(not stage.doors for stage in world.stages[1:]))
@@ -24,6 +31,106 @@ class StageDoorTests(unittest.TestCase):
             self.assertTrue((config.ROOT / name).is_file())
         advance(world, 3)
         self.assertTrue(all(door.state == "CLOSED" for door in world.stage.doors))
+
+    def test_only_fully_open_props_offer_spawns_and_starting_to_close_excludes_them(self):
+        for index in (0, 1):
+            world = World()
+            door = world.stage.doors[index]
+            self.assertEqual(world.stage.open_door_spawns(), [])
+            door.toggle()
+            world.stage.update_doors(0.2)
+            self.assertEqual(world.stage.open_door_spawns(), [])
+            world.stage.update_doors(1)
+            sources = {point.source for point in world.stage.open_door_spawns()}
+            expected = {("door", index, 0)}
+            if index == 1:
+                expected.add(("door", index, 1))
+            self.assertEqual(sources, expected)
+            door.toggle()
+            self.assertEqual(world.stage.open_door_spawns(), [])
+            world.stage.update_doors(1)
+            self.assertEqual(world.stage.open_door_spawns(), [])
+
+    def test_open_spawn_points_match_both_openings_and_only_the_in_world_mirrored_shutter(self):
+        world = World()
+        world.stage.toggle_doors()
+        world.stage.update_doors(1)
+        points = world.stage.open_door_spawns()
+        self.assertEqual([(point.source, point.x, point.ground_y, point.floor) for point in points],
+                         [(("door", 0, 0), 291.5, 268, 0),
+                          (("door", 1, 0), 1438.5, 266, 0),
+                          (("door", 1, 1), 1905.5, 266, 0)])
+        for point in points:
+            self.assertIs(point.walkable, world.stage.walkable)
+            self.assertTrue(point.walkable.contains(point.x, point.ground_y, 88))
+        world.camera.x, world.camera.y = 1280, 120
+        self.assertEqual(world.stage.open_door_spawns(), points)
+        for index in range(1, len(world.stages)):
+            world.select_stage(index)
+            self.assertEqual(world.stage.open_door_spawns(), ())
+
+    def test_open_spawn_pool_keeps_both_edges_all_three_doors_and_individual_profiles(self):
+        world = World(rng=random.Random(41))
+        world.stage.toggle_doors()
+        world.stage.update_doors(1)
+        points = {point.source: point for point in world.stage.open_door_spawns()}
+        enemies = world.spawner.spawn(160, 7)
+        self.assertEqual({enemy.spawn_source for enemy in enemies},
+                         set(points) | {("edge", -1), ("edge", 1)})
+        self.assertEqual(world.spawner.spawned_count, 160)
+        self.assertEqual(len({enemy.attack_speed for enemy in enemies}), 160)
+        for index, enemy in enumerate(enemies):
+            self.assertEqual((enemy.floor, enemy.hp, enemy.spawned_at), (0, 200, 7))
+            self.assertEqual(enemy.run_speed, config.ENEMY_RUN_SPEEDS[index % 4])
+            self.assertIs(enemy.walkable, world.stage.walkable)
+            self.assertTrue(enemy.walkable.contains(enemy.x, enemy.ground_y, enemy.boundary_padding))
+            if enemy.spawn_source in points:
+                point = points[enemy.spawn_source]
+                self.assertEqual((enemy.x, enemy.ground_y), (point.x, point.ground_y))
+
+    def test_closed_props_preserve_the_original_boundary_spawn_randomness(self):
+        world = World(rng=random.Random(71))
+        reference = SpawnManager(rng=random.Random(71))
+        actual, expected = world.spawner.spawn(25, 3), reference.spawn(25, 3)
+        self.assertEqual([(e.x, e.ground_y, e.facing, e.attack_speed) for e in actual],
+                         [(e.x, e.ground_y, e.facing, e.attack_speed) for e in expected])
+
+    def test_numeric_open_door_spawns_are_exact_and_only_follow_fresh_input(self):
+        for count in config.SPAWN_COUNTS:
+            world = World(rng=random.Random(41))
+            world.player.invincible = True
+            world.controls.press("toggle_doors")
+            advance(world, 1)
+            self.assertFalse(world.enemies)
+            world.controls.press(f"spawn_{count}")
+            world.step(config.FIXED_DT)
+            self.assertEqual(len(world.enemies), count)
+            self.assertTrue(any(enemy.spawn_source[0] == "door" for enemy in world.enemies))
+            world.controls.press(f"spawn_{count}")
+            advance(world, 0.1)
+            self.assertEqual(len(world.enemies), count)
+            tap(world.controls, f"spawn_{count}")
+            world.step(config.FIXED_DT)
+            self.assertEqual(len(world.enemies), count * 2)
+            self.assertEqual(world.spawner.spawned_count, count * 2)
+            self.assertTrue(all(enemy.floor == 0 and enemy.staircase is None for enemy in world.enemies))
+
+    def test_double_jump_and_old_stair_position_never_create_a_ghost_upper_floor(self):
+        for x in (238, 500, 1280, 1905.5):
+            world = World()
+            world.player.x = world.player.previous_x = x
+            world.player.ground_y = world.player.previous_ground_y = 268
+            world.controls.press("up")
+            world.controls.press("jump")
+            advance(world, 0.05, 120)
+            tap(world.controls, "jump")
+            for _ in range(240):
+                world.step(config.FIXED_DT)
+                self.assertEqual(world.player.floor, 0)
+                self.assertIsNone(world.player.staircase)
+                self.assertFalse(world.player.falling_from_upper)
+            self.assertEqual(world.player.ground_y, 268)
+            self.assertTrue(world.player.grounded)
 
     def test_both_sheets_play_all_eight_opening_and_closing_frames_and_hold_the_endpoints(self):
         for kind in config.DOOR_IMAGES:

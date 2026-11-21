@@ -357,6 +357,34 @@
 - 성능·실행: 차량+적 4명+차량 사망/혈흔/숫자/HP/UI 환경에서 **180프레임/3.000초·59.99~60.00 FPS**를 측정했다. 별도 임시 작업 폴더에서 전체 경로 `main.py --smoke-test 60` 실행·정상 종료로 신규 리소스의 경로 독립성을 확인했다.
 - 문서·결과: 로직 225개와 실제 SDL 차량/기존 전투·반격·스테이지 왕복/로딩의 결과를 PRD 및 TESTING 13장에 기록했다. README에 도시 도로 플레이·차량 즉사 예외·검증 명령·7개 시트/208프레임·모듈을 반영하고 기존 반격 속도 설명도 현재 8/6 FPS와 일치시켰다.
 - 캡처: `artifacts/traffic_drive_*`, `traffic_hit_*`, `traffic_dead_*`, `traffic_corpse_*`, `traffic_step_into_road.png`, `traffic_double_jump_clearance.png`의 실제 차량/회전/페이드/점프를 검토했다.
+
+## 후속 개선 26: 하역장 axe_enemy와 기존 전투 피드백 연결 (2026-11-21)
+
+- 요청·범위: `hood_man_factory_loading_dock`의 숫자 소환만 도끼 적으로 교체한다. 최대/시작 HP 400·도끼 피해 60, 머리 위 빨간 HP바·피해 숫자·기존 effect를 적용하며 마지막 기절 행은 사용하지 않는다.
+- 리소스 확인: 제공된 `axe_enemy_pico2d_2048x1792.png`는 RGBA·256px 셀의 8열×7행이다. 대기/걷기/달리기/공격/피격/사망은 1~6행이며 7행은 보관만 한다. 공유 이미지와 프레임 생성기에 추가해 전체 13개 시트·536프레임으로 확장했다. 원본 PNG는 수정하지 않았다.
+- 구현: 새 `axe_enemy.py`는 기존 추적·집단 분산·속도 배정·공격 판정을 재사용한다. 일반 공격은 4/5번 프레임에서 60을 한 번 적용하고, 모든 종류의 피격/제압에서도 자기 외형을 유지한다. `Enemy.max_hp`를 도입하고 HP바를 `hp / enemy.max_hp`로 그려 다른 HP의 적과 공존하도록 했다.
+- 기절/드롭: STUN 상태·전이·게이지는 추가하지 않았다. 일반/강화 피격·W 동반/해제·HJKL 제압·치명타·주인공 사망 넉백도 자기 5/6행만 사용한다. 도끼 적은 단일 몽둥이 사망 드롭에서 제외하며 새 도끼 드롭은 범위 밖이다.
+- 로직: 신규 `tests/test_axe_enemy.py` **18개**, 전체 **633개 통과**(39.859초). 일반/무기 D/강화/반격의 실제 피해·중복 차단·범위·무적·HP바·마지막 행 미사용·죽음/페이드·맵 보존/F5·30~144 FPS 동일성을 포함한다. 기존 전 맵 생성/하역장 왕복/사망 드롭 검증의 HP 200 고정 가정도 조정했다.
+- 실제 창: `tools/check_axe_enemy.py`에서 숫자열/숫자패드 18개 입력·정확한 개수·키 유지/반복·재입력·좌우 경계, 96개 클립/반전/발 정렬, HP바 48/24/12px/숨김 및 U 숨김 중 유지를 확인했다. 실제 ASDF/무기 A·S 피해 숫자와 effect 픽셀·수명·치명타, 적의 양방향 60 단발, QWERT/HJKL/A의 외형/피해·기절 없음·F5를 확인했다.
+- 회귀·성능: `tools/check_runtime.py`의 기존 전투·HP/UI/U·포커스·종료, `tools/check_stages.py`의 전체 스테이지 왕복·구역 로딩·HP 보존을 통과했다. 도끼 적 4명은 **180프레임/3.000초·60.00 FPS**, `pip check`는 충돌 없음이다.
+- 최종 검증: `tools/check_enemy02.py`의 전체 맵 종류/도시 전투·도약/반격/사망 회귀를 통과했다. 승인된 별도 임시 작업 폴더에서 전체 경로 `main.py --smoke-test 120` 실행·정상 종료를 확인했다. 기능 커밋의 소스/클립/도끼 PNG만 별도 추출해 신규 테스트 18개를 다시 실행했으며 **18개 통과**(0.540초)로 기존 미커밋 HUD 변경에 의존하지 않는 것도 확인했다.
+- 화면: `artifacts/axe_hp_200.png`, `axe_damage_unarmed_f.png`, `axe_counter_j_impact.png`, `axe_dock_combat.png`에서 작은 빨간 바·노란 피해 숫자·자기 외형·하역장 배경/발 정렬을 검토했다. 캡처는 Git에서 제외한다. SDL 자동 입력/픽셀 검증이며 장시간 직접 키보드 플레이는 수행하지 않았다.
+- 문서·커밋: `PRD.md` FR-37·AC-89/90·관련 수치/리소스/효과를 갱신했다. 기능은 `f43ea64` (`공장 하역장 도끼 적 소환과 체력 및 피해 연동 구현`)로 커밋했다. 시작 전에 있던 HUD 위치 고정·카메라 검증·README/TESTING 변경은 보존하고 커밋에 섞지 않았다.
+
+재현 명령:
+
+```powershell
+.\.venv\Scripts\python.exe tools/prepare_assets.py
+.\.venv\Scripts\python.exe -m unittest tests.test_axe_enemy -v
+.\.venv\Scripts\python.exe -m unittest discover -s tests
+.\.venv\Scripts\python.exe tools/check_axe_enemy.py
+.\.venv\Scripts\python.exe tools/check_runtime.py
+.\.venv\Scripts\python.exe tools/check_stages.py
+.\.venv\Scripts\python.exe tools/check_enemy02.py
+.\.venv\Scripts\python.exe main.py --smoke-test 120
+```
+
+직접 확인: N 출구로 도시 두 번째 맵 다음 하역장에 도착한 뒤 숫자 1~9를 새로 누른다. 도끼 적이 요청 수만큼 나타나고 체력바가 처음 가득 찬 상태여야 한다. A/S/D/F로 10/40/50/60 피해 숫자와 기존 타격 효과·HP 감소를 확인한다. 도끼 공격은 주인공 HP를 60씩 줄이며 어떤 전투 경로에서도 마지막 기절 행을 재생하지 않아야 한다. 바로 다음 공장 외부에서는 기존 적이 등장하고 F5 후 하역장 재진입/새 소환은 HP 400으로 복원되어야 한다.
 - 완료·커밋: 요청한 차량 랜덤 이동·두 전용 피격 즉사·한국어 기능 단위 커밋·개발 보고·PRD 기록을 완료했다. 검증/문서 커밋 메시지는 `도시 차량 실제 실행 검증과 개발 문서 정리`다.
 
 ## 후속 개선 26: 차량 주행 가속·좌우 등장 대기 단축 (2026-11-14)

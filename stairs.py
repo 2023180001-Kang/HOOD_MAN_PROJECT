@@ -8,7 +8,7 @@ from walkable import default_area
 
 def can_use_stairs(actor):
     return (actor.alive and actor.staircase is None and actor.jump_height == 0
-            and actor.vy == 0 and actor.counter_move is None
+            and actor.vy == 0
             and getattr(actor, "active_move", None) is None
             and not getattr(actor, "knockback_started", False)
             and actor.state in ("IDLE", "WALK", "RUN"))

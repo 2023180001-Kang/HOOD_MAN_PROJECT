@@ -265,7 +265,9 @@ def check_rush_flight(game):
                 start = player.x
                 tick(game, 10)
                 flight_side = -side
-                assert player.facing == flight_side and world.rush.direction == flight_side
+                assert player.facing == flight_side and world.rush.direction == flight_side, (
+                    weapon, enemy_type.__name__, side, player.state, player.rush_phase,
+                    player.facing, world.controls.held)
                 assert (player.x - start) * flight_side > 100
                 assert abs(enemy.x - player.x - flight_side * config.RUSH_CARRY_DISTANCE) < 1e-7
                 assert (enemy.facing, enemy.hp, enemy.state) == (-flight_side, 150, "RUSH_CARRIED")

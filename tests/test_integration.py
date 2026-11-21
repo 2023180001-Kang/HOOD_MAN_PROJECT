@@ -95,7 +95,6 @@ class IntegrationTests(unittest.TestCase):
                       config.RESEARCHER_IMAGE: 7, config.RESEARCHER_BULLET_IMAGE: 1,
                       config.COMBAT_IMAGE: 4,
                       config.STRONG_ATTACK_IMAGE: 5, config.STRONG_HIT_IMAGE: 5,
-                      config.COUNTER_PLAYER_IMAGE: 4, config.COUNTER_ENEMY_IMAGE: 4,
                       config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1,
                       **{name: config.WEAPON_SHEET_ROWS[kind]
                          for kind, name in config.WEAPON_POSE_IMAGES.items()}}
@@ -128,18 +127,6 @@ class IntegrationTests(unittest.TestCase):
                          [max(feet) - foot for foot in feet])
         self.assertEqual([frame["jump_height"] for frame in rows[4]], [0, 0, 48, 26, 0, 0, 0, 0])
         self.assertTrue(all(frame.get("offset_y", 0) == 0 for frame in rows[4]))
-
-    def test_counter_clips_preserve_the_shared_ground_anchor_and_airborne_poses(self):
-        with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
-            metadata = json.load(file)
-        for name in (config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE):
-            for row_index, row in enumerate(metadata[name]):
-                row_bottom = (3 - row_index) * 256
-                anchors = {256 - (tile["clip"][1] - row_bottom) + tile["offset_y"]
-                           for tile in row}
-                self.assertEqual(len(anchors), 1)
-                self.assertTrue(all(tile["offset_y"] >= 0 for tile in row))
-        self.assertGreaterEqual(metadata[config.COUNTER_ENEMY_IMAGE][3][2]["offset_y"], 50)
 
     def test_weapon_airborne_attack_clips_do_not_double_add_the_physical_jump(self):
         from PIL import Image

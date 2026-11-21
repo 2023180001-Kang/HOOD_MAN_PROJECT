@@ -69,7 +69,7 @@ class RaisePunchTests(unittest.TestCase):
         self.assertEqual(enemy.hp, 150)
 
     def test_interruptions_restore_normal_time_without_a_pending_r_hit(self):
-        for cause in ("attack", "hit", "death", "car", "drop", "swap", "counter", "restart"):
+        for cause in ("attack", "hit", "death", "car", "drop", "swap", "restart"):
             world, enemy = encounter(weapon="steel_pipe")
             world.stage.drop_items.clear()
             tap(world.controls, "combat_r")
@@ -85,10 +85,6 @@ class RaisePunchTests(unittest.TestCase):
                 tap(world.controls, "weapon_interact")
             elif cause == "swap":
                 world.player.equip_weapon("combat_knife")
-            elif cause == "counter":
-                enemy.start_attack()
-                enemy.animation.elapsed = 2 / enemy.attack_fps
-                tap(world.controls, "counter_h")
             else:
                 tap(world.controls, "restart")
             world.update(config.FIXED_DT)

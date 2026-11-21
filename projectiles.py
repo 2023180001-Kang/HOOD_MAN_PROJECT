@@ -49,7 +49,7 @@ class ResearcherBullet:
         if contact is None:
             return False
         self.x = start + (self.x - start) * contact
-        self.spent = True  # Also consume a bullet blocked by P/counter protection.
+        self.spent = True  # Also consume a bullet blocked by P invincibility.
         return player.take_damage(self.damage)
 
     def _contact_time(self, player, start_x, time_fraction):

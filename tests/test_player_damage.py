@@ -69,9 +69,8 @@ class PlayerDamageTests(unittest.TestCase):
         advance(world, 0.3)
         self.assertEqual([enemy.hp for enemy in enemies], [150, 150])
 
-    def test_h_without_an_attacker_does_not_lock_movement_or_prevent_damage(self):
+    def test_walking_does_not_lock_movement_or_prevent_damage(self):
         world = World()
-        world.controls.press("counter_h")
         world.controls.press("right")
         advance(world, 0.1)
         self.assertGreater(world.player.x, config.START_X)

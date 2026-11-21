@@ -6,13 +6,11 @@ import config
 from axe_enemy import AxeEnemy
 from collision import bodies_overlap
 from combat import STRONG_MOVES
-from counter import can_counter
 from enemy import Enemy
 from enemy02 import Enemy02
 from player import Player
 from researcher import Researcher
 from tests.helpers import advance, spawn_encounter
-from tests.test_counters import follow_up
 from tests.test_strong_attacks import strike
 from traffic import Car, Traffic
 from world import World
@@ -150,12 +148,6 @@ class Enemy02Tests(unittest.TestCase):
         advance(world, 0.1)
         self.assertEqual(world.player.hp, 220)
 
-    def test_counter_window_excludes_the_airborne_frames_of_the_slam(self):
-        for frame, allowed in ((0, False), (1, True), (2, False), (3, False), (4, True), (6, False)):
-            player, enemy = at_frame("slam", frame)
-            player.x = enemy.x + enemy.facing * 80
-            self.assertEqual(can_counter(player, enemy), allowed)
-
     def test_interruptions_end_damage_and_fall_instead_of_leaving_a_floating_enemy(self):
         for interruption in ("hit", "death", "knockback", "player_death", "car"):
             with self.subTest(interruption=interruption):
@@ -176,35 +168,6 @@ class Enemy02Tests(unittest.TestCase):
                     self.assertIsNone(enemy.attack_box)
                     self.assertEqual(enemy.sprite_image, config.ENEMY02_IMAGE)
                 self.assertEqual(enemy.jump_height, 0)
-
-    def test_counter_reactions_and_lethal_poses_keep_the_new_enemy_sheet(self):
-        for key in "hjkl":
-            for hp in (200, 40):
-                with self.subTest(key=key, hp=hp):
-                    world = World()
-                    world.stage_index = 3
-                    _, enemy = at_frame("clubs", 1)
-                    enemy.hp = hp
-                    world.enemies = [enemy]
-                    world.controls.press(f"counter_{key}")
-                    world.step(config.FIXED_DT)
-                    self.assertIsNotNone(world.counter)
-                    follow_up(world)
-                    for _ in range(360):
-                        self.assertEqual(enemy.sprite_image, config.ENEMY02_IMAGE)
-                        world.step(config.FIXED_DT)
-                        if world.counter is None and enemy.counter_move is None:
-                            break
-                    self.assertIsNone(world.counter)
-                    self.assertIsNone(enemy.counter_move)
-                    self.assertEqual(enemy.hp, max(0, hp - 80))
-                    self.assertEqual(enemy.state, "IDLE" if enemy.alive else "DEAD")
-                    if not enemy.alive:
-                        self.assertEqual((enemy.animation.row, enemy.animation.frame), (7, 7))
-                        advance(world, 3.5)
-                        self.assertAlmostEqual(enemy.opacity, 0.5)
-                        advance(world, 0.5)
-                        self.assertNotIn(enemy, world.enemies)
 
     def test_city_strong_hits_and_rush_release_use_enemy02_hit_art_until_recovery(self):
         for index in (2, 3):

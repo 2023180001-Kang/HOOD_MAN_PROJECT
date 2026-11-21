@@ -143,7 +143,7 @@ class VerticalCameraTests(ArchivedTwoFloorTests):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             frames = json.load(file)
         names = (config.PLAYER_IMAGE, config.COMBAT_IMAGE, config.STRONG_ATTACK_IMAGE,
-                 config.COUNTER_PLAYER_IMAGE, *config.WEAPON_POSE_IMAGES.values())
+                 *config.WEAPON_POSE_IMAGES.values())
         for name in names:
             scale = config.SPRITE_IMAGE_SCALES.get(name, config.SPRITE_SCALE)
             for row in frames[name]:

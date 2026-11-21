@@ -36,8 +36,6 @@ KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
              for key, *_ in config.COMBAT_MOVE_SPECS})
 KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
              for key, *_ in config.STRONG_MOVE_SPECS})
-KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"counter_{key}"
-             for key, *_ in config.COUNTER_MOVE_SPECS})
 KEYS.update({getattr(pico2d, f"SDLK_{prefix}{count}"): f"spawn_{count}"
              for count in config.SPAWN_COUNTS for prefix in ("", "KP_")})
 

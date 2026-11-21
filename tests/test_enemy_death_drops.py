@@ -13,7 +13,6 @@ from drop_items import DropItem, MetalClubDrop
 from enemy import Enemy
 from enemy02 import Enemy02
 from tests.helpers import advance, archived_two_floor_map, tap
-from tests.test_counters import attacker, follow_up
 from tests.test_stair_combat_and_drops import on_stairs
 from tests.test_strong_attacks import encounter, strike
 from tests.test_two_floors import place
@@ -69,26 +68,6 @@ class EnemyDeathDropTests(unittest.TestCase):
                 strike(world, enemy, f"combat_{key}")
                 self.assertEqual(len(clubs(world)), 1)
                 advance(world, 1)
-                self.assertEqual(len(clubs(world)), 1)
-
-    def test_each_counter_followup_drops_once_without_waiting_for_corpse_fade(self):
-        for key in "hjkl":
-            with self.subTest(key=key):
-                world, _ = drop_world()
-                world.enemies.clear()
-                enemy = attacker(world)
-                enemy.hp = 80
-                world.controls.press(f"counter_{key}")
-                world.step(config.FIXED_DT)
-                follow_up(world)
-                for _ in range(240):
-                    world.step(config.FIXED_DT)
-                    if not enemy.alive:
-                        break
-                self.assertFalse(enemy.alive)
-                self.assertIsNotNone(enemy.counter_move)
-                self.assertEqual(len(clubs(world)), 1)
-                advance(world, 6)
                 self.assertEqual(len(clubs(world)), 1)
 
     def test_multiple_deaths_keep_one_item_each_after_enemies_fade_out(self):

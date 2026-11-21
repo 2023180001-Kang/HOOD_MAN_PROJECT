@@ -31,7 +31,7 @@ class RushSequence:
         player = self.player
         contacts = []
         for enemy in enemies:
-            if (not enemy.alive or enemy in player.hit_enemies or enemy.counter_linked):
+            if not enemy.alive or enemy in player.hit_enemies:
                 continue
             contact = body_contact_time(player, enemy, allow_transit=True)
             if contact is None:

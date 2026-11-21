@@ -106,7 +106,7 @@ class AirKickChainTests(unittest.TestCase):
         self.assertEqual((first.hp, second.hp), (100, 150))
 
     def test_interruptions_loading_and_restart_clear_or_pause_the_wait(self):
-        for cause in ("hit", "death", "car", "drop", "swap", "attack", "counter", "restart"):
+        for cause in ("hit", "death", "car", "drop", "swap", "attack", "restart"):
             with self.subTest(cause=cause):
                 world, enemy = encounter(weapon="steel_pipe")
                 kick(world, enemy)
@@ -122,10 +122,6 @@ class AirKickChainTests(unittest.TestCase):
                     player.equip_weapon("combat_knife")
                 elif cause == "attack":
                     tap(world.controls, "combat_q")
-                elif cause == "counter":
-                    enemy.start_attack()
-                    enemy.animation.elapsed = 2 / enemy.attack_fps
-                    tap(world.controls, "counter_h")
                 else:
                     tap(world.controls, "restart")
                 world.update(config.FIXED_DT)

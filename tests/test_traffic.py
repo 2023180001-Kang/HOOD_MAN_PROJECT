@@ -3,7 +3,6 @@ import unittest
 
 import config
 from combat import MOVES
-from counter import COUNTERS
 from enemy import Enemy
 from tests.helpers import advance
 from traffic import Car, Traffic
@@ -151,43 +150,17 @@ class TrafficTests(unittest.TestCase):
         self.assertFalse(world.player.hit_by_car(-1))
         self.assertEqual((world.player.facing, enemy.facing), (1, 1))
 
-    def test_vehicle_interrupts_both_sides_of_a_counter_without_leaving_a_link(self):
-        for target in ("enemy", "both"):
-            with self.subTest(target=target):
-                world = city_world()
-                enemy = Enemy(world.player.x + 80, -1, ground_y=world.player.ground_y)
-                enemy.animation.set_state("ATTACK")
-                enemy.animation.elapsed = 2 / enemy.attack_fps
-                world.enemies.append(enemy)
-                self.assertTrue(world.try_start_counter("counter_h"))
-                place_car(world, x=world.player.x + (270 if target == "enemy" else 0), speed=1)
-                world.step(config.FIXED_DT)
-                self.assertIsNone(world.counter)
-                self.assertIsNone(world.player.counter_move)
-                self.assertIsNone(enemy.counter_move)
-                self.assertFalse(enemy.counter_linked)
-                self.assertEqual(enemy.state, "CAR_HIT")
-                self.assertEqual(world.player.hp, 500 if target == "enemy" else 0)
-                self.assertEqual(world.player.boundary_padding, config.PLAYER_BOUNDARY_PADDING)
-                self.assertEqual(enemy.boundary_padding, config.ENEMY_BOUNDARY_PADDING)
-
-    def test_independent_subdued_enemy_and_knockback_enemy_can_be_run_over(self):
-        for mode in ("subdued", "knockback"):
-            world = city_world()
-            world.player.ground_y = 148
-            enemy = Enemy(world.player.x, ground_y=config.CAR_GROUND_Y)
-            if mode == "subdued":
-                enemy.start_counter(COUNTERS["counter_j"], -1)
-                enemy.release_counter()
-            else:
-                enemy.knockback(enemy.x - 40)
-            world.enemies.append(enemy)
-            place_car(world)
-            world.step(config.FIXED_DT)
-            self.assertEqual((enemy.hp, enemy.state), (0, "CAR_HIT"))
-            self.assertIsNone(enemy.counter_move)
-            self.assertFalse(enemy.knockback_started)
-            self.assertEqual(world.player.hp, 500)
+    def test_knockback_enemy_can_be_run_over(self):
+        world = city_world()
+        world.player.ground_y = 148
+        enemy = Enemy(world.player.x, ground_y=config.CAR_GROUND_Y)
+        enemy.knockback(enemy.x - 40)
+        world.enemies.append(enemy)
+        place_car(world)
+        world.step(config.FIXED_DT)
+        self.assertEqual((enemy.hp, enemy.state), (0, "CAR_HIT"))
+        self.assertFalse(enemy.knockback_started)
+        self.assertEqual(world.player.hp, 500)
 
     def test_all_eight_death_frames_play_once_then_the_final_pose_is_held(self):
         world = city_world()
@@ -272,7 +245,7 @@ class TrafficTests(unittest.TestCase):
         traffic = world.stage.traffic
         place_car(world)
         world.step(config.FIXED_DT)
-        for key in ("spawn_9", "combat_a", "jump", "counter_h", "stage_exits", "invincibility"):
+        for key in ("spawn_9", "combat_a", "jump", "stage_exits", "invincibility"):
             world.controls.press(key)
         world.update(config.FIXED_DT)
         self.assertFalse(world.controls.pressed)

@@ -3,11 +3,9 @@ import unittest
 
 import config
 from combat import MOVES, STRONG_MOVES
-from counter import COUNTERS
 from enemy import Enemy
 from enemy02 import Enemy02
 from tests.helpers import advance, tap
-from tests.test_counters import attacker, follow_up
 from tests.test_weapon_leap import aim
 from world import World
 
@@ -247,15 +245,13 @@ class StrongAttackTests(unittest.TestCase):
                 advance(world, 5)
                 self.assertNotIn(enemy, world.enemies)
 
-    def test_normal_hits_counters_cars_and_death_knockback_replace_a_strong_reaction_cleanly(self):
+    def test_normal_hits_cars_and_death_knockback_replace_a_strong_reaction_cleanly(self):
         for enemy_type in (Enemy, Enemy02):
-            for cause in ("hit", "counter", "car", "knockback"):
+            for cause in ("hit", "car", "knockback"):
                 world, enemy = encounter(enemy_type)
                 strike(world, enemy, "combat_w")
                 if cause == "hit":
                     enemy.take_damage(10)
-                elif cause == "counter":
-                    enemy.start_counter(COUNTERS["counter_h"], -1)
                 elif cause == "car":
                     enemy.hit_by_car(1)
                 else:
@@ -276,32 +272,6 @@ class StrongAttackTests(unittest.TestCase):
         advance(world, 1.2)
         self.assertEqual(enemy.jump_height, 0)
         self.assertIsNone(enemy.leap_phase)
-
-    def test_capture_consumes_strong_keys_and_a_later_strike_replaces_the_unlinked_reaction(self):
-        for hp in (120, 200):
-            world = World()
-            enemy = attacker(world)
-            enemy.hp = hp
-            tap(world.controls, "counter_h")
-            world.step(config.FIXED_DT)
-            while not world.counter.holding:
-                world.step(config.FIXED_DT)
-            tap(world.controls, "combat_q")
-            world.step(config.FIXED_DT)
-            self.assertIsNone(world.player.active_move)
-            self.assertFalse(world.controls.pressed)
-            follow_up(world)
-            while world.counter is not None:
-                world.step(config.FIXED_DT)
-            self.assertIsNotNone(enemy.counter_move)
-            strike(world, enemy, "combat_q")
-            self.assertEqual((enemy.hp, enemy.state), (max(0, hp - 130), "STRONG_HIT"))
-            self.assertIsNone(enemy.counter_move)
-            self.assertIsNone(enemy.counter_death)
-            self.assertEqual(enemy.boundary_padding, config.ENEMY_BOUNDARY_PADDING)
-            if not enemy.alive:
-                advance(world, 1.5)
-                self.assertEqual((enemy.state, enemy.animation.row), ("DEAD", 6))
 
     def test_player_hit_death_drop_and_slow_dive_switching_do_not_leave_a_pending_strong_attack(self):
         for state in ("HIT", "DYING", "DEAD"):

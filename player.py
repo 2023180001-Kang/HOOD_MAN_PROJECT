@@ -6,7 +6,6 @@ import config
 from animation import Animation
 from collision import Rect, attack_hits_body
 from combat import ALL_MOVES, STRONG_MOVES, moves_for_weapon
-from counter import COUNTERS
 from physics import approach_vector
 from traffic import start_car_hit, update_car_hit
 from walkable import default_area
@@ -50,15 +49,10 @@ class Player:
         self.air_kicks_used = 0
         self.raise_punch_phase = None
         self.rush_phase = None
-        self.counter_move = None
         self.hit_enemies = set()
         definitions = dict(config.PLAYER_ANIMATIONS)
         definitions.update({move.state: (move.row, move.fps, False)
                             for move in ALL_MOVES.values()})
-        definitions.update({move.state: (move.row, move.fps, False)
-                            for move in COUNTERS.values()})
-        definitions.update({move.hold_state: (move.row, move.fps, False)
-                            for move in COUNTERS.values()})
         self.animation = Animation(definitions)
 
     @property
@@ -99,8 +93,6 @@ class Player:
     def sprite_image(self):
         if self.car_hit:
             return config.PLAYER_CAR_HIT_IMAGE
-        if self.counter_move is not None:
-            return config.COUNTER_PLAYER_IMAGE
         if self.active_move is not None:
             return self.active_move.image_name
         if self.state in config.WEAPON_POSE_ROWS.get(self.weapon, {}):
@@ -297,20 +289,9 @@ class Player:
             self.cancel_combat()
             self.animation.set_state("IDLE")
 
-    def start_counter(self, move, facing):
-        self.cancel_combat()
-        self.counter_move = move
-        self.vx = self.ground_vy = 0.0
-        self.facing = facing
-        self.animation.set_state(move.state)
-
     @property
     def grounded(self):
         return self.jump_height <= 0.0 and self.vy == 0
-
-    @property
-    def counter_holding(self):
-        return self.counter_move is not None and self.state == self.counter_move.hold_state
 
     @property
     def body(self):
@@ -347,8 +328,7 @@ class Player:
         return enemy.take_damage(self.active_move.damage)
 
     def take_damage(self, damage):
-        if (not self.alive or self.invincible
-                or (self.counter_move is not None and not self.counter_holding)):
+        if not self.alive or self.invincible:
             return False
         self.hp = max(0, self.hp - damage)
         self.vx = 0.0
@@ -370,7 +350,6 @@ class Player:
         if not self.alive:
             return False
         self.cancel_combat()
-        self.counter_move = None
         self.invincible = False
         start_car_hit(self, direction)
         return True
@@ -405,8 +384,7 @@ class Player:
             self.invincible = not self.invincible
         jump_pressed = controls.take_press("jump")
         combat_pressed = controls.take_latest_press(ALL_MOVES)
-        if (self.staircase is not None or self.counter_move is not None
-                or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD")):
+        if self.staircase is not None or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD"):
             return
         if self.rush_phase in ("WINDUP", "FLY") and "combat_w" not in controls.held:
             self.release_rush()
@@ -439,12 +417,6 @@ class Player:
         if self.state == "CAR_HIT":
             update_car_hit(self, dt)
             return
-        if self.counter_move is not None:
-            if self.counter_holding:
-                self.move_on_ground(dt, controls, config.COUNTER_CARRY_SPEED, turn=False)
-            else:
-                self.vx = self.ground_vy = 0.0
-            return  # The paired counter owns both animation clocks.
         if self.state in ("HIT", "DYING", "DEAD"):
             self.vx = 0.0
             self.ground_vy = 0.0

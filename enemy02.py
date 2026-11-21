@@ -31,13 +31,6 @@ class Enemy02(Enemy):
         self.leap_origin = self.leap_target = None
         self.leap_blocked = False
         self.air_contact_attack = self.air_contact_pending = False
-        # The supplied sheet has no separate counter/car-hit art. Keep this
-        # enemy's identity using its own hit/fall rows for those reactions.
-        for state in self.animation.definitions:
-            if state.startswith(("SUBDUED_", "HELD_")):
-                row = 7 if state.endswith(("_J", "_L")) else 6
-                _, fps, loop = self.animation.definitions[state]
-                self.animation.definitions[state] = (row, fps, loop)
 
     @property
     def sprite_image(self):
@@ -80,7 +73,7 @@ class Enemy02(Enemy):
         gap = hypot(player.x - self.x, player.ground_y - self.ground_y)
         if (not same_floor(self, player) or not self.alive or not player.alive
                 or self.car_hit or self.knockback_started
-                or self.counter_move is not None or self.jump_height > 0
+                or self.jump_height > 0
                 or self.state not in ("IDLE", "WALK", "RUN")
                 or self.cooldown > 0 or self.leap_cooldown > 0
                 or not config.ENEMY02_LEAP_MIN_DISTANCE <= gap <= config.ENEMY02_LEAP_MAX_DISTANCE):
@@ -222,11 +215,11 @@ class Enemy02(Enemy):
         if self.state in ("RUSH_CARRIED", "RUSH_RELEASED"):
             super()._update_ai(dt, player)
             return
-        if self.alive and player.alive and not self.car_hit and self.counter_move is None:
+        if self.alive and player.alive and not self.car_hit:
             self.leap_cooldown = max(0.0, self.leap_cooldown - dt)
         if self.leap_phase is not None:
             if (self.state == "ATTACK" and self.attack_kind == "slam" and self.alive and player.alive
-                    and not self.car_hit and not self.knockback_started and self.counter_move is None):
+                    and not self.car_hit and not self.knockback_started):
                 self.cooldown = max(0.0, self.cooldown - dt)
                 self._update_leap(dt, player)
                 return
@@ -245,7 +238,7 @@ class Enemy02(Enemy):
         super()._update_ai(dt, player)
         if self.state != "ATTACK":
             self.air_contact_attack = self.air_contact_pending = False
-        if not self.car_hit and self.counter_move is None and not self.rush_falling:
+        if not self.car_hit and not self.rush_falling:
             self._fall(dt)
 
     def take_damage(self, damage):
@@ -270,19 +263,6 @@ class Enemy02(Enemy):
     def stop(self):
         self._cancel_leap()
         super().stop()
-
-    def start_counter(self, move, facing):
-        self._cancel_leap()
-        super().start_counter(move, facing)
-
-    def finish_counter(self):
-        if self.counter_move is None:
-            return
-        super().finish_counter()
-        if not self.alive:
-            self.counter_death = None
-            self.animation.definitions["DEAD"] = self.animations["DEAD"]
-            self.animation.elapsed = 8 / self.animation.definitions["DEAD"][1]
 
     def hit_by_car(self, direction):
         if not super().hit_by_car(direction):

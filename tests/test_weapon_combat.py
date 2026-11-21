@@ -7,7 +7,6 @@ from drop_items import DropItem
 from enemy import Enemy
 from enemy02 import Enemy02
 from tests.helpers import advance, tap
-from tests.test_counters import attacker, follow_up
 from world import World
 
 
@@ -210,24 +209,6 @@ class WeaponCombatTests(unittest.TestCase):
         self.assertEqual(player.jump_count, 1)
         self.assertGreater(player.jump_height, 120)
         self.assertEqual(player.sprite_image, config.PLAYER_IMAGE)
-
-    def test_counter_hold_a_remains_the_counter_follow_up_with_equipped_weapons(self):
-        for kind in WEAPON_MOVES:
-            world = equipped_world(kind)
-            enemy = attacker(world)
-            world.controls.press("counter_h")
-            world.step(config.FIXED_DT)
-            follow_up(world)
-            for _ in range(180):
-                world.step(config.FIXED_DT)
-                if enemy.hp < 200:
-                    break
-            self.assertEqual(enemy.hp, 120)
-            self.assertIsNone(world.player.active_move)
-            self.assertEqual(world.effects[-1].image_name, config.PUNCH_KICK_HIT_IMAGE)
-            advance(world, 1)
-            self.assertEqual(world.player.weapon, kind)
-            self.assertEqual(world.player.sprite_image, config.WEAPON_POSE_IMAGES[kind])
 
     def test_weapon_combo_damage_is_identical_across_render_rates_and_f5_restores_unarmed(self):
         for kind in WEAPON_MOVES:

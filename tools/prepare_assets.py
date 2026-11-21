@@ -23,8 +23,6 @@ SHEETS = {
     config.COMBAT_IMAGE: 4,
     config.STRONG_ATTACK_IMAGE: 5,
     config.STRONG_HIT_IMAGE: 5,
-    config.COUNTER_PLAYER_IMAGE: 4,
-    config.COUNTER_ENEMY_IMAGE: 4,
     config.PLAYER_CAR_HIT_IMAGE: 1,
     config.ENEMY_CAR_HIT_IMAGE: 1,
     **{name: config.WEAPON_SHEET_ROWS[kind] for kind, name in config.WEAPON_POSE_IMAGES.items()},
@@ -60,7 +58,6 @@ def main():
                         frame["jump_height"] = ground_anchor - bottom
                     elif name in (config.ENEMY02_IMAGE,
                                   config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
-                                  config.COUNTER_PLAYER_IMAGE, config.COUNTER_ENEMY_IMAGE,
                                   config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE):
                         # Keep airborne throws above the floor instead of moving
                         # every cropped frame's bottom down to the same feet y.

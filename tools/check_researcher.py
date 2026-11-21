@@ -16,10 +16,9 @@ import pico2d
 import config
 from game import Game
 from researcher import Researcher
-from tools.check_counters import release, start_follow_up, wait_for_hold
 from tools.check_damage_numbers import capture_number
 from tools.check_render import capture, render_image
-from tools.check_runtime import push_key, tick
+from tools.check_runtime import push_key, release, tick
 from world import World
 
 
@@ -236,22 +235,7 @@ def check_dodges_and_invincibility(game):
           "a lethal bullet starts normal DYING rather than HIT.")
 
 
-def check_counters_and_restart(game):
-    for key in "hjkl":
-        world, enemy = encounter(game, gap=80, invincible=True)
-        enemy.start_attack()
-        enemy.animation.elapsed = 1.05 / enemy.attack_fps
-        keycode = getattr(pico2d, f"SDLK_{key}")
-        push_key(keycode)
-        tick(game)
-        release(game, keycode)
-        wait_for_hold(game)
-        assert enemy.ammo == 7 and enemy.sprite_image == config.RESEARCHER_IMAGE
-        start_follow_up(game)
-        wait(game, lambda: enemy.hp == 120)
-        capture(game, f"researcher_counter_{key}")
-        wait(game, lambda: world.counter is None and enemy.counter_move is None)
-        assert enemy.ammo == 7 and enemy.state == "IDLE"
+def check_restart(game):
     world, enemy = encounter(game, invincible=True)
     wait(game, lambda: bool(world.projectiles))
     saved = world.projectiles[0]
@@ -273,7 +257,7 @@ def check_counters_and_restart(game):
     release(game, pico2d.SDLK_1)
     assert (world.enemies[0].hp, world.enemies[0].ammo) == (200, 7)
     assert all(game.assets.images[name] is image for name, image in textures.items())
-    print("PASS: HJKL/A keep researcher appearance/ammo, inactive bullets pause, and SDL F5 "
+    print("PASS: inactive bullets pause, and SDL F5 "
           "clears all stages before new HP-200/ammo-7 summons, reusing textures.")
 
 
@@ -307,7 +291,7 @@ def main():
         check_health_and_damage(game)
         check_magazines_and_hits(game)
         check_dodges_and_invincibility(game)
-        check_counters_and_restart(game)
+        check_restart(game)
         check_performance(game)
     finally:
         if game is not None:

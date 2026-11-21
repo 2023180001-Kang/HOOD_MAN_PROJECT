@@ -42,6 +42,11 @@ def tick(game, frames=1):
         game.update(1 / 60)
 
 
+def release(game, key):
+    push_key(key, down=False)
+    game.handle_events()
+
+
 def check_input(game):
     game.world = World()
     push_key(pico2d.SDLK_RIGHT)
@@ -261,7 +266,7 @@ def check_player_action_inputs(game):
         game.handle_events()
     print("PASS: SDL A jab 32 FPS/~0.250s, S straight 20 FPS/~0.400s, "
           "D/F kicks 14 FPS/~0.571s; windup/active/recovery and held-key limits verified; "
-          "counters without an eligible attacker do not start an action.")
+          "retired H/J/K/L keys do not start an action.")
 
 
 def check_player_attack_switches(game):
@@ -402,7 +407,7 @@ def check_received_damage_and_effects(game):
         tick(game)
         assert game.world.player.hp == 480 and game.world.player.state == "HIT"
         assert len(game.world.effects) == 1 and game.world.camera.shake_remaining > 0
-        verify_hit_effect_pixels(game, f"failed_counter_h_hit_{'left' if side < 0 else 'right'}",
+        verify_hit_effect_pixels(game, f"removed_h_hit_{'left' if side < 0 else 'right'}",
                                  config.CLUB_HIT_IMAGE)
         push_key(pico2d.SDLK_h, down=False)
         tick(game)
@@ -413,14 +418,14 @@ def check_received_damage_and_effects(game):
     push_key(pico2d.SDLK_LSHIFT)
     tick(game, 30)
     assert game.world.player.state == "RUN" and game.world.player.vx == config.RUN_SPEED
-    capture(game, "failed_counter_h_running")
+    capture(game, "removed_h_running")
     push_key(pico2d.SDLK_SPACE)
     tick(game)
     assert game.world.player.jump_count == 1
     for key in (pico2d.SDLK_h, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT, pico2d.SDLK_SPACE):
         push_key(key, down=False)
     game.handle_events()
-    print("PASS: SDL H without a timed attacker does not block; running/jumping and both-side attacks "
+    print("PASS: retired SDL H does not block; running/jumping and both-side attacks "
           "deal 20 with club-hit effects/shake; hit effects expire normally.")
 
 

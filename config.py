@@ -169,26 +169,10 @@ WEAPON_MOVE_SPECS = {
         ("d", "도약 내려치기", 8, 50, 115.0, 146.0, COMBAT_KICK_FPS, (5, 6)),
     ),
 }
-COUNTER_PLAYER_IMAGE = "HoodMan_Counter_Player_2048x1024.png"
-COUNTER_ENEMY_IMAGE = "HoodMan_Counter_Enemy_2048x1024.png"
-COUNTER_DAMAGE = 80
-COUNTER_FPS = 8.0
-COUNTER_ENEMY_FPS = 6.0
-COUNTER_RANGE = 140.0
-COUNTER_DEPTH_TOLERANCE = 32.0
-COUNTER_TRIGGER_FRAMES = (1, 2, 3, 4, 5)
-COUNTER_PAIR_DISTANCE = 80.0
-COUNTER_BOUNDARY_PADDING = 90.0
-COUNTER_CARRY_SPEED = 180.0
-COUNTER_CARRY_HEIGHT = 24.0
-# Zero-based player/enemy poses held before the A-triggered follow-up.
-COUNTER_HOLD_FRAMES = {"h": (1, 1), "j": (2, 2), "k": (1, 1), "l": (1, 0)}
-# Key, technique, matching one-based player/enemy row, zero-based impact frame.
-COUNTER_MOVE_SPECS = (
-    ("h", "쳐내고 연타", 1, 4),
-    ("j", "잡아 메치기", 2, 6),
-    ("k", "단검 반격", 3, 4),
-    ("l", "회전 발차기", 4, 5),
+# Retired H/J/K/L art is preserved but never loaded by normal gameplay.
+ARCHIVED_COUNTER_IMAGES = (
+    "before_sheets/HoodMan_Counter_Player_2048x1024.png",
+    "before_sheets/HoodMan_Counter_Enemy_2048x1024.png",
 )
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
 AXE_ENEMY_IMAGE = "axe_enemy_pico2d_2048x1792.png"

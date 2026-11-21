@@ -5,7 +5,6 @@ import config
 from collision import bodies_overlap, body_contact_time, resolve_bodies
 from combat import MOVES
 from controls import Controls
-from counter import can_counter
 from enemy02 import Enemy02, leap_height
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from player import Player
@@ -193,9 +192,6 @@ class Enemy02LeapTests(unittest.TestCase):
         self.assertTrue(bodies_overlap(player, enemy))
         resolve_bodies(player, [enemy])
         self.assertFalse(bodies_overlap(player, enemy))
-        player.x = enemy.x + enemy.facing * 80
-        enemy.jump_height = 0  # Even the exact takeoff instant cannot be countered.
-        self.assertFalse(can_counter(player, enemy))
 
     def test_both_city_maps_apply_one_normal_club_hit_when_jumpers_meet(self):
         for index in (2, 3):

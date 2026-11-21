@@ -16,10 +16,9 @@ from effects import HitEffect
 from enemy import Enemy
 from enemy02 import Enemy02
 from game import Game
-from tools.check_counters import release
 from tools.check_enemy02 import encounter, set_frame
 from tools.check_render import capture
-from tools.check_runtime import push_key, tick, verify_hit_effect_pixels
+from tools.check_runtime import push_key, release, tick, verify_hit_effect_pixels
 from world import World
 
 

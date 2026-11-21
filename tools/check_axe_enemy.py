@@ -17,10 +17,9 @@ import config
 from axe_enemy import AxeEnemy
 from combat import STRONG_MOVES
 from game import Game
-from tools.check_counters import release, start_follow_up, wait_for_hold
 from tools.check_damage_numbers import capture_number
 from tools.check_render import capture, render_image
-from tools.check_runtime import push_key, tick
+from tools.check_runtime import push_key, release, tick
 from world import World
 
 
@@ -195,36 +194,13 @@ def check_axe_attack(game):
     print("PASS: both directions of axe swing deal 60 once, with existing club impact and hit shake.")
 
 
-def check_strong_and_counter_reactions(game):
+def check_strong_reactions(game):
     for move in STRONG_MOVES.values():
         world, enemy = encounter(game)
         press_attack(game, move.key, enemy)
         assert enemy.hp == 350 and enemy.animation.row == 5
         capture(game, f"axe_strong_{move.key}")
-    for key in "hjkl":
-        world, enemy = encounter(game)
-        enemy.start_attack()
-        enemy.animation.elapsed = 1.05 / enemy.attack_fps
-        keycode = getattr(pico2d, f"SDLK_{key}")
-        push_key(keycode)
-        tick(game)
-        release(game, keycode)
-        wait_for_hold(game)
-        assert enemy.hp == 400 and enemy.animation.row in (5, 6)
-        capture(game, f"axe_counter_{key}_hold")
-        start_follow_up(game)
-        hit_captured = False
-        for _ in range(180):
-            assert enemy.sprite_image == config.AXE_ENEMY_IMAGE and enemy.animation.row < 7
-            tick(game)
-            if enemy.hp == 320 and not hit_captured:
-                capture(game, f"axe_counter_{key}_impact")
-                hit_captured = True
-            if world.counter is None and enemy.counter_move is None:
-                break
-        assert hit_captured and enemy.hp == 320 and enemy.state == "IDLE"
-    print("PASS: real SDL QWERT and all HJKL hold/A follow-ups keep axe identity, "
-          "50/80 single damage, own recovery rows and no row-7 stun.")
+    print("PASS: real SDL QWERT keep axe identity, 50 single damage, own recovery rows and no row-7 stun.")
 
 
 def check_combat_and_restart(game):
@@ -279,7 +255,7 @@ def main():
         check_health_pixels(game)
         check_player_damage_pixels(game)
         check_axe_attack(game)
-        check_strong_and_counter_reactions(game)
+        check_strong_reactions(game)
         check_combat_and_restart(game)
     finally:
         if game is not None:

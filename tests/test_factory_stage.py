@@ -59,7 +59,7 @@ class FactoryStageTests(unittest.TestCase):
                     stage.effects.append(HitEffect(1500, 180, 1))
                     stage.damage_numbers.append(DamageNumber(1500, 250, 40))
                 self.assertTrue(world.try_stage_transition())
-                for action in ("jump", "combat_a", "counter_j", "invincibility", "stage_exits"):
+                for action in ("jump", "combat_a", "invincibility", "stage_exits"):
                     world.controls.press(action)
                 advance(world, 1.9)
                 self.assertEqual(world.elapsed, 0)
@@ -76,7 +76,6 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertFalse(target.arrows_visible)
                 world.update(config.FIXED_DT)
                 self.assertIsNone(world.player.active_move)
-                self.assertIsNone(world.counter)
                 self.assertEqual(len(world.enemies), 1)
                 self.assertEqual(world.player.jump_count, 0)
                 self.assertFalse(world.player.invincible)

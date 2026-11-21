@@ -149,7 +149,7 @@ class Stage:
         if (not player.alive or player.staircase is not None or player.stair_regrab_remaining > 0
                 or player.jump_count != 1 or player.vy > 0
                 or player.jump_height < config.STAIR_JUMP_CATCH_MIN_HEIGHT
-                or player.falling_from_upper or player.counter_move is not None
+                or player.falling_from_upper
                 or player.active_move is not None or player.state != "JUMP"):
             return False
         return any(stair.catch_player(player) for stair in self.stairs)
@@ -171,7 +171,7 @@ class Stage:
     def resolve_player_platforms(self, player, controls):
         """One-way upper landing and a gravity-driven drop from its front edge."""
         if (self.upper_walkable is None or player.staircase is not None
-                or not player.alive or player.counter_move is not None
+                or not player.alive
                 or player.active_move is not None):
             return
         front = self.upper_walkable.bounds[1]

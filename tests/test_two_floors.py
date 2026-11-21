@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 import config
 from collision import bodies_overlap, body_contact_time, resolve_bodies, same_floor
 from combat import MOVES, STRONG_MOVES
-from counter import can_counter
 from enemy import Enemy
 from rush import RushSequence
 from spawn_manager import SpawnManager
@@ -222,19 +221,18 @@ class StairAndFloorTests(ArchivedTwoFloorTests):
         self.assertTrue(world.player.grounded)
         self.assertEqual((world.player.floor, world.player.ground_y), (1, 476))
 
-    def test_stair_movement_consumes_attack_counter_and_weapon_input_without_buffering(self):
+    def test_stair_movement_consumes_attack_and_weapon_input_without_buffering(self):
         world = World()
         begin_player_stairs(world)
         world.player.equip_weapon("steel_pipe")
-        for key in ("combat_a", "counter_h", "weapon_interact", "invincibility"):
+        for key in ("combat_a", "weapon_interact", "invincibility"):
             world.controls.press(key)
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.weapon, "steel_pipe")
         self.assertTrue(world.player.invincible)
         self.assertEqual(world.player.jump_height, 0)
         self.assertIsNone(world.player.active_move)
-        self.assertIsNone(world.counter)
-        for key in ("combat_a", "counter_h", "weapon_interact", "invincibility"):
+        for key in ("combat_a", "weapon_interact", "invincibility"):
             self.assertNotIn(key, world.controls.pressed)
         advance(world, 3)
         self.assertEqual(world.player.floor, 1)
@@ -453,7 +451,7 @@ class StairAndFloorTests(ArchivedTwoFloorTests):
         self.assertTrue(world.try_stage_transition())
         self.assertEqual((world.stage_index, world.player.floor), (1, 0))
 
-    def test_floor_aware_hits_counters_and_swept_body_contacts_cannot_cross_floors(self):
+    def test_floor_aware_hits_and_swept_body_contacts_cannot_cross_floors(self):
         world = World()
         player = world.player
         enemy = Enemy(player.x + 80, -1, ground_y=100)
@@ -464,7 +462,6 @@ class StairAndFloorTests(ArchivedTwoFloorTests):
         enemy.animation.elapsed = 3 / enemy.attack_fps
         self.assertFalse(player.try_hit(enemy))
         self.assertFalse(enemy.try_hit(player))
-        self.assertFalse(can_counter(player, enemy))
         self.assertIsNone(body_contact_time(player, enemy))
         self.assertFalse(bodies_overlap(player, enemy))
         self.assertFalse(same_floor(player, enemy))
@@ -492,7 +489,7 @@ class StairAndFloorTests(ArchivedTwoFloorTests):
         self.assertEqual((enemy.x, enemy.ground_y), before)
         self.assertEqual(world.player.ground_y, 476)
 
-    def test_upstairs_combat_counter_and_strong_hit_keep_both_actors_on_the_upper_floor(self):
+    def test_upstairs_combat_and_strong_hit_keep_both_actors_on_the_upper_floor(self):
         world = World()
         place(world, world.player, 1, 1000, 476)
         enemy = Enemy(1080, -1, ground_y=476)
@@ -506,14 +503,10 @@ class StairAndFloorTests(ArchivedTwoFloorTests):
         self.assert_on_floor_or_stairs(world, enemy)
         world.player.finish_move()
         place(world, enemy, 1, world.player.x + 80, world.player.ground_y)
-        enemy.start_attack()
-        enemy.animation.elapsed = min(config.COUNTER_TRIGGER_FRAMES) / enemy.attack_fps
-        self.assertTrue(world.try_start_counter("counter_h"))
-        advance(world, 0.5)
-        self.assertTrue(world.counter.holding)
-        world.controls.press("combat_a")
-        advance(world, 2)
-        self.assertIsNone(world.counter)
+        world.player.start_move(MOVES["combat_a"], 1)
+        world.player.animation.elapsed = 3 / MOVES["combat_a"].fps
+        self.assertTrue(world.player.try_hit(enemy))
+        self.assertEqual(enemy.hp, 140)
         self.assertEqual(world.player.floor, 1)
         self.assertEqual(enemy.floor, 1)
         self.assert_on_floor_or_stairs(world, enemy)

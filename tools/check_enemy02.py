@@ -19,9 +19,8 @@ from enemy import Enemy
 from enemy02 import Enemy02, leap_height
 from game import Game
 from researcher import Researcher
-from tools.check_counters import release, start_follow_up, wait_for_hold
 from tools.check_render import capture
-from tools.check_runtime import push_key, tick
+from tools.check_runtime import push_key, release, tick
 from world import World
 
 
@@ -254,24 +253,7 @@ def check_damage(game):
           "with real hit effects/HP/shake; SDL P consumes a swing without damage/effects.")
 
 
-def check_counters_and_death(game):
-    for key in "hjkl":
-        world, enemy = encounter(game)
-        set_frame(world, enemy, 1)
-        keycode = getattr(pico2d, f"SDLK_{key}")
-        push_key(keycode)
-        tick(game)
-        release(game, keycode)
-        wait_for_hold(game)
-        assert enemy.sprite_image == config.ENEMY02_IMAGE
-        capture(game, f"enemy02_counter_{key}_hold")
-        start_follow_up(game)
-        for _ in range(180):
-            tick(game)
-            assert enemy.sprite_image == config.ENEMY02_IMAGE
-            if world.counter is None and enemy.counter_move is None:
-                break
-        assert enemy.hp == 120 and enemy.state == "IDLE"
+def check_death(game):
     world, enemy = encounter(game)
     enemy.take_damage(200)
     tick(game, 60)
@@ -283,8 +265,7 @@ def check_counters_and_death(game):
     with patch.object(texture, "opacify", wraps=texture.opacify) as alpha:
         capture(game, "enemy02_corpse_half")
     assert [call.args[0] for call in alpha.call_args_list] == [0.5, 1.0]
-    print("PASS: all four SDL counter/carry/A follow-ups preserve enemy02's identity and "
-          "single 80 damage; own row-7 death/fade and shared texture alpha restoration verified.")
+    print("PASS: own row-7 death/fade and shared texture alpha restoration verified.")
 
 
 def check_city_road(game):
@@ -360,7 +341,7 @@ def main():
         check_tracking_leap(game)
         check_midair_collisions(game)
         check_damage(game)
-        check_counters_and_death(game)
+        check_death(game)
         check_city_road(game)
         check_natural_encounter_and_restart(game)
     finally:

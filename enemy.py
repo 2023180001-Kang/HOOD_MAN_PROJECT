@@ -6,7 +6,6 @@ import random
 import config
 from animation import Animation
 from collision import Rect, same_floor
-from counter import COUNTERS
 from physics import approach_vector
 from traffic import start_car_hit, update_car_hit
 from walkable import default_area
@@ -55,10 +54,6 @@ class Enemy:
         self.car_hit = False
         self.rush_release_still = 0.0
         self.rush_falling = False
-        self.counter_move = None
-        self.counter_linked = False
-        self.counter_padding = self.boundary_padding
-        self.counter_death = None
         self.attack_speed = attack_speed
         self.attack_interval = config.ENEMY_ATTACK_INTERVAL / attack_speed
         definitions = dict(self.animations)
@@ -66,10 +61,6 @@ class Enemy:
         row, fps, loop = definitions["ATTACK"]
         self.attack_fps = fps * attack_speed
         definitions["ATTACK"] = (row, self.attack_fps, loop)
-        definitions.update({move.enemy_state: (move.row, move.enemy_fps, False)
-                            for move in COUNTERS.values()})
-        definitions.update({move.enemy_hold_state: (move.row, move.enemy_fps, False)
-                            for move in COUNTERS.values()})
         self.animation = Animation(definitions)
         self.formation_side = None
         self.formation_slot = None
@@ -112,8 +103,7 @@ class Enemy:
             return config.ENEMY_CAR_HIT_IMAGE
         if self.state in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED"):
             return config.STRONG_HIT_IMAGE
-        return (config.COUNTER_ENEMY_IMAGE if self.counter_move is not None
-                or self.counter_death is not None else self.image_name)
+        return self.image_name
 
     @property
     def y(self):
@@ -146,8 +136,7 @@ class Enemy:
         self.running = False
         self.has_hit = True
         self.knockback_started = False
-        if self.counter_move is None:
-            self.animation.set_state("HIT" if self.alive else "DYING")
+        self.animation.set_state("HIT" if self.alive else "DYING")
         if not self.alive and self.staircase is not None:
             self.begin_floor_fall(self.staircase.lower_area)
         return True
@@ -157,13 +146,6 @@ class Enemy:
             return False
         if self.staircase is not None:
             self.begin_floor_fall(self.staircase.lower_area)
-        if self.counter_move is not None:
-            # An independently finishing counter reaction can be interrupted
-            # once the player is free; it must not overwrite the new hit later.
-            self.finish_counter()
-            self.counter_death = None
-            self.boundary_padding = self.counter_padding
-            self.animation.definitions["DEAD"] = self.animations["DEAD"]
         self.facing = -direction
         self.vx = direction * move.knockback_speed
         self.ground_vy = 0.0
@@ -264,10 +246,6 @@ class Enemy:
     def hit_by_car(self, direction):
         if not self.alive:
             return False
-        if self.counter_move is not None:
-            self.boundary_padding = self.counter_padding
-        self.counter_move = self.counter_death = None
-        self.counter_linked = False
         self.rush_falling = False
         self.running = self.knockback_started = False
         self.has_hit = True
@@ -277,45 +255,6 @@ class Enemy:
         self.corpse_elapsed = 0.0
         start_car_hit(self, direction)
         return True
-
-    def start_counter(self, move, facing):
-        self.counter_move = move
-        self.counter_linked = True
-        self.counter_padding = self.boundary_padding
-        self.boundary_padding = max(self.boundary_padding, config.COUNTER_BOUNDARY_PADDING)
-        self.vx = self.ground_vy = 0.0
-        self.running = False
-        self.has_hit = True
-        self.facing = facing
-        self.formation_slot = None
-        self.target_x = self.target_ground_y = None
-        self.animation.set_state(move.enemy_state)
-
-    def release_counter(self):
-        """Continue the slower reaction after the player is free to act."""
-        self.counter_linked = False
-        if self.animation.elapsed + 1e-9 >= self.counter_move.enemy_duration:
-            self.finish_counter()
-
-    def finish_counter(self):
-        move = self.counter_move
-        if move is None:
-            return
-        self.counter_move = None
-        self.counter_linked = False
-        self.jump_height = 0.0
-        self.cooldown = self.attack_interval
-        if self.alive:
-            self.boundary_padding = self.counter_padding
-            self.animation.set_state("IDLE")
-        else:
-            # The supplied last pose already shows the defeated enemy on the
-            # floor; keep it instead of replaying the standard death sheet.
-            self.counter_death = move
-            self.animation.definitions["DEAD"] = (move.row, move.enemy_fps, False)
-            self.animation.set_state("DEAD")
-            self.animation.elapsed = move.enemy_duration
-            self.corpse_elapsed = 0.0
 
     @property
     def body(self):
@@ -362,7 +301,7 @@ class Enemy:
         return None  # Melee enemies never emit a projectile.
 
     def knockback(self, player_x, player_ground_y=None):
-        if not self.alive or self.knockback_started or self.counter_move is not None:
+        if not self.alive or self.knockback_started:
             return
         self.knockback_started = True
         self.running = False
@@ -415,7 +354,7 @@ class Enemy:
         if self.falling_from_upper:
             self.update_floor_fall(dt)
         if (self.rush_falling and self.state not in ("RUSH_CARRIED", "RUSH_RELEASED")
-                and not self.car_hit and self.counter_move is None):
+                and not self.car_hit):
             self.fall_from_rush(dt)
         self._update_ai(dt, player)
         self.walkable.constrain(self, config.ENEMY_HALF_WIDTH)
@@ -432,14 +371,6 @@ class Enemy:
         if self.state == "STRONG_HIT":
             self.update_strong_hit(dt)
             return
-        if self.counter_move is not None:
-            self.vx = self.ground_vy = 0.0
-            self.running = False
-            if not self.counter_linked:
-                self.animation.update(dt)
-                if self.animation.elapsed + 1e-9 >= self.counter_move.enemy_duration:
-                    self.finish_counter()
-            return  # Even a lethal counter finishes its reaction before corpse timing.
         if not self.alive:
             self.vx = 0.0
             self.ground_vy = 0.0

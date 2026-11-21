@@ -199,17 +199,16 @@ class StairControlTests(ArchivedTwoFloorTests):
         world, stair = stair_world()
         steer(world, 0)
         world.player.equip_weapon("steel_pipe")
-        for key in ("combat_q", "counter_h", "weapon_interact"):
+        for key in ("combat_q", "weapon_interact"):
             world.controls.press(key)
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.state, "IDLE")
         self.assertEqual(world.player.weapon, "steel_pipe")
         self.assertIsNone(world.player.active_move)
-        self.assertIsNone(world.counter)
         self.assertEqual(world.player.jump_height, 0)
         self.assertIs(world.player.staircase, stair)
         self.assertTrue(all(key not in world.controls.pressed
-                             for key in ("combat_q", "counter_h", "weapon_interact")))
+                             for key in ("combat_q", "weapon_interact")))
         steer(world, 1)
         advance(world, 3)
         self.assertIsNone(world.player.active_move)

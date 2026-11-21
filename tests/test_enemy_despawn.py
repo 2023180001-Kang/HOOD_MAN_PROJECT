@@ -2,7 +2,6 @@ import unittest
 
 import config
 from tests.helpers import advance
-from tests.test_counters import attacker, follow_up
 from world import World
 
 
@@ -45,39 +44,15 @@ class EnemyDespawnTests(unittest.TestCase):
         advance(world, 2)
         self.assertEqual(world.enemies, [])
 
-    def test_lethal_counters_finish_the_whole_pair_before_starting_the_corpse_timer(self):
-        for key in "hjkl":
-            with self.subTest(key=key):
-                world = World()
-                enemy = attacker(world)
-                enemy.hp = 40
-                world.controls.press(f"counter_{key}")
-                world.step(config.FIXED_DT)
-                follow_up(world)
-                while enemy.hp:
-                    world.step(config.FIXED_DT)
-                self.assertIsNotNone(world.counter)
-                self.assertEqual((enemy.corpse_elapsed, enemy.opacity), (0, 1))
-                while world.counter is not None or enemy.counter_move is not None:
-                    world.step(config.FIXED_DT)
-                    self.assertEqual((enemy.corpse_elapsed, enemy.opacity), (0, 1))
-                self.assertEqual((enemy.state, enemy.animation.frame), ("DEAD", 7))
-                self.assertEqual(enemy.sprite_image, config.COUNTER_ENEMY_IMAGE)
-                advance(world, 3)
-                self.assertEqual(enemy.opacity, 1)
-                advance(world, 0.5)
-                self.assertAlmostEqual(enemy.opacity, 0.5)
-                advance(world, 0.5)
-                self.assertNotIn(enemy, world.enemies)
-
-    def test_surviving_subdued_enemies_never_fade_and_resume_pursuit(self):
+    def test_nonlethally_hit_enemies_never_fade_and_resume_pursuit(self):
         world = World()
-        enemy = attacker(world)
-        world.controls.press("counter_j")
-        world.step(config.FIXED_DT)
-        follow_up(world)
-        while world.counter is not None or enemy.counter_move is not None:
+        enemy = world.spawner.spawn(1, world.elapsed)[0]
+        world.enemies.append(enemy)
+        enemy.take_damage(80)
+        for _ in range(120):
             world.step(config.FIXED_DT)
+            if enemy.state == "IDLE":
+                break
         self.assertEqual((enemy.hp, enemy.state), (120, "IDLE"))
         world.player.x += 500
         world.player.invincible = True

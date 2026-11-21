@@ -4,7 +4,6 @@ from math import ceil, floor, hypot
 
 import config
 from combat import STRONG_MOVES
-from counter import COUNTERS
 from physics import clamp
 
 
@@ -214,9 +213,6 @@ class UI:
                                  (180, 255, 150))
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
-            for index, move in enumerate(COUNTERS.values()):
-                assets.font.draw(22 + index * 310, 74,
-                                 f"{move.key.upper()} {move.name} ({move.damage})", (244, 204, 66))
             if world.player.weapon in config.WEAPON_NAMES:
                 phase = world.player.weapon_leap_phase
                 if phase == "AIM":
@@ -226,23 +222,17 @@ class UI:
                 else:
                     help_text = "무기 내려찍기: Space 두 번 → D 슬로 모션 / 방향키 조준 → D 급강하"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))
-            if world.player.counter_holding:
-                counter_help = "제압 유지: 방향키로 적을 들고 이동 / A 새 입력으로 후속 공격"
-            elif world.stage.image_name in config.ENEMY02_STAGE_IMAGES:
+            if world.stage.image_name in config.ENEMY02_STAGE_IMAGES:
                 clubs, slam = config.ENEMY02_ATTACKS["clubs"][1], config.ENEMY02_ATTACKS["slam"][1]
-                counter_help = (f"적 공격: 몽둥이 {clubs} / 착지 {slam}   "
-                                f"반격: 지상 공격 중 {config.COUNTER_RANGE:g}px 내")
+                enemy_help = f"적 공격: 몽둥이 {clubs} / 착지 {slam}"
             elif world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE:
-                counter_help = (f"적 공격: 도끼 {config.AXE_ENEMY_DAMAGE}   "
-                                f"반격: 도끼 공격 중 {config.COUNTER_RANGE:g}px 내")
+                enemy_help = f"적 공격: 도끼 {config.AXE_ENEMY_DAMAGE}"
             elif world.stage.image_name in config.FACTORY_INSIDE_IMAGES:
-                counter_help = (f"적 권총 {config.RESEARCHER_DAMAGE} · "
-                                f"{config.RESEARCHER_MAGAZINE_SIZE}발 후 재장전 / "
-                                "반격: 근거리 사격 준비 중")
+                enemy_help = (f"적 권총 {config.RESEARCHER_DAMAGE} · "
+                              f"{config.RESEARCHER_MAGAZINE_SIZE}발 후 재장전")
             else:
-                counter_help = (f"적 공격 피해: {config.ENEMY_DAMAGE}   "
-                                f"반격: 쇠파이프 공격 중 {config.COUNTER_RANGE:g}px 내")
-            assets.font.draw(22, 48, counter_help, (205, 218, 231))
+                enemy_help = f"적 공격 피해: {config.ENEMY_DAMAGE}"
+            assets.font.draw(22, 48, enemy_help, (205, 218, 231))
             sources = "좌우/열린 문 무작위" if world.stage.doors else "좌우 무작위"
             assets.font.draw(740, 48, f"1~9: 해당 수만큼 적 소환 ({sources})", (205, 218, 231))
             assets.font.draw(22, 25,

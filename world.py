@@ -6,7 +6,6 @@ import config
 from camera import Camera
 from collision import resolve_bodies, same_floor, transit_target, world_rect
 from controls import Controls
-from counter import COUNTERS, CounterSequence, can_counter
 from drop_items import DropItem, MetalClubDrop
 from effects import DamageNumber, HitEffect, SpriteAfterimage
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
@@ -27,18 +26,12 @@ class World:
     def reset(self):
         if getattr(self, "rush", None) is not None:
             self.rush.finish()
-        if getattr(self, "counter", None) is not None:
-            self.counter.finish()
         for stage in getattr(self, "stages", ()):
             for stair in stage.stairs:
                 for actor in tuple(stair.occupants):
                     stair.release(actor)
                 stair.queue.clear()
-            for enemy in stage.enemies:
-                if enemy.counter_move is not None:
-                    enemy.finish_counter()
         self.controls.reset_for_restart()
-        self.counter = None
         self.rush = None
         self.player = Player()
         self.camera = Camera(self.player.x)
@@ -110,8 +103,7 @@ class World:
     @property
     def pickup_item(self):
         player = self.player
-        if (self.stage_loading or player.staircase is not None or not player.alive or not player.grounded
-                or player.counter_move is not None):
+        if self.stage_loading or player.staircase is not None or not player.alive or not player.grounded:
             return None
         candidates = [item for item in self.stage.drop_items if item.collectible and item.grounded
                       and item.floor == player.floor
@@ -139,8 +131,7 @@ class World:
 
     def interact_weapon(self):
         player = self.player
-        if (self.stage_loading or player.staircase is not None
-                or not player.alive or player.counter_move is not None):
+        if self.stage_loading or player.staircase is not None or not player.alive:
             return False
         item = self.pickup_item
         if item is not None:
@@ -184,13 +175,6 @@ class World:
             actor.stair_arrival = False
         self.player.stair_regrab_remaining = max(0.0, self.player.stair_regrab_remaining - dt)
         self.stage.exit_player_stairs(self.player, self.controls)
-        self.cancel_invalid_counter()
-        counter_pressed = self.controls.take_latest_press(COUNTERS)
-        if counter_pressed is not None:
-            self.try_start_counter(counter_pressed)
-        if (self.counter is not None and self.counter.holding
-                and self.controls.take_press("combat_a")):
-            self.counter.start_follow_up()
         if self.controls.take_press("stage_exits") and self.player.alive:
             self.stage.arrows_visible = True
         if self.controls.take_press("toggle_doors"):
@@ -233,7 +217,6 @@ class World:
                 # The held approach direction predates entry, not a fresh exit.
                 self.controls.take_latest_press(("left", "right"))
             self.stage.resolve_player_platforms(self.player, self.controls)
-        self.cancel_invalid_counter()
         self.cancel_invalid_rush()
         if self.player.rush_phase == "FLY" and self.rush is None:
             self.rush = RushSequence(self.player, self.stage.area_for(self.player))
@@ -243,8 +226,6 @@ class World:
             if enemy not in stair_moved:
                 enemy.update(dt, self.player, self.stage.area_for(enemy))
                 self.stage.resolve_enemy_drop(enemy, self.player)
-        if self.counter is not None:
-            self.counter.sync_pair()
         traffic_updated = self.rush is not None
         if traffic_updated:
             # Move existing captives before swept car checks, but let fatal
@@ -271,19 +252,6 @@ class World:
             self.update_traffic(dt)
         self.handle_death()
         if self.player.alive:
-            if self.counter is not None:
-                sequence = self.counter
-                damage = sequence.update(dt)
-                if damage:
-                    enemy = sequence.enemy
-                    self.damage_numbers.append(DamageNumber.above_body(
-                        enemy.body, damage, depth=enemy.ground_y - config.GROUND_Y))
-                    self.effects.append(HitEffect(enemy.x, enemy.y + config.ENEMY_HEIGHT * 0.6,
-                                                  self.player.facing,
-                                                  image_name=config.PUNCH_KICK_HIT_IMAGE))
-                    self.camera.shake()
-                if sequence.finished:
-                    self.counter = None
             player_box = self.player.attack_box
             if player_box is not None:
                 for enemy in self.enemies:
@@ -304,7 +272,6 @@ class World:
             for enemy in self.enemies:
                 enemy_box = enemy.attack_box
                 if enemy_box is not None and enemy.try_hit(self.player):
-                    self.cancel_invalid_counter()
                     self.effects.append(HitEffect.at_contact(enemy_box, self.player.body,
                                                              enemy.facing,
                                                              depth=self.player.ground_y - config.GROUND_Y,
@@ -324,7 +291,7 @@ class World:
 
     def update_projectiles(self, dt):
         # Existing rounds survive their shooter's death. New shots are emitted
-        # only after melee/counter priority has had a chance to interrupt them.
+        # only after the player's strikes have had a chance to interrupt them.
         for bullet in self.projectiles:
             if bullet.update(dt, self.player):
                 self.projectile_impact(bullet)
@@ -341,7 +308,6 @@ class World:
         self.projectiles[:] = [bullet for bullet in self.projectiles if not bullet.finished]
 
     def projectile_impact(self, bullet):
-        self.cancel_invalid_counter()
         self.effects.append(HitEffect(bullet.impact_x, bullet.y, bullet.facing,
                                       image_name=config.CLUB_HIT_IMAGE))
         self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
@@ -376,11 +342,6 @@ class World:
             self.afterimages.append(SpriteAfterimage.from_player(self.player))
             self._dive_afterimage_remaining += config.WEAPON_DIVE_AFTERIMAGE_INTERVAL
 
-    def cancel_invalid_counter(self):
-        if self.counter is not None and (not self.counter.valid or self.counter.enemy not in self.enemies):
-            self.counter.finish()
-            self.counter = None
-
     def cancel_invalid_rush(self):
         if self.rush is not None:
             self.rush.prune(self.enemies)
@@ -396,9 +357,6 @@ class World:
             return
         hit_player = car.hits(self.player)
         hit_enemies = [enemy for enemy in self.enemies if car.hits(enemy)]
-        if self.counter is not None and (hit_player or self.counter.enemy in hit_enemies):
-            self.counter.finish()
-            self.counter = None
         for enemy in hit_enemies:
             previous_hp = enemy.hp
             enemy.hit_by_car(car.facing)
@@ -413,27 +371,10 @@ class World:
         if hit_player or hit_enemies:
             self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
 
-    def try_start_counter(self, action):
-        player = self.player
-        if (self.counter is not None or self.stage_loading or player.staircase is not None
-                or not player.alive or not player.grounded
-                or player.state in ("HIT", "DYING", "DEAD")):
-            return False
-        candidates = [enemy for enemy in self.enemies if can_counter(player, enemy)]
-        candidates.sort(key=lambda enemy: (abs(enemy.x - player.x),
-                                           abs(enemy.ground_y - player.ground_y)))
-        for enemy in candidates:
-            sequence = CounterSequence.start(player, enemy, COUNTERS[action], self.stage.area_for(player))
-            if sequence is not None:
-                self.counter = sequence
-                return True
-        return False
-
     def try_stage_transition(self):
         player = self.player
         if (self.stage_loading or player.floor != 0 or player.staircase is not None
                 or not player.alive or player.active_move is not None
-                or player.counter_move is not None
                 or player.state in ("HIT", "DYING", "DEAD")):
             return False
         for side in self.stage.arrow_sides:
@@ -457,9 +398,6 @@ class World:
         """Enter a scene for tooling while preserving its actors and player HP."""
         if not self.player.alive or not 0 <= destination < len(self.stages):
             return False
-        if self.counter is not None:
-            self.counter.finish()
-            self.counter = None
         self.pending_stage_index = None
         self.stage_loading_remaining = 0.0
         self.accumulator = 0.0

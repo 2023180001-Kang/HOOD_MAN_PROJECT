@@ -6,7 +6,6 @@ from effects import HitEffect
 from enemy import Enemy
 from enemy02 import Enemy02
 from tests.helpers import advance
-from tests.test_counters import attacker, follow_up
 from tests.test_enemy02 import at_frame
 from traffic import Car, Traffic
 from world import World
@@ -160,22 +159,6 @@ class HitEffectTests(unittest.TestCase):
                     self.assertEqual(len(world.effects), 1)
                     self.assertEqual(world.effects[0].image_name, config.CLUB_HIT_IMAGE)
                     self.assertEqual(world.effects[0].facing, -side)
-
-    def test_counter_followups_use_the_player_impact_instead_of_blood(self):
-        for key in "hjkl":
-            world = World()
-            world.enemies.clear()
-            enemy = attacker(world)
-            world.controls.press(f"counter_{key}")
-            world.step(config.FIXED_DT)
-            follow_up(world)
-            for _ in range(120):
-                world.step(config.FIXED_DT)
-                if world.effects:
-                    break
-            self.assertEqual(enemy.hp, 120)
-            self.assertEqual(len(world.effects), 1)
-            self.assertEqual(world.effects[0].image_name, config.PUNCH_KICK_HIT_IMAGE)
 
     def test_vehicle_impacts_use_the_club_impact_for_both_victims(self):
         world = World()

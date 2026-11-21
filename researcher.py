@@ -18,10 +18,6 @@ class Researcher(Enemy):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ammo = config.RESEARCHER_MAGAZINE_SIZE
-        for state, (_, fps, loop) in self.animation.definitions.items():
-            if state.startswith(("SUBDUED_", "HELD_")):
-                row = self.animations["DYING" if state.endswith(("_J", "_L")) else "HIT"][0]
-                self.animation.definitions[state] = (row, fps, loop)
 
     @property
     def sprite_image(self):
@@ -59,7 +55,7 @@ class Researcher(Enemy):
 
     def _update_ai(self, dt, player):
         if (not self.alive or not player.alive or self.knockback_started
-                or self.counter_move is not None or self.falling_from_upper
+                or self.falling_from_upper
                 or self.state in ("HIT", "CAR_HIT", "STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")):
             super()._update_ai(dt, player)
             return
@@ -125,15 +121,6 @@ class Researcher(Enemy):
         self.animation.definitions["STRONG_HIT"] = (
             self.animations["HIT"][0], config.STRONG_HIT_FPS, False)
         return True
-
-    def finish_counter(self):
-        if self.counter_move is None:
-            return
-        super().finish_counter()
-        if not self.alive:
-            self.counter_death = None
-            self.animation.definitions["DEAD"] = self.animations["DEAD"]
-            self.animation.elapsed = 8 / self.animation.definitions["DEAD"][1]
 
     def hit_by_car(self, direction):
         if not super().hit_by_car(direction):

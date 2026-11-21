@@ -12,7 +12,6 @@ from enemy02 import Enemy02
 from player import Player
 from researcher import Researcher
 from tests.helpers import advance, spawn_encounter, tap
-from tests.test_counters import follow_up
 from tests.test_strong_attacks import strike
 from ui import UI
 from world import World
@@ -199,29 +198,6 @@ class AxeEnemyTests(unittest.TestCase):
                             break
                         world.step(config.FIXED_DT)
                     self.assertEqual((enemy.hp, enemy.state), (350, "IDLE"))
-
-    def test_counter_holds_follow_ups_and_lethal_poses_keep_axe_rows_without_stun(self):
-        for key in "hjkl":
-            for hp in (400, 40):
-                with self.subTest(key=key, hp=hp):
-                    world, enemy = encounter(hp=hp)
-                    enemy.start_attack()
-                    enemy.animation.elapsed = 1.05 / enemy.attack_fps
-                    tap(world.controls, f"counter_{key}")
-                    world.step(config.FIXED_DT)
-                    self.assertIsNotNone(world.counter)
-                    follow_up(world)
-                    for _ in range(300):
-                        self.assertEqual(enemy.sprite_image, config.AXE_ENEMY_IMAGE)
-                        self.assertLess(enemy.animation.row, 7)
-                        world.step(config.FIXED_DT)
-                        if world.counter is None and enemy.counter_move is None:
-                            break
-                    self.assertEqual(enemy.hp, max(0, hp - 80))
-                    self.assertEqual(enemy.state, "IDLE" if enemy.alive else "DEAD")
-                    self.assertTrue(all(row < 7 for row, _, _ in enemy.animation.definitions.values()))
-                    if not enemy.alive:
-                        self.assertEqual((enemy.animation.row, enemy.animation.frame), (6, 7))
 
     def test_lethal_strong_reactions_finish_with_the_axe_death_row_not_stun(self):
         for action in STRONG_MOVES:

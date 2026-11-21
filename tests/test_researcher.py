@@ -14,7 +14,6 @@ from player import Player
 from projectiles import ResearcherBullet
 from researcher import Researcher
 from tests.helpers import advance, tap
-from tests.test_counters import follow_up
 from tests.test_strong_attacks import strike
 from ui import UI
 from world import World
@@ -305,7 +304,7 @@ class ResearcherTests(unittest.TestCase):
         first.update(0.5, player)
         self.assertEqual((first.ammo, second.ammo), (7, 6))
 
-    def test_strong_attacks_rush_and_counters_keep_researcher_identity_and_ammo(self):
+    def test_strong_attacks_and_rush_keep_researcher_identity_and_ammo(self):
         for action in STRONG_MOVES:
             world, enemy = encounter(gap=80, invincible=True)
             enemy.cooldown = 100
@@ -317,22 +316,6 @@ class ResearcherTests(unittest.TestCase):
                 world.step(config.FIXED_DT)
             until(world, lambda: enemy.state == "IDLE")
             self.assertEqual(enemy.sprite_image, config.RESEARCHER_IMAGE)
-        for key in "hjkl":
-            for hp in (200, 40):
-                world, enemy = encounter(gap=80, invincible=True)
-                enemy.hp = hp
-                enemy.start_attack()
-                enemy.animation.elapsed = 1.05 / enemy.attack_fps
-                tap(world.controls, f"counter_{key}")
-                world.step(config.FIXED_DT)
-                self.assertIsNotNone(world.counter)
-                follow_up(world)
-                until(world, lambda: world.counter is None and enemy.counter_move is None)
-                self.assertEqual((enemy.hp, enemy.ammo), (max(0, hp - 80), 7))
-                self.assertEqual(enemy.sprite_image, config.RESEARCHER_IMAGE)
-                if not enemy.alive:
-                    self.assertEqual((enemy.state, enemy.animation.row, enemy.animation.frame),
-                                     ("DEAD", 7, 7))
 
     def test_ranged_enemies_ignore_melee_slots_and_hold_their_firing_distance(self):
         world, enemy = encounter(invincible=True)

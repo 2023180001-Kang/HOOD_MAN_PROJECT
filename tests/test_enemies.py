@@ -209,28 +209,6 @@ class EnemyTests(unittest.TestCase):
         world.update(config.FIXED_DT)
         self.assertEqual((world.stage_index, len(world.enemies)), (2, 9))
 
-    def test_spawning_while_carrying_keeps_the_pair_and_adds_only_the_requested_enemies(self):
-        world = World()
-        enemy = Enemy(world.player.x + 80, -1)
-        world.enemies = [enemy]
-        enemy.x, enemy.ground_y, enemy.facing = world.player.x + 80, 100, -1
-        enemy.animation.set_state("ATTACK")
-        enemy.animation.elapsed = 2 / enemy.attack_fps
-        world.controls.press("counter_j")
-        world.step(config.FIXED_DT)
-        advance(world, 0.4)
-        self.assertIsNotNone(world.counter)
-        self.assertTrue(world.counter.holding)
-        sequence = world.counter
-        world.controls.press("spawn_6")
-        world.update(1 / 60)
-        self.assertEqual(world.stage_index, 0)
-        self.assertIs(world.counter, sequence)
-        self.assertIsNotNone(world.player.counter_move)
-        self.assertIsNotNone(enemy.counter_move)
-        self.assertEqual(enemy.jump_height, config.COUNTER_CARRY_HEIGHT)
-        self.assertEqual((len(world.enemies), world.spawner.spawned_count), (7, 6))
-
     def test_distant_enemies_keep_independent_ai_before_melee_spacing(self):
         world = World()
         world.enemies = [Enemy(500), Enemy(500)]

@@ -3,7 +3,6 @@ import unittest
 
 import config
 from combat import MOVES
-from counter import COUNTERS
 from drop_items import DropItem
 from tests.helpers import advance, tap
 from tests.test_combat import attacking_enemy
@@ -122,14 +121,12 @@ class WeaponPickupTests(unittest.TestCase):
         self.assertIsNone(world.player.weapon)
         self.assertEqual(world.stage.drop_items, [item])
 
-    def test_death_counter_and_loading_consume_g_without_queuing_an_interaction(self):
-        for blocked in ("death", "counter", "loading"):
+    def test_death_and_loading_consume_g_without_queuing_an_interaction(self):
+        for blocked in ("death", "loading"):
             with self.subTest(blocked=blocked):
                 world, item = encounter()
                 if blocked == "death":
                     world.player.take_damage(500)
-                elif blocked == "counter":
-                    world.player.counter_move = COUNTERS["counter_h"]
                 else:
                     world.pending_stage_index = 1
                     world.stage_loading_remaining = 2
@@ -138,10 +135,6 @@ class WeaponPickupTests(unittest.TestCase):
                 self.assertIsNone(world.player.weapon)
                 self.assertEqual(world.stage.drop_items, [item])
                 self.assertNotIn("weapon_interact", world.controls.pressed)
-                if blocked == "counter":
-                    world.player.counter_move = None
-                    world.step(config.FIXED_DT)
-                    self.assertIsNone(world.player.weapon)
 
     def test_equipment_survives_travel_and_inactive_dropped_weapons_pause(self):
         world, _ = encounter()
@@ -193,9 +186,6 @@ class WeaponPickupTests(unittest.TestCase):
             self.assertEqual(player.sprite_image, config.COMBAT_IMAGE)
             self.assertEqual(player.active_move.damage, 10)
             player.cancel_combat()
-            player.start_counter(COUNTERS["counter_h"], 1)
-            self.assertEqual(player.sprite_image, config.COUNTER_PLAYER_IMAGE)
-            player.counter_move = None
         player.hit_by_car(1)
         self.assertEqual(player.sprite_image, config.PLAYER_CAR_HIT_IMAGE)
 

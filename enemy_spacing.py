@@ -53,7 +53,7 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
         if (not enemy.uses_melee_slots or not same_floor(player, enemy)
                 or enemy.navigation_target is not None or enemy.falling_from_upper
                 or not player.alive or not enemy.alive or enemy.knockback_started
-                or enemy.counter_move is not None or enemy.leaping
+                or enemy.leaping
                 or enemy.state in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")):
             enemy.formation_slot = None
             continue
@@ -71,7 +71,7 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
     left, right, padding = encounter_envelope(enemies)
     desired_gap = right - left + config.ENEMY_SPACING_MARGIN
     body_gap = config.PLAYER_HALF_WIDTH + config.ENEMY_HALF_WIDTH
-    # Both sides can really connect: rear slots must remain counterable even
+    # Both sides can really connect: rear slots must remain reachable even
     # with the player's shortest basic attack, not just trigger enemy animation.
     reach = min(config.ENEMY_ATTACK_REACH + config.PLAYER_HALF_WIDTH,
                 min(move.reach for move in MOVES.values()) + config.ENEMY_HALF_WIDTH)
@@ -134,7 +134,7 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
               if enemy.uses_melee_slots and same_floor(player, enemy)
               and enemy.navigation_target is None and not enemy.falling_from_upper
               and player.alive and enemy.alive and not enemy.knockback_started
-              and enemy.counter_move is None and not enemy.leaping
+              and not enemy.leaping
               and enemy.state not in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")]
     left, right, _ = encounter_envelope(enemies)
     width = right - left + config.ENEMY_SPACING_MARGIN

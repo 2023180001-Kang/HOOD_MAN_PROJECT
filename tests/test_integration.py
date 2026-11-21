@@ -91,6 +91,7 @@ class IntegrationTests(unittest.TestCase):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             metadata = json.load(file)
         row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.ENEMY02_IMAGE: 7,
+                      config.AXE_ENEMY_IMAGE: 7,
                       config.COMBAT_IMAGE: 4,
                       config.STRONG_ATTACK_IMAGE: 5, config.STRONG_HIT_IMAGE: 5,
                       config.COUNTER_PLAYER_IMAGE: 4, config.COUNTER_ENEMY_IMAGE: 4,

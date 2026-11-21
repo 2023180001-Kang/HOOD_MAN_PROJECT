@@ -15,6 +15,7 @@ from walkable import default_area
 class Enemy:
     stair_following = True
     death_drop_kind = "metal_club"
+    max_hp = config.ENEMY_MAX_HP
     boundary_padding = config.ENEMY_BOUNDARY_PADDING
     image_name = config.ENEMY_IMAGE
     animations = config.ENEMY_ANIMATIONS
@@ -47,7 +48,7 @@ class Enemy:
         self.knockback_started = False
         self.run_speed = config.ENEMY_RUN_SPEEDS[0] if run_speed is None else run_speed
         self.running = False
-        self.hp = config.ENEMY_MAX_HP
+        self.hp = self.max_hp
         self.death_drop_spawned = False
         self.corpse_elapsed = 0.0
         self.car_hit = False

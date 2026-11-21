@@ -439,7 +439,9 @@ def check_factory_exterior(game):
     game.world.stage_index = 4
     player = game.world.player
     source = game.world.stage
-    source.enemies.append(Enemy(1400))
+    enemy = source.spawner.spawn(1, game.world.elapsed)[0]
+    enemy.x = enemy.previous_x = 1400
+    source.enemies.append(enemy)
     source.enemies[0].take_damage(40)
     player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
     player.ground_y = 116
@@ -461,7 +463,7 @@ def check_factory_exterior(game):
     player.x, player.vx = config.STAGE_EXIT_MARGIN, -config.RUN_SPEED
     tick(game)
     assert game.world.stage is source and not game.world.stage_loading
-    assert source.enemies[0].hp == 160 and exterior.spawner.spawned_count == 2
+    assert source.enemies[0].hp == 360 and exterior.spawner.spawned_count == 2
     assert player.hp == 420 and player.invincible
     capture(game, "factory_outside_returned_from_exterior")
     for key in (pico2d.SDLK_n, pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT, pico2d.SDLK_2):

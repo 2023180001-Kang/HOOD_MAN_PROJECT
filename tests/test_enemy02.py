@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import Mock
 
 import config
+from axe_enemy import AxeEnemy
 from collision import bodies_overlap
 from combat import STRONG_MOVES
 from counter import can_counter
@@ -47,12 +48,16 @@ class Enemy02Tests(unittest.TestCase):
                 world.controls.press("spawn_4")
                 world.update(config.FIXED_DT)
                 world.controls.release("spawn_4")
-                expected = Enemy02 if stage.image_name in ("cityStage-1.png", "cityStage-2.png") else Enemy
+                expected, hp = Enemy, 200
+                if stage.image_name == config.FACTORY_OUTSIDE_IMAGE:
+                    expected, hp = AxeEnemy, 400
+                elif stage.image_name in config.ENEMY02_STAGE_IMAGES:
+                    expected = Enemy02
                 self.assertEqual(len(stage.enemies), 4)
                 self.assertEqual(stage.spawner.spawned_count, 4)
                 self.assertTrue(all(type(enemy) is expected for enemy in stage.enemies))
                 for enemy in stage.enemies:
-                    self.assertEqual(enemy.hp, 200)
+                    self.assertEqual(enemy.hp, hp)
                     self.assertTrue(stage.spawn_area.contains(enemy.x, enemy.ground_y,
                                                               enemy.boundary_padding))
                     self.assertEqual(enemy.facing, 1 if enemy.x < config.START_X else -1)

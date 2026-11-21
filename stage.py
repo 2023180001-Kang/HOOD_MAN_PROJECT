@@ -4,6 +4,7 @@ from math import ceil, floor, sin, sqrt, tau
 import random
 
 import config
+from axe_enemy import AxeEnemy
 from doors import StageDoor
 from drop_items import spawn_drop_items
 from enemy import Enemy
@@ -41,10 +42,14 @@ class Stage:
         spawn_bounds = config.STAGE_ENEMY_SPAWN_BOUNDS.get(self.image_name)
         self.spawn_area = (WalkableArea.rectangle(*spawn_bounds) if spawn_bounds is not None
                            else self.walkable)
+        enemy_type = Enemy
+        if self.image_name == config.FACTORY_OUTSIDE_IMAGE:
+            enemy_type = AxeEnemy
+        elif self.image_name in config.ENEMY02_STAGE_IMAGES:
+            enemy_type = Enemy02
         self.spawner = SpawnManager(rng=rng, walkable=self.walkable, spawn_area=self.spawn_area,
                                     attack_sequence=attack_sequence,
-                                    enemy_type=Enemy02 if self.image_name in config.ENEMY02_STAGE_IMAGES
-                                    else Enemy, extra_sources=self.open_door_spawns)
+                                    enemy_type=enemy_type, extra_sources=self.open_door_spawns)
         self.traffic = None  # Road traffic is retired; no stage creates cars.
 
     def constrain_actor(self, actor):

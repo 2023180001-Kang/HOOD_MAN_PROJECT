@@ -165,7 +165,7 @@ class FactoryStageTests(unittest.TestCase):
         self.assertFalse(world.stage_loading)
         self.assertIs(world.stage, source)
         self.assertIs(source.enemies[0], enemy)
-        self.assertEqual(enemy.hp, 160)
+        self.assertEqual(enemy.hp, 360)
         self.assertEqual(exterior.spawner.spawned_count, 0)
         self.assertEqual(exterior.enemies, [])
         self.assertEqual((player.ground_y, player.jump_height, player.vy, player.jump_count),

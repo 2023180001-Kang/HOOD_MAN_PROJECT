@@ -191,6 +191,9 @@ COUNTER_MOVE_SPECS = (
     ("l", "회전 발차기", 4, 5),
 )
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
+AXE_ENEMY_IMAGE = "axe_enemy_pico2d_2048x1792.png"
+AXE_ENEMY_MAX_HP = 400
+AXE_ENEMY_DAMAGE = 60
 ENEMY02_IMAGE = "HOOD_MAN_enemy02.png"
 ENEMY02_STAGE_IMAGES = ("cityStage-1.png", "cityStage-2.png")
 ENEMY02_BOUNDARY_PADDING = 128.0  # Living attack/effect envelope reaches 126.75px.
@@ -390,6 +393,11 @@ ENEMY_ANIMATIONS = {
     "KNOCKBACK": (5, 12.0, False),
     "DYING": (6, 10.0, False),
     "DEAD": (6, 10.0, False),
+}
+# Rows 1..6 match the street thug. Row 7 is reserved stun art, never a state.
+AXE_ENEMY_ANIMATIONS = {
+    **ENEMY_ANIMATIONS,
+    "CAR_HIT": (6, CAR_HIT_FPS, False),
 }
 ENEMY02_ANIMATIONS = {
     **ENEMY_ANIMATIONS,

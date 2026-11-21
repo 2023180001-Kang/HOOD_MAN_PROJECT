@@ -121,9 +121,10 @@ class EnemyDeathDropTests(unittest.TestCase):
             initial = len(world.stage.drop_items)
             world.enemies = world.spawner.spawn(3, world.elapsed)
             for enemy in world.enemies:
-                enemy.take_damage(200)
+                enemy.take_damage(enemy.max_hp)
             world.step(config.FIXED_DT)
-            expected = 0 if world.stage.image_name in config.ENEMY02_STAGE_IMAGES else 3
+            excluded = (*config.ENEMY02_STAGE_IMAGES, config.FACTORY_OUTSIDE_IMAGE)
+            expected = 0 if world.stage.image_name in excluded else 3
             self.assertEqual(len(clubs(world)), expected)
             self.assertEqual(len(world.stage.drop_items), initial + expected)
 

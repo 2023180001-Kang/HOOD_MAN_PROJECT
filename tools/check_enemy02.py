@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 import pico2d
 
 import config
+from axe_enemy import AxeEnemy
 from collision import bodies_overlap
 from combat import MOVES
 from enemy import Enemy
@@ -56,14 +57,15 @@ def set_frame(world, enemy, frame):
 def check_city_summons(game):
     game.world = World(rng=random.Random(32))
     textures = dict(game.assets.images)
-    for number in range(1, 11):
+    for number in range(1, len(config.STAGE_IMAGES) + 1):
         game.world.select_stage(number - 1)
         assert not game.world.enemies and game.world.spawner.spawned_count == 0
         push_key(pico2d.SDLK_4)
         tick(game)
         release(game, pico2d.SDLK_4)
         world = game.world
-        expected = Enemy02 if number in (3, 4) else Enemy
+        expected = (AxeEnemy if world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE else
+                    Enemy02 if world.stage.image_name in config.ENEMY02_STAGE_IMAGES else Enemy)
         assert world.stage_index == number - 1
         assert len(world.enemies) == world.spawner.spawned_count == 4
         assert all(type(enemy) is expected for enemy in world.enemies)
@@ -76,7 +78,7 @@ def check_city_summons(game):
                     capture(game, f"enemy02_city_{number - 2}_{side}")
                 assert any("몽둥이 60 / 착지 80" in call.args[2] for call in draw.call_args_list)
         assert all(game.assets.images[name] is image for name, image in textures.items())
-    print("PASS: SDL 4 summons four enemy02 actors on city stages, old actors elsewhere; "
+    print("PASS: SDL 4 summons enemy02 on city stages, axe enemies at the dock, old actors elsewhere; "
           "spawn floors/texture reuse and the real 60/80 HUD text verified.")
 
 
@@ -335,8 +337,9 @@ def check_natural_encounter_and_restart(game):
         release(game, pico2d.SDLK_4)
     for index, stage in enumerate(game.world.stages):
         assert len(stage.enemies) == stage.spawner.spawned_count == (4 if index in (0, 3) else 0)
-        expected = Enemy02 if index in (2, 3) else Enemy
-        assert all(type(enemy) is expected and enemy not in old_enemies and enemy.hp == 200
+        expected = (AxeEnemy if stage.image_name == config.FACTORY_OUTSIDE_IMAGE else
+                    Enemy02 if stage.image_name in config.ENEMY02_STAGE_IMAGES else Enemy)
+        assert all(type(enemy) is expected and enemy not in old_enemies and enemy.hp == enemy.max_hp
                    for enemy in stage.enemies)
     print("PASS: natural four-enemy city combat uses ranged leaps/close attacks without touching spawn RNG; "
           "SDL F5 clears all groups and fresh numeric input summons the correct full-health type.")

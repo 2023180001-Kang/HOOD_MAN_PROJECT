@@ -130,7 +130,7 @@ class UI:
             left = enemy.x - camera_x - config.ENEMY_HP_BAR_WIDTH / 2
             bottom = enemy.y - camera_y + height + config.ENEMY_HP_BAR_GAP
             right = left + config.ENEMY_HP_BAR_WIDTH
-            ratio = clamp(enemy.hp / config.ENEMY_MAX_HP, 0.0, 1.0)
+            ratio = clamp(enemy.hp / enemy.max_hp, 0.0, 1.0)
             pico2d.draw_rectangle(left - 1, bottom - 1, right,
                                   bottom + config.ENEMY_HP_BAR_HEIGHT, 12, 12, 16, filled=True)
             pico2d.draw_rectangle(left, bottom, right - 1,
@@ -235,6 +235,9 @@ class UI:
                 clubs, slam = config.ENEMY02_ATTACKS["clubs"][1], config.ENEMY02_ATTACKS["slam"][1]
                 counter_help = (f"적 공격: 몽둥이 {clubs} / 착지 {slam}   "
                                 f"반격: 지상 공격 중 {config.COUNTER_RANGE:g}px 내")
+            elif world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE:
+                counter_help = (f"적 공격: 도끼 {config.AXE_ENEMY_DAMAGE}   "
+                                f"반격: 도끼 공격 중 {config.COUNTER_RANGE:g}px 내")
             else:
                 counter_help = (f"적 공격 피해: {config.ENEMY_DAMAGE}   "
                                 f"반격: 쇠파이프 공격 중 {config.COUNTER_RANGE:g}px 내")

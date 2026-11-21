@@ -1,5 +1,6 @@
-"""Actual SDL verification of factory researchers, pistol bullets and reloads."""
+"""Actual SDL verification of researchers, warnings, ballistic bullets and reloads."""
 
+from math import sqrt
 from pathlib import Path
 import random
 import sys
@@ -15,6 +16,7 @@ import pico2d
 
 import config
 from game import Game
+from projectiles import ResearcherBullet
 from researcher import Researcher
 from tools.check_damage_numbers import capture_number
 from tools.check_render import capture, render_image
@@ -367,6 +369,151 @@ def check_dodges_and_invincibility(game):
           "a lethal bullet starts normal DYING rather than HIT.")
 
 
+def capture_ballistic_pixels(game, bullet, name):
+    image = capture(game, name).convert("RGB")
+    with patch.object(game.assets, "draw_projectile"):
+        clean = render_image(game).convert("RGB")
+    box = ImageChops.difference(image, clean).getbbox()
+    assert box is not None and box[2] - box[0] <= 27 and box[3] - box[1] <= 8, box
+    screen_y = bullet.y - game.world.camera.render_y
+    assert abs((box[1] + box[3]) / 2 - (config.SCREEN_HEIGHT - screen_y)) <= 4, box
+
+
+def check_ballistic_flight(game):
+    details = game.ui.details_visible
+    game.ui.details_visible = False
+    try:
+        for index in (6, 7):
+            for facing in (-1, 1):
+                world, enemy = encounter(game, index=index, side=-facing)
+                enemy.x = enemy.previous_x = 300 if facing > 0 else config.WORLD_WIDTH - 300
+                player = world.player
+                player.x = player.previous_x = enemy.x + facing * 300
+                world.update_camera(0)
+                wait(game, lambda: bool(world.projectiles))
+                bullet = world.projectiles[0]
+                origin = bullet.x - facing * config.RESEARCHER_BULLET_SPEED * bullet.elapsed
+                height, depth = bullet.height, bullet.ground_y
+                enemy.take_damage(enemy.hp)
+                push_key(pico2d.SDLK_DOWN)
+                tick(game, 12)
+                release(game, pico2d.SDLK_DOWN)
+                while not bullet.falling:
+                    assert bullet in world.projectiles and bullet.height == height
+                    tick(game)
+                # A shot may be born halfway through a two-step rendered frame.
+                # Inspect the first rendered frame past the exact range boundary.
+                fall_time = bullet.elapsed - bullet.straight_duration
+                assert bullet in world.projectiles and 0 <= fall_time <= 1 / 60 + 1e-8
+                assert abs(bullet.height - (height - config.RESEARCHER_BULLET_GRAVITY
+                                            * fall_time ** 2 / 2)) < 1e-8
+                assert abs(abs(bullet.x - origin)
+                           - config.RESEARCHER_BULLET_SPEED * bullet.elapsed) < 1e-8
+                view_x = max(0, min(config.WORLD_WIDTH - config.SCREEN_WIDTH,
+                                    bullet.x + facing * 200 - config.SCREEN_WIDTH / 2))
+                world.camera.x = view_x
+                capture_ballistic_pixels(game, bullet, f"researcher_fall_{index}_{facing}_range")
+                for frame in range(1, 31):
+                    tick(game)
+                    if bullet not in world.projectiles:
+                        break
+                    fall_time = bullet.elapsed - bullet.straight_duration
+                    assert abs(bullet.height - (height - config.RESEARCHER_BULLET_GRAVITY
+                                                * fall_time ** 2 / 2)) < 1e-8
+                    assert abs(bullet.x - (origin + facing
+                                          * config.RESEARCHER_BULLET_SPEED * bullet.elapsed)) < 1e-8
+                    assert (bullet.floor, bullet.ground_y) == (0, depth) and bullet.vy < 0
+                    if frame in (6, 12, 18, 24):
+                        world.camera.x = view_x
+                        snapshot = bullet.x, bullet.height, bullet.elapsed, bullet.vy
+                        capture_ballistic_pixels(game, bullet, f"researcher_fall_{index}_{facing}_{frame}")
+                        if frame == 12:
+                            world.camera.offset_y = 4
+                            capture_ballistic_pixels(game, bullet,
+                                                     f"researcher_fall_{index}_{facing}_shake")
+                            world.camera.offset_y = 0
+                        assert (bullet.x, bullet.height, bullet.elapsed, bullet.vy) == snapshot
+                assert bullet not in world.projectiles and bullet.finished
+                expected_time = bullet.straight_duration + sqrt(
+                    2 * (height - config.RESEARCHER_BULLET_HALF_HEIGHT)
+                    / config.RESEARCHER_BULLET_GRAVITY)
+                assert abs(bullet.elapsed - expected_time) < 1e-8
+                assert bullet.height == config.RESEARCHER_BULLET_HALF_HEIGHT
+                assert player.hp == 500 and not world.effects and world.camera.shake_remaining == 0
+                assert len(world.stage.drop_items) == 15
+                world.camera.x = view_x
+                with patch.object(game.assets, "draw_projectile", wraps=game.assets.draw_projectile) as draw:
+                    capture(game, f"researcher_fall_{index}_{facing}_ground_removed")
+                draw.assert_not_called()
+    finally:
+        game.ui.details_visible = details
+    print("PASS: actual shots in both interiors/directions keep all 1125px of straight flight, "
+          "survive the shooter, then show real curved descending bullet pixels at 6/12/18/24 "
+          "frames, with camera/shake alignment; ground contact removes the bullet immediately "
+          "without a corpse, drop, impact, damage or shake.")
+
+
+def check_ballistic_hits_and_pause(game):
+    for index in (6, 7):
+        for facing in (-1, 1):
+            for invincible in (False, True):
+                game.world = World()
+                world = game.world
+                world.select_stage(index)
+                bullet = ResearcherBullet(300 if facing > 0 else config.WORLD_WIDTH - 300,
+                                          100, 300, facing)
+                player = world.player
+                player.x = player.previous_x = (bullet.x + facing
+                                                * (config.RESEARCHER_BULLET_STRAIGHT_RANGE
+                                                   + config.RESEARCHER_BULLET_SPEED * 0.6))
+                world.projectiles.append(bullet)
+                if invincible:
+                    push_key(pico2d.SDLK_p)
+                    tick(game)
+                    release(game, pico2d.SDLK_p)
+                wait(game, lambda: not world.projectiles)
+                assert bullet.falling and bullet.spent
+                assert player.hp == (500 if invincible else 470)
+                assert len(world.effects) == (0 if invincible else 1)
+                if not invincible:
+                    assert player.state == "HIT" and world.effects[0].image_name == config.CLUB_HIT_IMAGE
+                    assert abs(world.effects[0].y - bullet.y) < 1e-8
+                    assert world.camera.shake_remaining > 0
+                capture(game, f"researcher_fall_hit_{index}_{facing}_{invincible}")
+        game.world = World()
+        world = game.world
+        world.select_stage(index)
+        straight = config.RESEARCHER_BULLET_STRAIGHT_RANGE / config.RESEARCHER_BULLET_SPEED
+        bullet = ResearcherBullet(900, world.stage.walkable.bounds[3], 78.75, 1, elapsed=straight + 0.1)
+        world.projectiles.append(bullet)
+        push_key(pico2d.SDLK_r)
+        tick(game, 6)
+        release(game, pico2d.SDLK_r)
+        assert world.time_scale == 0.2
+        assert abs(bullet.elapsed - straight - 0.12) < 1e-8
+        assert abs(bullet.height - (83.25 - config.RESEARCHER_BULLET_GRAVITY * 0.12 ** 2 / 2)) < 1e-8
+        capture_ballistic_pixels(game, bullet, f"researcher_fall_{index}_slow")
+        snapshot = bullet.x, bullet.height, bullet.elapsed, bullet.vy
+        world.select_stage(5)
+        tick(game, 30)
+        world.select_stage(index)
+        assert (bullet.x, bullet.height, bullet.elapsed, bullet.vy) == snapshot
+        world.pending_stage_index = 5 if index == 6 else 8
+        world.stage_loading_remaining = config.STAGE_LOADING_DURATION
+        game.update(0.5)
+        assert (bullet.x, bullet.height, bullet.elapsed, bullet.vy) == snapshot
+        with patch.object(game.assets, "draw_projectile", wraps=game.assets.draw_projectile) as draw:
+            capture(game, f"researcher_fall_{index}_loading")
+        draw.assert_not_called()
+        push_key(pico2d.SDLK_F5)
+        tick(game)
+        release(game, pico2d.SDLK_F5)
+        assert world.stage_index == 0 and all(not stage.projectiles for stage in world.stages)
+    print("PASS: curved rounds in both interiors/directions deal 30/HIT/existing impact once "
+          "at the real height; SDL P consumes them harmlessly. Actual SDL R scales the fall, "
+          "inactive/loading frames freeze height/velocity/time, loading hides it, and F5 clears it.")
+
+
 def check_restart(game):
     world, enemy = encounter(game, invincible=True)
     wait(game, lambda: bool(world.projectiles))
@@ -425,6 +572,8 @@ def main():
         check_health_and_damage(game)
         check_magazines_and_hits(game)
         check_dodges_and_invincibility(game)
+        check_ballistic_flight(game)
+        check_ballistic_hits_and_pause(game)
         check_restart(game)
         check_performance(game)
     finally:

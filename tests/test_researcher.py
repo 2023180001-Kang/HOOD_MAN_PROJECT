@@ -419,15 +419,20 @@ class ResearcherTests(unittest.TestCase):
                                        bullet.impact_x - 20)
         self.assertIsNone(Researcher(1000).death_drop_kind)
 
-    def test_bullet_lifetime_and_world_bounds_remove_misses(self):
+    def test_world_bounds_remove_misses_but_former_lifetime_now_starts_falling(self):
         player = Player()
         for x, facing in ((0, -1), (config.WORLD_WIDTH, 1)):
             bullet = bullet_at(player, x=x, facing=facing)
             bullet.update(0.1, player)
             self.assertTrue(bullet.finished)
         bullet = bullet_at(player, height=400)
-        bullet.update(config.RESEARCHER_BULLET_LIFETIME, player)
-        self.assertTrue(bullet.finished)
+        bullet.update(config.RESEARCHER_BULLET_STRAIGHT_RANGE / config.RESEARCHER_BULLET_SPEED, player)
+        self.assertTrue(bullet.falling)
+        self.assertEqual(bullet.height, 400)
+        self.assertFalse(bullet.finished)
+        bullet.update(0.1, player)
+        self.assertLess(bullet.height, 400)
+        self.assertFalse(bullet.finished)
 
     def test_firing_reloading_and_projectiles_are_render_rate_independent(self):
         outcomes = []

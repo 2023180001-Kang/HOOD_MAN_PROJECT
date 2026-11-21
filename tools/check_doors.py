@@ -159,7 +159,7 @@ def check_air_conditioner_foreground(game):
 
 
 def check_numeric_spawns(game):
-    expected = {("door", 0, 0): (291.5, 268),
+    expected = {("door", 0, 0): (291.5, 277),
                 ("door", 1, 0): (1438.5, 266),
                 ("door", 1, 1): (1905.5, 266)}
     observed_sources = set()
@@ -203,7 +203,7 @@ def check_numeric_spawns(game):
                 if source[0] == "door":
                     assert (x, y) == expected[source], (source, x, y)
                 else:
-                    assert x in (88, 2472) and 56 <= y <= 268
+                    assert x in (88, 2472) and -3 <= y <= 277
             assert all(enemy.floor == 0 and enemy.staircase is None
                        and world.stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                        for enemy in world.enemies)
@@ -231,7 +231,7 @@ def check_single_floor_and_revisit(game):
     push_key(pico2d.SDLK_LSHIFT)
     tick(game, 45)
     release(game, pico2d.SDLK_LSHIFT)
-    assert world.player.ground_y == 268 and world.player.staircase is None
+    assert world.player.ground_y == 277 and world.player.staircase is None
     push_key(pico2d.SDLK_SPACE)
     tick(game, 3)
     release(game, pico2d.SDLK_SPACE)
@@ -244,7 +244,7 @@ def check_single_floor_and_revisit(game):
         assert world.player.floor == 0 and world.player.staircase is None
         assert not world.player.falling_from_upper
     release(game, pico2d.SDLK_UP)
-    assert world.player.grounded and world.player.ground_y == 268
+    assert world.player.grounded and world.player.ground_y == 277
     assert len(world.stage.drop_items) == 15
     assert all(item.floor == 0 and item.grounded for item in world.stage.drop_items)
     capture(game, "flat_map_jump_landed")

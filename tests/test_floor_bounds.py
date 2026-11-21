@@ -86,10 +86,10 @@ class FloorBoundsTests(unittest.TestCase):
         game.ui.floor_bounds_visible = True
         camera_x, camera_y = 640, -4
         expected = [
-            (68 - camera_x, 56 - camera_y, 2492 - camera_x, 56 - camera_y),
-            (2492 - camera_x, 56 - camera_y, 2492 - camera_x, 268 - camera_y),
-            (2492 - camera_x, 268 - camera_y, 68 - camera_x, 268 - camera_y),
-            (68 - camera_x, 268 - camera_y, 68 - camera_x, 56 - camera_y),
+            (68 - camera_x, -3 - camera_y, 2492 - camera_x, -3 - camera_y),
+            (2492 - camera_x, -3 - camera_y, 2492 - camera_x, 277 - camera_y),
+            (2492 - camera_x, 277 - camera_y, 68 - camera_x, 277 - camera_y),
+            (68 - camera_x, 277 - camera_y, 68 - camera_x, -3 - camera_y),
         ]
         for height in (0, 240):
             game.world.player.jump_height = height

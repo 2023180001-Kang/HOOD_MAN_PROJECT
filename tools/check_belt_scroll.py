@@ -109,6 +109,84 @@ def check_floor_toggle(game):
           "P invincibility remains an independent toggle.")
 
 
+def check_full_first_floor(game):
+    visible, details = game.ui.floor_bounds_visible, game.ui.details_visible
+    game.ui.floor_bounds_visible, game.ui.details_visible = True, False
+    try:
+        for weapon in (None, *config.WEAPON_POSE_IMAGES):
+            for running in (False, True):
+                for side in (-1, 1):
+                    for depth in (-1, 1):
+                        game.world = World(item_rng=random.Random(23))
+                        world, player = game.world, game.world.player
+                        assert world.stage.walkable.bounds == (0, -3, 2560, 277)
+                        player.equip_weapon(weapon)
+                        player.x = player.previous_x = 300 if side < 0 else 2260
+                        keys = (pico2d.SDLK_LEFT if side < 0 else pico2d.SDLK_RIGHT,
+                                pico2d.SDLK_DOWN if depth < 0 else pico2d.SDLK_UP)
+                        if running:
+                            keys += (pico2d.SDLK_LSHIFT,)
+                        for key in keys:
+                            push_key(key)
+                        for _ in range(90):
+                            tick(game)
+                            inside(world)
+                        release(keys)
+                        game.handle_events()
+                        assert (player.x, player.ground_y, player.jump_height, player.floor) == (
+                            68 if side < 0 else 2492, -3 if depth < 0 else 277, 0, 0)
+                        assert 0 <= player.y - world.camera.render_y < config.SCREEN_HEIGHT
+                        with patch.object(pico2d, "draw_line", wraps=pico2d.draw_line) as draw:
+                            if weapon is None:
+                                capture(game, f"first_floor_full_{'run' if running else 'walk'}_{side}_{depth}")
+                            else:
+                                render_image(game)
+                        endpoints = {point for call in draw.call_args_list
+                                     if call.args[4:] == PLAYER_BOUNDS_COLOR
+                                     for point in (call.args[:2], call.args[2:4])}
+                        assert (player.x - world.camera.render_x,
+                                player.ground_y - world.camera.render_y) in endpoints
+                        source_y = (config.GROUND_Y - config.STAGE_GROUND_Y
+                                    + config.STAGE_IMAGE_HEIGHT - player.ground_y)
+                        assert source_y == (900 if depth < 0 else 620)
+        game.world = World(item_rng=random.Random(23))
+        world, player = game.world, game.world.player
+        player.x = player.previous_x = 68
+        player.ground_y = player.previous_ground_y = -3
+        push_key(pico2d.SDLK_RIGHT)
+        push_key(pico2d.SDLK_LSHIFT)
+        for frame in range(240):
+            tick(game)
+            inside(world)
+            assert player.ground_y == -3 and player.grounded
+            if frame == 120:
+                capture(game, "first_floor_full_front_traverse")
+        release((pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT))
+        game.handle_events()
+        assert player.x == 2492
+        for _ in range(2):
+            push_key(pico2d.SDLK_SPACE)
+            tick(game, 3)
+            release((pico2d.SDLK_SPACE,))
+            game.handle_events()
+        assert player.jump_count == 2
+        tick(game, 120)
+        assert player.grounded and player.ground_y == -3 and player.floor == 0
+        push_key(pico2d.SDLK_F5)
+        tick(game)
+        release((pico2d.SDLK_F5,))
+        game.handle_events()
+        assert world.stage.walkable.bounds == (0, -3, 2560, 277)
+        assert game.ui.floor_bounds_visible and not world.player.invincible
+        capture(game, "first_floor_full_restarted")
+    finally:
+        game.ui.floor_bounds_visible, game.ui.details_visible = visible, details
+        game.world = World()
+    print("PASS: all three loadouts walk/run to all four full-pavement corners; F4 matches "
+          "real feet at source rows 620/900, the formerly blocked front band is traversable "
+          "across both map tiles, double jumps land there, and F5 keeps the expanded floor.")
+
+
 def ready(enemies):
     for enemy in enemies:
         enemy.animation.set_state("ATTACK")
@@ -314,6 +392,7 @@ def main():
         game = Game()
         game.handle_events()
         check_floor_toggle(game)
+        check_full_first_floor(game)
         check_movement(game)
         check_jump(game)
         check_depth_and_order(game)

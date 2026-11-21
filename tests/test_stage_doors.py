@@ -57,7 +57,7 @@ class StageDoorTests(unittest.TestCase):
         world.stage.update_doors(1)
         points = world.stage.open_door_spawns()
         self.assertEqual([(point.source, point.x, point.ground_y, point.floor) for point in points],
-                         [(("door", 0, 0), 291.5, 268, 0),
+                          [(("door", 0, 0), 291.5, 277, 0),
                           (("door", 1, 0), 1438.5, 266, 0),
                           (("door", 1, 1), 1905.5, 266, 0)])
         for point in points:
@@ -119,7 +119,7 @@ class StageDoorTests(unittest.TestCase):
         for x in (238, 500, 1280, 1905.5):
             world = World()
             world.player.x = world.player.previous_x = x
-            world.player.ground_y = world.player.previous_ground_y = 268
+            world.player.ground_y = world.player.previous_ground_y = 277
             world.controls.press("up")
             world.controls.press("jump")
             advance(world, 0.05, 120)
@@ -129,7 +129,7 @@ class StageDoorTests(unittest.TestCase):
                 self.assertEqual(world.player.floor, 0)
                 self.assertIsNone(world.player.staircase)
                 self.assertFalse(world.player.falling_from_upper)
-            self.assertEqual(world.player.ground_y, 268)
+            self.assertEqual(world.player.ground_y, 277)
             self.assertTrue(world.player.grounded)
 
     def test_both_sheets_play_all_eight_opening_and_closing_frames_and_hold_the_endpoints(self):

@@ -356,8 +356,9 @@ STAGE_GROUND_ANCHORS = {
 # World-space foot regions, below the buildings/props and above the foreground.
 # Optional convex polygons override a stage's rectangle (counterclockwise vertices).
 STAGE_WALKABLE_BOUNDS = (
-    # Flat first map: source rows 629..841, below the storefront openings.
-    (0.0, 56.0, WORLD_WIDTH, 268.0),
+    # Flat first map: the full paved floor, source rows 620..900.
+    # World y = 100 - 144 + 941 - source_y; stop before the foreground curb/drain.
+    (0.0, -3.0, WORLD_WIDTH, 277.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     (0.0, 56.0, WORLD_WIDTH, 116.0),

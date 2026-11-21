@@ -21,7 +21,7 @@ class StageTests(unittest.TestCase):
     def test_first_stage_uses_flat_background_on_start_and_restart_and_archives_old_art(self):
         world = World()
         self.assertEqual(world.stage.image_name, "changed_first_map_no_door.png")
-        self.assertEqual(world.stage.walkable.bounds, (0, 56, config.WORLD_WIDTH, 268))
+        self.assertEqual(world.stage.walkable.bounds, (0, -3, config.WORLD_WIDTH, 277))
         with Image.open(config.ROOT / world.stage.image_name) as image:
             self.assertEqual(image.size, (1672, 941))
         self.assertNotIn(config.ARCHIVED_TWO_FLOOR_IMAGE, config.STAGE_IMAGES)
@@ -40,8 +40,8 @@ class StageTests(unittest.TestCase):
         world = World(rng=random.Random(29), item_rng=random.Random(13))
         world.controls.press("up")
         world.controls.press("left_shift")
-        advance(world, 0.6)
-        self.assertEqual(world.player.ground_y, 268)
+        advance(world, 0.7)
+        self.assertEqual(world.player.ground_y, 277)
         self.assertEqual(world.player.jump_height, 0)
         self.assertEqual(world.player.ground_vy, 0)
         self.assertTrue(all(world.stage.drop_spawn_area.contains(item.x, item.ground_y)
@@ -53,9 +53,79 @@ class StageTests(unittest.TestCase):
                                                           enemy.boundary_padding))
         world.controls.release("up")
         world.controls.press("down")
-        advance(world, 1)
-        self.assertEqual(world.player.ground_y, 56)
+        advance(world, 1.2)
+        self.assertEqual(world.player.ground_y, -3)
         self.assertEqual(world.player.jump_height, 0)
+
+    def test_first_floor_covers_the_full_source_pavement_without_entering_wall_or_curb(self):
+        world = World()
+        left, bottom, right, top = world.stage.walkable.bounds
+        source_world_top = config.GROUND_Y - config.STAGE_GROUND_Y + config.STAGE_IMAGE_HEIGHT
+        self.assertEqual((source_world_top - top, source_world_top - bottom), (620, 900))
+        self.assertEqual((left, right), (0, config.WORLD_WIDTH))
+        for x in (68, 300, 1280, 1672, 2260, 2492):
+            for y in (-3, 0, 28, 56, 100, 268, 277):
+                self.assertTrue(world.stage.walkable.contains(x, y, world.player.boundary_padding))
+        self.assertFalse(world.stage.walkable.contains(1280, -3.01, 68))
+        self.assertFalse(world.stage.walkable.contains(1280, 277.01, 68))
+        self.assertEqual(config.STAGE_WALKABLE_BOUNDS[1:],
+                         ((0, 56, 2560, 116), (0, 56, 2560, 148), (0, 56, 2560, 116),
+                          (0, 48, 2560, 240), (0, 56, 2560, 100), (0, 56, 2560, 148),
+                          (0, 16, 2560, 200), (0, 56, 2560, 148), (0, 56, 2560, 116),
+                          (0, 56, 2560, 148), (0, 56, 2560, 116)))
+
+    def test_each_loadout_can_walk_and_run_to_all_four_expanded_floor_corners(self):
+        for weapon in (None, *config.WEAPON_POSE_IMAGES):
+            for running in (False, True):
+                for side in (-1, 1):
+                    for depth in (-1, 1):
+                        with self.subTest(weapon=weapon, running=running, side=side, depth=depth):
+                            world = World()
+                            player = world.player
+                            player.equip_weapon(weapon)
+                            player.x = player.previous_x = 300 if side < 0 else 2260
+                            for key in ("left" if side < 0 else "right",
+                                        "down" if depth < 0 else "up"):
+                                world.controls.press(key)
+                            if running:
+                                world.controls.press("left_shift")
+                            advance(world, 1.5)
+                            self.assertEqual((player.x, player.ground_y),
+                                             (68 if side < 0 else 2492, -3 if depth < 0 else 277))
+                            self.assertEqual((player.floor, player.jump_height), (0, 0))
+                            self.assertTrue(player.grounded)
+                            self.assertTrue(world.stage.walkable.contains(
+                                player.x, player.ground_y, player.boundary_padding))
+                            self.assertGreaterEqual(player.y - world.camera.render_y, 0)
+
+    def test_expanded_front_floor_keeps_jump_depth_and_weapon_discard_pickup_on_the_floor(self):
+        for kind in config.WEAPON_POSE_IMAGES:
+            world = World()
+            player = world.player
+            player.ground_y = player.previous_ground_y = -3
+            world.controls.press("jump")
+            advance(world, 0.05)
+            tap(world.controls, "jump")
+            advance(world, 1.5)
+            self.assertTrue(player.grounded)
+            self.assertEqual((player.ground_y, player.jump_height, player.floor), (-3, 0, 0))
+            player.equip_weapon(kind)
+            world.stage.drop_items.clear()
+            tap(world.controls, "weapon_interact")
+            world.step(config.FIXED_DT)
+            self.assertIsNone(player.weapon)
+            item = world.stage.drop_items[0]
+            advance(world, 0.5)
+            self.assertTrue(item.grounded)
+            self.assertTrue(world.stage.walkable.contains(item.x, item.ground_y))
+            tap(world.controls, "weapon_interact")
+            world.step(config.FIXED_DT)
+            self.assertEqual(player.weapon, kind)
+            self.assertEqual(player.ground_y, -3)
+            tap(world.controls, "restart")
+            world.update(config.FIXED_DT)
+            self.assertEqual(world.stage.walkable.bounds, (0, -3, config.WORLD_WIDTH, 277))
+            self.assertEqual(world.player.walkable, world.stage.walkable)
 
     def test_n_reveals_only_the_first_stage_right_arrow_and_is_not_a_toggle(self):
         world = World()

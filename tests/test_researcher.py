@@ -92,6 +92,7 @@ class ResearcherTests(unittest.TestCase):
             enemy.animation.elapsed = 2.9 / enemy.attack_fps
             self.assertIsNone(enemy.take_projectile())
             self.assertEqual(enemy.ammo, 7)
+            enemy.update(config.RESEARCHER_AIM_DURATION, Player())
             enemy.animation.elapsed = 3.05 / enemy.attack_fps
             bullet = enemy.take_projectile()
             self.assertIsInstance(bullet, ResearcherBullet)
@@ -106,6 +107,7 @@ class ResearcherTests(unittest.TestCase):
             enemy = Researcher(1000, facing, ground_y=140)
             enemy.jump_height = 20
             enemy.start_attack()
+            enemy.update(config.RESEARCHER_AIM_DURATION, Player())
             enemy.animation.elapsed = 3.05 / enemy.attack_fps
             bullet = enemy.take_projectile()
             self.assertAlmostEqual(bullet.x - facing * config.RESEARCHER_BULLET_HALF_WIDTH,
@@ -118,6 +120,7 @@ class ResearcherTests(unittest.TestCase):
         enemy = Researcher(player.x + 300, -1)
         for remaining in range(6, -1, -1):
             enemy.start_attack()
+            enemy.update(config.RESEARCHER_AIM_DURATION, player)
             enemy.animation.elapsed = 3.05 / enemy.attack_fps
             self.assertIsNotNone(enemy.take_projectile())
             self.assertEqual(enemy.ammo, remaining)
@@ -274,7 +277,7 @@ class ResearcherTests(unittest.TestCase):
     def test_player_strike_cancels_same_tick_shot_before_ammo_or_projectile_is_emitted(self):
         world, enemy = encounter(gap=80)
         enemy.start_attack()
-        enemy.animation.elapsed = 3 / enemy.attack_fps - config.FIXED_DT
+        enemy.update(config.RESEARCHER_AIM_DURATION - config.FIXED_DT, world.player)
         move = MOVES["combat_s"]
         world.player.start_move(move, 1)
         world.player.animation.elapsed = 3 / move.fps
@@ -298,6 +301,7 @@ class ResearcherTests(unittest.TestCase):
         first.ammo = 0
         first.update(0.5, player)
         second.start_attack()
+        second.update(config.RESEARCHER_AIM_DURATION, player)
         second.animation.elapsed = 3.05 / second.attack_fps
         self.assertIsNotNone(second.take_projectile())
         self.assertEqual((first.ammo, first.state, second.ammo), (0, "RELOAD", 6))

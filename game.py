@@ -12,6 +12,7 @@ from assets import Assets
 from drop_items import DropItem
 from effects import SpriteAfterimage
 from projectiles import ResearcherBullet
+from researcher import Researcher
 from ui import UI
 from world import World
 
@@ -119,6 +120,9 @@ class Game:
         self.world.stage.draw(self.assets, camera_x, camera_y, elapsed=self.world.elapsed)
         self.ui.draw_floor_bounds(self.world, camera_x, camera_y)
         player = self.world.player
+        for enemy in self.world.enemies:
+            if isinstance(enemy, Researcher):
+                self.assets.draw_researcher_aim(enemy, camera_x, camera_y)
         # Stable depth sorting puts older echoes behind newer ones and the
         # live actors on the same floor, without sorting by airborne height.
         sprites = [(image.ground_y, image, image.image_name, image.opacity)

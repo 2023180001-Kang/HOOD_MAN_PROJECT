@@ -80,6 +80,126 @@ def check_summons(game):
           "repeat latch, fresh input, boundaries and shared textures.")
 
 
+def check_warning_pixels(game):
+    image = render_image(game).convert("RGB")
+    with patch.object(game.assets, "draw_researcher_aim"):
+        clean = render_image(game).convert("RGB")
+    delta = ImageChops.difference(image, clean)
+    box = delta.getbbox()
+    assert box is not None and box[3] - box[1] <= 2 * config.RESEARCHER_AIM_DOT_RADIUS + 1, box
+    changed = [(x, y) for y in range(box[1], box[3]) for x in range(box[0], box[2])
+               if delta.getpixel((x, y)) != (0, 0, 0)]
+    # Actors cover the warning; their translucent edge pixels can tint a dot.
+    red = [point for point in changed if image.getpixel(point) == config.RESEARCHER_AIM_COLOR]
+    assert len(red) > 80 and len(red) >= len(changed) * 0.75
+    xs = sorted({x for x, y in red if y == (box[1] + box[3]) // 2})
+    runs = []
+    for x in xs:
+        if not runs or x > runs[-1][-1] + 1:
+            runs.append([])
+        runs[-1].append(x)
+    assert len(runs) >= 8 and all(len(run) <= 2 * config.RESEARCHER_AIM_DOT_RADIUS + 1 for run in runs)
+    assert all(second[0] - first[-1] > 1 for first, second in zip(runs, runs[1:]))
+
+
+def check_aim_warning(game):
+    details = game.ui.details_visible
+    game.ui.details_visible = False
+    try:
+        for index in (6, 7):
+            for side in (-1, 1):
+                for speed in (0.8, 1.4):
+                    world, original = encounter(game, index=index, side=side, invincible=True)
+                    enemy = Researcher(original.x, -side, ground_y=original.ground_y, attack_speed=speed)
+                    enemy.walkable = world.stage.walkable
+                    world.enemies[:] = [enemy]
+                    tick(game)
+                    assert enemy.aiming and enemy.animation.frame == 2 and enemy.ammo == 7
+                    warning = enemy.aim_line
+                    assert warning[1] == warning[3] == enemy.y + config.RESEARCHER_MUZZLE_HEIGHT
+                    assert warning[0] == enemy.x + enemy.facing * config.RESEARCHER_MUZZLE_X
+                    elapsed, remaining = world.elapsed, enemy.aim_remaining
+                    check_warning_pixels(game)
+                    capture(game, f"researcher_aim_{index}_{side}_{speed}_warning")
+                    if speed == 0.8:
+                        for camera_x, shake_y in ((0, -4), (640, 0), (1280, 4)):
+                            world.camera.x, world.camera.offset_y = camera_x, shake_y
+                            check_warning_pixels(game)
+                            capture(game, f"researcher_aim_{index}_{side}_camera_{camera_x}")
+                        world.camera.offset_y = 0
+                        world.update_camera(0)
+                    assert (world.elapsed, enemy.aim_remaining) == (elapsed, remaining)
+                    if index == 6 and side == -1 and speed == 0.8:
+                        for _ in range(2):
+                            push_key(pico2d.SDLK_u)
+                            game.handle_events()
+                            game.update(0)
+                            release(game, pico2d.SDLK_u)
+                            check_warning_pixels(game)
+                        game.ui.details_visible = False
+                    tick(game, 29)
+                    assert enemy.aiming and enemy.ammo == 7 and not world.projectiles
+                    check_warning_pixels(game)
+                    tick(game)
+                    assert not enemy.aiming and enemy.aim_line is None and enemy.ammo == 6
+                    assert len(world.projectiles) == 1 and world.projectiles[0].y == warning[1]
+                    with patch.object(pico2d, "draw_circle", wraps=pico2d.draw_circle) as dots:
+                        capture(game, f"researcher_aim_{index}_{side}_{speed}_fired")
+                    dots.assert_not_called()
+    finally:
+        game.ui.details_visible = details
+    print("PASS: both interiors/facings and 0.8/1.4 attack speeds show real separated red dot "
+          "pixels for 30 rendered frames before firing; raised-pistol pose, muzzle/bullet "
+          "lane, scrolled/shaken views, U-hide and render-only timer stability verified.")
+
+
+def check_aim_interruptions_and_pause(game):
+    for index in (6, 7):
+        world, enemy = encounter(game, index=index, gap=80, invincible=True)
+        tick(game)
+        assert enemy.aiming
+        push_key(pico2d.SDLK_s)
+        wait(game, lambda: enemy.hp < 200)
+        release(game, pico2d.SDLK_s)
+        assert enemy.state == "HIT" and enemy.ammo == 7 and enemy.aim_line is None
+        assert enemy.aim_remaining == 0 and not world.projectiles
+        capture(game, f"researcher_aim_{index}_interrupted")
+
+        world, enemy = encounter(game, index=index, invincible=True)
+        tick(game)
+        snapshot = enemy.aim_remaining, enemy.animation.elapsed, enemy.ammo
+        world.select_stage(5)
+        tick(game, 30)
+        world.select_stage(index)
+        assert (enemy.aim_remaining, enemy.animation.elapsed, enemy.ammo) == snapshot
+        check_warning_pixels(game)
+        world.pending_stage_index = 5 if index == 6 else 8
+        world.stage_loading_remaining = config.STAGE_LOADING_DURATION
+        game.update(0.5)
+        assert (enemy.aim_remaining, enemy.animation.elapsed, enemy.ammo) == snapshot
+        with patch.object(pico2d, "draw_circle", wraps=pico2d.draw_circle) as dots:
+            capture(game, f"researcher_aim_{index}_loading")
+        dots.assert_not_called()
+        push_key(pico2d.SDLK_F5)
+        tick(game)
+        release(game, pico2d.SDLK_F5)
+        assert world.stage_index == 0 and all(not stage.enemies and not stage.projectiles
+                                            for stage in world.stages)
+
+        world, enemy = encounter(game, index=index, invincible=True)
+        push_key(pico2d.SDLK_r)
+        tick(game, 120)
+        release(game, pico2d.SDLK_r)
+        assert world.time_scale == 0.2 and enemy.aiming and enemy.ammo == 7
+        check_warning_pixels(game)
+        capture(game, f"researcher_aim_{index}_slow_warning")
+        wait(game, lambda: enemy.ammo == 6)
+        assert enemy.aim_line is None
+    print("PASS: real SDL S cancels the warning/shot without spending ammo; stage inactivity "
+          "and loading freeze it, loading hides it, F5 clears it, and R slow motion scales "
+          "the half-second warning in both interiors.")
+
+
 def check_source_and_bullet_pixels(game):
     world, enemy = encounter(game, side=-1)
     texture = game.assets.images[config.RESEARCHER_IMAGE]
@@ -98,6 +218,7 @@ def check_source_and_bullet_pixels(game):
                 assert draw.call_args.args[:4] == tuple(tile["clip"])
                 assert draw.call_args.args[5] == ("h" if facing < 0 else "")
         enemy.start_attack()
+        enemy.update(config.RESEARCHER_AIM_DURATION, world.player)
         enemy.animation.elapsed = 3.05 / enemy.attack_fps
         bullet = enemy.take_projectile()
         assert bullet is not None
@@ -169,10 +290,19 @@ def check_magazines_and_hits(game):
             previous_ammo, previous_hp = 7, 500
             reload_frames = set()
             reload_captured = False
+            warning_started = None
+            warning_count = 0
             for _ in range(1200):
+                was_aiming = enemy.aiming
                 tick(game)
+                if enemy.aiming and not was_aiming:
+                    warning_started = world.elapsed
+                    warning_count += 1
                 if enemy.ammo < previous_ammo:
                     assert enemy.ammo == previous_ammo - 1 and enemy.animation.row == 4
+                    assert warning_started is not None
+                    assert abs(world.elapsed - warning_started - config.RESEARCHER_AIM_DURATION) <= 1 / 60 + 1e-8
+                    assert enemy.aim_line is None
                     shots += 1
                     assert shots <= 7 * (reloads + 1)
                     if shots == 1:
@@ -205,8 +335,10 @@ def check_magazines_and_hits(game):
                 if reloads == 2:
                     break
             assert (shots, reloads, impacts, enemy.ammo, world.player.hp) == (14, 2, 14, 7, 80)
+            assert warning_count == 14
     print("PASS: both maps x both directions naturally fire exactly 7, play every row-5 reload "
-          "frame with zero ammo, refill 7, and repeat; 14 real hits deal 420 total with HIT/effects.")
+          "frame with zero ammo, refill 7, and repeat; every shot has a half-second warning, "
+          "and 14 real hits deal 420 total with HIT/effects.")
 
 
 def check_dodges_and_invincibility(game):
@@ -287,6 +419,8 @@ def main():
         game = Game()
         game.handle_events()
         check_summons(game)
+        check_aim_warning(game)
+        check_aim_interruptions_and_pause(game)
         check_source_and_bullet_pixels(game)
         check_health_and_damage(game)
         check_magazines_and_hits(game)

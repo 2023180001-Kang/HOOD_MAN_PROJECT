@@ -185,6 +185,10 @@ RESEARCHER_DAMAGE = 30
 RESEARCHER_MAGAZINE_SIZE = 7
 RESEARCHER_SHOOT_RANGE = 480.0
 RESEARCHER_SHOOT_FRAME = 3  # Muzzle flash in the fourth row, zero-based column.
+RESEARCHER_AIM_DURATION = 0.5  # Game-time warning, independent of attack-speed rolls.
+RESEARCHER_AIM_DOT_SPACING = 12.0
+RESEARCHER_AIM_DOT_RADIUS = 2
+RESEARCHER_AIM_COLOR = (255, 45, 55)
 RESEARCHER_RELOAD_FPS = 8.0
 # Source firing pose: cell center x=128, barrel exit (190, 120), feet y=231.
 RESEARCHER_MUZZLE_X = 46.5

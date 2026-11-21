@@ -91,6 +91,22 @@ class Assets:
             width * scale, height * scale,
         )
 
+    def draw_researcher_aim(self, researcher, camera_x, camera_y):
+        line = researcher.aim_line
+        if line is None:
+            return
+        start_x, height, end_x, _ = line
+        radius = config.RESEARCHER_AIM_DOT_RADIUS
+        y = height - camera_y
+        if not -radius <= y < config.SCREEN_HEIGHT + radius:
+            return
+        distance = abs(end_x - start_x)
+        for index in range(int(distance / config.RESEARCHER_AIM_DOT_SPACING) + 1):
+            x = (start_x + researcher.facing * index * config.RESEARCHER_AIM_DOT_SPACING
+                 - camera_x)
+            if -radius <= x < config.SCREEN_WIDTH + radius:
+                pico2d.draw_circle(x, y, radius, *config.RESEARCHER_AIM_COLOR, filled=True)
+
     def draw_stage_door(self, door, background, tile_x, bottom, scale, *, mirrored=False):
         image = self.images[door.image_name]
         cell = config.DOOR_CELL_SIZE

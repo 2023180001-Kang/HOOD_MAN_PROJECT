@@ -162,6 +162,21 @@ class FloorBoundsTests(unittest.TestCase):
                 ys = [y + camera_y for _, ay, _, by in enemy_lines for y in (ay, by)]
                 self.assertEqual((min(xs), max(xs), min(ys), max(ys)), (88, 2472, 0, 284))
 
+    def test_factory_inside_full_floor_outline_matches_player_and_researcher_foot_bounds(self):
+        game = scene()
+        game.world.select_stage(6)
+        game.ui.floor_bounds_visible = True
+        for camera_x, camera_y in ((0, -44), (640, 8), (1280, 120)):
+            for height in (0, 240):
+                game.world.player.jump_height = height
+                with patch("pico2d.draw_line") as draw:
+                    game.ui.draw_floor_bounds(game.world, camera_x, camera_y)
+                for color, padding in ((PLAYER_BOUNDS_COLOR, 68), (ENEMY_BOUNDS_COLOR, 88)):
+                    lines = [call.args[:4] for call in draw.call_args_list if call.args[4:] == color]
+                    xs = [x + camera_x for ax, _, bx, _ in lines for x in (ax, bx)]
+                    ys = [y + camera_y for _, ay, _, by in lines for y in (ay, by)]
+                    self.assertEqual((min(xs), max(xs), min(ys), max(ys)), (padding, 2560 - padding, -3, 172))
+
     def test_both_lab_floor300_outlines_match_player_and_shield_soldier_foot_bounds(self):
         game = scene()
         game.ui.floor_bounds_visible = True

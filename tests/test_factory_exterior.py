@@ -159,7 +159,7 @@ class FactoryExteriorTests(unittest.TestCase):
     def test_dock_and_interior_travel_preserve_common_depth_and_only_project_outside_values(self):
         cases = ((4, 5, 45, 45), (4, 5, 258, 258),
                  (5, 4, 0, 45), (5, 4, 284, 258),
-                 (5, 6, 0, 56), (5, 6, 284, 148),
+                 (5, 6, 0, 0), (5, 6, 284, 172),
                  (6, 5, 56, 56), (6, 5, 148, 148))
         for source, destination, depth, projected in cases:
             with self.subTest(source=source, destination=destination, depth=depth):

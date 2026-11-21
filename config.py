@@ -392,7 +392,9 @@ STAGE_WALKABLE_BOUNDS = (
     # Expanded factory exterior: source rows 657..941, below wall/prop bases.
     # Keep the original 100px ground anchor: world y = 941 - source_y.
     (0.0, 0.0, WORLD_WIDTH, 284.0),
-    (0.0, 56.0, WORLD_WIDTH, 148.0),
+    # factoryInside-1: full tiled floor below equipment/chair feet, before the front fascia.
+    # Keep the 144px ground anchor: world y = 897 - source_y; source rows 725..900.
+    (0.0, -3.0, WORLD_WIDTH, 172.0),
     # factoryStage-2: source rows 697..881, below equipment and inside the viewport.
     (0.0, 16.0, WORLD_WIDTH, 200.0),
     # New lab floors: below equipment/platform bases, before foreground metal grates.

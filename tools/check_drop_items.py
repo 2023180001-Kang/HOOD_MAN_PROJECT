@@ -259,6 +259,7 @@ def main():
         check_floor_pickup(game)
         check_floor_pickup(game, index=1)
         check_floor_pickup(game, index=5)
+        check_floor_pickup(game, index=6)
         check_floor_pickup(game, index=8)
         check_floor_pickup(game, index=9)
         check_restart(game)

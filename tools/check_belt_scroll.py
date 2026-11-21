@@ -126,6 +126,7 @@ def check_full_floor(game, index=0):
         0: (-3, 277, 620, 900, "first_floor_full"),
         1: (-44, 239, 658, 941, "second_alley_floor300"),
         5: (0, 284, 657, 941, "factory_floor300"),
+        6: (-3, 172, 725, 900, "factory_inside_1_full_floor"),
         8: (-109, 178, 583, 870, "lab_1_floor300"),
         9: (-48, 239, 522, 809, "lab_2_floor300"),
     }[index]
@@ -436,6 +437,7 @@ def main():
         check_full_floor(game)
         check_full_floor(game, index=1)
         check_full_floor(game, index=5)
+        check_full_floor(game, index=6)
         check_full_floor(game, index=8)
         check_full_floor(game, index=9)
         check_movement(game)

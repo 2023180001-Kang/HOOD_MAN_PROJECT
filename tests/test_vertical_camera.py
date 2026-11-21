@@ -151,25 +151,33 @@ class VerticalCameraTests(unittest.TestCase):
                     self.assertLessEqual((tile["clip"][3] + tile.get("offset_y", 0)) * scale,
                                          config.CAMERA_PLAYER_HEIGHT)
 
-    def test_high_tracking_moves_help_panels_below_the_player_and_restores_them_on_landing(self):
-        world = World()
-        ui = UI()
-        assets = SimpleNamespace(images={config.HP_IMAGE: Mock(w=700, h=80)}, font=Mock())
-        place(world, world.player, 1, 2492, 502)
-        world.player.jump_height = 300
-        world.update_camera(0)
-        feet = world.player.y - world.camera.render_y
-        with patch("pico2d.draw_rectangle") as draw:
-            ui.draw(assets, world)
-        panels = [call.args for call in draw.call_args_list if call.args[0] == 688]
-        self.assertEqual(len(panels), 2)
-        self.assertTrue(all(panel[3] < feet for panel in panels))
-        place(world, world.player, 0, 1280, 100)
-        world.update_camera(0)
-        with patch("pico2d.draw_rectangle") as draw:
-            ui.draw(assets, world)
-        self.assertTrue(any(call.args[:4] == (688, 616, config.SCREEN_WIDTH - 20, 704)
-                            for call in draw.call_args_list))
+    def test_help_panels_and_labels_keep_original_positions_at_every_camera_height(self):
+        for weapon in (None, *config.WEAPON_POSE_IMAGES):
+            world = World()
+            world.player.equip_weapon(weapon)
+            ui = UI()
+            ui.floor_bounds_visible = True
+            assets = SimpleNamespace(images={config.HP_IMAGE: Mock(w=700, h=80)}, font=Mock())
+            with patch("pico2d.draw_rectangle") as draw:
+                ui.draw(assets, world)
+            panels = [call.args for call in draw.call_args_list if call.args[0] == 688]
+            labels = [call.args[:2] for call in assets.font.draw.call_args_list]
+            hp = assets.images[config.HP_IMAGE].draw_to_origin.call_args
+            self.assertEqual([panel[:4] for panel in panels],
+                             [(688, 616, config.SCREEN_WIDTH - 20, 704),
+                              (688, 436, config.SCREEN_WIDTH - 20, 610)])
+            for floor, ground_y, height in ((0, 136, 420), (1, 452, 0),
+                                            (1, 502, 300), (0, 56, 0)):
+                place(world, world.player, floor, 1280, ground_y)
+                world.player.jump_height = height
+                world.update_camera(0)
+                assets.font.reset_mock()
+                with patch("pico2d.draw_rectangle") as draw:
+                    ui.draw(assets, world)
+                self.assertEqual([call.args for call in draw.call_args_list if call.args[0] == 688],
+                                 panels)
+                self.assertEqual([call.args[:2] for call in assets.font.draw.call_args_list], labels)
+                self.assertEqual(assets.images[config.HP_IMAGE].draw_to_origin.call_args, hp)
 
     def test_camera_tracking_does_not_change_jump_physics(self):
         snapshots = []

@@ -28,16 +28,67 @@ def visible_sprite(game):
     top = bottom + tile["clip"][3] * scale
     assert 0 <= bottom <= top <= config.SCREEN_HEIGHT
     assert 0 <= camera.render_x <= config.WORLD_WIDTH - config.SCREEN_WIDTH
-    image = render_image(game)
-    with patch.object(game.assets, "draw_sprite"):
-        background = render_image(game)
+    # Fixed help can cover the world at the map edge. Check camera clipping
+    # separately in the existing U-hide mode, without moving any UI.
+    with patch.object(game.ui, "details_visible", False):
+        image = render_image(game)
+        with patch.object(game.assets, "draw_sprite"):
+            background = render_image(game)
     box = ImageChops.difference(image.convert("RGB"), background.convert("RGB")).getbbox()
     assert box is not None
     assert abs((box[3] - box[1]) - tile["clip"][3] * scale) <= 2
 
 
+def help_layout(game):
+    with (patch("pico2d.draw_rectangle", wraps=pico2d.draw_rectangle) as rectangles,
+          patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text):
+        render_image(game)
+    panels = [call.args[:4] for call in rectangles.call_args_list if call.args[0] == 688]
+    labels = [call.args[:2] for call in text.call_args_list
+              if call.args[0] in (704, 974) or call.args[2].startswith(("F3 ", "F4 ", "점프로 계단"))
+              or "키 놓기: 정지" in call.args[2]]
+    assert panels == [(688, 616, config.SCREEN_WIDTH - 20, 704),
+                      (688, 436, config.SCREEN_WIDTH - 20, 610)]
+    return panels, labels
+
+
+def check_fixed_help(game):
+    game.world = World(item_rng=random.Random(5))
+    game.ui.details_visible = True
+    world = game.world
+    baseline = help_layout(game)
+    capture(game, "fixed_attack_help_ground")
+    push_key(pico2d.SDLK_SPACE)
+    tick(game, 3)
+    release(game, pico2d.SDLK_SPACE)
+    push_key(pico2d.SDLK_SPACE)
+    push_key(pico2d.SDLK_UP)
+    for frame in range(120):
+        tick(game)
+        if frame % 10 == 0:
+            assert help_layout(game) == baseline
+        if world.player.floor == 1:
+            break
+    release(game, pico2d.SDLK_SPACE)
+    release(game, pico2d.SDLK_UP)
+    assert world.player.floor == 1 and world.camera.y > 0
+    assert help_layout(game) == baseline
+    capture(game, "fixed_attack_help_upper_landing")
+    push_key(pico2d.SDLK_SPACE)
+    tick(game, 18)
+    release(game, pico2d.SDLK_SPACE)
+    assert world.player.jump_height > 0 and world.camera.y > 0
+    assert help_layout(game) == baseline
+    capture(game, "fixed_attack_help_upper_jump")
+    tick(game, 90)
+    assert help_layout(game) == baseline
+    print("PASS: real SDL double jump + Up reaches floor 2 and jumps again; "
+          "both attack panel rectangles and all attack/F3/F4/stair label coordinates "
+          "stay at their original screen positions throughout.")
+
+
 def check_jumps(game):
-    game.ui.details_visible = True  # Visibility must also hold with the default help panels.
+    game.ui.details_visible = True
     variants = (("normal", False, None), ("double", True, None),
                 ("running_left", True, pico2d.SDLK_LEFT),
                 ("running_right", True, pico2d.SDLK_RIGHT))
@@ -75,8 +126,8 @@ def check_jumps(game):
                         pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT):
                 release(game, key)
     print("PASS: real SDL upstairs normal/double/running jumps with all 3 equipment "
-          "states and both map edges keep the complete rasterized sprite visible; "
-          "jump speeds/floor/landing remain unchanged.")
+          "states and both map edges stay within the viewport, with full sprite pixels "
+          "verified in U-hide mode; jump speeds/floor/landing remain unchanged.")
 
 
 def check_extended_background(game):
@@ -122,6 +173,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
+        check_fixed_help(game)
         check_jumps(game)
         check_extended_background(game)
     finally:

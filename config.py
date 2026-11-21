@@ -335,7 +335,8 @@ STAIR_REGRAB_DELAY = 0.2
 ENEMY_DROP_DELAY_RANGE = (0.0, 0.35)
 FACTORY_OUTSIDE_IMAGE = "factory_loading_dock_no_stairs_1672x941.png"
 ARCHIVED_FACTORY_OUTSIDE_IMAGE = "before_sheets/hood_man_factory_loading_dock_1672x941.png"
-FACTORY_EXTERIOR_IMAGE = "HOOD_MAN_Factory_Exterior_1672x941.png"
+FACTORY_EXTERIOR_IMAGE = "factoryOutside_floor300.px.png"
+ARCHIVED_FACTORY_EXTERIOR_IMAGE = "before_sheets/HOOD_MAN_Factory_Exterior_1672x941.png"
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
 LAB_STAGE_IMAGES = ("labStage-1_new_1672x941.png", "labStage-2_new_1672x941.png")
 BOSS_STAGE_IMAGES = ("bossStage-1.png", "bossStage-2.png")
@@ -379,7 +380,9 @@ STAGE_WALKABLE_BOUNDS = (
     # Stair-free loading dock: full concrete floor, source rows 683..896.
     # The raised loading platform/fascia and foreground drainage grate are not floor.
     (0.0, 45.0, WORLD_WIDTH, 258.0),
-    (0.0, 56.0, WORLD_WIDTH, 100.0),
+    # Expanded factory exterior: source rows 657..941, below wall/prop bases.
+    # Keep the original 100px ground anchor: world y = 941 - source_y.
+    (0.0, 0.0, WORLD_WIDTH, 284.0),
     (0.0, 56.0, WORLD_WIDTH, 148.0),
     # factoryStage-2: source rows 697..881, below equipment and inside the viewport.
     (0.0, 16.0, WORLD_WIDTH, 200.0),

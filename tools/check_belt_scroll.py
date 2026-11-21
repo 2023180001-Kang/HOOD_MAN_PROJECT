@@ -109,15 +109,20 @@ def check_floor_toggle(game):
           "P invincibility remains an independent toggle.")
 
 
-def check_full_alley_floor(game, index=0):
+def check_full_floor(game, index=0):
     if index == 1:
         assert config.SECOND_STAGE_IMAGE in game.assets.images
         assert config.ARCHIVED_SECOND_STAGE_IMAGE not in game.assets.images
         assert "newStage-2.png" not in game.assets.images
-    bottom, top, source_top, source_bottom, prefix = (
-        (-3, 277, 620, 900, "first_floor_full") if index == 0 else
-        (-44, 239, 658, 941, "second_alley_floor300")
-    )
+    elif index == 5:
+        assert config.FACTORY_EXTERIOR_IMAGE in game.assets.images
+        assert config.ARCHIVED_FACTORY_EXTERIOR_IMAGE not in game.assets.images
+        assert "HOOD_MAN_Factory_Exterior_1672x941.png" not in game.assets.images
+    bottom, top, source_top, source_bottom, prefix = {
+        0: (-3, 277, 620, 900, "first_floor_full"),
+        1: (-44, 239, 658, 941, "second_alley_floor300"),
+        5: (0, 284, 657, 941, "factory_floor300"),
+    }[index]
     visible, details = game.ui.floor_bounds_visible, game.ui.details_visible
     game.ui.floor_bounds_visible, game.ui.details_visible = True, False
     try:
@@ -155,25 +160,28 @@ def check_full_alley_floor(game, index=0):
                                      for point in (call.args[:2], call.args[2:4])}
                         assert (player.x - world.camera.render_x,
                                 player.ground_y - world.camera.render_y) in endpoints
-                        source_y = (config.GROUND_Y - config.STAGE_GROUND_Y
+                        anchor = config.STAGE_GROUND_ANCHORS.get(world.stage.image_name,
+                                                                config.STAGE_GROUND_Y)
+                        source_y = (config.GROUND_Y - anchor
                                     + config.STAGE_IMAGE_HEIGHT - player.ground_y)
                         assert source_y == (source_bottom if depth < 0 else source_top)
         game.world = World(item_rng=random.Random(23))
         game.world.select_stage(index)
         world, player = game.world, game.world.player
-        player.x = player.previous_x = 68
-        player.ground_y = player.previous_ground_y = bottom
-        push_key(pico2d.SDLK_RIGHT)
-        push_key(pico2d.SDLK_LSHIFT)
-        for frame in range(240):
-            tick(game)
-            inside(world)
-            assert player.ground_y == bottom and player.grounded
-            if frame == 120:
-                capture(game, f"{prefix}_front_traverse")
-        release((pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT))
-        game.handle_events()
-        assert player.x == 2492
+        for depth in (bottom, top):
+            player.x = player.previous_x = 68
+            player.ground_y = player.previous_ground_y = depth
+            push_key(pico2d.SDLK_RIGHT)
+            push_key(pico2d.SDLK_LSHIFT)
+            for frame in range(240):
+                tick(game)
+                inside(world)
+                assert player.ground_y == depth and player.grounded
+                if frame == 120:
+                    capture(game, f"{prefix}_{'front' if depth == bottom else 'rear'}_traverse")
+            release((pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT))
+            game.handle_events()
+            assert player.x == 2492
         for depth in (bottom, top):
             player.ground_y = player.previous_ground_y = depth
             direction = pico2d.SDLK_DOWN if depth == bottom else pico2d.SDLK_UP
@@ -207,9 +215,9 @@ def check_full_alley_floor(game, index=0):
     finally:
         game.ui.floor_bounds_visible, game.ui.details_visible = visible, details
         game.world = World()
-    print(f"PASS: alley {index + 1}, all three loadouts walk/run to all four full-floor corners; "
+    print(f"PASS: stage {index + 1}, all three loadouts walk/run to all four full-floor corners; "
           f"F4 matches real feet at source rows {source_top}/{source_bottom}, the formerly "
-          "blocked front band is traversable across both map tiles, double jumps land at "
+          "blocked front/rear bands are traversable across both map tiles, double jumps land at "
           "both depth edges without hidden stairs, and F5 keeps the expanded floor.")
 
 
@@ -322,7 +330,7 @@ def check_depth_and_order(game):
 
 
 def check_crowds(game):
-    for stage_index in (0, 1):
+    for stage_index in (0, 1, 5):
         for count in (2, 5, 10):
             for sx, sy in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
                 game.world = World()
@@ -418,14 +426,16 @@ def main():
         game = Game()
         game.handle_events()
         check_floor_toggle(game)
-        check_full_alley_floor(game)
-        check_full_alley_floor(game, index=1)
+        check_full_floor(game)
+        check_full_floor(game, index=1)
+        check_full_floor(game, index=5)
         check_movement(game)
         check_jump(game)
         check_depth_and_order(game)
         check_crowds(game)
         check_travel(game)
         game.world = World(rng=random.Random(10))
+        game.world.select_stage(5)
         game.world.enemies.extend(game.world.spawner.spawn(9, game.world.elapsed))
         push_key(pico2d.SDLK_p)
         tick(game)
@@ -437,7 +447,7 @@ def main():
         seconds = perf_counter() - start
         assert frames == 180 and len(game.world.enemies) == 10
         inside(game.world)
-        print(f"BENCHMARK: 10 enemies, 2D AI/Separation/bounds/depth sorting: "
+        print(f"BENCHMARK: factory floor300, 10 enemies, 2D AI/Separation/bounds/depth sorting: "
               f"{frames} frames / {seconds:.3f}s = {frames / seconds:.2f} FPS.")
         push_key(pico2d.SDLK_F5)
         tick(game)

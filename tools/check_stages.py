@@ -417,25 +417,7 @@ def check_factory_loading(game, first=3):
 
 
 def check_factory_exterior(game):
-    game.world = World()
-    game.world.stage_index = 5
-    with Image.open(config.ROOT / config.FACTORY_EXTERIOR_IMAGE) as source:
-        assert source.size == (1672, 941)
-        supplied = source.convert("RGB")
-    tiled = Image.new("RGB", (supplied.width * 2, supplied.height))
-    tiled.paste(supplied, (0, 0))
-    tiled.paste(supplied.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (supplied.width, 0))
-    for camera_x in (0, config.WORLD_WIDTH - config.SCREEN_WIDTH):
-        game.world.camera.x = camera_x
-        game.world.camera.offset_x = game.world.camera.offset_y = 0
-        expected = tiled.crop((camera_x, supplied.height - config.SCREEN_HEIGHT,
-                               camera_x + config.SCREEN_WIDTH, supplied.height))
-        with (patch.object(game.assets, "draw_sprite"), patch.object(game.ui, "draw"),
-              patch.object(game.assets, "draw_drop_item"),
-              patch.object(game.ui, "draw_pickup_prompt"),
-              patch.object(game.ui, "draw_enemy_health")):
-            image = capture(game, f"factory_exterior_background_{camera_x}")
-        assert ImageChops.difference(image.convert("RGB"), expected).getbbox() is None
+    check_stage_background(game, 5, "factory_floor300")
     game.world = World()
     game.world.stage_index = 4
     player = game.world.player
@@ -445,13 +427,13 @@ def check_factory_exterior(game):
     source.enemies.append(enemy)
     source.enemies[0].take_damage(40)
     player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
-    player.ground_y = 116
+    player.ground_y = 258
     player.hp, player.invincible = 420, True
     for key in (pico2d.SDLK_n, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT):
         push_key(key)
     tick(game)
     assert game.world.stage_index == 5 and not game.world.stage_loading
-    assert game.world.player is player and player.hp == 420 and player.ground_y == 100
+    assert game.world.player is player and player.hp == 420 and player.ground_y == 258
     capture(game, "factory_exterior_entered")
     game.world.enemies.extend(game.world.spawner.spawn(2, game.world.elapsed))
     tick(game)
@@ -470,8 +452,9 @@ def check_factory_exterior(game):
     for key in (pico2d.SDLK_n, pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT, pico2d.SDLK_2):
         push_key(key, down=False)
     game.handle_events()
-    print("PASS: HOOD_MAN_Factory_Exterior original-size pixels/tiling, SDL factory-to-factory "
-          "travel, ground projection and saved enemy HP/spawn objects survive the round trip.")
+    print(f"PASS: {config.FACTORY_EXTERIOR_IMAGE} original-size pixels/tiling/shake, SDL "
+          "factory-to-factory travel, shared depth and saved enemy HP/spawn objects survive "
+          "the round trip.")
 
 
 def check_indoor_backgrounds(game, first=6):

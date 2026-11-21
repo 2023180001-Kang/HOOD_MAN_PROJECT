@@ -177,7 +177,8 @@ def check_all_stages(game):
 
 
 def check_floor_pickup(game, floor=0, index=0):
-    prefix = f"drop_floor_{floor}" if index == 0 else f"second_alley_floor_{floor}"
+    prefix = {0: f"drop_floor_{floor}", 1: f"second_alley_floor_{floor}"}.get(
+        index, f"drop_stage_{index + 1}_floor_{floor}")
     for kind in config.DROP_ITEM_IMAGES:
         game.world = World(item_rng=random.Random(20261119))
         world = game.world
@@ -257,6 +258,7 @@ def main():
         check_all_stages(game)
         check_floor_pickup(game)
         check_floor_pickup(game, index=1)
+        check_floor_pickup(game, index=5)
         check_restart(game)
     finally:
         if game is not None:

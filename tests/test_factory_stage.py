@@ -233,7 +233,7 @@ class FactoryStageTests(unittest.TestCase):
         enemy.take_damage(40)
         player = world.player
         player.hp, player.invincible = 420, True
-        player.ground_y = 116
+        player.ground_y = 258
         player.jump_height, player.vy, player.jump_count = 140, 300, 2
         player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
         world.controls.press("right")
@@ -244,7 +244,7 @@ class FactoryStageTests(unittest.TestCase):
         self.assertIs(world.player, player)
         self.assertEqual((player.hp, player.invincible, player.ground_y, player.jump_height,
                           player.vy, player.jump_count, player.vx),
-                         (420, True, 100, 140, 300, 2, config.RUN_SPEED))
+                         (420, True, 258, 140, 300, 2, config.RUN_SPEED))
         exterior = world.stage
         exterior.arrows_visible = True
         self.assertEqual(exterior.destination(1), 6)
@@ -259,7 +259,7 @@ class FactoryStageTests(unittest.TestCase):
         self.assertEqual(exterior.spawner.spawned_count, 0)
         self.assertEqual(exterior.enemies, [])
         self.assertEqual((player.ground_y, player.jump_height, player.vy, player.jump_count),
-                         (100, 140, 300, 2))
+                         (258, 140, 300, 2))
 
 
 if __name__ == "__main__":

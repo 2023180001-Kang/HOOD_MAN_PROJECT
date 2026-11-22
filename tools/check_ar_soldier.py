@@ -1,4 +1,4 @@
-"""Exercise AR soldiers, twenty-round reloads and real pixels through SDL."""
+"""Exercise automatic AR fire, twenty-round reloads and real pixels through SDL."""
 
 from pathlib import Path
 import random
@@ -87,6 +87,10 @@ def check_warning(game):
                 assert len(world.projectiles) == 1 and isinstance(world.projectiles[0], RifleBullet)
                 assert world.projectiles[0].y == enemy.y + config.AR_SOLDIER_MUZZLE_HEIGHT
                 capture(game, f"ar_fired_{index}_{side}_{speed}")
+                tick(game, 6)
+                assert enemy.ammo == 18 and not enemy.aiming and enemy.animation.frame == 3
+                assert len(world.projectiles) == 2
+                capture(game, f"ar_automatic_stream_{index}_{side}_{speed}")
     world, enemy = encounter(game, gap=620)
     tick(game)
     assert not enemy.aiming and not world.projectiles
@@ -95,36 +99,80 @@ def check_warning(game):
     tick(game, 10)
     release(game, pico2d.SDLK_DOWN)
     assert not enemy.aiming and enemy.ammo == 20 and not world.projectiles
-    print("PASS: 0.5s warning/red dot pixels in both directions at every speed; lane escape cancels the shot.")
+    print("PASS: 0.5s red-dot warning then 0.1s automatic fire/two visible rounds, "
+          "both bosses/facings/speed endpoints; lane escape cancels the warning.")
 
 
 def check_twenty_rounds(game):
+    for index in (10, 11):
+        for side in (-1, 1):
+            world, enemy = encounter(game, index, side)
+            shots, warnings, frames_seen = [], [], set()
+            started, refilled = None, False
+            for _ in range(360):
+                previous_ammo, was_aiming = enemy.ammo, enemy.aiming
+                tick(game)
+                if enemy.aiming and not was_aiming:
+                    warnings.append(world.elapsed)
+                if enemy.ammo == previous_ammo - 1:
+                    if len(shots) % 20 == 0:
+                        assert abs(world.elapsed - warnings[-1] - 0.5) < 1e-8
+                    else:
+                        assert abs(world.elapsed - shots[-1] - 0.1) < 1e-8
+                    shots.append(world.elapsed)
+                    assert enemy.animation.frame == 2 + (len(shots) - 1) % 4
+                if enemy.state == "RELOAD":
+                    assert len(shots) == 20 and enemy.ammo == 0 and enemy.animation.row == 6
+                    assert enemy.aim_line is None
+                    frames_seen.add(enemy.animation.frame)
+                    if started is None:
+                        started = world.elapsed
+                        capture(game, f"ar_auto_empty_reload_{index}_{side}")
+                if started is not None and enemy.ammo == 20 and not refilled:
+                    assert abs(world.elapsed - started - 1) < 1 / 60
+                    refilled = True
+                    capture(game, f"ar_auto_refilled_{index}_{side}")
+                if len(shots) == 21:
+                    break
+            assert (len(shots), len(warnings), refilled, enemy.ammo) == (21, 2, True, 19)
+            assert abs(shots[19] - shots[0] - 1.9) < 1e-8
+            assert frames_seen == set(range(8))
+    print("PASS: both bosses/facings fire 20 rounds at 10/s after ONE warning, loop row-4 frames 2..5, "
+          "then all 8 row-6 frames/1s refill and a new warning before round 21.")
+
+
+def check_burst_interruptions(game):
+    world, enemy = encounter(game, gap=80)
+    wait(game, lambda: enemy.ammo == 19)
+    push_key(pico2d.SDLK_s)
+    wait(game, lambda: enemy.hp < 300)
+    release(game, pico2d.SDLK_s)
+    ammo = enemy.ammo
+    assert enemy.state == "HIT" and ammo < 20
+    tick(game, 12)
+    assert enemy.ammo == ammo and not enemy.aiming
+    wait(game, lambda: enemy.aiming)
+    assert enemy.ammo == ammo and enemy.animation.frame == 1
+    capture(game, "ar_auto_hit_restarts_warning")
+
     world, enemy = encounter(game)
-    shots, reloads, frames_seen = 0, 0, set()
-    refilled = False
-    previous = enemy.ammo
-    for _ in range(1800):
-        tick(game)
-        if enemy.ammo == previous - 1:
-            shots += 1
-        if enemy.state == "RELOAD":
-            assert shots == 20 and enemy.ammo == 0 and enemy.animation.row == 6
-            assert enemy.aim_line is None
-            frames_seen.add(enemy.animation.frame)
-            if reloads == 0:
-                reloads = 1
-                started = world.elapsed
-                capture(game, "ar_twenty_empty_reload_6")
-        if reloads and enemy.ammo == 20 and not refilled:
-            assert abs(world.elapsed - started - 1) < 1 / 60
-            refilled = True
-            capture(game, "ar_reload_finished_twenty")
-        if shots == 21:
-            break
-        previous = enemy.ammo
-    assert (shots, reloads, enemy.ammo) == (21, 1, 19)
-    assert frames_seen == set(range(8))
-    print("PASS: 20 natural shots, all 8 row-6 reload frames, 1s refill and a freshly warned 21st shot.")
+    wait(game, lambda: enemy.ammo == 19)
+    tick(game, 3)
+    snapshot = enemy.ammo, enemy.fire_remaining, enemy.animation.elapsed
+    world.select_stage(9)
+    tick(game, 30)
+    world.select_stage(10)
+    assert (enemy.ammo, enemy.fire_remaining, enemy.animation.elapsed) == snapshot
+    world.pending_stage_index, world.stage_loading_remaining = 9, 2
+    tick(game, 30)
+    assert (enemy.ammo, enemy.fire_remaining, enemy.animation.elapsed) == snapshot
+    world.select_stage(10)
+    tick(game, 2)
+    assert enemy.ammo == 19
+    tick(game)
+    assert enemy.ammo == 18
+    print("PASS: SDL S interrupts active automatic fire; recovery starts a new warning. "
+          "Inactive/loading stages freeze the fire interval without catch-up shots.")
 
 
 def check_health(game):
@@ -219,6 +267,7 @@ def main():
         check_spawning(game)
         check_warning(game)
         check_twenty_rounds(game)
+        check_burst_interruptions(game)
         check_health(game)
         check_hits(game)
         check_bullet_pixels(game)

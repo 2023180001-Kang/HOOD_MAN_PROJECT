@@ -90,11 +90,15 @@ MAIN_MENU_BUTTON_SIZE = (580, 110)  # Preserve each 928x176 source frame's aspec
 MAIN_MENU_RIGHT_MARGIN = 48
 MAIN_MENU_TOP_MARGIN = 144
 MAIN_MENU_BUTTON_GAP = 24
-BAG_UI_IMAGE = "bag_UI_1280x720.png"
+ARCHIVED_BAG_UI_IMAGE = "before_sheets/bag_UI_1280x720.png"
+BAG_UI_IMAGE = "bag_UI_new.png"
 BAG_BUTTON_IMAGE = "bagButtons.png"
 BAG_BACK_BUTTON_SIZE = (62, 58)
 BAG_BACK_BUTTON_LEFT = 32
 BAG_BACK_BUTTON_TOP = 24
+BAG_PLAYER_X = SCREEN_WIDTH / 2
+BAG_PLAYER_FEET_Y = 320
+BAG_PLAYER_SCALE = 1.7
 # Item order and visible source clips (pico2d bottom-left coordinates).
 # Alpha > 8 ignores almost-invisible stray pixels in the club/axe originals.
 BAG_ITEM_SPECS = (
@@ -105,14 +109,14 @@ BAG_ITEM_SPECS = (
     ("shield_item", "HOOD_MAN_shield_item_256x256.png", (62, 16, 132, 224)),
     ("ar_rifle", "ar_rifle_item_256.png", (15, 86, 226, 84)),
 )
-# Six frames measured in the bag background's top-left image coordinates.
+# Screen-space slot frames after fitting the new 1672x941 background to 1280x720.
 BAG_ITEM_SLOT_RECTS = (
-    (82, 484, 260, 663),
-    (274, 484, 450, 663),
-    (463, 484, 634, 663),
-    (647, 484, 813, 663),
-    (826, 484, 999, 663),
-    (1012, 484, 1208, 663),
+    (83, 484, 260, 660),
+    (274, 484, 450, 660),
+    (464, 484, 634, 660),
+    (648, 484, 814, 660),
+    (827, 484, 998, 660),
+    (1014, 484, 1208, 660),
 )
 BAG_ITEM_SLOT_PADDING = 18
 PLAYER_IMAGE = "HoodMan_Sprite.png"

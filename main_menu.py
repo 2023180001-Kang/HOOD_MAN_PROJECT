@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 import config
+from animation import Animation
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,7 @@ class MainMenu:
             width, height,
         )
         self.bag_open = False
+        self.bag_player_animation = Animation({"IDLE": config.PLAYER_ANIMATIONS["IDLE"]})
         self.hovered_button = None
 
     @property
@@ -56,6 +58,11 @@ class MainMenu:
     def clear_hover(self):
         self.hovered_button = None
 
+    def update(self, dt):
+        # Only this UI clock runs in the bag; the gameplay world stays paused.
+        if self.bag_open:
+            self.bag_player_animation.update(max(0.0, dt))
+
     def click(self, x, y):
         """Navigate locally; only a game-start click requests gameplay."""
         self.move_pointer(x, y)
@@ -66,6 +73,7 @@ class MainMenu:
             return True
         if action == "backpack":
             self.bag_open = True
+            self.bag_player_animation.elapsed = 0.0
             self.clear_hover()
         elif action == "back":
             self.show_main()
@@ -78,6 +86,7 @@ class MainMenu:
             config.SCREEN_WIDTH, config.SCREEN_HEIGHT,
         )
         if self.bag_open:
+            self.draw_bag_player(assets)
             self.draw_bag_items(assets)
         for button in self.buttons:
             image = assets.images[button.image_name]
@@ -86,6 +95,12 @@ class MainMenu:
             left = frame_width if button is self.hovered_button else 0
             image.clip_draw(left, 0, frame_width, image.h,
                             button.x, button.y, button.width, button.height)
+
+    def draw_bag_player(self, assets):
+        animation = self.bag_player_animation
+        assets.draw_sprite(config.PLAYER_IMAGE, animation.row, animation.frame,
+                           config.BAG_PLAYER_X, config.BAG_PLAYER_FEET_Y,
+                           scale=config.BAG_PLAYER_SCALE)
 
     def draw_bag_items(self, assets):
         padding = config.BAG_ITEM_SLOT_PADDING

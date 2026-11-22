@@ -38,10 +38,11 @@ class Assets:
         self.damage_font = (pico2d.load_font(str(font_path), config.DAMAGE_NUMBER_FONT_SIZE)
                             if font_path.is_file() else None)
 
-    def draw_sprite(self, name, row, frame, x, feet_y, facing=1, opacity=1.0):
+    def draw_sprite(self, name, row, frame, x, feet_y, facing=1, opacity=1.0, *, scale=None):
         tile = self.frames[name][row - 1][frame]
         left, bottom, width, height = tile["clip"]
-        scale = config.SPRITE_IMAGE_SCALES.get(name, config.SPRITE_SCALE)
+        if scale is None:
+            scale = config.SPRITE_IMAGE_SCALES.get(name, config.SPRITE_SCALE)
         image = self.images[name]
         fading = opacity < 1.0
         if fading:

@@ -121,7 +121,11 @@ class Game:
         self.world.controls.held.clear()
         self.world.controls.pressed.clear()
         self.draw_main_menu()
+        previous = perf_counter()
         while self.running:
+            now = perf_counter()
+            self.menu.update(now - previous)
+            previous = now
             if self.handle_events(menu_screen=True):
                 self.world.reset()
                 self.ui.update(0, self.world.player)

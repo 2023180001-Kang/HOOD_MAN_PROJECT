@@ -5,7 +5,7 @@ import sys
 from time import perf_counter
 from unittest.mock import patch
 
-from PIL import Image, ImageChops, ImageStat
+from PIL import ImageChops, ImageStat
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -17,6 +17,7 @@ from sdl2 import (
 )
 
 import config
+from combat import STRONG_MOVES
 from game import Game, KEYS
 import main as entrypoint
 from tools.check_main_menu import menu_image, push, push_click, push_mouse, push_quit, screen_box
@@ -42,18 +43,31 @@ def check_bag_pixels_and_navigation(game):
         with patch.object(arrow, "clip_draw", wraps=arrow.clip_draw) as clip:
             normal = menu_image(game, "bag_ui_default")
         clip.assert_called_once_with(0, 0, 62, 58, 63, 667, 62, 58)
-        with Image.open(ROOT / config.BAG_UI_IMAGE) as image:
-            background = image.convert("RGB")
+        assert (game.assets.images[config.BAG_UI_IMAGE].w,
+                game.assets.images[config.BAG_UI_IMAGE].h) == (1672, 941)
+        assert config.ARCHIVED_BAG_UI_IMAGE not in game.assets.images
         with patch.object(menu, "draw_bag_items"):
             empty_slots = menu_image(game)
+        # Use SDL's scaled background as the reference, rather than a separate
+        # Pillow resampler for the new 1672x941 -> 1280x720 presentation.
+        with patch.object(menu, "draw_bag_items"), patch.object(menu, "draw_bag_player"):
+            without_content = menu_image(game)
+            with patch.object(arrow, "clip_draw"):
+                background = menu_image(game)
         box = screen_box(back)
         assert box == (32, 24, 94, 82)
-        changed = ImageChops.difference(background, empty_slots).getbbox()
+        changed = ImageChops.difference(background, without_content).getbbox()
         assert changed is not None
         assert box[0] <= changed[0] < changed[2] <= box[2]
         assert box[1] <= changed[1] < changed[3] <= box[3]
         title = (130, 24, 270, 82)
         assert normal.crop(title).tobytes() == background.crop(title).tobytes()
+        with patch.object(menu, "draw_bag_player"):
+            without_player = menu_image(game)
+        player_bounds = ImageChops.difference(normal, without_player).getbbox()
+        assert player_bounds is not None
+        assert 528 <= player_bounds[0] < player_bounds[2] <= 752
+        assert 24 <= player_bounds[1] < player_bounds[3] <= 410
 
         item_changes = ImageChops.difference(normal, empty_slots)
         padding = config.BAG_ITEM_SLOT_PADDING
@@ -131,11 +145,73 @@ def check_bag_pixels_and_navigation(game):
     assert game.world is world and world.player is player
     assert (world.elapsed, world.stage_index, player.hp, player.state) == (0, 0, 500, "IDLE")
     assert all(game.assets.images[name] is image for name, image in textures.items())
-    print("PASS: bag background is pixel-identical except the arrow and six ordered item icons; "
-          "each icon stays in its padded slot, title is intact, item clicks have no action, "
+    print("PASS: new bag background is pixel-identical except the idle preview, arrow and six item icons; "
+          "old background is not loaded, each icon stays in its padded slot, "
+          "title is intact, item clicks have no action, "
           "black/gray arrow clips and hover-only pixel changes match, "
           "leave/focus restore black, hidden menu/buttons/keys do not activate, "
           "20 round trips reuse textures without advancing/resetting the world.")
+
+
+def check_idle_preview(game):
+    menu, world = game.menu, game.world
+    player = world.player
+    player.hp = 200
+    player.equip_weapon("steel_pipe")
+    player.start_move(STRONG_MOVES["combat_r"], 1)
+    before = (player.hp, player.state, player.weapon, player.animation.elapsed,
+              world.elapsed, world.time_scale)
+    push_click(menu.main_buttons[-1])
+    assert not game.handle_events(menu_screen=True) and menu.bag_open
+    fps = config.PLAYER_ANIMATIONS["IDLE"][1]
+    menu.update(0.1 / fps)
+    reference = None
+    variants = set()
+    image = game.assets.images[config.PLAYER_IMAGE]
+    preview_box = (528, 24, 752, 410)
+    with patch.object(world, "update", wraps=world.update) as update, \
+            patch.object(world, "reset", wraps=world.reset) as reset:
+        for index in range(16):
+            frame = index % 8
+            assert menu.bag_player_animation.frame == frame
+            tile = game.assets.frames[config.PLAYER_IMAGE][0][frame]
+            left, bottom, width, height = tile["clip"]
+            scale = config.BAG_PLAYER_SCALE
+            with patch.object(image, "clip_composite_draw", wraps=image.clip_composite_draw) as draw:
+                rendered = menu_image(game, f"bag_idle_{frame}" if index < 8 else None)
+            draw.assert_called_once_with(
+                left, bottom, width, height, 0, "",
+                config.BAG_PLAYER_X + tile["offset_x"] * scale,
+                config.BAG_PLAYER_FEET_Y + (height / 2 + tile.get("offset_y", 0)) * scale,
+                width * scale, height * scale,
+            )
+            variants.add(rendered.crop(preview_box).tobytes())
+            if reference is None:
+                reference = rendered
+            else:
+                changed = ImageChops.difference(reference, rendered)
+                changed.paste((0, 0, 0), preview_box)
+                assert changed.getbbox() is None, "Animation changed the background, slots or button"
+                if frame == 0:
+                    assert ImageChops.difference(reference, rendered).getbbox() is None
+            assert before == (player.hp, player.state, player.weapon, player.animation.elapsed,
+                              world.elapsed, world.time_scale)
+            menu.update(1 / fps)
+        assert len(variants) == 8
+        update.assert_not_called()
+        reset.assert_not_called()
+    menu.show_main()
+    elapsed = menu.bag_player_animation.elapsed
+    menu.update(10)
+    assert menu.bag_player_animation.elapsed == elapsed
+    push_click(menu.main_buttons[-1])
+    assert not game.handle_events(menu_screen=True)
+    assert menu.bag_player_animation.frame == 0 and menu.bag_player_animation.elapsed == 0
+    push_click(menu.bag_back_button)
+    assert not game.handle_events(menu_screen=True) and not menu.bag_open
+    print("PASS: basic HoodMan IDLE shows all eight distinct source frames at 7 FPS/1.7 scale, "
+          "loops twice with fixed feet, changes only the preview region, and is independent of "
+          "the armed/slow gameplay player; hidden preview stops and reopening restarts frame 0.")
 
 
 def check_bag_wait_return_and_start(game):
@@ -149,6 +225,7 @@ def check_bag_wait_return_and_start(game):
     menu = game.menu
     phase = "open"
     shown_at = None
+    seen_idle_frames = set()
     total_start = perf_counter()
 
     def draw_and_inject(present=True):
@@ -163,8 +240,10 @@ def check_bag_wait_return_and_start(game):
             phase = "wait"
         elif phase == "wait":
             assert menu.bag_open
+            seen_idle_frames.add(menu.bag_player_animation.frame)
             if shown_at is None:
                 shown_at = perf_counter()
+                assert menu.bag_player_animation.frame == 0
                 for key in KEYS:
                     push_key(key)
                     push_key(key, repeat=True)
@@ -192,6 +271,7 @@ def check_bag_wait_return_and_start(game):
         game.show_main_menu()
     seconds = perf_counter() - shown_at
     assert phase == "done" and seconds >= 2.2 and not menu.bag_open
+    assert seen_idle_frames == set(range(8)), "Live bag loop did not animate all idle frames"
     update.assert_not_called()
     reset.assert_called_once_with()
     assert world.player is not player
@@ -208,7 +288,7 @@ def check_bag_wait_return_and_start(game):
     release(game, pico2d.SDLK_F5)
     assert (world.stage_index, world.player.hp, world.player.state) == (0, 500, "IDLE")
     assert all(game.assets.images[name] is image for name, image in textures.items())
-    print(f"PASS: actual bag/menu loop remained frozen for {seconds:.3f}s despite keys/invalid clicks; "
+    print(f"PASS: actual world stayed frozen while all eight idle frames animated for {seconds:.3f}s; "
           "back returns to menu without starting, only a fresh start click resets stage 1, "
           "no queued gameplay input, fresh Space and F5 still work.")
 
@@ -271,6 +351,7 @@ def main():
         game = Game()
         game.handle_events(menu_screen=True)
         check_bag_pixels_and_navigation(game)
+        check_idle_preview(game)
         check_bag_wait_return_and_start(game)
     finally:
         if game is not None:

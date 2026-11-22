@@ -1,4 +1,5 @@
 import hashlib
+import json
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -22,7 +23,7 @@ from world import World
 class BagUITests(unittest.TestCase):
     def setUp(self):
         self.menu = MainMenu()
-        self.assets = SimpleNamespace(images={
+        self.assets = SimpleNamespace(draw_sprite=Mock(), images={
             name: Mock(w=1856, h=176)
             for name in (config.MAIN_MENU_IMAGE, config.BAG_UI_IMAGE,
                          *(image for _, image, _ in config.BAG_ITEM_SPECS),
@@ -113,8 +114,8 @@ class BagUITests(unittest.TestCase):
 
     def test_supplied_bag_assets_keep_original_bytes_and_dimensions(self):
         files = (
-            (config.BAG_UI_IMAGE, (1280, 720), "RGB",
-             "91636e37134ef331a296ee1d88bdfeba1a3a8a166336d13f3dcd7383f27aa87f"),
+            (config.BAG_UI_IMAGE, (1672, 941), "RGB",
+             "aa9470b831d7c4ec3c26e5efba6927640d43198971d797b736823892ff69a9ca"),
             (config.BAG_BUTTON_IMAGE, (124, 58), "RGBA",
              "e89fc88704999ff9885d1533b59dda2e15340e99f7dc025a5681cefa9ead5ee2"),
         )
@@ -133,6 +134,106 @@ class BagUITests(unittest.TestCase):
                      *(image for _, image, _ in config.BAG_ITEM_SPECS)):
             self.assertIn(name, assets.images)
             self.assertEqual(loaded.count(str(config.ROOT / name)), 1)
+        self.assertNotIn(config.ARCHIVED_BAG_UI_IMAGE, assets.images)
+        self.assertNotIn(str(config.ROOT / config.ARCHIVED_BAG_UI_IMAGE), loaded)
+
+    def test_previous_bag_background_is_archived_without_changing_bytes(self):
+        path = config.ROOT / config.ARCHIVED_BAG_UI_IMAGE
+        self.assertFalse((config.ROOT / path.name).exists())
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),
+                         "91636e37134ef331a296ee1d88bdfeba1a3a8a166336d13f3dcd7383f27aa87f")
+        self.assertEqual(config.BAG_UI_IMAGE, "bag_UI_new.png")
+
+    def test_preview_uses_basic_idle_at_a_fixed_large_scale(self):
+        self.open_bag()
+        self.menu.draw(self.assets)
+        self.assets.draw_sprite.assert_called_once_with(
+            config.PLAYER_IMAGE, 1, 0, 640, 320, scale=1.7,
+        )
+
+    def test_preview_loops_all_eight_frames_at_the_original_idle_fps(self):
+        self.open_bag()
+        fps = config.PLAYER_ANIMATIONS["IDLE"][1]
+        self.assertEqual(fps, 7)
+        self.menu.update(0.1 / fps)
+        for index in range(24):
+            self.menu.draw(self.assets)
+            self.assertEqual(self.assets.draw_sprite.call_args.args[:3],
+                             (config.PLAYER_IMAGE, 1, index % 8))
+            self.assertEqual(self.menu.bag_player_animation.state, "IDLE")
+            self.menu.update(1 / fps)
+
+    def test_hidden_preview_stops_and_reopening_bag_restarts_frame_zero(self):
+        self.menu.update(10)
+        self.assertEqual(self.menu.bag_player_animation.elapsed, 0)
+        self.menu.draw(self.assets)
+        self.assets.draw_sprite.assert_not_called()
+        self.open_bag()
+        self.menu.update(0.5)
+        elapsed = self.menu.bag_player_animation.elapsed
+        self.menu.show_main()
+        self.menu.update(10)
+        self.assertEqual(self.menu.bag_player_animation.elapsed, elapsed)
+        self.open_bag()
+        self.assertEqual(self.menu.bag_player_animation.elapsed, 0)
+        self.assertEqual(self.menu.bag_player_animation.frame, 0)
+
+    def test_preview_ignores_negative_time_and_rendering_does_not_advance_it(self):
+        self.open_bag()
+        self.menu.update(0.4)
+        elapsed = self.menu.bag_player_animation.elapsed
+        for dt in (-10, 0, -1):
+            self.menu.update(dt)
+            self.menu.draw(self.assets)
+            self.assertEqual(self.menu.bag_player_animation.elapsed, elapsed)
+
+    def test_preview_timing_is_independent_of_render_rate(self):
+        for fps in (30, 60, 120, 144):
+            menu = MainMenu()
+            bag = menu.main_buttons[-1]
+            menu.click(bag.x, bag.y)
+            frames = int(2.2 * fps)
+            for _ in range(frames):
+                menu.update(1 / fps)
+            menu.update(2.2 - frames / fps)
+            self.assertAlmostEqual(menu.bag_player_animation.elapsed, 2.2)
+            self.assertEqual(menu.bag_player_animation.frame, 7)
+
+    def test_preview_scale_and_feet_alignment_do_not_change_gameplay_sprites(self):
+        with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
+            frames = json.load(file)
+        image = Mock()
+        assets = SimpleNamespace(frames=frames, images={config.PLAYER_IMAGE: image})
+        for frame, tile in enumerate(frames[config.PLAYER_IMAGE][0]):
+            for scale in (None, config.BAG_PLAYER_SCALE, None):
+                kwargs = {} if scale is None else {"scale": scale}
+                Assets.draw_sprite(assets, config.PLAYER_IMAGE, 1, frame, 640, 320, **kwargs)
+                actual_scale = config.SPRITE_SCALE if scale is None else scale
+                left, bottom, width, height = tile["clip"]
+                x = 640 + tile["offset_x"] * actual_scale
+                y = 320 + (height / 2 + tile.get("offset_y", 0)) * actual_scale
+                image.clip_composite_draw.assert_called_with(
+                    left, bottom, width, height, 0, "", x, y,
+                    width * actual_scale, height * actual_scale,
+                )
+                if scale is not None:
+                    self.assertGreaterEqual(x - width * scale / 2, 528)
+                    self.assertLessEqual(x + width * scale / 2, 752)
+                    self.assertGreaterEqual(720 - y - height * scale / 2, 24)
+                    self.assertLessEqual(720 - y + height * scale / 2, 410)
+
+    def test_bag_draws_background_player_ordered_items_then_back_button(self):
+        calls = []
+        self.assets.images[config.BAG_UI_IMAGE].draw.side_effect = lambda *args: calls.append("background")
+        self.assets.draw_sprite.side_effect = lambda *args, **kwargs: calls.append("player")
+        for kind, name, _ in config.BAG_ITEM_SPECS:
+            self.assets.images[name].clip_draw.side_effect = (
+                lambda *args, item=kind: calls.append(item))
+        self.assets.images[config.BAG_BUTTON_IMAGE].clip_draw.side_effect = lambda *args: calls.append("back")
+        self.open_bag()
+        self.menu.draw(self.assets)
+        self.assertEqual(calls, ["background", "player",
+                                 *(kind for kind, _, _ in config.BAG_ITEM_SPECS), "back"])
 
     def test_items_match_requested_left_to_right_order(self):
         self.assertEqual(

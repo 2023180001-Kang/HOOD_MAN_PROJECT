@@ -24,6 +24,8 @@ class ARSoldier(Researcher):
         super().__init__(*args, **kwargs)
         self.fire_remaining = 0.0
         self.burst_shots = 0
+        self.aim_cancel_remaining = 0.0
+        self._last_player_ground_y = None
 
     @property
     def attack_damage(self):
@@ -32,12 +34,34 @@ class ARSoldier(Researcher):
     def start_attack(self):
         self.fire_remaining = 0.0
         self.burst_shots = 0
+        self.aim_cancel_remaining = 0.0
         super().start_attack()
 
     def start_reload(self):
         self.fire_remaining = 0.0
         self.burst_shots = 0
+        self.aim_cancel_remaining = 0.0
         super().start_reload()
+
+    def take_damage(self, damage):
+        if not super().take_damage(damage):
+            return False
+        self.aim_cancel_remaining = 0.0
+        return True
+
+    def stop(self):
+        self.aim_cancel_remaining = 0.0
+        super().stop()
+
+    def knockback(self, player_x, player_ground_y=None):
+        self.aim_cancel_remaining = 0.0
+        super().knockback(player_x, player_ground_y)
+
+    def hit_by_car(self, direction):
+        if not super().hit_by_car(direction):
+            return False
+        self.aim_cancel_remaining = 0.0
+        return True
 
     def show_fire_pose(self):
         frames = config.AR_SOLDIER_FIRE_FRAMES
@@ -75,13 +99,32 @@ class ARSoldier(Researcher):
         return bullet
 
     def _update_ai(self, dt, player):
+        player_changing_depth = (
+            self._last_player_ground_y is not None
+            and abs(player.ground_y - self._last_player_ground_y) > 1e-9)
+        self._last_player_ground_y = player.ground_y
+        if not self.aiming:
+            self.aim_cancel_remaining = 0.0
         # Leaving the lane/range or crossing behind cancels both the warning and
-        # an active burst. Re-entering always starts a fresh, full warning.
+        # an active burst. Only vertical evasion DURING aiming gets a delayed
+        # reaction; normal pursuit and active-burst interruption stay unchanged.
         if self.alive and self.state == "ATTACK":
             dx = player.x - self.x
             if (not player.alive or not same_floor(self, player)
                     or abs(dx) > self.shoot_range
-                    or abs(player.ground_y - self.ground_y) > config.ATTACK_DEPTH_TOLERANCE
                     or dx * self.facing < 0):
+                self.stop()
+            elif self.aiming and (player_changing_depth or self.aim_cancel_remaining > 0):
+                if self.aim_cancel_remaining > 0:
+                    self.aim_cancel_remaining = max(0.0, self.aim_cancel_remaining - dt)
+                else:
+                    self.aim_cancel_remaining = config.AR_SOLDIER_AIM_CANCEL_DELAY
+                # Freeze the original warning pose/lane and timer, so even a
+                # last-tick dodge cannot fire while cancellation is pending.
+                self.vx = self.ground_vy = 0.0
+                if self.aim_cancel_remaining <= 1e-9:
+                    self.stop()
+                return  # Never cancel and immediately re-aim in the same tick.
+            elif abs(player.ground_y - self.ground_y) > config.ATTACK_DEPTH_TOLERANCE:
                 self.stop()
         super()._update_ai(dt, player)

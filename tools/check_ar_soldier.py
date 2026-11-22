@@ -1,5 +1,6 @@
 """Exercise automatic AR fire, twenty-round reloads and real pixels through SDL."""
 
+from math import hypot
 from pathlib import Path
 import random
 import sys
@@ -59,7 +60,7 @@ def check_spawning(game):
                 tick(game)
                 assert len(world.enemies) == world.spawner.spawned_count == count
                 assert all(type(enemy) is ARSoldier and enemy.hp == 300 and enemy.ammo == 20
-                           and enemy.attack_damage == 10
+                           and enemy.attack_damage == 5
                            and world.stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                            for enemy in world.enemies)
                 push_key(key, repeat=True)
@@ -127,12 +128,9 @@ def check_warning(game):
     tick(game)
     assert not enemy.aiming and not world.projectiles
     wait(game, lambda: enemy.aiming)
-    push_key(pico2d.SDLK_DOWN)
-    tick(game, 10)
-    release(game, pico2d.SDLK_DOWN)
-    assert not enemy.aiming and enemy.ammo == 20 and not world.projectiles
+    assert enemy.ammo == 20 and not world.projectiles
     print("PASS: full 1s red-dot warning (still no shot at 0.5s), then 0.1s automatic fire/two visible rounds, "
-          "both bosses/facings/speed endpoints; lane escape cancels the warning.")
+          "both bosses/facings/speed endpoints; range entry starts a new warning.")
 
 
 def check_twenty_rounds(game):
@@ -171,6 +169,47 @@ def check_twenty_rounds(game):
             assert frames_seen == set(range(8))
     print("PASS: both bosses/facings fire 20 rounds at 10/s after ONE 1s warning, loop row-4 frames 2..5, "
           "then all 8 row-6 frames/1s refill and a new 1s warning before round 21.")
+
+
+def check_depth_evasion_and_pursuit(game):
+    for index in (10, 11):
+        for side in (-1, 1):
+            for key, direction in ((pico2d.SDLK_UP, 1), (pico2d.SDLK_DOWN, -1)):
+                world, enemy = encounter(game, index, side, gap=200)
+                tick(game, 15)
+                assert enemy.aiming
+                before = enemy.x, enemy.ground_y, enemy.aim_line
+                push_key(key)
+                tick(game)
+                assert enemy.aiming and enemy.aim_cancel_remaining > 0
+                assert abs(world.player.ground_y - enemy.ground_y) < 32
+                check_warning_pixels(game)
+                for _ in range(29):
+                    tick(game)
+                    assert enemy.aiming and not world.projectiles and enemy.ammo == 20
+                    assert (enemy.x, enemy.ground_y, enemy.aim_line) == before
+                capture(game, f"ar_depth_cancel_delay_{index}_{side}_{direction}")
+                tick(game)
+                assert not enemy.aiming and enemy.aim_cancel_remaining == 0
+                assert enemy.ground_vy == direction * 120
+                capture(game, f"ar_depth_cancelled_{index}_{side}_{direction}")
+                release(game, key)
+                wait(game, lambda: enemy.aiming)
+                assert enemy.ammo == 20 and not world.projectiles
+                tick(game, 59)
+                assert enemy.aiming and enemy.ammo == 20
+                tick(game)
+                assert enemy.ammo == 19
+            for run_speed in config.ENEMY_RUN_SPEEDS:
+                world, enemy = encounter(game, index, side, gap=800)
+                enemy.run_speed = run_speed
+                enemy.ground_y -= 80
+                before = enemy.x, enemy.ground_y
+                tick(game)
+                assert abs(hypot(enemy.vx, enemy.ground_vy) - run_speed) < 1e-8
+                assert abs(hypot(enemy.x - before[0], enemy.ground_y - before[1]) - run_speed / 60) < 1e-8
+    print("PASS: SDL up/down during aiming delays cancellation by 0.5s with no shot or lane tracking, "
+          "then resumes original 120px/s walking and a new 1s warning. All run speeds/diagonals are unchanged.")
 
 
 def check_burst_interruptions(game):
@@ -239,11 +278,11 @@ def check_hits(game):
         for side in (-1, 1):
             world, enemy = encounter(game, index, side, protected=False)
             wait(game, lambda: world.player.hp < 500)
-            assert world.player.hp == 490 and world.player.state == "HIT"
+            assert world.player.hp == 495 and world.player.state == "HIT"
             assert len(world.effects) == 1 and world.effects[0].image_name == config.CLUB_HIT_IMAGE
             assert world.camera.shake_remaining > 0
             capture(game, f"ar_impact_{index}_{side}")
-    print("PASS: real S hit uses own row 5; rifle deals 10 once with player HIT/effect/shake.")
+    print("PASS: real S hit uses own row 5; rifle deals 5 once with player HIT/effect/shake.")
 
 
 def check_bullet_pixels(game):
@@ -300,6 +339,7 @@ def main():
         check_spawning(game)
         check_warning(game)
         check_twenty_rounds(game)
+        check_depth_evasion_and_pursuit(game)
         check_burst_interruptions(game)
         check_health(game)
         check_hits(game)

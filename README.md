@@ -19,12 +19,13 @@ python -m venv .venv
 ```
 
 리소스는 소스 파일 위치를 기준으로 읽으므로 다른 작업 폴더에서 `main.py`의 전체 경로로 실행해도 됩니다.
-일반 실행 시 타이틀 이미지를 2초 표시한 뒤 자동으로 게임이 시작됩니다.
+일반 실행 시 메인 메뉴가 표시됩니다. 오른쪽 버튼은 위부터 **게임 시작 → 스테이지 진행 → 조작법 → 배낭** 순서이며, 마우스를 올리면 검정색에서 회색으로 바뀝니다. **게임 시작을 왼쪽 클릭하면 첫 스테이지부터 시작**합니다. 나머지 세 버튼은 아직 호버 외 기능이 없습니다.
 
 ## 조작
 
 | 입력 | 동작 |
 | --- | --- |
+| 메인 메뉴의 게임 시작 왼쪽 클릭 | 첫 스테이지부터 새 게임 시작 |
 | ← / → | 바닥 좌우 걷기 |
 | ↑ / ↓ | 바닥 안쪽 / 바깥쪽 걷기, 좌우와 조합해 대각선 이동 |
 | 계단 아래 ↑ / 계단 위 ↓ | 2층 오르기 / 1층 내려오기, 주인공 단독·적 간격 이동 |
@@ -167,6 +168,7 @@ A를 준비 중에 미리 누르거나 계속 유지하면 자동으로 후속 �
 .\.venv\Scripts\python.exe tools/prepare_assets.py
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 .\.venv\Scripts\python.exe main.py --smoke-test 60
+.\.venv\Scripts\python.exe tools/check_main_menu.py
 .\.venv\Scripts\python.exe tools/check_render.py
 .\.venv\Scripts\python.exe tools/check_runtime.py
 .\.venv\Scripts\python.exe tools/check_damage_numbers.py
@@ -190,6 +192,8 @@ A를 준비 중에 미리 누르거나 계속 유지하면 자동으로 후속 �
 
 원본 PNG를 보존하며 `assets/frames.json`의 프레임별 클립 좌표를 생성합니다. 생성된 파일이 저장소에 포함되어 있어 일반 실행에는 Pillow가 필요하지 않습니다. 스모크 테스트는 실제 pico2d 창에서 지정한 프레임을 렌더링하고 정상 종료합니다.
 
+`check_main_menu.py`는 실제 SDL 마우스 이벤트와 화면 픽셀로 메뉴 순서·검정/회색 호버·미구현 버튼 클릭·자동 시작 없음·첫 스테이지 시작·F5/종료·일반 실행 진입점을 검증합니다. 캡처는 `artifacts/main_menu_*.png`, 최신 변경/검증 기록은 `PRD.md`에서 확인합니다. `--smoke-test`는 메뉴 대기를 생략합니다.
+
 `check_render.py`는 주요 상태의 실제 렌더링 화면을 `artifacts/`에 저장합니다. `check_runtime.py`는 ASDF 동작·연속 전환·공격별 속도·10/40/50/60 피해·대상 없는 반격 입력·SDL 키 이벤트·HP바 픽셀·포커스·재시작·정상 종료를 검사하고 적 4명 상황의 FPS를 출력합니다. `check_damage_numbers.py`는 피해 숫자를, `check_stages.py`는 네 배경·왕복·2초 로딩을 검증합니다. `check_counters.py`는 네 반격의 제압 유지·적을 든 이동·새 A 후속 80·치명타/페이드·피격/F5 중단·양 끝 경계·제압 이동 성능을 실제 창에서 검증합니다.
 
 `check_traffic.py`는 실제 창에서 차량 제거·자동차 시트 미로딩·30초 도로 대기·양쪽 화면의 차량/주의 안내 없음·적/드랍 유지·재방문/F5 후 차량 미복원을 검증합니다. 최신 캡처는 `artifacts/city_no_traffic_*.png`에 저장합니다.
@@ -199,6 +203,7 @@ A를 준비 중에 미리 누르거나 계속 유지하면 자동으로 후속 �
 | 파일 | 역할 |
 | --- | --- |
 | `main.py`, `game.py` | 캔버스·SDL 입력·게임 루프·렌더링·종료 |
+| `main_menu.py` | 오른쪽 메뉴 버튼 배치·마우스 호버/클릭·검정/회색 프레임 선택 |
 | `world.py` | 고정 시간 시뮬레이션·스테이지 왕복·플레이어 상태 연속성·사망·재시작 |
 | `player.py`, `controls.py`, `physics.py` | 이동·점프·공격 전환·피격·사망·입력 순서·물리 |
 | `combat.py`, `effects.py` | 일반/강화/무기 공격·적 피격 행·피해·범위·속도 정의, 타격 효과·잔상·피해 숫자 수명 |

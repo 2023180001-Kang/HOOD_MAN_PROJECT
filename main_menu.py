@@ -77,6 +77,8 @@ class MainMenu:
             config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2,
             config.SCREEN_WIDTH, config.SCREEN_HEIGHT,
         )
+        if self.bag_open:
+            self.draw_bag_items(assets)
         for button in self.buttons:
             image = assets.images[button.image_name]
             frame_width = image.w // 2
@@ -84,3 +86,16 @@ class MainMenu:
             left = frame_width if button is self.hovered_button else 0
             image.clip_draw(left, 0, frame_width, image.h,
                             button.x, button.y, button.width, button.height)
+
+    def draw_bag_items(self, assets):
+        padding = config.BAG_ITEM_SLOT_PADDING
+        for (_, image_name, clip), (left, top, right, bottom) in zip(
+                config.BAG_ITEM_SPECS, config.BAG_ITEM_SLOT_RECTS):
+            width, height = clip[2:]
+            scale = min((right - left - padding * 2) / width,
+                        (bottom - top - padding * 2) / height)
+            assets.images[image_name].clip_draw(
+                *clip, (left + right) / 2,
+                config.SCREEN_HEIGHT - (top + bottom) / 2,
+                width * scale, height * scale,
+            )

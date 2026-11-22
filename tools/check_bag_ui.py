@@ -44,14 +44,36 @@ def check_bag_pixels_and_navigation(game):
         clip.assert_called_once_with(0, 0, 62, 58, 63, 667, 62, 58)
         with Image.open(ROOT / config.BAG_UI_IMAGE) as image:
             background = image.convert("RGB")
+        with patch.object(menu, "draw_bag_items"):
+            empty_slots = menu_image(game)
         box = screen_box(back)
         assert box == (32, 24, 94, 82)
-        changed = ImageChops.difference(background, normal).getbbox()
+        changed = ImageChops.difference(background, empty_slots).getbbox()
         assert changed is not None
         assert box[0] <= changed[0] < changed[2] <= box[2]
         assert box[1] <= changed[1] < changed[3] <= box[3]
         title = (130, 24, 270, 82)
         assert normal.crop(title).tobytes() == background.crop(title).tobytes()
+
+        item_changes = ImageChops.difference(normal, empty_slots)
+        padding = config.BAG_ITEM_SLOT_PADDING
+        for (kind, name, _), (left, top, right, bottom) in zip(
+                config.BAG_ITEM_SPECS, config.BAG_ITEM_SLOT_RECTS):
+            # Remove each real texture independently: its pixels must occur
+            # only in the assigned slot, not a neighboring slot or its border.
+            with patch.object(game.assets.images[name], "clip_draw"):
+                without_item = menu_image(game)
+            bounds = ImageChops.difference(normal, without_item).getbbox()
+            assert bounds is not None, f"{kind} did not appear in the bag"
+            assert left + padding <= bounds[0] < bounds[2] <= right - padding, (kind, bounds)
+            assert top + padding <= bounds[1] < bounds[3] <= bottom - padding, (kind, bounds)
+            item_changes.paste((0, 0, 0), (left, top, right, bottom))
+            x, y = (left + right) / 2, config.SCREEN_HEIGHT - (top + bottom) / 2
+            push_mouse(x, y, kind=pico2d.SDL_MOUSEBUTTONDOWN)
+            push_mouse(x, y, kind=pico2d.SDL_MOUSEBUTTONUP)
+            assert not game.handle_events(menu_screen=True) and menu.bag_open
+            assert menu.hovered_button is None
+        assert item_changes.getbbox() is None, "Item pixels escaped the six slot frames"
 
         push_mouse(back.x, back.y)
         assert not game.handle_events(menu_screen=True)
@@ -109,8 +131,9 @@ def check_bag_pixels_and_navigation(game):
     assert game.world is world and world.player is player
     assert (world.elapsed, world.stage_index, player.hp, player.state) == (0, 0, 500, "IDLE")
     assert all(game.assets.images[name] is image for name, image in textures.items())
-    print("PASS: bag background is pixel-identical except the native 62x58 arrow at (32,24); "
-          "title is intact, black/gray clips and hover-only pixel changes match, "
+    print("PASS: bag background is pixel-identical except the arrow and six ordered item icons; "
+          "each icon stays in its padded slot, title is intact, item clicks have no action, "
+          "black/gray arrow clips and hover-only pixel changes match, "
           "leave/focus restore black, hidden menu/buttons/keys do not activate, "
           "20 round trips reuse textures without advancing/resetting the world.")
 

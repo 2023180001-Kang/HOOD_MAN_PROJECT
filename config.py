@@ -95,6 +95,26 @@ BAG_BUTTON_IMAGE = "bagButtons.png"
 BAG_BACK_BUTTON_SIZE = (62, 58)
 BAG_BACK_BUTTON_LEFT = 32
 BAG_BACK_BUTTON_TOP = 24
+# Item order and visible source clips (pico2d bottom-left coordinates).
+# Alpha > 8 ignores almost-invisible stray pixels in the club/axe originals.
+BAG_ITEM_SPECS = (
+    ("steel_club", "steel_club.png", (501, 87, 1174, 530)),
+    ("dual_black_batons", "dual_black_batons_pico2d.png", (27, 67, 458, 379)),
+    ("axe", "axe_weapon.png", (393, 273, 496, 730)),
+    ("pistol", "pistol_item_256.png", (22, 49, 212, 158)),
+    ("shield_item", "HOOD_MAN_shield_item_256x256.png", (62, 16, 132, 224)),
+    ("ar_rifle", "ar_rifle_item_256.png", (15, 86, 226, 84)),
+)
+# Six frames measured in the bag background's top-left image coordinates.
+BAG_ITEM_SLOT_RECTS = (
+    (82, 484, 260, 663),
+    (274, 484, 450, 663),
+    (463, 484, 634, 663),
+    (647, 484, 813, 663),
+    (826, 484, 999, 663),
+    (1012, 484, 1208, 663),
+)
+BAG_ITEM_SLOT_PADDING = 18
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 WEAPON_POSE_IMAGES = {
     "combat_knife": "HOOD_MAN_DAGGER_move and fight.png",

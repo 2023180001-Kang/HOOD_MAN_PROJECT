@@ -25,6 +25,7 @@ class BagUITests(unittest.TestCase):
         self.assets = SimpleNamespace(images={
             name: Mock(w=1856, h=176)
             for name in (config.MAIN_MENU_IMAGE, config.BAG_UI_IMAGE,
+                         *(image for _, image, _ in config.BAG_ITEM_SPECS),
                          *(image for _, image in config.MAIN_MENU_BUTTONS))
         })
         self.assets.images[config.BAG_BUTTON_IMAGE] = Mock(w=124, h=58)
@@ -123,14 +124,104 @@ class BagUITests(unittest.TestCase):
             with Image.open(path) as image:
                 self.assertEqual((image.size, image.mode), (size, mode))
 
-    def test_shared_loader_loads_bag_background_and_button_once(self):
+    def test_shared_loader_loads_bag_background_button_and_items_once(self):
         with patch("assets.pico2d.load_image", side_effect=lambda path: Mock()) as load, \
                 patch("assets.pico2d.load_font", return_value=None):
             assets = Assets()
         loaded = [call.args[0] for call in load.call_args_list]
-        for name in (config.BAG_UI_IMAGE, config.BAG_BUTTON_IMAGE):
+        for name in (config.BAG_UI_IMAGE, config.BAG_BUTTON_IMAGE,
+                     *(image for _, image, _ in config.BAG_ITEM_SPECS)):
             self.assertIn(name, assets.images)
             self.assertEqual(loaded.count(str(config.ROOT / name)), 1)
+
+    def test_items_match_requested_left_to_right_order(self):
+        self.assertEqual(
+            [(kind, image) for kind, image, _ in config.BAG_ITEM_SPECS],
+            [("steel_club", "steel_club.png"), ("dual_black_batons", "dual_black_batons_pico2d.png"),
+             ("axe", "axe_weapon.png"), ("pistol", "pistol_item_256.png"),
+             ("shield_item", "HOOD_MAN_shield_item_256x256.png"),
+             ("ar_rifle", "ar_rifle_item_256.png")],
+        )
+        self.assertEqual(len(config.BAG_ITEM_SPECS), len(config.BAG_ITEM_SLOT_RECTS))
+        self.assertEqual(len(config.BAG_ITEM_SPECS), 6)
+        for first, second in zip(config.BAG_ITEM_SLOT_RECTS, config.BAG_ITEM_SLOT_RECTS[1:]):
+            self.assertLess(first[2], second[0])
+
+    def test_item_clips_trim_transparent_padding_and_keep_original_files(self):
+        originals = {
+            "steel_club": ((2172, 724), "efcfcc648e1fa63fa1b52532ed31de415dda19a4c35a29a7613b8a72a67da743"),
+            "dual_black_batons": ((512, 512), "f2545fb5941d486b206b1dd7f52c8c885003c80fdaf8bc6d7d4efa985e3f6b3c"),
+            "axe": ((1254, 1254), "6922c22be97be0109d040238f8414d2a00539ba14d1c8811f6b55ae7b4c60a6e"),
+            "pistol": ((256, 256), "0ac560814a59cba562bcd57a620de5ae1433f75dc146433068358dc37df29003"),
+            "shield_item": ((256, 256), "a4a18bab602767fc49c506272bc540575e8e8aa0dc7f127367540cf4fb35e662"),
+            "ar_rifle": ((256, 256), "27104451c8bcce2eb57387643d7a186fa03a2870d25394a7ed6fe7bb3e55cab7"),
+        }
+        for kind, name, (left, bottom, width, height) in config.BAG_ITEM_SPECS:
+            path = config.ROOT / name
+            size, digest = originals[kind]
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest)
+            with Image.open(path) as image:
+                self.assertEqual((image.size, image.mode), (size, "RGBA"))
+                bounds = image.getchannel("A").point(lambda alpha: 255 if alpha > 8 else 0).getbbox()
+                self.assertEqual((left, image.height - bottom - height, left + width,
+                                  image.height - bottom), bounds)
+
+    def test_items_draw_in_order_centered_inside_slots_without_distortion(self):
+        calls = []
+        for _, name, _ in config.BAG_ITEM_SPECS:
+            self.assets.images[name].clip_draw.side_effect = (
+                lambda *args, image=name: calls.append((image, args)))
+        self.open_bag()
+        self.menu.draw(self.assets)
+        self.assertEqual([name for name, _ in calls], [name for _, name, _ in config.BAG_ITEM_SPECS])
+        for (_, args), (_, _, clip), (left, top, right, bottom) in zip(
+                calls, config.BAG_ITEM_SPECS, config.BAG_ITEM_SLOT_RECTS):
+            self.assertEqual(args[:4], clip)
+            x, y, width, height = args[4:]
+            self.assertEqual((x, y), ((left + right) / 2,
+                                     config.SCREEN_HEIGHT - (top + bottom) / 2))
+            self.assertAlmostEqual(width / height, clip[2] / clip[3])
+            available_width = right - left - 2 * config.BAG_ITEM_SLOT_PADDING
+            available_height = bottom - top - 2 * config.BAG_ITEM_SLOT_PADDING
+            self.assertLessEqual(width, available_width + 1e-9)
+            self.assertLessEqual(height, available_height + 1e-9)
+            self.assertTrue(abs(width - available_width) < 1e-9
+                            or abs(height - available_height) < 1e-9)
+
+    def test_item_images_only_draw_while_bag_is_open(self):
+        self.menu.draw(self.assets)
+        for _, name, _ in config.BAG_ITEM_SPECS:
+            self.assets.images[name].clip_draw.assert_not_called()
+        self.open_bag()
+        self.menu.draw(self.assets)
+        for _, name, _ in config.BAG_ITEM_SPECS:
+            self.assets.images[name].clip_draw.assert_called_once()
+            self.assets.images[name].clip_draw.reset_mock()
+        back = self.menu.bag_back_button
+        self.menu.click(back.x, back.y)
+        self.menu.draw(self.assets)
+        for _, name, _ in config.BAG_ITEM_SPECS:
+            self.assets.images[name].clip_draw.assert_not_called()
+
+    def test_item_slots_are_display_only_not_new_buttons(self):
+        self.open_bag()
+        for left, top, right, bottom in config.BAG_ITEM_SLOT_RECTS:
+            self.assertFalse(self.menu.click((left + right) / 2,
+                                            config.SCREEN_HEIGHT - (top + bottom) / 2))
+            self.assertTrue(self.menu.bag_open)
+            self.assertIsNone(self.menu.hovered_button)
+        self.assertEqual(self.menu.buttons, (self.menu.bag_back_button,))
+
+    def test_item_layout_is_unchanged_during_back_button_hover(self):
+        self.open_bag()
+        self.menu.draw(self.assets)
+        calls = [self.assets.images[name].clip_draw.call_args
+                 for _, name, _ in config.BAG_ITEM_SPECS]
+        back = self.menu.bag_back_button
+        self.menu.move_pointer(back.x, back.y)
+        self.menu.draw(self.assets)
+        self.assertEqual(calls, [self.assets.images[name].clip_draw.call_args
+                                 for _, name, _ in config.BAG_ITEM_SPECS])
 
 
 class BagUIFlowTests(unittest.TestCase):

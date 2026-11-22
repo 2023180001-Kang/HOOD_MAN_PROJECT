@@ -5,7 +5,6 @@ from enemy import Enemy
 
 
 class ShieldSoldier(Enemy):
-    death_drop_kind = None
     max_hp = config.SHIELD_SOLDIER_MAX_HP
     image_name = config.SHIELD_SOLDIER_IMAGE
     animations = config.SHIELD_SOLDIER_ANIMATIONS

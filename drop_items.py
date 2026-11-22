@@ -1,4 +1,4 @@
-"""Stage-local weapons, death-only props and gravity-driven falling items."""
+"""Stage-local weapons and gravity-driven falling items."""
 
 from dataclasses import dataclass
 import random
@@ -39,26 +39,6 @@ class DropItem:
             self.jump_height = max(0.0, self.jump_height + self.vy * dt)
             if self.jump_height == 0:
                 self.vy = 0.0
-
-
-class MetalClubDrop(DropItem):
-    """A single-club enemy's visual death drop, with no pickup/equipment path."""
-
-    collectible = False
-    frame_count = config.METAL_CLUB_ITEM_FRAMES
-
-    def __init__(self, x, ground_y, facing=1, *, jump_height=0.0, floor=0):
-        super().__init__("metal_club", x, ground_y, facing,
-                         jump_height=jump_height, floor=floor)
-
-    @property
-    def image_name(self):
-        return config.METAL_CLUB_ITEM_IMAGE
-
-    @property
-    def frame(self):
-        # The source poses wobble; only animate them while the club is falling.
-        return 0 if self.grounded else super().frame
 
 
 def spawn_drop_items(walkable, *, rng=None, upper_walkable=None):

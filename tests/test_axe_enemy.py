@@ -238,7 +238,6 @@ class AxeEnemyTests(unittest.TestCase):
         strike(world, enemy, "combat_f")
         self.assertEqual((enemy.hp, enemy.state, enemy.animation.row), (0, "DYING", 6))
         self.assertEqual([number.damage for number in world.damage_numbers], [25])
-        self.assertIsNone(enemy.death_drop_kind)
         advance(world, 1)
         self.assertEqual((enemy.state, enemy.animation.row, enemy.animation.frame), ("DEAD", 6, 7))
         self.assertFalse(enemy.blocks_movement)

@@ -22,7 +22,6 @@ class Assets:
                          config.HP_IMAGE,
                          *config.HIT_EFFECT_IMAGES,
                          *config.DROP_ITEM_IMAGES.values(),
-                         config.METAL_CLUB_ITEM_IMAGE,
                          *config.WEAPON_POSE_IMAGES.values(),
                          *config.DOOR_IMAGES.values(),
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
@@ -127,20 +126,6 @@ class Assets:
 
     def draw_drop_item(self, item, camera_x, camera_y):
         image = self.images[item.image_name]
-        if item.kind == "metal_club":
-            cell = config.METAL_CLUB_ITEM_CELL_SIZE
-            top, bottom = config.METAL_CLUB_ITEM_BODY_BOUNDS[item.frame]
-            height = bottom - top
-            scale = config.METAL_CLUB_ITEM_SCALE
-            angle, left, base, right, _ = config.METAL_CLUB_ITEM_HORIZONTAL_POSES[item.frame]
-            image.clip_composite_draw(
-                item.frame * cell, image.h - bottom, cell, height,
-                angle * item.facing, "h" if item.facing < 0 else "",
-                item.x - camera_x - (left + right) * scale / 2 * item.facing,
-                item.ground_y + item.jump_height - camera_y - base * scale,
-                cell * scale, height * scale,
-            )
-            return
         width = image.w // config.DROP_ITEM_FRAMES
         left = item.frame * width
         scale = config.DROP_ITEM_SCALE

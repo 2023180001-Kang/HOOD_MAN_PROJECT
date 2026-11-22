@@ -289,7 +289,6 @@ class ShieldSoldierTests(unittest.TestCase):
             advance(world, 2)
             self.assertEqual((enemy.state, enemy.animation.row, enemy.animation.frame), ("DEAD", 7, 7))
             self.assertEqual(len(world.stage.drop_items), 15)
-            self.assertIsNone(enemy.death_drop_kind)
             enemy.corpse_elapsed = 3.5
             self.assertAlmostEqual(enemy.opacity, 0.5)
             advance(world, 0.5)

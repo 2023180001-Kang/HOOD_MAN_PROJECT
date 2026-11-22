@@ -420,7 +420,6 @@ class ResearcherTests(unittest.TestCase):
                 self.assertLessEqual(args[9], 7)
                 self.assertAlmostEqual(args[6] + facing * args[8] / 2,
                                        bullet.impact_x - 20)
-        self.assertIsNone(Researcher(1000).death_drop_kind)
 
     def test_world_bounds_remove_misses_but_former_lifetime_now_starts_falling(self):
         player = Player()

@@ -5,7 +5,6 @@ from enemy import Enemy
 
 
 class AxeEnemy(Enemy):
-    death_drop_kind = None  # An axe wielder must not drop the street thug's club.
     max_hp = config.AXE_ENEMY_MAX_HP
     image_name = config.AXE_ENEMY_IMAGE
     animations = config.AXE_ENEMY_ANIMATIONS

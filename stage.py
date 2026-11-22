@@ -21,7 +21,7 @@ from walkable import WalkableArea, for_stage
 def enemy_type_for_stage(index):
     """Resolve a stage's native enemy, independently of its current spawn selection."""
     image_name = config.STAGE_IMAGES[index]
-    if image_name == config.FACTORY_OUTSIDE_IMAGE:
+    if image_name in config.AXE_ENEMY_STAGE_IMAGES:
         return AxeEnemy
     if image_name in config.ENEMY02_STAGE_IMAGES:
         return Enemy02

@@ -28,7 +28,7 @@ from tools.check_runtime import push_key, release, tick
 from world import World
 
 
-TYPES = (Enemy, Enemy, Enemy02, Enemy02, AxeEnemy, Enemy,
+TYPES = (Enemy, Enemy, Enemy02, Enemy02, AxeEnemy, AxeEnemy,
          Researcher, Researcher, ShieldSoldier, ShieldSoldier, ARSoldier, ARSoldier)
 
 

@@ -1,4 +1,4 @@
-"""Loading-dock axe enemy; the sheet's last (stun) row stays unused."""
+"""Factory-exterior axe enemy using the replacement six-row sprite sheet."""
 
 import config
 from enemy import Enemy

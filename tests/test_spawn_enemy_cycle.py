@@ -19,7 +19,7 @@ from ui import ENEMY_BOUNDS_COLOR, UI
 from world import World
 
 
-NATIVE_TYPES = (Enemy, Enemy, Enemy02, Enemy02, AxeEnemy, Enemy,
+NATIVE_TYPES = (Enemy, Enemy, Enemy02, Enemy02, AxeEnemy, AxeEnemy,
                 Researcher, Researcher, ShieldSoldier, ShieldSoldier, ARSoldier, ARSoldier)
 
 
@@ -311,7 +311,7 @@ class SpawnEnemyCycleTests(unittest.TestCase):
         world.select_stage(6)
         assets = SimpleNamespace(font=Mock(), images={config.HP_IMAGE: Mock(w=700, h=80)})
         ui = UI()
-        expected_help = ("20", "20", "몽둥이", "몽둥이", "도끼", "20",
+        expected_help = ("20", "20", "몽둥이", "몽둥이", "도끼", "도끼",
                          "권총", "권총", "방패", "방패", "소총", "소총")
         for source, keyword in enumerate(expected_help):
             world.stage.cycle_spawn_enemy_type()

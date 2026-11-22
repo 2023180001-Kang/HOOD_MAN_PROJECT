@@ -1,4 +1,4 @@
-"""Exercise loading-dock axe summons, combat and HP/text/effect pixels via SDL."""
+"""Exercise replacement axe art, both factory summons and combat through SDL."""
 
 from pathlib import Path
 import random
@@ -25,12 +25,13 @@ from world import World
 
 
 DOCK = config.STAGE_IMAGES.index(config.FACTORY_OUTSIDE_IMAGE)
+EXTERIORS = tuple(config.STAGE_IMAGES.index(name) for name in config.AXE_ENEMY_STAGE_IMAGES)
 
 
-def encounter(game, side=1, *, hp=400, weapon=None):
+def encounter(game, side=1, *, hp=400, weapon=None, index=DOCK):
     game.world = World(rng=random.Random(23), item_rng=random.Random(5))
     world = game.world
-    world.select_stage(DOCK)
+    world.select_stage(index)
     world.player.facing = side
     world.player.invincible = True
     world.player.equip_weapon(weapon)
@@ -121,41 +122,48 @@ def check_stair_free_dock_floor(game):
 
 def check_summons(game):
     texture = game.assets.images[config.AXE_ENEMY_IMAGE]
-    for prefix in ("", "KP_"):
-        for count in config.SPAWN_COUNTS:
-            game.world = World(rng=random.Random(42))
-            world = game.world
-            world.select_stage(DOCK)
-            tick(game, 12)
-            assert not world.enemies
-            key = getattr(pico2d, f"SDLK_{prefix}{count}")
-            push_key(key)
-            tick(game)
-            assert len(world.enemies) == world.spawner.spawned_count == count
-            assert all(type(enemy) is AxeEnemy and enemy.hp == enemy.max_hp == 400
-                       and enemy.attack_damage == 60 for enemy in world.enemies)
-            assert all(world.stage.walkable.contains(enemy.x, enemy.ground_y,
-                                                     enemy.boundary_padding)
-                       for enemy in world.enemies)
-            push_key(key, repeat=True)
-            tick(game, 6)
-            assert len(world.enemies) == count
-            release(game, key)
-            push_key(key)
-            tick(game)
-            release(game, key)
-            assert len(world.enemies) == count * 2
-            assert game.assets.images[config.AXE_ENEMY_IMAGE] is texture
-    for label, camera_x in (("left", 0), ("right", config.WORLD_WIDTH - config.SCREEN_WIDTH)):
-        game.world.camera.x = camera_x
-        capture(game, f"axe_spawn_{label}")
-    print("PASS: all 18 SDL digit/keypad inputs summon their count of HP-400/damage-60 "
-          "axe enemies only on the dock; repeat latch, fresh input, bounds and texture reuse.")
+    for index in EXTERIORS:
+        for prefix in ("", "KP_"):
+            for count in config.SPAWN_COUNTS:
+                game.world = World(rng=random.Random(42))
+                world = game.world
+                world.select_stage(index)
+                tick(game, 12)
+                assert not world.enemies
+                key = getattr(pico2d, f"SDLK_{prefix}{count}")
+                push_key(key)
+                tick(game)
+                assert len(world.enemies) == world.spawner.spawned_count == count
+                assert all(type(enemy) is AxeEnemy and enemy.hp == enemy.max_hp == 400
+                           and enemy.attack_damage == 60 and enemy.sprite_image == config.AXE_ENEMY_IMAGE
+                           for enemy in world.enemies)
+                assert all(world.stage.walkable.contains(enemy.x, enemy.ground_y,
+                                                         enemy.boundary_padding)
+                           for enemy in world.enemies)
+                push_key(key, repeat=True)
+                tick(game, 6)
+                assert len(world.enemies) == count
+                release(game, key)
+                push_key(key)
+                tick(game)
+                release(game, key)
+                assert len(world.enemies) == count * 2
+                assert game.assets.images[config.AXE_ENEMY_IMAGE] is texture
+        for label, camera_x in (("left", 0), ("right", config.WORLD_WIDTH - config.SCREEN_WIDTH)):
+            game.world.camera.x = camera_x
+            capture(game, f"axe_spawn_{index}_{label}")
+    print("PASS: both factory exteriors/all 36 SDL digit/keypad cases summon the new HP-400/damage-60 "
+          "axe enemy; repeat latch, fresh input, bounds and texture reuse.")
 
 
 def check_source_frames(game):
     world, enemy = encounter(game)
+    assert config.AXE_ENEMY_IMAGE == "axe_enemy_pico2d_256x256.png"
     texture = game.assets.images[config.AXE_ENEMY_IMAGE]
+    assert (texture.w, texture.h) == (2048, 1536)
+    assert len(game.assets.frames[config.AXE_ENEMY_IMAGE]) == 6
+    for name in (config.ARCHIVED_AXE_ENEMY_IMAGE, Path(config.ARCHIVED_AXE_ENEMY_IMAGE).name):
+        assert name not in game.assets.images and name not in game.assets.frames
     for facing in (-1, 1):
         enemy.facing = facing
         for state, row in (("IDLE", 1), ("WALK", 2), ("RUN", 3), ("ATTACK", 4),
@@ -173,8 +181,10 @@ def check_source_frames(game):
                 assert args[5] == ("h" if facing < 0 else "")
                 assert abs(args[7] - args[9] / 2 - (enemy.y - world.camera.render_y)) < 1e-8
                 assert enemy.animation.row != 7
-    print("PASS: own sheet rows 1..6, all 8 frames in both directions, exact clips/flips/feet; "
-          "last-row stun has no runtime mapping.")
+                if (state, frame) in (("IDLE", 0), ("ATTACK", 4), ("HIT", 0), ("DYING", 7)):
+                    capture(game, f"axe_replacement_{state.lower()}_{facing}_{frame}")
+    print("PASS: replacement 2048x1536 sheet, all 6x8x2 exact clips/flips/feet; "
+          "old seven-row sheet is archived and never loaded; no stun state.")
 
 
 def check_health_pixels(game):
@@ -254,21 +264,22 @@ def check_player_damage_pixels(game):
 
 
 def check_axe_attack(game):
-    for side in (-1, 1):
-        world, enemy = encounter(game, side)
-        world.player.invincible = False
-        enemy.start_attack()
-        for _ in range(60):
-            tick(game)
-            if enemy.has_hit:
-                break
-        assert world.player.hp == 440 and enemy.has_hit
-        assert len(world.effects) == 1 and world.effects[0].image_name == config.CLUB_HIT_IMAGE
-        assert world.camera.shake_remaining > 0
-        capture(game, f"axe_attack_{side}")
-        tick(game, 6)
-        assert world.player.hp == 440
-    print("PASS: both directions of axe swing deal 60 once, with existing club impact and hit shake.")
+    for index in EXTERIORS:
+        for side in (-1, 1):
+            world, enemy = encounter(game, side, index=index)
+            world.player.invincible = False
+            enemy.start_attack()
+            for _ in range(60):
+                tick(game)
+                if enemy.has_hit:
+                    break
+            assert world.player.hp == 440 and enemy.has_hit
+            assert len(world.effects) == 1 and world.effects[0].image_name == config.CLUB_HIT_IMAGE
+            assert world.camera.shake_remaining > 0
+            capture(game, f"axe_attack_{index}_{side}")
+            tick(game, 6)
+            assert world.player.hp == 440
+    print("PASS: both maps/facings deal axe damage 60 once, with existing club impact and hit shake.")
 
 
 def check_strong_reactions(game):
@@ -320,6 +331,33 @@ def check_combat_and_restart(game):
           "while reusing the texture and clearing all stage feedback.")
 
 
+def check_two_exterior_lifecycle(game):
+    world, enemy = encounter(game, index=EXTERIORS[1])
+    enemy.take_damage(40)
+    snapshot = enemy.hp, enemy.x, enemy.ground_y, enemy.animation.elapsed
+    world.select_stage(DOCK)
+    tick(game, 30)
+    world.select_stage(EXTERIORS[1])
+    assert world.enemies == [enemy]
+    assert (enemy.hp, enemy.x, enemy.ground_y, enemy.animation.elapsed) == snapshot
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    release(game, pico2d.SDLK_F5)
+    for index in EXTERIORS:
+        world.select_stage(index)
+        tick(game, 12)
+        assert not world.enemies and world.stage.spawn_cycle_index is None
+        push_key(pico2d.SDLK_1)
+        tick(game)
+        release(game, pico2d.SDLK_1)
+        assert len(world.enemies) == 1 and type(world.enemies[0]) is AxeEnemy
+        assert (world.enemies[0].hp, world.enemies[0].attack_damage) == (400, 60)
+        world.camera.x = 0 if world.enemies[0].x < config.START_X else config.WORLD_WIDTH - config.SCREEN_WIDTH
+        capture(game, f"axe_replacement_native_map_{index}")
+    print("PASS: second exterior preserves its axe actor/HP across visits; SDL F5 restores "
+          "both factory defaults to replacement axe enemies with fresh-input-only summons.")
+
+
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()
@@ -335,6 +373,7 @@ def main():
         check_axe_attack(game)
         check_strong_reactions(game)
         check_combat_and_restart(game)
+        check_two_exterior_lifecycle(game)
     finally:
         if game is not None:
             game.close()

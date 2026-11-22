@@ -228,7 +228,7 @@ class UI:
                 enemy_name = "도시 적"
                 clubs, slam = config.ENEMY02_ATTACKS["clubs"][1], config.ENEMY02_ATTACKS["slam"][1]
                 enemy_help = f"적 공격: 몽둥이 {clubs} / 착지 {slam}"
-            elif source_image == config.FACTORY_OUTSIDE_IMAGE:
+            elif source_image in config.AXE_ENEMY_STAGE_IMAGES:
                 enemy_name = "도끼 적"
                 enemy_help = f"적 공격: 도끼 {config.AXE_ENEMY_DAMAGE}"
             elif source_image in config.FACTORY_INSIDE_IMAGES:

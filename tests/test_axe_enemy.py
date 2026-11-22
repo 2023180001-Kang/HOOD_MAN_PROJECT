@@ -1,11 +1,15 @@
+import hashlib
 import json
 import random
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
+from PIL import Image
+
 import config
 from ar_soldier import ARSoldier
+from assets import Assets
 from axe_enemy import AxeEnemy
 from combat import STRONG_MOVES
 from enemy import Enemy
@@ -19,9 +23,9 @@ from ui import UI
 from world import World
 
 
-def encounter(side=1, *, hp=400, weapon=None):
+def encounter(side=1, *, hp=400, weapon=None, index=4):
     world = World(rng=random.Random(23), item_rng=random.Random(5))
-    world.select_stage(config.STAGE_IMAGES.index(config.FACTORY_OUTSIDE_IMAGE))
+    world.select_stage(index)
     world.player.invincible = True
     world.player.facing = side
     world.player.equip_weapon(weapon)
@@ -35,14 +39,14 @@ def encounter(side=1, *, hp=400, weapon=None):
 
 
 class AxeEnemyTests(unittest.TestCase):
-    def test_only_the_loading_dock_summons_axe_enemies_with_their_own_max_hp(self):
+    def test_both_factory_exteriors_summon_axe_enemies_with_their_own_max_hp(self):
         world = World(rng=random.Random(42))
         for index, stage in enumerate(world.stages):
             world.select_stage(index)
             tap(world.controls, "spawn_4")
             world.update(config.FIXED_DT)
             expected, hp = Enemy, 200
-            if stage.image_name == config.FACTORY_OUTSIDE_IMAGE:
+            if stage.image_name in config.AXE_ENEMY_STAGE_IMAGES:
                 expected, hp = AxeEnemy, 400
             elif stage.image_name in config.ENEMY02_STAGE_IMAGES:
                 expected = Enemy02
@@ -60,26 +64,52 @@ class AxeEnemyTests(unittest.TestCase):
                                                         enemy.boundary_padding))
 
     def test_each_numeric_input_keeps_count_latching_and_independent_speed_profiles(self):
-        for count in config.SPAWN_COUNTS:
-            world, _ = encounter()
-            world.enemies.clear()
-            before = world.spawner.spawned_count
-            action = f"spawn_{count}"
-            tap(world.controls, action)
-            world.update(config.FIXED_DT)
-            advance(world, 0.1)
-            world.controls.press(action)  # Holding/repeat is not another summon.
-            world.update(config.FIXED_DT)
-            self.assertEqual(len(world.enemies), count)
-            tap(world.controls, action)
-            world.update(config.FIXED_DT)
-            self.assertEqual(len(world.enemies), count * 2)
-            self.assertEqual(world.spawner.spawned_count, before + count * 2)
-            self.assertEqual(len({enemy.attack_speed for enemy in world.enemies}), count * 2)
-            self.assertEqual([enemy.run_speed for enemy in world.enemies],
-                             [config.ENEMY_RUN_SPEEDS[(before + i) % 4]
-                              for i in range(count * 2)])
-            self.assertTrue(all(enemy.hp == 400 for enemy in world.enemies))
+        for index in (4, 5):
+            for count in config.SPAWN_COUNTS:
+                with self.subTest(index=index, count=count):
+                    world, _ = encounter(index=index)
+                    world.enemies.clear()
+                    before = world.spawner.spawned_count
+                    action = f"spawn_{count}"
+                    tap(world.controls, action)
+                    world.update(config.FIXED_DT)
+                    advance(world, 0.1)
+                    world.controls.press(action)  # Holding/repeat is not another summon.
+                    world.update(config.FIXED_DT)
+                    self.assertEqual(len(world.enemies), count)
+                    tap(world.controls, action)
+                    world.update(config.FIXED_DT)
+                    self.assertEqual(len(world.enemies), count * 2)
+                    self.assertEqual(world.spawner.spawned_count, before + count * 2)
+                    self.assertEqual(len({enemy.attack_speed for enemy in world.enemies}), count * 2)
+                    self.assertEqual([enemy.run_speed for enemy in world.enemies],
+                                     [config.ENEMY_RUN_SPEEDS[(before + i) % 4]
+                                      for i in range(count * 2)])
+                    self.assertTrue(all(type(enemy) is AxeEnemy and enemy.hp == 400
+                                        and enemy.sprite_image == config.AXE_ENEMY_IMAGE
+                                        for enemy in world.enemies))
+
+    def test_both_factory_m_entries_use_new_axe_art_without_replacing_existing_enemies(self):
+        world = World(rng=random.Random(23))
+        world.select_stage(8)
+        original = world.spawner.spawn(1, 0)[0]
+        original.take_damage(40)
+        world.enemies = [original]
+        for _ in range(5):
+            world.stage.cycle_spawn_enemy_type()
+        for source in (4, 5):
+            self.assertEqual(world.stage.spawn_enemy_stage_index, source)
+            self.assertIs(world.spawner.enemy_type, AxeEnemy)
+            tap(world.controls, "spawn_1")
+            world.step(config.FIXED_DT)
+            fresh = world.enemies[-1]
+            self.assertIs(type(fresh), AxeEnemy)
+            self.assertEqual((fresh.hp, fresh.attack_damage, fresh.sprite_image),
+                             (400, 60, config.AXE_ENEMY_IMAGE))
+            self.assertIs(fresh.walkable, world.stage.walkable)
+            self.assertIs(world.enemies[0], original)
+            self.assertEqual(original.hp, 360)
+            world.stage.cycle_spawn_enemy_type()
 
     def test_axe_swing_deals_sixty_once_only_on_active_frames_in_both_directions(self):
         for side in (-1, 1):
@@ -273,22 +303,25 @@ class AxeEnemyTests(unittest.TestCase):
                                          config.ENEMY_HP_BAR_WIDTH * hp / world.enemies[0].max_hp)
                         self.assertEqual(bars[0][3] - bars[0][1] + 1, config.ENEMY_HP_BAR_HEIGHT)
 
-    def test_dock_hud_reports_axe_damage_instead_of_the_old_club_damage(self):
-        world, _ = encounter()
-        assets = SimpleNamespace(images={config.HP_IMAGE: Mock(w=700, h=80)}, font=Mock())
-        with patch("pico2d.draw_rectangle"):
-            UI().draw(assets, world)
-        labels = [call.args[2] for call in assets.font.draw.call_args_list]
-        self.assertTrue(any("도끼" in text and "60" in text for text in labels))
+    def test_both_exterior_huds_report_axe_damage_instead_of_the_old_club_damage(self):
+        for index in (4, 5):
+            world, _ = encounter(index=index)
+            assets = SimpleNamespace(images={config.HP_IMAGE: Mock(w=700, h=80)}, font=Mock())
+            with patch("pico2d.draw_rectangle"):
+                UI().draw(assets, world)
+            labels = [call.args[2] for call in assets.font.draw.call_args_list]
+            self.assertTrue(any("도끼" in text and "60" in text for text in labels))
+            self.assertTrue(any(f"{index + 1}번 맵" in text and "도끼 적" in text for text in labels))
 
-    def test_sheet_metadata_has_seven_rows_but_no_runtime_stun_mapping(self):
-        from PIL import Image
-
+    def test_sheet_metadata_has_six_rows_with_exact_clips_flips_feet_and_no_stun_mapping(self):
         with Image.open(config.ROOT / config.AXE_ENEMY_IMAGE) as image:
-            self.assertEqual((image.size, image.mode), ((2048, 1792), "RGBA"))
+            self.assertEqual((image.size, image.mode), ((2048, 1536), "RGBA"))
             with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
-                rows = json.load(file)[config.AXE_ENEMY_IMAGE]
-            self.assertEqual(len(rows), 7)
+                metadata = json.load(file)
+            rows = metadata[config.AXE_ENEMY_IMAGE]
+            texture = Mock()
+            assets = SimpleNamespace(frames=metadata, images={config.AXE_ENEMY_IMAGE: texture})
+            self.assertEqual(len(rows), 6)
             for row_index, row in enumerate(rows):
                 self.assertEqual(len(row), 8)
                 for column, tile in enumerate(row):
@@ -298,8 +331,40 @@ class AxeEnemyTests(unittest.TestCase):
                     self.assertEqual(tile["clip"], [column * 256 + left,
                                                     image.height - row_index * 256 - bottom,
                                                     right - left, bottom - top])
+                    self.assertEqual(bottom, 240)
+                    for facing in (-1, 1):
+                        Assets.draw_sprite(assets, config.AXE_ENEMY_IMAGE, row_index + 1, column,
+                                           500, 100, facing)
+                        args = texture.clip_composite_draw.call_args.args
+                        self.assertEqual(args[:4], tuple(tile["clip"]))
+                        self.assertEqual(args[5], "h" if facing < 0 else "")
+                        self.assertEqual(args[7] - args[9] / 2, 100)
         enemy = AxeEnemy(1000)
         self.assertTrue(all(1 <= row <= 6 for row, _, _ in enemy.animation.definitions.values()))
+
+    def test_new_sheet_and_archived_original_keep_supplied_bytes_and_only_new_art_is_loaded(self):
+        self.assertEqual(config.AXE_ENEMY_IMAGE, "axe_enemy_pico2d_256x256.png")
+        self.assertEqual(config.ARCHIVED_AXE_ENEMY_IMAGE, "before_sheets/axe_enemy_pico2d_2048x1792.png")
+        for name, digest, height in (
+            (config.AXE_ENEMY_IMAGE, "866eb4fda2e77de47d4ca49fe79ce98103076db5378182f926bfeb00a42deea4", 1536),
+            (config.ARCHIVED_AXE_ENEMY_IMAGE, "d677ad34fa101aecd32e111dcdd9c75b5738ee075b3a2a76491093cf8d3fd8a7", 1792),
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(hashlib.sha256((config.ROOT / name).read_bytes()).hexdigest(), digest)
+                with Image.open(config.ROOT / name) as image:
+                    self.assertEqual((image.size, image.mode), ((2048, height), "RGBA"))
+        self.assertFalse((config.ROOT / "axe_enemy_pico2d_2048x1792.png").exists())
+        with patch("pico2d.load_image", return_value=Mock()), patch("pico2d.load_font"):
+            assets = Assets()
+        from tools.prepare_assets import SHEETS
+        for name in (config.ARCHIVED_AXE_ENEMY_IMAGE, "axe_enemy_pico2d_2048x1792.png"):
+            self.assertNotIn(name, assets.images)
+            self.assertNotIn(name, assets.frames)
+            self.assertNotIn(name, SHEETS)
+        self.assertIn(config.AXE_ENEMY_IMAGE, assets.images)
+        self.assertEqual(SHEETS[config.AXE_ENEMY_IMAGE], 6)
+        self.assertEqual(len(assets.frames), 16)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 648)
 
     def test_revisiting_pauses_axe_hp_animation_and_effects_and_f5_restores_fresh_summons(self):
         world, enemy = encounter()

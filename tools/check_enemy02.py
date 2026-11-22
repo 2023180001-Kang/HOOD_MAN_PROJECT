@@ -67,7 +67,7 @@ def check_city_summons(game):
         tick(game)
         release(game, pico2d.SDLK_4)
         world = game.world
-        expected = (AxeEnemy if world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE else
+        expected = (AxeEnemy if world.stage.image_name in config.AXE_ENEMY_STAGE_IMAGES else
                     Researcher if world.stage.image_name in config.FACTORY_INSIDE_IMAGES else
                     ShieldSoldier if world.stage.image_name in config.LAB_STAGE_IMAGES else
                     ARSoldier if world.stage.image_name in config.BOSS_STAGE_IMAGES else
@@ -325,7 +325,7 @@ def check_natural_encounter_and_restart(game):
         release(game, pico2d.SDLK_4)
     for index, stage in enumerate(game.world.stages):
         assert len(stage.enemies) == stage.spawner.spawned_count == (4 if index in (0, 3) else 0)
-        expected = (AxeEnemy if stage.image_name == config.FACTORY_OUTSIDE_IMAGE else
+        expected = (AxeEnemy if stage.image_name in config.AXE_ENEMY_STAGE_IMAGES else
                     Researcher if stage.image_name in config.FACTORY_INSIDE_IMAGES else
                     ShieldSoldier if stage.image_name in config.LAB_STAGE_IMAGES else
                     ARSoldier if stage.image_name in config.BOSS_STAGE_IMAGES else

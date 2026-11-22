@@ -16,7 +16,7 @@ import config
 SHEETS = {
     config.PLAYER_IMAGE: 6,
     config.ENEMY_IMAGE: 6,
-    config.AXE_ENEMY_IMAGE: 7,
+    config.AXE_ENEMY_IMAGE: 6,
     config.RESEARCHER_IMAGE: 7,
     config.SHIELD_SOLDIER_IMAGE: 7,
     config.RESEARCHER_BULLET_IMAGE: 1,

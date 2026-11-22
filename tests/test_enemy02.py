@@ -51,7 +51,7 @@ class Enemy02Tests(unittest.TestCase):
                 world.update(config.FIXED_DT)
                 world.controls.release("spawn_4")
                 expected, hp = Enemy, 200
-                if stage.image_name == config.FACTORY_OUTSIDE_IMAGE:
+                if stage.image_name in config.AXE_ENEMY_STAGE_IMAGES:
                     expected, hp = AxeEnemy, 400
                 elif stage.image_name in config.ENEMY02_STAGE_IMAGES:
                     expected = Enemy02

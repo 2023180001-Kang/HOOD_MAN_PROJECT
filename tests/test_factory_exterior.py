@@ -7,7 +7,7 @@ from PIL import Image
 
 import config
 from assets import Assets
-from enemy import Enemy
+from axe_enemy import AxeEnemy
 from tests.helpers import advance, tap
 from world import World
 
@@ -108,7 +108,7 @@ class FactoryExteriorTests(unittest.TestCase):
                     world.step(config.FIXED_DT)
                     self.assertEqual(player.weapon, weapon)
 
-    def test_basic_spawns_items_pursuit_revisit_and_f5_share_the_expanded_exterior_floor(self):
+    def test_axe_spawns_items_pursuit_revisit_and_f5_share_the_expanded_exterior_floor(self):
         world = World(rng=random.Random(41), item_rng=random.Random(23))
         world.select_stage(5)
         stage = world.stage
@@ -121,7 +121,7 @@ class FactoryExteriorTests(unittest.TestCase):
         tap(world.controls, "spawn_9")
         world.step(config.FIXED_DT)
         self.assertEqual((len(world.enemies), stage.spawner.spawned_count), (9, 9))
-        self.assertTrue(all(type(enemy) is Enemy and enemy.hp == 200 and enemy.attack_damage == 20
+        self.assertTrue(all(type(enemy) is AxeEnemy and enemy.hp == 400 and enemy.attack_damage == 60
                             and stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                             for enemy in world.enemies))
         self.assertTrue(any(enemy.ground_y < 56 for enemy in world.enemies))
@@ -135,7 +135,7 @@ class FactoryExteriorTests(unittest.TestCase):
         self.assertIs(world.stage, stage)
         self.assertIs(world.enemies[0], first)
         self.assertIs(stage.drop_items, items)
-        self.assertEqual((first.hp, stage.spawner.spawned_count), (160, 9))
+        self.assertEqual((first.hp, stage.spawner.spawned_count), (360, 9))
         self.assertEqual((first.x, first.ground_y, first.animation.elapsed), snapshot)
         tap(world.controls, "restart")
         world.update(config.FIXED_DT)
@@ -149,7 +149,7 @@ class FactoryExteriorTests(unittest.TestCase):
             world.select_stage(5)
             world.player.invincible = True
             world.player.ground_y = depth
-            enemy = Enemy(world.player.x + 150, -1, ground_y=opposite)
+            enemy = AxeEnemy(world.player.x + 150, -1, ground_y=opposite)
             world.enemies.append(enemy)
             advance(world, 3)
             self.assertLessEqual(abs(enemy.ground_y - depth), config.ATTACK_DEPTH_TOLERANCE)

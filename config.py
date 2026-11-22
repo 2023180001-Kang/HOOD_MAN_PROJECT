@@ -176,7 +176,8 @@ ARCHIVED_COUNTER_IMAGES = (
     "before_sheets/HoodMan_Counter_Enemy_2048x1024.png",
 )
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
-AXE_ENEMY_IMAGE = "axe_enemy_pico2d_2048x1792.png"
+AXE_ENEMY_IMAGE = "axe_enemy_pico2d_256x256.png"
+ARCHIVED_AXE_ENEMY_IMAGE = "before_sheets/axe_enemy_pico2d_2048x1792.png"
 AXE_ENEMY_MAX_HP = 400
 AXE_ENEMY_DAMAGE = 60
 SHIELD_SOLDIER_IMAGE = "hoodman_shield_soldier.png"
@@ -349,6 +350,7 @@ FACTORY_OUTSIDE_IMAGE = "factory_loading_dock_no_stairs_1672x941.png"
 ARCHIVED_FACTORY_OUTSIDE_IMAGE = "before_sheets/hood_man_factory_loading_dock_1672x941.png"
 FACTORY_EXTERIOR_IMAGE = "factoryOutside_floor300.px.png"
 ARCHIVED_FACTORY_EXTERIOR_IMAGE = "before_sheets/HOOD_MAN_Factory_Exterior_1672x941.png"
+AXE_ENEMY_STAGE_IMAGES = (FACTORY_OUTSIDE_IMAGE, FACTORY_EXTERIOR_IMAGE)
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
 LAB_STAGE_IMAGES = ("labStage-1_floor300_1672x941.png", "labStage-2_floor300_1672x941.png")
 ARCHIVED_LAB_STAGE_IMAGES = ("before_sheets/labStage-1_new_1672x941.png",
@@ -446,7 +448,7 @@ ENEMY_ANIMATIONS = {
     "DYING": (6, 10.0, False),
     "DEAD": (6, 10.0, False),
 }
-# Rows 1..6 match the street thug. Row 7 is reserved stun art, never a state.
+# The replacement sheet has six active rows; old stun art is archived only.
 AXE_ENEMY_ANIMATIONS = {
     **ENEMY_ANIMATIONS,
     "CAR_HIT": (6, CAR_HIT_FPS, False),

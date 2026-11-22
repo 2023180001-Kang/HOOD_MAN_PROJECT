@@ -140,7 +140,7 @@ class SpawnEnemyCycleTests(unittest.TestCase):
                 if expected is ShieldSoldier:
                     self.assertTrue(all(enemy.attack_damage == 40 for enemy in spawned))
                 if expected is ARSoldier:
-                    self.assertTrue(all(enemy.hp == 300 and enemy.attack_damage == 40 for enemy in spawned))
+                    self.assertTrue(all(enemy.hp == 300 and enemy.attack_damage == 10 for enemy in spawned))
             self.assertEqual(stage.spawner.spawned_count, 36)
             self.assertEqual(len({enemy.attack_speed for enemy in enemies}), 36)
             self.assertEqual([enemy.run_speed for enemy in enemies[:4]], list(config.ENEMY_RUN_SPEEDS))

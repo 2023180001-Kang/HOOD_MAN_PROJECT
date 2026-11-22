@@ -35,7 +35,7 @@ def encounter(index=10, side=1, gap=300, speed=1.0, invincible=True):
 
 
 class ARSoldierTests(unittest.TestCase):
-    def test_both_boss_maps_spawn_exact_digit_counts_with_300_hp_40_damage_and_twenty_rounds(self):
+    def test_both_boss_maps_spawn_exact_digit_counts_with_300_hp_10_damage_and_twenty_rounds(self):
         for index in (10, 11):
             for count in config.SPAWN_COUNTS:
                 with self.subTest(index=index, count=count):
@@ -47,7 +47,7 @@ class ARSoldierTests(unittest.TestCase):
                     world.step(config.FIXED_DT)
                     self.assertEqual((len(world.enemies), world.spawner.spawned_count), (count, count))
                     self.assertTrue(all(type(enemy) is ARSoldier and enemy.hp == enemy.max_hp == 300
-                                        and enemy.attack_damage == 40 and enemy.ammo == 20
+                                        and enemy.attack_damage == 10 and enemy.ammo == 20
                                         and world.stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                                         for enemy in world.enemies))
                     world.controls.press(f"spawn_{count}")
@@ -67,7 +67,7 @@ class ARSoldierTests(unittest.TestCase):
         for source in (10, 11):
             self.assertIs(world.spawner.enemy_type, ARSoldier)
             spawned = world.spawner.spawn(1, 0)[0]
-            self.assertEqual((spawned.hp, spawned.ammo, spawned.attack_damage), (300, 20, 40))
+            self.assertEqual((spawned.hp, spawned.ammo, spawned.attack_damage), (300, 20, 10))
             self.assertIs(spawned.walkable, world.stage.walkable)
             self.assertEqual((world.enemies, original.hp), ([original], 360))
             world.stage.cycle_spawn_enemy_type()
@@ -111,7 +111,7 @@ class ARSoldierTests(unittest.TestCase):
                         bullet = world.projectiles[0]
                         self.assertIsInstance(bullet, RifleBullet)
                         self.assertEqual((bullet.damage, bullet.y, bullet.facing),
-                                         (40, warning[1], enemy.facing))
+                                         (10, warning[1], enemy.facing))
                         self.assertEqual(bullet.x - bullet.facing * bullet.half_width, warning[0])
                         self.assertIsNone(enemy.take_projectile())
                         world.step(config.FIXED_DT)
@@ -398,7 +398,7 @@ class ARSoldierTests(unittest.TestCase):
         fresh = world.stages[10].spawner.spawn(1, 0)[0]
         self.assertEqual((fresh.hp, fresh.ammo, fresh.aim_remaining), (300, 20, 0))
 
-    def test_actual_round_deals_forty_and_preserves_player_hit_effect_and_shake(self):
+    def test_actual_round_deals_ten_and_preserves_player_hit_effect_and_shake(self):
         for index in (10, 11):
             for side in (-1, 1):
                 world, enemy = encounter(index, side, invincible=False)
@@ -406,12 +406,12 @@ class ARSoldierTests(unittest.TestCase):
                     world.step(config.FIXED_DT)
                     if world.player.hp < 500:
                         break
-                self.assertEqual((world.player.hp, world.player.state), (460, "HIT"))
+                self.assertEqual((world.player.hp, world.player.state), (490, "HIT"))
                 self.assertLess(enemy.ammo, 19)  # Further rounds are already in flight.
                 self.assertEqual([effect.image_name for effect in world.effects], [config.CLUB_HIT_IMAGE])
                 self.assertGreater(world.camera.shake_remaining, 0)
                 advance(world, 0.1)
-                self.assertEqual(world.player.hp, 420)
+                self.assertEqual(world.player.hp, 480)
 
     def test_player_basic_weapon_and_strong_hits_use_own_fifth_row_and_existing_feedback(self):
         for weapon in (None, *config.WEAPON_POSE_IMAGES):

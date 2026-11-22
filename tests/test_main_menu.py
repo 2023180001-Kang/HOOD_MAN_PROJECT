@@ -29,6 +29,20 @@ def mouse_event(kind, x, y, button=SDL_BUTTON_LEFT):
     return event
 
 
+def process_menu_events(game, *events):
+    queue = iter(events)
+
+    def poll(pointer):
+        event = next(queue, None)
+        if event is None:
+            return 0
+        ctypes.memmove(pointer, ctypes.byref(event), ctypes.sizeof(event))
+        return 1
+
+    with patch("game.SDL_PollEvent", side_effect=poll):
+        return Game.handle_events(game, menu_screen=True)
+
+
 class MainMenuTests(unittest.TestCase):
     def setUp(self):
         self.menu = MainMenu()
@@ -87,10 +101,14 @@ class MainMenuTests(unittest.TestCase):
             for item in self.menu.buttons:
                 self.assertEqual(self.assets.images[item.image_name].clip_draw.call_args.args[0], 0)
 
-    def test_only_game_start_click_has_an_action(self):
+    def test_only_game_start_requests_play_and_backpack_opens_its_screen(self):
         for button in self.menu.buttons:
             self.assertEqual(self.menu.click(button.x, button.y), button.action == "game_start")
-            self.assertIs(self.menu.hovered_button, button)
+            if button.action == "backpack":
+                self.assertTrue(self.menu.bag_open)
+                self.assertIsNone(self.menu.hovered_button)
+            else:
+                self.assertIs(self.menu.hovered_button, button)
         self.assertFalse(self.menu.click(10, 10))
         self.assertIsNone(self.menu.hovered_button)
 
@@ -151,17 +169,7 @@ class MainMenuFlowTests(unittest.TestCase):
         self.game.running = True
 
     def process(self, *events):
-        queue = iter(events)
-
-        def poll(pointer):
-            event = next(queue, None)
-            if event is None:
-                return 0
-            ctypes.memmove(pointer, ctypes.byref(event), ctypes.sizeof(event))
-            return 1
-
-        with patch("game.SDL_PollEvent", side_effect=poll):
-            return self.game.handle_events(menu_screen=True)
+        return process_menu_events(self.game, *events)
 
     def test_sdl_mouse_coordinates_hover_and_click_the_matching_button(self):
         for button in self.game.menu.buttons:

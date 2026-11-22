@@ -104,7 +104,7 @@ def check_pixels_and_placeholders(game):
             if other is not button:
                 box = screen_box(other)
                 assert ImageChops.difference(normal.crop(box), hovered.crop(box)).getbbox() is None
-        if button.action != "game_start":
+        if button.action in ("stage_progress", "controls"):
             push_click(button)
             assert not game.handle_events(menu_screen=True)
             assert game.world is world and world.player is player and world.elapsed == 0
@@ -123,7 +123,7 @@ def check_pixels_and_placeholders(game):
     assert config.ARCHIVED_TITLE_IMAGE not in game.assets.images
     print("PASS: original background/left half, four right-side black/gray buttons, "
           "only the hovered rectangle changes, leave/focus restore pixels, "
-          "all three placeholder clicks have no action; archived title is not loaded.")
+          "stage/control placeholder clicks have no action; archived title is not loaded.")
 
 
 def check_wait_start_and_restart(game):
@@ -150,7 +150,8 @@ def check_wait_start_and_restart(game):
                 push_key(key, repeat=True)
                 push_key(key, down=False)
             for button in game.menu.buttons[1:]:
-                push_click(button)
+                if button.action in ("stage_progress", "controls"):
+                    push_click(button)
             for mouse_button in (SDL_BUTTON_RIGHT, SDL_BUTTON_MIDDLE):
                 push_click(game.menu.buttons[0], mouse_button)
             push_mouse(10, 10, kind=pico2d.SDL_MOUSEBUTTONDOWN)

@@ -76,9 +76,13 @@ class Game:
                         event.motion.x, config.SCREEN_HEIGHT - 1 - event.motion.y,
                     )
                 elif event.type == pico2d.SDL_MOUSEBUTTONDOWN and event.button.button == SDL_BUTTON_LEFT:
+                    was_bag_open = self.menu.bag_open
                     start_requested |= self.menu.click(
                         event.button.x, config.SCREEN_HEIGHT - 1 - event.button.y,
                     )
+                    if self.menu.bag_open != was_bag_open:
+                        # Navigation cancels an earlier start click in this batch.
+                        start_requested = False
             elif event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if key is not None:
@@ -99,7 +103,7 @@ class Game:
     def show_main_menu(self):
         if not self.running:
             return
-        self.menu.clear_hover()
+        self.menu.show_main()
         self.world.controls.held.clear()
         self.world.controls.pressed.clear()
         self.draw_main_menu()

@@ -1,4 +1,4 @@
-"""Screen-fixed menu layout and two-frame buttons, independent of SDL."""
+"""Screen-fixed main menu/bag navigation and two-frame buttons, without SDL."""
 
 from dataclasses import dataclass
 
@@ -24,13 +24,29 @@ class MainMenu:
         width, height = config.MAIN_MENU_BUTTON_SIZE
         x = config.SCREEN_WIDTH - config.MAIN_MENU_RIGHT_MARGIN - width / 2
         top = config.SCREEN_HEIGHT - config.MAIN_MENU_TOP_MARGIN
-        self.buttons = tuple(
+        self.main_buttons = tuple(
             MenuButton(action, image, x,
                        top - height / 2 - index * (height + config.MAIN_MENU_BUTTON_GAP),
                        width, height)
             for index, (action, image) in enumerate(config.MAIN_MENU_BUTTONS)
         )
+        width, height = config.BAG_BACK_BUTTON_SIZE
+        self.bag_back_button = MenuButton(
+            "back", config.BAG_BUTTON_IMAGE,
+            config.BAG_BACK_BUTTON_LEFT + width / 2,
+            config.SCREEN_HEIGHT - config.BAG_BACK_BUTTON_TOP - height / 2,
+            width, height,
+        )
+        self.bag_open = False
         self.hovered_button = None
+
+    @property
+    def buttons(self):
+        return (self.bag_back_button,) if self.bag_open else self.main_buttons
+
+    def show_main(self):
+        self.bag_open = False
+        self.clear_hover()
 
     def move_pointer(self, x, y):
         self.hovered_button = next(
@@ -41,12 +57,23 @@ class MainMenu:
         self.hovered_button = None
 
     def click(self, x, y):
-        """Only the game-start button has an action; the others are placeholders."""
+        """Navigate locally; only a game-start click requests gameplay."""
         self.move_pointer(x, y)
-        return self.hovered_button is not None and self.hovered_button.action == "game_start"
+        if self.hovered_button is None:
+            return False
+        action = self.hovered_button.action
+        if action == "game_start":
+            return True
+        if action == "backpack":
+            self.bag_open = True
+            self.clear_hover()
+        elif action == "back":
+            self.show_main()
+        return False
 
     def draw(self, assets):
-        assets.images[config.MAIN_MENU_IMAGE].draw(
+        background = config.BAG_UI_IMAGE if self.bag_open else config.MAIN_MENU_IMAGE
+        assets.images[background].draw(
             config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2,
             config.SCREEN_WIDTH, config.SCREEN_HEIGHT,
         )

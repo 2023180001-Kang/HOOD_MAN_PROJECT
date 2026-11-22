@@ -71,12 +71,13 @@ def check_spawning(game):
     print("PASS: both bosses/all 18 digit keys, exact counts, HP 300/ammo 20, repeat latch and floor bounds.")
 
 
-def check_corrected_sheet(game):
-    assert config.AR_SOLDIER_IMAGE == "AR_soldier_pico2d_2048x1792.png"
+def check_reload_fixed_sheet(game):
+    assert config.AR_SOLDIER_IMAGE == "AR_soldier_pico2d_reload_fixed_2048x1792.png"
     image = game.assets.images[config.AR_SOLDIER_IMAGE]
     assert (image.w, image.h) == (2048, 1792)
-    for archived in ("AR_soldier.png", config.ARCHIVED_AR_SOLDIER_IMAGE):
-        assert archived not in game.assets.images and archived not in game.assets.frames
+    for archived in config.ARCHIVED_AR_SOLDIER_IMAGES:
+        for name in (archived, archived.rsplit("/", 1)[-1]):
+            assert name not in game.assets.images and name not in game.assets.frames
     game.ui.details_visible = False
     for side in (-1, 1):
         world, enemy = encounter(game, side=side)
@@ -95,8 +96,10 @@ def check_corrected_sheet(game):
                 assert abs(args[7] - args[9] / 2 - (enemy.y - world.camera.render_y)) < 1e-8
                 if state == "ATTACK" and frame in config.AR_SOLDIER_FIRE_FRAMES:
                     capture(game, f"ar_corrected_fire_{enemy.facing}_{frame}")
-    print("PASS: corrected sheet uses all 7x8x2 source clips/flips/feet, including planted firing poses; "
-          "archived original is never loaded or included in metadata.")
+                elif state == "RELOAD":
+                    capture(game, f"ar_reload_fixed_{enemy.facing}_{frame}")
+    print("PASS: reload-fixed sheet uses all 7x8x2 source clips/flips/feet, including all 8 reload poses; "
+          "both archived originals are never loaded or included in metadata.")
 
 
 def check_warning(game):
@@ -335,7 +338,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
-        check_corrected_sheet(game)
+        check_reload_fixed_sheet(game)
         check_spawning(game)
         check_warning(game)
         check_twenty_rounds(game)

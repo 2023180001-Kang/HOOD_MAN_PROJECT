@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import pico2d
-from PIL import Image
+from PIL import Image, ImageChops
 
 import config
 from ar_soldier import ARSoldier
@@ -698,20 +698,25 @@ class ARSoldierTests(unittest.TestCase):
         self.assertEqual(len(assets.frames[config.AR_SOLDIER_IMAGE]), 7)
         self.assertEqual(len(assets.frames[config.RIFLE_BULLET_IMAGE][0]), 8)
         self.assertIn(config.AR_SOLDIER_IMAGE, assets.images)
-        for archived in ("AR_soldier.png", config.ARCHIVED_AR_SOLDIER_IMAGE):
-            self.assertNotIn(archived, assets.images)
-            self.assertNotIn(archived, assets.frames)
+        for archived in config.ARCHIVED_AR_SOLDIER_IMAGES:
+            for name in (archived, archived.rsplit("/", 1)[-1]):
+                self.assertNotIn(name, assets.images)
+                self.assertNotIn(name, assets.frames)
         self.assertIn(config.RIFLE_BULLET_IMAGE, assets.images)
         self.assertEqual(len(assets.frames), 16)
         self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 656)
 
-    def test_corrected_sheet_and_archived_original_keep_their_supplied_bytes(self):
-        self.assertEqual(config.AR_SOLDIER_IMAGE, "AR_soldier_pico2d_2048x1792.png")
-        self.assertEqual(config.ARCHIVED_AR_SOLDIER_IMAGE, "before_sheets/AR_soldier.png")
-        self.assertFalse((config.ROOT / "AR_soldier.png").exists())
+    def test_reload_fixed_sheet_and_both_archived_originals_keep_their_supplied_bytes(self):
+        self.assertEqual(config.AR_SOLDIER_IMAGE, "AR_soldier_pico2d_reload_fixed_2048x1792.png")
+        self.assertEqual(config.ARCHIVED_AR_SOLDIER_IMAGES, (
+            "before_sheets/AR_soldier.png",
+            "before_sheets/AR_soldier_pico2d_2048x1792.png",
+        ))
         for name, digest in (
-            (config.AR_SOLDIER_IMAGE, "2c6d6d145f9e81884d3baa5dffbd82a59164053cbdee2ac30de2a30a6cd53997"),
-            (config.ARCHIVED_AR_SOLDIER_IMAGE, "ad7b5d7b665199d82080579a76f571d23f150b12a1d6cc4f54ecb589587ffda6"),
+            (config.AR_SOLDIER_IMAGE, "5793b6627ee64e5eb9cbfc6a24fdb5bf202d246c159f43ab5625992d12937d98"),
+            ("before_sheets/AR_soldier.png", "ad7b5d7b665199d82080579a76f571d23f150b12a1d6cc4f54ecb589587ffda6"),
+            ("before_sheets/AR_soldier_pico2d_2048x1792.png",
+             "2c6d6d145f9e81884d3baa5dffbd82a59164053cbdee2ac30de2a30a6cd53997"),
         ):
             with self.subTest(name=name):
                 self.assertEqual(hashlib.sha256((config.ROOT / name).read_bytes()).hexdigest(), digest)
@@ -719,10 +724,24 @@ class ARSoldierTests(unittest.TestCase):
                     self.assertEqual((image.size, image.mode), ((2048, 1792), "RGBA"))
         from tools.prepare_assets import SHEETS
         self.assertIn(config.AR_SOLDIER_IMAGE, SHEETS)
-        self.assertNotIn(config.ARCHIVED_AR_SOLDIER_IMAGE, SHEETS)
-        self.assertNotIn("AR_soldier.png", SHEETS)
+        for archived in config.ARCHIVED_AR_SOLDIER_IMAGES:
+            self.assertFalse((config.ROOT / archived.rsplit("/", 1)[-1]).exists())
+            for name in (archived, archived.rsplit("/", 1)[-1]):
+                self.assertNotIn(name, SHEETS)
 
-    def test_all_corrected_sheet_clips_keep_source_bounds_flips_and_feet_alignment(self):
+    def test_reload_fixed_sheet_only_changes_the_sixth_row(self):
+        with (Image.open(config.ROOT / config.AR_SOLDIER_IMAGE) as fixed,
+              Image.open(config.ROOT / "before_sheets/AR_soldier_pico2d_2048x1792.png") as previous):
+            for row in range(7):
+                with self.subTest(row=row + 1):
+                    box = (0, row * 256, 2048, (row + 1) * 256)
+                    difference = ImageChops.difference(fixed.crop(box), previous.crop(box))
+                    if row == 5:
+                        self.assertIsNotNone(difference.getbbox(alpha_only=False))
+                    else:
+                        self.assertIsNone(difference.getbbox(alpha_only=False))
+
+    def test_all_reload_fixed_sheet_clips_keep_source_bounds_flips_and_feet_alignment(self):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             metadata = json.load(file)
         texture = Mock()

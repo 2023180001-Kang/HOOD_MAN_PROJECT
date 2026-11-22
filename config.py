@@ -208,8 +208,11 @@ RESEARCHER_BULLET_SPEED = 900.0
 RESEARCHER_BULLET_FPS = 16.0
 RESEARCHER_BULLET_STRAIGHT_RANGE = 1125.0  # Preserve the former 1.25s straight flight.
 RESEARCHER_BULLET_GRAVITY = 900.0  # After the straight range, in world px/s².
-AR_SOLDIER_IMAGE = "AR_soldier_pico2d_2048x1792.png"
-ARCHIVED_AR_SOLDIER_IMAGE = "before_sheets/AR_soldier.png"
+AR_SOLDIER_IMAGE = "AR_soldier_pico2d_reload_fixed_2048x1792.png"
+ARCHIVED_AR_SOLDIER_IMAGES = (
+    "before_sheets/AR_soldier.png",
+    "before_sheets/AR_soldier_pico2d_2048x1792.png",
+)
 AR_SOLDIER_MAX_HP = 300
 AR_SOLDIER_DAMAGE = 5
 AR_SOLDIER_MAGAZINE_SIZE = 20

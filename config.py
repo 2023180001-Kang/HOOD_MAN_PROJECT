@@ -208,6 +208,25 @@ RESEARCHER_BULLET_SPEED = 900.0
 RESEARCHER_BULLET_FPS = 16.0
 RESEARCHER_BULLET_STRAIGHT_RANGE = 1125.0  # Preserve the former 1.25s straight flight.
 RESEARCHER_BULLET_GRAVITY = 900.0  # After the straight range, in world px/s².
+AR_SOLDIER_IMAGE = "AR_soldier.png"
+AR_SOLDIER_MAX_HP = 300
+AR_SOLDIER_DAMAGE = 40
+AR_SOLDIER_MAGAZINE_SIZE = 20
+AR_SOLDIER_RELOAD_FPS = 8.0
+AR_SOLDIER_SHOOT_RANGE = 600.0
+AR_SOLDIER_SHOOT_FRAME = 2  # First muzzle flash in source row 4, zero-based column.
+AR_SOLDIER_AIM_DURATION = 0.5
+# Source firing pose: cell center x=128, barrel exit near (208, 143), feet y=251.
+AR_SOLDIER_MUZZLE_X = 60.0
+AR_SOLDIER_MUZZLE_HEIGHT = 81.0
+RIFLE_BULLET_IMAGE = "rifle_bullet_flying_8frames_pico2d.png"
+RIFLE_BULLET_SCALE = 0.0625  # Visible round/trail about 14x5px, not a full-size sprite.
+RIFLE_BULLET_ANCHOR_Y = 127.5
+RIFLE_BULLET_HALF_WIDTH = 7.5
+RIFLE_BULLET_HALF_HEIGHT = 2.5
+RIFLE_BULLET_SPEED = 1200.0
+RIFLE_BULLET_FPS = 16.0
+RIFLE_BULLET_RANGE = 1200.0  # Straight flight only, then expire; no landed ammunition.
 ENEMY02_IMAGE = "HOOD_MAN_enemy02.png"
 CITY_STAGE_IMAGES = ("cityStage1_ground_300px_1672x941.png", "cityStage2_ground_300px_1672x941.png")
 ARCHIVED_CITY_STAGE_IMAGES = ("before_sheets/cityStage-1.png", "before_sheets/cityStage-2.png")
@@ -429,6 +448,15 @@ RESEARCHER_ANIMATIONS = {
     "RELOAD": (5, RESEARCHER_RELOAD_FPS, False),
     "HIT": (6, 12.0, False),
     "KNOCKBACK": (6, 12.0, False),
+    "DYING": (7, 10.0, False),
+    "DEAD": (7, 10.0, False),
+    "CAR_HIT": (7, CAR_HIT_FPS, False),
+}
+AR_SOLDIER_ANIMATIONS = {
+    **ENEMY_ANIMATIONS,
+    "RELOAD": (6, AR_SOLDIER_RELOAD_FPS, False),
+    "HIT": (5, 12.0, False),
+    "KNOCKBACK": (5, 12.0, False),
     "DYING": (7, 10.0, False),
     "DEAD": (7, 10.0, False),
     "CAR_HIT": (7, CAR_HIT_FPS, False),

@@ -1,4 +1,4 @@
-"""Researcher rounds: straight range, ballistic fall and continuous collision."""
+"""Ranged rounds with continuous collision and per-weapon flight/render profiles."""
 
 from dataclasses import dataclass
 from math import sqrt
@@ -19,6 +19,15 @@ class ResearcherBullet:
 
     image_name = config.RESEARCHER_BULLET_IMAGE
     damage = config.RESEARCHER_DAMAGE
+    half_width = config.RESEARCHER_BULLET_HALF_WIDTH
+    half_height = config.RESEARCHER_BULLET_HALF_HEIGHT
+    speed = config.RESEARCHER_BULLET_SPEED
+    fps = config.RESEARCHER_BULLET_FPS
+    straight_range = config.RESEARCHER_BULLET_STRAIGHT_RANGE
+    gravity = config.RESEARCHER_BULLET_GRAVITY
+    scale = config.RESEARCHER_BULLET_SCALE
+    anchor_y = config.RESEARCHER_BULLET_ANCHOR_Y
+    range_limited = False
 
     @property
     def y(self):
@@ -26,29 +35,30 @@ class ResearcherBullet:
 
     @property
     def frame(self):
-        return int(self.elapsed * config.RESEARCHER_BULLET_FPS + 1e-9) % 8
+        return int(self.elapsed * self.fps + 1e-9) % 8
 
     @property
     def impact_x(self):
-        return self.x + self.facing * config.RESEARCHER_BULLET_HALF_WIDTH
+        return self.x + self.facing * self.half_width
 
     @property
     def straight_duration(self):
-        return config.RESEARCHER_BULLET_STRAIGHT_RANGE / config.RESEARCHER_BULLET_SPEED
+        return self.straight_range / self.speed
 
     @property
     def falling(self):
-        return self.elapsed + 1e-12 >= self.straight_duration
+        return not self.range_limited and self.elapsed + 1e-12 >= self.straight_duration
 
     @property
     def vy(self):
-        return -config.RESEARCHER_BULLET_GRAVITY * max(0.0, self.elapsed - self.straight_duration)
+        return -self.gravity * max(0.0, self.elapsed - self.straight_duration) if self.falling else 0.0
 
     @property
     def finished(self):
-        margin = config.RESEARCHER_BULLET_HALF_WIDTH
-        return (self.spent or self.height <= config.RESEARCHER_BULLET_HALF_HEIGHT
-                or self.x < -margin or self.x > config.WORLD_WIDTH + margin)
+        margin = self.half_width
+        return (self.spent or self.height <= self.half_height
+                or self.x < -margin or self.x > config.WORLD_WIDTH + margin
+                or (self.range_limited and self.elapsed + 1e-12 >= self.straight_duration))
 
     def update(self, dt, player):
         if self.finished:
@@ -56,28 +66,31 @@ class ResearcherBullet:
         dt = max(0.0, dt)
         offset = 0.0
         while True:
-            gravity = config.RESEARCHER_BULLET_GRAVITY if self.falling else 0.0
+            gravity = self.gravity if self.falling else 0.0
             vy = self.vy
             step = dt - offset
+            range_time = float("inf")
             if not self.falling:
                 # Split exactly at the range boundary, including a large update.
                 step = min(step, self.straight_duration - self.elapsed)
+                if self.range_limited:
+                    range_time = self.straight_duration - self.elapsed
             ground_time = float("inf")
             if gravity:
-                clearance = self.height - config.RESEARCHER_BULLET_HALF_HEIGHT
+                clearance = self.height - self.half_height
                 ground_time = 2 * clearance / (sqrt(vy * vy + 2 * gravity * clearance) - vy)
                 step = min(step, ground_time)
-            margin = config.RESEARCHER_BULLET_HALF_WIDTH
+            margin = self.half_width
             edge_gap = (config.WORLD_WIDTH + margin - self.x if self.facing > 0
                         else self.x + margin)
-            edge_time = edge_gap / config.RESEARCHER_BULLET_SPEED
+            edge_time = edge_gap / self.speed
             step = min(step, edge_time)
-            terminal = min(ground_time, edge_time) <= step + 1e-12
+            terminal = min(ground_time, edge_time, range_time) <= step + 1e-12
             contact = self._contact_time(player, step, offset, dt, gravity)
             # Ground/world contact wins a simultaneous tie. Never hit after landing.
             hit = contact is not None and (not terminal or contact < step - 1e-12)
             travel = contact if hit else step
-            self.x += self.facing * config.RESEARCHER_BULLET_SPEED * travel
+            self.x += self.facing * self.speed * travel
             self.height += vy * travel - gravity * travel * travel / 2
             self.elapsed += travel
             if hit:
@@ -85,7 +98,7 @@ class ResearcherBullet:
                 return player.take_damage(self.damage)
             if terminal:
                 if ground_time <= step + 1e-12:
-                    self.height = config.RESEARCHER_BULLET_HALF_HEIGHT
+                    self.height = self.half_height
                 self.spent = True
                 return False
             offset += step
@@ -107,10 +120,10 @@ class ResearcherBullet:
             px = player.previous_x + vx * offset
             py = player.previous_ground_y + ground_vy * offset
             height = player.previous_jump_height + jump_vy * offset
-        half_width = (player.body.right - player.body.left) / 2 + config.RESEARCHER_BULLET_HALF_WIDTH
-        half_height = config.RESEARCHER_BULLET_HALF_HEIGHT
+        half_width = (player.body.right - player.body.left) / 2 + self.half_width
+        half_height = self.half_height
         axes = (
-            (self.x - px, self.facing * config.RESEARCHER_BULLET_SPEED - vx, -half_width, half_width),
+            (self.x - px, self.facing * self.speed - vx, -half_width, half_width),
             (self.ground_y - py, -ground_vy,
               -config.ATTACK_DEPTH_TOLERANCE, config.ATTACK_DEPTH_TOLERANCE),
         )
@@ -147,3 +160,18 @@ class ResearcherBullet:
                 if low - 1e-9 <= value <= high + 1e-9:
                     return time
         return None
+
+
+class RifleBullet(ResearcherBullet):
+    """AR round: level, range-limited flight; shared swept collision, no floor drop."""
+
+    image_name = config.RIFLE_BULLET_IMAGE
+    damage = config.AR_SOLDIER_DAMAGE
+    half_width = config.RIFLE_BULLET_HALF_WIDTH
+    half_height = config.RIFLE_BULLET_HALF_HEIGHT
+    speed = config.RIFLE_BULLET_SPEED
+    fps = config.RIFLE_BULLET_FPS
+    straight_range = config.RIFLE_BULLET_RANGE
+    scale = config.RIFLE_BULLET_SCALE
+    anchor_y = config.RIFLE_BULLET_ANCHOR_Y
+    range_limited = True

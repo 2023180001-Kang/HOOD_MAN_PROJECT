@@ -4,6 +4,7 @@ from math import ceil, floor, sin, sqrt, tau
 import random
 
 import config
+from ar_soldier import ARSoldier
 from axe_enemy import AxeEnemy
 from doors import StageDoor
 from drop_items import spawn_drop_items
@@ -28,6 +29,8 @@ def enemy_type_for_stage(index):
         return Researcher
     if image_name in config.LAB_STAGE_IMAGES:
         return ShieldSoldier
+    if image_name in config.BOSS_STAGE_IMAGES:
+        return ARSoldier
     return Enemy
 
 

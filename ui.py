@@ -238,7 +238,12 @@ class UI:
             elif source_image in config.LAB_STAGE_IMAGES:
                 enemy_name = "방패 병사"
                 enemy_help = (f"적 공격: 방패 {config.SHIELD_SOLDIER_DAMAGE} · "
-                              f"HP {config.SHIELD_SOLDIER_MAX_HP} · 방어 중 받는 피해 50%")
+                               f"HP {config.SHIELD_SOLDIER_MAX_HP} · 방어 중 받는 피해 50%")
+            elif source_image in config.BOSS_STAGE_IMAGES:
+                enemy_name = "AR 병사"
+                enemy_help = (f"적 공격: 소총 {config.AR_SOLDIER_DAMAGE} · "
+                              f"HP {config.AR_SOLDIER_MAX_HP} · "
+                              f"{config.AR_SOLDIER_MAGAZINE_SIZE}발 후 재장전")
             else:
                 enemy_name = "기본 적"
                 enemy_help = f"적 공격 피해: {config.ENEMY_DAMAGE}"

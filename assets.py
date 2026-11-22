@@ -18,6 +18,7 @@ class Assets:
                          config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
                          config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,
+                         config.AR_SOLDIER_IMAGE, config.RIFLE_BULLET_IMAGE,
                          config.SHIELD_SOLDIER_IMAGE,
                          config.HP_IMAGE,
                          *config.HIT_EFFECT_IMAGES,
@@ -79,15 +80,15 @@ class Assets:
         image = self.images[bullet.image_name]
         tile = self.frames[bullet.image_name][0][bullet.frame]
         left, bottom, width, height = tile["clip"]
-        scale = config.RESEARCHER_BULLET_SCALE
+        scale = bullet.scale
         # Keep the copper nose on the physics body while the animated trail
         # extends backward, never moving the impact point as clips get wider.
         image.clip_composite_draw(
             left, bottom, width, height, 0, "h" if bullet.facing < 0 else "",
             bullet.x - camera_x + bullet.facing * (
-                config.RESEARCHER_BULLET_HALF_WIDTH - width * scale / 2),
+                bullet.half_width - width * scale / 2),
             bullet.y - camera_y + (
-                bottom + height / 2 - image.h + config.RESEARCHER_BULLET_ANCHOR_Y) * scale,
+                bottom + height / 2 - image.h + bullet.anchor_y) * scale,
             width * scale, height * scale,
         )
 

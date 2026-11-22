@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 import pico2d
 
 import config
+from ar_soldier import ARSoldier
 from axe_enemy import AxeEnemy
 from collision import bodies_overlap
 from combat import MOVES
@@ -69,6 +70,7 @@ def check_city_summons(game):
         expected = (AxeEnemy if world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE else
                     Researcher if world.stage.image_name in config.FACTORY_INSIDE_IMAGES else
                     ShieldSoldier if world.stage.image_name in config.LAB_STAGE_IMAGES else
+                    ARSoldier if world.stage.image_name in config.BOSS_STAGE_IMAGES else
                     Enemy02 if world.stage.image_name in config.ENEMY02_STAGE_IMAGES else Enemy)
         assert world.stage_index == number - 1
         assert len(world.enemies) == world.spawner.spawned_count == 4
@@ -326,6 +328,7 @@ def check_natural_encounter_and_restart(game):
         expected = (AxeEnemy if stage.image_name == config.FACTORY_OUTSIDE_IMAGE else
                     Researcher if stage.image_name in config.FACTORY_INSIDE_IMAGES else
                     ShieldSoldier if stage.image_name in config.LAB_STAGE_IMAGES else
+                    ARSoldier if stage.image_name in config.BOSS_STAGE_IMAGES else
                     Enemy02 if stage.image_name in config.ENEMY02_STAGE_IMAGES else Enemy)
         assert all(type(enemy) is expected and enemy not in old_enemies and enemy.hp == enemy.max_hp
                    for enemy in stage.enemies)

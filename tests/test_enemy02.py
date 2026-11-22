@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import Mock
 
 import config
+from ar_soldier import ARSoldier
 from axe_enemy import AxeEnemy
 from collision import bodies_overlap
 from combat import STRONG_MOVES
@@ -58,6 +59,8 @@ class Enemy02Tests(unittest.TestCase):
                     expected = Researcher
                 elif stage.image_name in config.LAB_STAGE_IMAGES:
                     expected, hp = ShieldSoldier, 400
+                elif stage.image_name in config.BOSS_STAGE_IMAGES:
+                    expected, hp = ARSoldier, 300
                 self.assertEqual(len(stage.enemies), 4)
                 self.assertEqual(stage.spawner.spawned_count, 4)
                 self.assertTrue(all(type(enemy) is expected for enemy in stage.enemies))

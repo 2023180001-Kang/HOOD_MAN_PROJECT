@@ -7,7 +7,7 @@ from PIL import Image
 
 import config
 from assets import Assets
-from enemy import Enemy
+from ar_soldier import ARSoldier
 from tests.helpers import advance, tap
 from world import World
 
@@ -122,7 +122,7 @@ class BossStageTests(unittest.TestCase):
                         world.step(config.FIXED_DT)
                         self.assertEqual(player.weapon, weapon)
 
-    def test_basic_enemies_items_pursuit_revisit_and_f5_use_the_expanded_boss_floors(self):
+    def test_ar_soldiers_items_pursuit_revisit_and_f5_use_the_expanded_boss_floors(self):
         world = World(rng=random.Random(41), item_rng=random.Random(23))
         for index, bottom, top, _, _ in BOSS_FLOORS:
             world.select_stage(index)
@@ -136,7 +136,7 @@ class BossStageTests(unittest.TestCase):
             tap(world.controls, "spawn_9")
             world.step(config.FIXED_DT)
             self.assertEqual((len(world.enemies), stage.spawner.spawned_count), (9, 9))
-            self.assertTrue(all(type(enemy) is Enemy and enemy.hp == 200 and enemy.attack_damage == 20
+            self.assertTrue(all(type(enemy) is ARSoldier and enemy.hp == 300 and enemy.attack_damage == 40
                                 and stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                                 for enemy in world.enemies))
             self.assertTrue(any(enemy.ground_y < 56 for enemy in world.enemies))
@@ -149,14 +149,14 @@ class BossStageTests(unittest.TestCase):
             world.select_stage(index)
             self.assertIs(world.stage, stage)
             self.assertIs(stage.drop_items, items)
-            self.assertEqual((enemy.hp, stage.spawner.spawned_count), (160, 9))
+            self.assertEqual((enemy.hp, stage.spawner.spawned_count), (260, 9))
             self.assertEqual((enemy.x, enemy.ground_y, enemy.animation.elapsed), snapshot)
             for depth, opposite in ((bottom, top), (top, bottom)):
                 chase = World()
                 chase.select_stage(index)
                 chase.player.invincible = True
                 chase.player.ground_y = depth
-                pursuer = Enemy(chase.player.x + 150, -1, ground_y=opposite)
+                pursuer = ARSoldier(chase.player.x + 150, -1, ground_y=opposite)
                 chase.enemies = [pursuer]
                 advance(chase, 3)
                 self.assertLessEqual(abs(pursuer.ground_y - depth), config.ATTACK_DEPTH_TOLERANCE)

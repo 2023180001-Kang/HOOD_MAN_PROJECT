@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import config
+from ar_soldier import ARSoldier
 from axe_enemy import AxeEnemy
 from combat import STRONG_MOVES
 from enemy import Enemy
@@ -49,6 +50,8 @@ class AxeEnemyTests(unittest.TestCase):
                 expected = Researcher
             elif stage.image_name in config.LAB_STAGE_IMAGES:
                 expected, hp = ShieldSoldier, 400
+            elif stage.image_name in config.BOSS_STAGE_IMAGES:
+                expected, hp = ARSoldier, 300
             self.assertEqual(len(world.enemies), 4)
             for enemy in world.enemies:
                 self.assertIs(type(enemy), expected)

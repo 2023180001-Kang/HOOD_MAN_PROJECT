@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pico2d
 
 import config
+from ar_soldier import ARSoldier
 from axe_enemy import AxeEnemy
 from enemy import Enemy
 from enemy02 import Enemy02
@@ -19,7 +20,7 @@ from world import World
 
 
 NATIVE_TYPES = (Enemy, Enemy, Enemy02, Enemy02, AxeEnemy, Enemy,
-                Researcher, Researcher, ShieldSoldier, ShieldSoldier, Enemy, Enemy)
+                Researcher, Researcher, ShieldSoldier, ShieldSoldier, ARSoldier, ARSoldier)
 
 
 def press(world, action):
@@ -138,6 +139,8 @@ class SpawnEnemyCycleTests(unittest.TestCase):
                     self.assertTrue(all(enemy.ammo == 7 and enemy.attack_damage == 30 for enemy in spawned))
                 if expected is ShieldSoldier:
                     self.assertTrue(all(enemy.attack_damage == 40 for enemy in spawned))
+                if expected is ARSoldier:
+                    self.assertTrue(all(enemy.hp == 300 and enemy.attack_damage == 40 for enemy in spawned))
             self.assertEqual(stage.spawner.spawned_count, 36)
             self.assertEqual(len({enemy.attack_speed for enemy in enemies}), 36)
             self.assertEqual([enemy.run_speed for enemy in enemies[:4]], list(config.ENEMY_RUN_SPEEDS))
@@ -309,7 +312,7 @@ class SpawnEnemyCycleTests(unittest.TestCase):
         assets = SimpleNamespace(font=Mock(), images={config.HP_IMAGE: Mock(w=700, h=80)})
         ui = UI()
         expected_help = ("20", "20", "몽둥이", "몽둥이", "도끼", "20",
-                         "권총", "권총", "방패", "방패", "20", "20")
+                         "권총", "권총", "방패", "방패", "소총", "소총")
         for source, keyword in enumerate(expected_help):
             world.stage.cycle_spawn_enemy_type()
             assets.font.reset_mock()

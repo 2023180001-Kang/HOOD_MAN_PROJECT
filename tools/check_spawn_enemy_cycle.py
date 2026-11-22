@@ -16,6 +16,7 @@ import pico2d
 from sdl2 import SDL_Event, SDL_PushEvent, SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST
 
 import config
+from ar_soldier import ARSoldier
 from axe_enemy import AxeEnemy
 from enemy import Enemy
 from enemy02 import Enemy02
@@ -28,7 +29,7 @@ from world import World
 
 
 TYPES = (Enemy, Enemy, Enemy02, Enemy02, AxeEnemy, Enemy,
-         Researcher, Researcher, ShieldSoldier, ShieldSoldier, Enemy, Enemy)
+         Researcher, Researcher, ShieldSoldier, ShieldSoldier, ARSoldier, ARSoldier)
 
 
 def tap(game, key):

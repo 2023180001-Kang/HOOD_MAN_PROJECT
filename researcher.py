@@ -13,10 +13,18 @@ class Researcher(Enemy):
     max_hp = config.RESEARCHER_MAX_HP
     image_name = config.RESEARCHER_IMAGE
     animations = config.RESEARCHER_ANIMATIONS
+    magazine_size = config.RESEARCHER_MAGAZINE_SIZE
+    reload_fps = config.RESEARCHER_RELOAD_FPS
+    shoot_range = config.RESEARCHER_SHOOT_RANGE
+    shoot_frame = config.RESEARCHER_SHOOT_FRAME
+    aim_duration = config.RESEARCHER_AIM_DURATION
+    muzzle_x = config.RESEARCHER_MUZZLE_X
+    muzzle_height = config.RESEARCHER_MUZZLE_HEIGHT
+    projectile_type = ResearcherBullet
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ammo = config.RESEARCHER_MAGAZINE_SIZE
+        self.ammo = self.magazine_size
         self.aim_remaining = 0.0
 
     @property
@@ -42,10 +50,10 @@ class Researcher(Enemy):
         if not self.aiming:
             return None
         # Predict the unchanged horizontal bullet lane, not a homing shot.
-        muzzle_x = self.x + self.facing * config.RESEARCHER_MUZZLE_X
-        height = self.y + config.RESEARCHER_MUZZLE_HEIGHT
+        muzzle_x = self.x + self.facing * self.muzzle_x
+        height = self.y + self.muzzle_height
         end_x = max(0.0, min(config.WORLD_WIDTH,
-                            self.x + self.facing * config.RESEARCHER_SHOOT_RANGE))
+                            self.x + self.facing * self.shoot_range))
         return muzzle_x, height, end_x, height
 
     def start_reload(self):
@@ -62,20 +70,20 @@ class Researcher(Enemy):
             super().start_attack()
             self.vx = self.ground_vy = 0.0
             self.running = False
-            self.aim_remaining = config.RESEARCHER_AIM_DURATION
+            self.aim_remaining = self.aim_duration
             # Hold the original raised-pistol pose just before the muzzle flash.
-            self.animation.elapsed = (config.RESEARCHER_SHOOT_FRAME - 1 + 1e-9) / self.attack_fps
+            self.animation.elapsed = (self.shoot_frame - 1 + 1e-9) / self.attack_fps
 
     def update_attack(self, dt):
         self.vx = self.ground_vy = 0.0
         if self.aim_remaining > 0:
             remaining = self.aim_remaining
             self.aim_remaining = max(0.0, remaining - dt)
-            self.animation.elapsed = (config.RESEARCHER_SHOOT_FRAME - 1 + 1e-9) / self.attack_fps
+            self.animation.elapsed = (self.shoot_frame - 1 + 1e-9) / self.attack_fps
             if self.aim_remaining > 1e-9:
                 return
             self.aim_remaining = 0.0
-            self.animation.elapsed = (config.RESEARCHER_SHOOT_FRAME + 1e-9) / self.attack_fps
+            self.animation.elapsed = (self.shoot_frame + 1e-9) / self.attack_fps
             dt = max(0.0, dt - remaining)
         self.animation.update(dt)
         if self.animation.finished:
@@ -87,13 +95,13 @@ class Researcher(Enemy):
     def take_projectile(self):
         if (not self.alive or self.state != "ATTACK" or self.has_hit or self.ammo <= 0
                 or self.aim_remaining > 0 or self.staircase is not None or self.falling_from_upper
-                or self.animation.finished or self.animation.frame < config.RESEARCHER_SHOOT_FRAME):
+                or self.animation.finished or self.animation.frame < self.shoot_frame):
             return None
         self.has_hit = True
         self.ammo -= 1
-        return ResearcherBullet(
-            self.x + self.facing * (config.RESEARCHER_MUZZLE_X + config.RESEARCHER_BULLET_HALF_WIDTH),
-            self.ground_y, self.jump_height + config.RESEARCHER_MUZZLE_HEIGHT, self.facing, self.floor)
+        return self.projectile_type(
+            self.x + self.facing * (self.muzzle_x + self.projectile_type.half_width),
+            self.ground_y, self.jump_height + self.muzzle_height, self.facing, self.floor)
 
     def _update_ai(self, dt, player):
         if (not self.alive or not player.alive or self.knockback_started
@@ -106,8 +114,8 @@ class Researcher(Enemy):
         if self.state == "RELOAD":
             self.vx = self.ground_vy = 0.0
             self.animation.update(dt)
-            if self.animation.elapsed + 1e-9 >= 8 / config.RESEARCHER_RELOAD_FPS:
-                self.ammo = config.RESEARCHER_MAGAZINE_SIZE
+            if self.animation.elapsed + 1e-9 >= 8 / self.reload_fps:
+                self.ammo = self.magazine_size
                 self.animation.set_state("IDLE")
             return
         if self.state == "ATTACK":
@@ -126,7 +134,7 @@ class Researcher(Enemy):
         if dx:
             self.facing = 1 if dx > 0 else -1
         self.vx = self.ground_vy = 0.0
-        if (abs(dx) <= config.RESEARCHER_SHOOT_RANGE
+        if (abs(dx) <= self.shoot_range
                 and abs(dy) <= config.ATTACK_DEPTH_TOLERANCE):
             self.running = False
             if self.cooldown <= 0:
@@ -141,7 +149,7 @@ class Researcher(Enemy):
         elif gap <= config.ENEMY_RUN_STOP_DISTANCE:
             self.running = False
         # Align to the firing lane instead of walking into a melee slot.
-        target_x = self.facing * max(0.0, abs(dx) - config.RESEARCHER_SHOOT_RANGE)
+        target_x = self.facing * max(0.0, abs(dx) - self.shoot_range)
         target_y = dy if abs(dy) > config.ATTACK_DEPTH_TOLERANCE else 0.0
         distance = hypot(target_x, target_y)
         speed = self.run_speed if self.running else config.ENEMY_SPEED

@@ -93,6 +93,7 @@ class IntegrationTests(unittest.TestCase):
         row_counts = {config.PLAYER_IMAGE: 6, config.ENEMY_IMAGE: 6, config.ENEMY02_IMAGE: 7,
                       config.AXE_ENEMY_IMAGE: 7, config.SHIELD_SOLDIER_IMAGE: 7,
                       config.RESEARCHER_IMAGE: 7, config.RESEARCHER_BULLET_IMAGE: 1,
+                      config.AR_SOLDIER_IMAGE: 7, config.RIFLE_BULLET_IMAGE: 1,
                       config.COMBAT_IMAGE: 4,
                       config.STRONG_ATTACK_IMAGE: 5, config.STRONG_HIT_IMAGE: 5,
                       config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1,

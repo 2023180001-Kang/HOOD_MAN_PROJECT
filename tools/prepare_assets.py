@@ -27,6 +27,8 @@ SHEETS = {
     # Keep legacy vehicle clips reproducible without preloading their textures.
     **dict.fromkeys(config.ARCHIVED_CAR_HIT_IMAGES, 1),
     **{name: config.WEAPON_SHEET_ROWS[kind] for kind, name in config.WEAPON_POSE_IMAGES.items()},
+    config.AR_SOLDIER_IMAGE: 7,
+    config.RIFLE_BULLET_IMAGE: 1,
 }
 AIRBORNE_WEAPON_ROWS = {config.WEAPON_POSE_IMAGES[kind]: row
                         for kind, row in config.WEAPON_AIRBORNE_ROWS.items()}
@@ -69,7 +71,7 @@ def main():
     destination = ROOT / "assets"
     destination.mkdir(exist_ok=True)
     (destination / "frames.json").write_text(
-        json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
+        json.dumps(metadata, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
     print(f"Prepared sprite clips: {len(SHEETS)} sheets, {sum(SHEETS.values()) * 8} frames; "
           "source PNGs unchanged.")

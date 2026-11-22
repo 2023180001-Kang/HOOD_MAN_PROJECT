@@ -70,6 +70,34 @@ def check_spawning(game):
     print("PASS: both bosses/all 18 digit keys, exact counts, HP 300/ammo 20, repeat latch and floor bounds.")
 
 
+def check_corrected_sheet(game):
+    assert config.AR_SOLDIER_IMAGE == "AR_soldier_pico2d_2048x1792.png"
+    image = game.assets.images[config.AR_SOLDIER_IMAGE]
+    assert (image.w, image.h) == (2048, 1792)
+    for archived in ("AR_soldier.png", config.ARCHIVED_AR_SOLDIER_IMAGE):
+        assert archived not in game.assets.images and archived not in game.assets.frames
+    game.ui.details_visible = False
+    for side in (-1, 1):
+        world, enemy = encounter(game, side=side)
+        for state in ("IDLE", "WALK", "RUN", "ATTACK", "HIT", "RELOAD", "DYING"):
+            enemy.animation.set_state(state)
+            fps = enemy.animation.definitions[state][1]
+            for frame in range(8):
+                enemy.animation.elapsed = (frame + 0.05) / fps
+                tile = game.assets.frames[enemy.sprite_image][enemy.animation.row - 1][frame]
+                with patch.object(image, "clip_composite_draw", wraps=image.clip_composite_draw) as draw:
+                    render_image(game)
+                assert draw.call_count == 1
+                args = draw.call_args.args
+                assert args[:4] == tuple(tile["clip"])
+                assert args[5] == ("h" if enemy.facing < 0 else "")
+                assert abs(args[7] - args[9] / 2 - (enemy.y - world.camera.render_y)) < 1e-8
+                if state == "ATTACK" and frame in config.AR_SOLDIER_FIRE_FRAMES:
+                    capture(game, f"ar_corrected_fire_{enemy.facing}_{frame}")
+    print("PASS: corrected sheet uses all 7x8x2 source clips/flips/feet, including planted firing poses; "
+          "archived original is never loaded or included in metadata.")
+
+
 def check_warning(game):
     game.ui.details_visible = False
     for index in (10, 11):
@@ -82,6 +110,10 @@ def check_warning(game):
                 capture(game, f"ar_warning_{index}_{side}_{speed}")
                 tick(game, 29)
                 assert enemy.aiming and not world.projectiles
+                check_warning_pixels(game)  # The former half-second limit must no longer fire.
+                tick(game, 30)
+                assert enemy.aiming and enemy.ammo == 20 and not world.projectiles
+                check_warning_pixels(game)
                 tick(game)
                 assert enemy.ammo == 19
                 assert len(world.projectiles) == 1 and isinstance(world.projectiles[0], RifleBullet)
@@ -99,7 +131,7 @@ def check_warning(game):
     tick(game, 10)
     release(game, pico2d.SDLK_DOWN)
     assert not enemy.aiming and enemy.ammo == 20 and not world.projectiles
-    print("PASS: 0.5s red-dot warning then 0.1s automatic fire/two visible rounds, "
+    print("PASS: full 1s red-dot warning (still no shot at 0.5s), then 0.1s automatic fire/two visible rounds, "
           "both bosses/facings/speed endpoints; lane escape cancels the warning.")
 
 
@@ -116,7 +148,7 @@ def check_twenty_rounds(game):
                     warnings.append(world.elapsed)
                 if enemy.ammo == previous_ammo - 1:
                     if len(shots) % 20 == 0:
-                        assert abs(world.elapsed - warnings[-1] - 0.5) < 1e-8
+                        assert abs(world.elapsed - warnings[-1] - 1.0) < 1e-8
                     else:
                         assert abs(world.elapsed - shots[-1] - 0.1) < 1e-8
                     shots.append(world.elapsed)
@@ -137,8 +169,8 @@ def check_twenty_rounds(game):
             assert (len(shots), len(warnings), refilled, enemy.ammo) == (21, 2, True, 19)
             assert abs(shots[19] - shots[0] - 1.9) < 1e-8
             assert frames_seen == set(range(8))
-    print("PASS: both bosses/facings fire 20 rounds at 10/s after ONE warning, loop row-4 frames 2..5, "
-          "then all 8 row-6 frames/1s refill and a new warning before round 21.")
+    print("PASS: both bosses/facings fire 20 rounds at 10/s after ONE 1s warning, loop row-4 frames 2..5, "
+          "then all 8 row-6 frames/1s refill and a new 1s warning before round 21.")
 
 
 def check_burst_interruptions(game):
@@ -264,6 +296,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
+        check_corrected_sheet(game)
         check_spawning(game)
         check_warning(game)
         check_twenty_rounds(game)

@@ -208,7 +208,8 @@ RESEARCHER_BULLET_SPEED = 900.0
 RESEARCHER_BULLET_FPS = 16.0
 RESEARCHER_BULLET_STRAIGHT_RANGE = 1125.0  # Preserve the former 1.25s straight flight.
 RESEARCHER_BULLET_GRAVITY = 900.0  # After the straight range, in world px/s².
-AR_SOLDIER_IMAGE = "AR_soldier.png"
+AR_SOLDIER_IMAGE = "AR_soldier_pico2d_2048x1792.png"
+ARCHIVED_AR_SOLDIER_IMAGE = "before_sheets/AR_soldier.png"
 AR_SOLDIER_MAX_HP = 300
 AR_SOLDIER_DAMAGE = 40
 AR_SOLDIER_MAGAZINE_SIZE = 20
@@ -217,10 +218,10 @@ AR_SOLDIER_FIRE_INTERVAL = 0.1  # Ten rounds/second on the shared gameplay clock
 AR_SOLDIER_FIRE_FRAMES = (2, 3, 4, 5)  # Row-4 muzzle-flash/recoil loop, zero-based.
 AR_SOLDIER_SHOOT_RANGE = 600.0
 AR_SOLDIER_SHOOT_FRAME = 2  # First muzzle flash in source row 4, zero-based column.
-AR_SOLDIER_AIM_DURATION = 0.5
-# Source firing pose: cell center x=128, barrel exit near (208, 143), feet y=251.
+AR_SOLDIER_AIM_DURATION = 1.0
+# New planted firing pose: center x=128, barrel exit near (208, 143), feet y=248.
 AR_SOLDIER_MUZZLE_X = 60.0
-AR_SOLDIER_MUZZLE_HEIGHT = 81.0
+AR_SOLDIER_MUZZLE_HEIGHT = 78.75
 RIFLE_BULLET_IMAGE = "rifle_bullet_flying_8frames_pico2d.png"
 RIFLE_BULLET_SCALE = 0.0625  # Visible round/trail about 14x5px, not a full-size sprite.
 RIFLE_BULLET_ANCHOR_Y = 127.5

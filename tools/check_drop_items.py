@@ -262,6 +262,8 @@ def main():
         check_floor_pickup(game, index=6)
         check_floor_pickup(game, index=8)
         check_floor_pickup(game, index=9)
+        check_floor_pickup(game, index=10)
+        check_floor_pickup(game, index=11)
         check_restart(game)
     finally:
         if game is not None:

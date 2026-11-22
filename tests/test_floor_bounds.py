@@ -207,6 +207,23 @@ class FloorBoundsTests(unittest.TestCase):
                                (2492 - camera_x, 258 - camera_y, 68 - camera_x, 258 - camera_y),
                                (68 - camera_x, 258 - camera_y, 68 - camera_x, 45 - camera_y)])
 
+    def test_both_boss_floor300_outlines_match_the_expanded_player_and_enemy_foot_bounds(self):
+        game = scene()
+        game.ui.floor_bounds_visible = True
+        for index, bottom, top in ((10, -28, 247), (11, -20, 242)):
+            game.world.select_stage(index)
+            for camera_x, camera_y in ((0, -44), (640, 8), (1280, 120)):
+                for height in (0, 240):
+                    game.world.player.jump_height = height
+                    with patch("pico2d.draw_line") as draw:
+                        game.ui.draw_floor_bounds(game.world, camera_x, camera_y)
+                    for color, padding in ((PLAYER_BOUNDS_COLOR, 68), (ENEMY_BOUNDS_COLOR, 88)):
+                        lines = [call.args[:4] for call in draw.call_args_list if call.args[4:] == color]
+                        xs = [x + camera_x for ax, _, bx, _ in lines for x in (ax, bx)]
+                        ys = [y + camera_y for _, ay, _, by in lines for y in (ay, by)]
+                        self.assertEqual((min(xs), max(xs), min(ys), max(ys)),
+                                         (padding, 2560 - padding, bottom, top))
+
     def test_both_new_city_outlines_cover_the_full_sidewalk_and_road(self):
         game = scene()
         game.ui.floor_bounds_visible = True

@@ -36,7 +36,7 @@ class CityStageTests(unittest.TestCase):
                           config.FACTORY_OUTSIDE_IMAGE, config.FACTORY_EXTERIOR_IMAGE,
                           "factoryInside-1.png", "factoryStage-2.png",
                           "labStage-1_floor300_1672x941.png", "labStage-2_floor300_1672x941.png",
-                          "bossStage-1.png", "bossStage-2.png"])
+                           "bossStage_floor300_1672x941.png", "bossStage-2_floor300_1672x941.png"])
         for index, stage in enumerate(world.stages):
             stage.arrows_visible = True
             self.assertEqual(stage.destination(-1), index - 1 if index else None)

@@ -464,6 +464,11 @@ def check_indoor_backgrounds(game, first=6):
             "labStage-1_floor300_1672x941.png", "labStage-2_floor300_1672x941.png")
         for archived in config.ARCHIVED_LAB_STAGE_IMAGES:
             assert archived not in game.assets.images and Path(archived).name not in game.assets.images
+    elif first == 10:
+        assert config.STAGE_IMAGES[10:] == config.BOSS_STAGE_IMAGES == (
+            "bossStage_floor300_1672x941.png", "bossStage-2_floor300_1672x941.png")
+        for archived in config.ARCHIVED_BOSS_STAGE_IMAGES:
+            assert archived not in game.assets.images and Path(archived).name not in game.assets.images
     for index in (first, first + 1):
         game.world = World()
         game.world.stage_index = index

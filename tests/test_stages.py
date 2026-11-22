@@ -72,7 +72,7 @@ class StageTests(unittest.TestCase):
                           ((0, -44, 2560, 239), (0, -44, 2560, 247), (0, -44, 2560, 279),
                           (0, 45, 2560, 258), (0, 0, 2560, 284), (0, -3, 2560, 172),
                           (0, 16, 2560, 200), (0, -109, 2560, 178), (0, -48, 2560, 239),
-                          (0, 56, 2560, 148), (0, 56, 2560, 116)))
+                          (0, -28, 2560, 247), (0, -20, 2560, 242)))
 
     def test_each_loadout_can_walk_and_run_to_all_four_expanded_floor_corners(self):
         for weapon in (None, *config.WEAPON_POSE_IMAGES):

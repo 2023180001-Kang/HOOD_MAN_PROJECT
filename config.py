@@ -326,7 +326,8 @@ FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
 LAB_STAGE_IMAGES = ("labStage-1_floor300_1672x941.png", "labStage-2_floor300_1672x941.png")
 ARCHIVED_LAB_STAGE_IMAGES = ("before_sheets/labStage-1_new_1672x941.png",
                             "before_sheets/labStage-2_new_1672x941.png")
-BOSS_STAGE_IMAGES = ("bossStage-1.png", "bossStage-2.png")
+BOSS_STAGE_IMAGES = ("bossStage_floor300_1672x941.png", "bossStage-2_floor300_1672x941.png")
+ARCHIVED_BOSS_STAGE_IMAGES = ("before_sheets/bossStage-1.png", "before_sheets/bossStage-2.png")
 STAGE_IMAGES = (STAGE_IMAGE, SECOND_STAGE_IMAGE, *CITY_STAGE_IMAGES,
                 FACTORY_OUTSIDE_IMAGE, FACTORY_EXTERIOR_IMAGE, *FACTORY_INSIDE_IMAGES,
                 *LAB_STAGE_IMAGES, *BOSS_STAGE_IMAGES)
@@ -379,8 +380,10 @@ STAGE_WALKABLE_BOUNDS = (
     # Keep anchor 280: world y = 761 - source_y; source rows 583..870 / 522..809.
     (0.0, -109.0, WORLD_WIDTH, 178.0),
     (0.0, -48.0, WORLD_WIDTH, 239.0),
-    (0.0, 56.0, WORLD_WIDTH, 148.0),
-    (0.0, 56.0, WORLD_WIDTH, 116.0),
+    # Expanded boss floors: below equipment/furniture, through the front tile lip.
+    # Keep anchor 144: world y = 897 - source_y; source rows 650..925 / 655..917.
+    (0.0, -28.0, WORLD_WIDTH, 247.0),
+    (0.0, -20.0, WORLD_WIDTH, 242.0),
 )
 STAGE_WALKABLE_POLYGONS = {}
 # Spawn on the sidewalk, while pursuit can still use the full city floor.

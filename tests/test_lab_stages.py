@@ -143,7 +143,7 @@ class LabStageTests(unittest.TestCase):
     def test_lab_and_neighbor_transitions_keep_loading_motion_and_common_depths(self):
         cases = ((7, 8, 200, 178), (7, 8, 16, 16), (8, 7, -109, 16), (8, 7, 178, 178),
                  (8, 9, -109, -48), (8, 9, 178, 178), (9, 8, -48, -48), (9, 8, 239, 178),
-                 (9, 10, -48, 56), (9, 10, 239, 148), (10, 9, 56, 56), (10, 9, 148, 148))
+                 (9, 10, -48, -28), (9, 10, 239, 239), (10, 9, -28, -28), (10, 9, 247, 239))
         for source, destination, depth, projected in cases:
             world = World()
             world.select_stage(source)

@@ -23,11 +23,13 @@
 
 **2026-11-22 몽둥이 사망 드랍 삭제:** 몽둥이 하나를 사용하는 기존 적을 처치해도 몽둥이를 생성하지 않는다. M으로 다른 맵에 소환한 경우와 일반/무기/강화/W 등 모든 처치 경로에 적용한다(FR-36). 전용 생성·낙하/표시·이미지 로딩을 제거하되 원본 PNG, 적의 보유 외형/전투/사망·페이드, 단검·쇠파이프 15개 배치와 G 기능은 유지한다. 이전 드랍 추가/표시 개선 이력보다 이 삭제 사양을 우선하며 변경 기록은 PRD.md에만 남기고 별도 커밋은 만들지 않는다.
 
+**2026-11-22 보스 배경/바닥 교체:** 열한 번째·열두 번째 맵은 `bossStage_floor300_1672x941.png → bossStage-2_floor300_1672x941.png`를 사용한다. 이전 `bossStage-1.png`·`bossStage-2.png`는 `before_sheets/`로 원본 그대로 옮기고 일반 로딩에서 제외한다. 새 바닥은 각각 월드 `x=0~2560, y=-28~247 / -20~242`이며 실제 이동/F4·적 소환/추적·아이템/G에 공통 적용한다(FR-45). 연구소 경계의 2초 로딩·보스 두 맵 즉시 왕복·마지막 오른쪽 경계는 유지하고 별도 커밋은 만들지 않는다.
+
 ## 2. 목표와 범위
 
 ### 2.1 개발 목표
 
-플레이어가 4방향·대각선 바닥 이동, 가속과 마찰이 적용된 달리기, 독립된 이단 점프와 기본 전투를 사용하는 12개 스테이지를 만든다. N키로 맵 끝 이동 화살표를 표시하고 걷기·달리기·점프 상태를 이어가며 `changed_first_map_no_door → newStage-2_floor300 → cityStage1_ground_300px → cityStage2_ground_300px → factory_loading_dock_no_stairs → factoryOutside_floor300 → factoryInside-1 → factoryStage-2 → labStage-1_floor300 → labStage-2_floor300 → bossStage-1 → bossStage-2`를 진행·왕복한다. 기존/도시, 도시/공장 외부, 공장 외부/내부, 공장 내부/연구소, 연구소/보스 구역 경계에는 기존 STAGE_LOADING 이미지를 2초 표시한다. 적은 자동 생성하지 않으며 숫자 1~9를 새로 누를 때만 현재 맵에 해당 수를 무작위 좌우 방향으로 소환한다. 도시 두 맵은 enemy02, 공장 하역장은 axe_enemy(HP 400·공격력 60), 공장 내부 factoryInside-1/factoryStage-2는 연구원(HP 200·권총 30·7발 후 재장전), 연구소 두 맵은 방패 병사(HP 400·공격 40·방어 중 피해 절반·방어/공격 무작위), 나머지 맵은 기존 적을 사용한다. 적은 2차원으로 추적·분산하고 실제 바닥 깊이를 고려해 공격한다. 주인공과 적의 발은 모든 이동·보정·넉백 뒤에도 각 맵의 이동 가능 영역 안에 있어야 한다. 각 맵 바닥에는 이동 화살표 영역을 피해서 combat_knife·steel_pipe 드랍 아이템을 합계 15개 무작위 배치한다. 가까운 바닥 무기는 G로 획득/교체하고 해당 무기 Pose 시트를 사용하며, 근처 무기가 없으면 G로 버리고 공중에서 버린 무기도 중력으로 낙하한다. `F5`로 처음부터 반복 테스트할 수 있어야 한다.
+플레이어가 4방향·대각선 바닥 이동, 가속과 마찰이 적용된 달리기, 독립된 이단 점프와 기본 전투를 사용하는 12개 스테이지를 만든다. N키로 맵 끝 이동 화살표를 표시하고 걷기·달리기·점프 상태를 이어가며 `changed_first_map_no_door → newStage-2_floor300 → cityStage1_ground_300px → cityStage2_ground_300px → factory_loading_dock_no_stairs → factoryOutside_floor300 → factoryInside-1 → factoryStage-2 → labStage-1_floor300 → labStage-2_floor300 → bossStage_floor300 → bossStage-2_floor300`를 진행·왕복한다. 기존/도시, 도시/공장 외부, 공장 외부/내부, 공장 내부/연구소, 연구소/보스 구역 경계에는 기존 STAGE_LOADING 이미지를 2초 표시한다. 적은 자동 생성하지 않으며 숫자 1~9를 새로 누를 때만 현재 맵에 해당 수를 무작위 좌우 방향으로 소환한다. 도시 두 맵은 enemy02, 공장 하역장은 axe_enemy(HP 400·공격력 60), 공장 내부 factoryInside-1/factoryStage-2는 연구원(HP 200·권총 30·7발 후 재장전), 연구소 두 맵은 방패 병사(HP 400·공격 40·방어 중 피해 절반·방어/공격 무작위), 나머지 맵은 기존 적을 사용한다. 적은 2차원으로 추적·분산하고 실제 바닥 깊이를 고려해 공격한다. 주인공과 적의 발은 모든 이동·보정·넉백 뒤에도 각 맵의 이동 가능 영역 안에 있어야 한다. 각 맵 바닥에는 이동 화살표 영역을 피해서 combat_knife·steel_pipe 드랍 아이템을 합계 15개 무작위 배치한다. 가까운 바닥 무기는 G로 획득/교체하고 해당 무기 Pose 시트를 사용하며, 근처 무기가 없으면 G로 버리고 공중에서 버린 무기도 중력으로 낙하한다. `F5`로 처음부터 반복 테스트할 수 있어야 한다.
 
 ### 2.2 필수 개발 범위
 
@@ -131,10 +133,11 @@
 | 아홉 번째 배경 | 확장 바닥의 첫 번째 연구소 | `labStage-1_floor300_1672x941.png` | 1672×941 RGB·원본 배율·지면 기준 280px, 원본 y=583~870·월드 y=-109~178 |
 | 열 번째 배경 | 확장 바닥의 두 번째 연구소 | `labStage-2_floor300_1672x941.png` | 1672×941 RGB·원본 y=522~809·월드 y=-48~239, 첫 연구소 다음 즉시 연결 |
 | 이전 연구소 배경 | 교체 전 `_new` 두 맵 | `before_sheets/labStage-1_new_1672x941.png`, `before_sheets/labStage-2_new_1672x941.png` | 원본 바이트 그대로 보관·일반 로딩 제외, 더 오래된 보관 원본도 유지 |
-| 열한 번째·열두 번째 배경 | 기존 보스 구역 | `bossStage-1.png`, `bossStage-2.png` | 연구소 뒤 기존 2초 로딩·보스 두 맵 즉시 왕복 유지, 최종 경계는 bossStage-2 오른쪽 |
+| 열한 번째·열두 번째 배경 | 확장 바닥의 보스 구역 | `bossStage_floor300_1672x941.png`, `bossStage-2_floor300_1672x941.png` | 1672×941 RGB/RGBA 원본·앵커 144·월드 y=-28~247/-20~242, 연구소 뒤 기존 2초 로딩·두 맵 즉시 왕복·두 번째 맵 오른쪽 최종 경계 |
+| 이전 보스 배경 | 교체 전 보스 두 맵 | `before_sheets/bossStage-1.png`, `before_sheets/bossStage-2.png` | 원본 바이트 그대로 보관·일반 이미지 로딩 제외 |
 | 이전/다음 이동 표식 | 노란색 좌우 화살표 | `arrow_left_yellow.png`, `arrow_right_yellow.png` | 512×320 원본, 96×60px 표시·월드 좌표 적용 |
 
-기존 배경 `stage.png`는 `before_sheets/stage.png`에 원본 그대로 보관한다. 게임 실행에는 `changed_first_map_no_door.png`, `newStage-2_floor300_1672x941.png`, `cityStage1_ground_300px_1672x941.png`, `cityStage2_ground_300px_1672x941.png`, `factory_loading_dock_no_stairs_1672x941.png`, `factoryOutside_floor300.px.png`, `factoryInside-1.png`, `factoryStage-2.png`, `labStage-1_floor300_1672x941.png`, `labStage-2_floor300_1672x941.png`, `bossStage-1.png`, `bossStage-2.png`를 순서대로 사용한다. 두 번째 내부 배경은 사용자 확인에 따라 `factoryStage-2.png`를 사용한다.
+기존 배경 `stage.png`는 `before_sheets/stage.png`에 원본 그대로 보관한다. 게임 실행에는 `changed_first_map_no_door.png`, `newStage-2_floor300_1672x941.png`, `cityStage1_ground_300px_1672x941.png`, `cityStage2_ground_300px_1672x941.png`, `factory_loading_dock_no_stairs_1672x941.png`, `factoryOutside_floor300.px.png`, `factoryInside-1.png`, `factoryStage-2.png`, `labStage-1_floor300_1672x941.png`, `labStage-2_floor300_1672x941.png`, `bossStage_floor300_1672x941.png`, `bossStage-2_floor300_1672x941.png`를 순서대로 사용한다. 두 번째 내부 배경은 사용자 확인에 따라 `factoryStage-2.png`를 사용한다.
 
 두 번째 어두운 골목은 사용자 제공 `newStage-2_floor300_1672x941.png`로 교체한다. 이전 `newStage-2.png`는 `before_sheets/newStage-2.png`에 원본 바이트 그대로 보관하고 일반 로딩에서 제외한다. 같은 인덱스·원본 배율 1.0·지면 기준 144px·좌우 반전 연결을 유지하며 원본 y=658~941의 건물/현관 계단 받침 아래 타일 바닥부터 이미지 하단까지 이동한다. 이번 교체는 스테이징·커밋·푸시 없이 작업 트리에 유지한다.
 
@@ -147,6 +150,8 @@
 두 번째 공장 외부는 사용자 제공 `factoryOutside_floor300.px.png`로 교체한다. `.px.png`를 포함한 실제 파일명을 유지하고 이전 `HOOD_MAN_Factory_Exterior_1672x941.png`는 `before_sheets/`에 원본 바이트 그대로 이동한다. 새/보관 PNG는 재저장하지 않고 일반 로딩은 새 배경만 사용한다. 같은 인덱스 5·배율 1.0·지면 기준 100px를 유지해 원본 y=657~941의 벽/적재물 아래부터 이미지 하단까지 아스팔트 바닥 전체를 단층 보행 영역으로 사용하며 스테이징·커밋·푸시는 하지 않는다.
 
 연구소는 같은 인덱스 8/9에 `labStage-1_floor300_1672x941.png`·`labStage-2_floor300_1672x941.png`를 연결한다. 직전 활성 `_new` 두 PNG는 `before_sheets/labStage-1_new_1672x941.png`·`before_sheets/labStage-2_new_1672x941.png`로 원본 바이트 그대로 이동하고 일반 로딩에서 제외한다. 더 오래된 `before_sheets/labStage-1_1672x941.png`·`before_sheets/labStage-2_1672x941.png`도 그대로 보존한다. 배율 1.0·앵커 280·반전 연결을 유지해 `world_y = 761 - source_y`를 적용하며 장비/기단 아래부터 앞쪽 금속 배수로 직전까지의 단층 바닥을 사용한다.
+
+보스 구역은 같은 인덱스 10/11에 새 `bossStage_floor300_1672x941.png`·`bossStage-2_floor300_1672x941.png`를 연결한다. 이전 두 PNG는 `before_sheets/bossStage-1.png`·`before_sheets/bossStage-2.png`로 원본 그대로 이동하고 일반 로딩에서 제외한다. 새/보관 PNG를 재저장하지 않으며 원본 배율 1.0·앵커 144·반전 연결을 유지한다. `world_y = 897 - source_y`로 원본 y=650~925/655~917의 가구·설비 아래부터 전면 바닥 턱 윗면까지 사용하고 수직 측면은 제외한다. 변경은 별도 커밋 없이 유지한다.
 
 기존 9Moves 시트는 `before_sheets/HoodMan_BasicCombat_9Moves_8Frames_2048x2304.png`에 원본 그대로 보관한다. 기존 무기 시트는 `before_sheets/HOOD_MAN_DAGGER_new.png`, `before_sheets/HOOD_MAN_STEEL_PIPE_new.png`에 보관한다. `tools/prepare_assets.py`는 반격 시트 2개·64프레임을 제외하고 방패 병사 56프레임을 포함한 **총 14개 시트·592프레임**을 생성한다. 이는 **활성 캐릭터/총알 12개·576프레임 + 보관 차량 피격 2개·16프레임**이며, 후자의 이미지 텍스처는 일반 로딩에서 제외한다. 기존 536개 클립의 좌표/발 오프셋은 바꾸지 않는다. 도끼 적 기절 행은 메타데이터에만 보존하며 상태에 연결하지 않는다. enemy02는 384×384 셀, 나머지는 256×256 셀이다. 차량/바닥 아이템/문은 기존 직접 클립을 유지하며 두 Counter PNG는 before_sheets 보관만 한다.
 
@@ -246,7 +251,7 @@
 17. 공장 외부 두 맵을 지나 factoryOutside_floor300의 오른쪽 N 출구를 통과하면 기존 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 창 전체에 2초 표시하고 첫 공장 내부 `factoryInside-1` 왼쪽 x=128에 진입한다. 내부에서 외부로 돌아갈 때도 같은 로딩을 사용한다.
 18. factoryInside-1 오른쪽 N 출구는 두 번째 내부 `factoryStage-2`로 즉시 이어진다. 두 내부 맵은 양방향 즉시 전환한다.
 19. 공장 내부 두 번째 맵 factoryStage-2의 오른쪽 N 출구를 통과하면 기존 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 창 전체에 2초 표시한 뒤 `labStage-1` 왼쪽 x=128에 진입한다. 연구소에서 공장 내부로 돌아갈 때도 같은 2초 로딩을 사용한다.
-20. labStage-1_floor300 오른쪽 N 출구는 labStage-2_floor300으로 즉시 이어지고 왼쪽 출구로 돌아올 수 있다. 두 번째 연구소 오른쪽은 기존 2초 로딩 뒤 bossStage-1로 이어지며 보스 두 맵의 즉시 왕복과 bossStage-2 오른쪽 최종 경계는 유지한다.
+20. labStage-1_floor300 오른쪽 N 출구는 labStage-2_floor300으로 즉시 이어지고 왼쪽 출구로 돌아올 수 있다. 두 번째 연구소 오른쪽은 기존 2초 로딩 뒤 bossStage_floor300으로 이어지며 새 보스 두 맵의 즉시 왕복과 bossStage-2_floor300 오른쪽 최종 경계는 유지한다.
 21. 모든 맵에는 combat_knife·steel_pipe가 처음 합계 15개씩 바닥에 놓인다. 두 종류를 최소 1개씩 포함하고 이동 화살표 주변은 비워 둔다. 가까이 접근하면 G가 표시되고 새 G 입력으로 가장 가까운 바닥 무기를 획득한다. 이미 들고 있으면 바닥 무기로 교체하고 기존 무기를 떨어뜨리며, 근처 바닥 무기가 없으면 들고 있는 무기를 버린다. 점프 중 G는 손 높이에서 떨어뜨리기다. 맵별 바닥/낙하 아이템과 보유 무기는 재방문 시 유지하고 F5는 비무장·모든 맵 초기 배치를 복원한다.
 22. U를 새로 누르면 설명/보조 HUD를 숨겨 주인공 HP바와 현재 체력 수치·적 HP바를 남기고, 다시 누르면 설명을 복원한다. 기본은 표시이며 맵 이동과 F5 재시작 후에도 선택한 표시 상태를 유지한다.
 
@@ -554,17 +559,17 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 
 ### FR-15. 12개 스테이지 배경과 N키 이동 표식
 
-- 스테이지 순서는 `changed_first_map_no_door.png → newStage-2_floor300_1672x941.png → cityStage1_ground_300px_1672x941.png → cityStage2_ground_300px_1672x941.png → factory_loading_dock_no_stairs_1672x941.png → factoryOutside_floor300.px.png → factoryInside-1.png → factoryStage-2.png → labStage-1_floor300_1672x941.png → labStage-2_floor300_1672x941.png → bossStage-1.png → bossStage-2.png`다. 12개 맵 모두 월드 너비 2560px·지면 y=100·원본 배율 1.0·교대 좌우 반전 연결을 사용한다. 기존 네 거리 맵과 두 공장 내부/보스 맵의 보행 기준은 원본 아래 144px, 두 공장 외부 맵은 100px, 두 연구소 맵은 280px다.
+- 스테이지 순서는 `changed_first_map_no_door.png → newStage-2_floor300_1672x941.png → cityStage1_ground_300px_1672x941.png → cityStage2_ground_300px_1672x941.png → factory_loading_dock_no_stairs_1672x941.png → factoryOutside_floor300.px.png → factoryInside-1.png → factoryStage-2.png → labStage-1_floor300_1672x941.png → labStage-2_floor300_1672x941.png → bossStage_floor300_1672x941.png → bossStage-2_floor300_1672x941.png`다. 12개 맵 모두 월드 너비 2560px·지면 y=100·원본 배율 1.0·교대 좌우 반전 연결을 사용한다. 기존 네 거리 맵과 두 공장 내부/보스 맵의 보행 기준은 원본 아래 144px, 두 공장 외부 맵은 100px, 두 연구소 맵은 280px다.
 - 시작 시 화살표를 숨긴다. 살아 있는 주인공이 N을 새로 누르면 현재 맵의 이동 표식을 표시하고 유지한다. 재입력은 숨김 토글이 아니며 키 반복은 새 입력으로 처리하지 않는다.
 - 첫 맵은 오른쪽 화살표만, 나머지 맵은 왼쪽/오른쪽 화살표를 각각 맵 양 끝에서 안쪽 80px에 표시한다. 화살표 중심을 캐릭터 발이 닿는 맵 바닥선 y=100에 맞춰 96×60px로 렌더링하며 카메라 이동·흔들림과 함께 이동한다.
 - 화살표는 기준 x좌표에서 좌우 최대 6px씩, 1.6초 주기의 사인 곡선으로 부드럽게 왕복한다. 높이는 고정하고 게임 경과 시간을 사용한다. 애니메이션은 표시 위치에만 적용하며 스테이지 전환 영역은 맵 끝 안쪽 80px로 유지한다.
-- 화살표 옆 `다음 스테이지`, `이전 스테이지`, `다음 스테이지 준비 중` 문구를 제거하고 화살표 이미지만 표시한다. 현재 마지막 맵 `bossStage-2`의 오른쪽 화살표에는 이동 대상이 없다.
+- 화살표 옆 `다음 스테이지`, `이전 스테이지`, `다음 스테이지 준비 중` 문구를 제거하고 화살표 이미지만 표시한다. 현재 마지막 맵 `bossStage-2_floor300`의 오른쪽 화살표에는 이동 대상이 없다.
 - N 표시 상태·적 목록/체력/AI·타격 효과·소환 순서는 맵마다 별도로 관리한다. N을 누른 채 다른 맵에 들어가도 새 N 입력 전에는 그 맵의 표식을 표시하지 않는다.
 - F5는 첫 맵·중앙 시작 위치로 돌아오며 12개 맵의 객체와 화살표, 애니메이션 기준 시간·대기 중 구역 전환을 초기화한다. 모든 배경·화살표·로딩 이미지는 최초 1회 로딩해 재사용한다. 화면 하단 N 조작 안내는 표시하고, 화면 상단 스테이지 번호는 표시하지 않는다.
 
 ### FR-16. 이동 상태를 보존하는 양방향 스테이지 전환
 
-- N으로 표시한 유효한 이동 표식 쪽 맵 끝 안쪽 80px 영역에 들어가 바깥쪽으로 이동하면 이웃 맵으로 전환한다. 12개 맵을 순서대로 양방향 연결하며 `newStage-2_floor300 ↔ cityStage1`, `cityStage2 ↔ factory_loading_dock_no_stairs`, `factoryOutside_floor300 ↔ factoryInside-1`, `factoryStage-2 ↔ labStage-1_floor300`, `labStage-2_floor300 ↔ bossStage-1` 사이에는 FR-21의 로딩을 거친다. 각 구역 안의 두 맵끼리는 즉시 전환한다. 화살표가 숨겨진 방향·첫 맵 왼쪽·마지막 맵 오른쪽에는 이동 대상이 없다.
+- N으로 표시한 유효한 이동 표식 쪽 맵 끝 안쪽 80px 영역에 들어가 바깥쪽으로 이동하면 이웃 맵으로 전환한다. 12개 맵을 순서대로 양방향 연결하며 `newStage-2_floor300 ↔ cityStage1`, `cityStage2 ↔ factory_loading_dock_no_stairs`, `factoryOutside_floor300 ↔ factoryInside-1`, `factoryStage-2 ↔ labStage-1_floor300`, `labStage-2_floor300 ↔ bossStage_floor300` 사이에는 FR-21의 로딩을 거친다. 각 구역 안의 두 맵끼리는 즉시 전환한다. 화살표가 숨겨진 방향·첫 맵 왼쪽·마지막 맵 오른쪽에는 이동 대상이 없다.
 - 다음 맵으로 갈 때 x=128, 이전 맵으로 돌아올 때 x=2432에 진입한다. 표식 영역에서 48px 안쪽에 배치하여 즉시 재전환을 막고, 충돌용 이전 x도 진입 위치에 동기화한다.
 - **동일한 Player 객체**를 유지하고 x/이전 x와 카메라를 새 맵에 맞춘다. 공통 바닥 구간에서는 `ground_y`와 바닥 속도도 이어가고 새 맵의 보행 영역 밖인 깊이만 투영한다. `jump_height`·점프 속도·횟수·HP·무적·방향·모션 시간·유지 입력은 이어간다. 바닥 경계로 막힌 축 속도만 0으로 한다.
 - 새 두 번째 골목과 첫 맵 사이에는 기존 즉시 왕복을 유지한다. 첫 맵 뒤쪽 y=277은 새 골목의 y=239로, 새 골목 앞쪽 y=-44는 첫 맵의 y=-3으로만 제한한다. 새 골목↔첫 도시의 공통 깊이 -44~239는 로딩 후에도 유지하고 도시 y=247에서 돌아올 때만 239로 투영한다. 이전 골목의 좁은 56~116 범위를 남기지 않는다.
@@ -602,7 +607,7 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 ### FR-19. 맵별 바닥 보행 영역과 좌표·경계의 일관성
 
 - 좌표는 `x`·`ground_y`·`jump_height`로 분리한다. 화면 발 위치 `y`는 두 높이의 합이며 실제 바닥 제한에 점프 높이를 넣지 않는다. 바닥 속도는 `(vx, ground_vy)`, 점프 속도는 `vy`다.
-- 배경의 원본 크기·카메라 뷰포트와 분리된 `STAGE_WALKABLE_BOUNDS`를 사용한다. 첫 맵은 새 단층 배경의 월드 y=-3~277, 두 번째 골목은 y=-44~239, 새 `cityStage1`은 y=-44~247·`cityStage2`는 y=-44~279, `factoryInside-1`은 y=-3~172, `labStage-1_floor300`은 y=-109~178·`labStage-2_floor300`은 y=-48~239, `factory_loading_dock_no_stairs`는 y=45~258, `factoryOutside_floor300`은 y=0~284, `factoryStage-2`는 y=16~200이며 x 범위는 0~2560이다. 기존 보스 두 맵의 y=56~148/56~116은 유지한다. 초기 스프라이트 좌우 여백은 주인공 68·적 88px다. 두 번째 골목과 도시 두 맵은 `world_y = 897 - source_y`로 원본 y=658~941/650~941/618~941의 바닥 전체를 사용하고 F4도 동일한 실제 발 경계를 표시한다. factoryInside-1은 같은 앵커 144/좌표 변환으로 원본 y=725~900 전체를 사용한다. 음수 깊이는 같은 단층 바닥의 월드 좌표이며 별도 층이 아니다. 새 공장 외부는 지면 기준 100을 유지한 `world_y = 941 - source_y`로 원본 y=657~941 전체를 사용한다. 두 연구소는 앵커 280을 유지한 `world_y = 761 - source_y`로 원본 y=583~870/522~809의 장비/기단 아래부터 배수로 직전까지 사용한다.
+- 배경의 원본 크기·카메라 뷰포트와 분리된 `STAGE_WALKABLE_BOUNDS`를 사용한다. 첫 맵은 새 단층 배경의 월드 y=-3~277, 두 번째 골목은 y=-44~239, 새 `cityStage1`은 y=-44~247·`cityStage2`는 y=-44~279, `factoryInside-1`은 y=-3~172, `labStage-1_floor300`은 y=-109~178·`labStage-2_floor300`은 y=-48~239, `factory_loading_dock_no_stairs`는 y=45~258, `factoryOutside_floor300`은 y=0~284, `factoryStage-2`는 y=16~200이며 x 범위는 0~2560이다. 새 보스 두 맵은 FR-45의 y=-28~247/-20~242로 확장한다. 초기 스프라이트 좌우 여백은 주인공 68·적 88px다. 두 번째 골목과 도시 두 맵은 `world_y = 897 - source_y`로 원본 y=658~941/650~941/618~941의 바닥 전체를 사용하고 F4도 동일한 실제 발 경계를 표시한다. factoryInside-1은 같은 앵커 144/좌표 변환으로 원본 y=725~900 전체를 사용한다. 음수 깊이는 같은 단층 바닥의 월드 좌표이며 별도 층이 아니다. 새 공장 외부는 지면 기준 100을 유지한 `world_y = 941 - source_y`로 원본 y=657~941 전체를 사용한다. 두 연구소는 앵커 280을 유지한 `world_y = 761 - source_y`로 원본 y=583~870/522~809의 장비/기단 아래부터 배수로 직전까지 사용한다. 새 보스 두 맵은 앵커 144의 `world_y = 897 - source_y`로 원본 y=650~925/655~917의 바닥 전체를 사용한다.
 - `WalkableArea`는 직사각형과 볼록 다각형을 지원한다. `STAGE_WALKABLE_POLYGONS[index]`로 재정의할 수 있고 발의 수평 폭을 고려해 다각형을 안쪽으로 축소한 뒤 내부 검사·최근접 투영을 수행한다. 현재 열 배경은 건물/소품 앞의 안전한 직사각형을 사용한다.
 - 경계는 액터 갱신 전후, 적의 넉백 이동 직후, 몸체/Separation 보정 뒤, 매 `World.step()` 마지막에 검사한다. 막힌 바닥 축 속도만 제거하고 점프 속도·높이는 유지한다. 공격·피격·사망의 조기 반환 경로도 `update()` 래퍼의 검사에서 빠지지 않는다.
 - 적 생성과 공격 슬롯 목표도 먼저 보행 영역 안에 둔다. 실제 이동이 끝난 뒤만 자르는 방식으로 벽 바깥 목표를 계속 추적하지 않게 한다. 밀집 시 일부 겹침을 허용하되 반복 투영이 바깥 밀림이나 무한 루프를 만들지 않게 한다.
@@ -623,7 +628,7 @@ U로 선택한 설명 표시 상태는 게임 시뮬레이션과 분리된 UI �
 - `cityStage2` 오른쪽 출구는 STAGE_LOADING 이미지를 2초 표시한 뒤 `factory_loading_dock_no_stairs` 왼쪽 x=128로 연결한다. 공장 외부 왼쪽 출구에서도 같은 이미지를 2초 표시한 뒤 도시 두 번째 맵 오른쪽 x=2432로 돌아간다.
 - 공장 외부 두 번째 맵 `factoryOutside_floor300` 오른쪽 출구는 같은 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 2초 표시한 뒤 `factoryInside-1` 왼쪽 x=128로 연결한다. 첫 내부 맵 왼쪽에서 외부로 돌아갈 때도 같은 2초 로딩 뒤 x=2432로 진입한다. 내부 첫 맵과 두 번째 `factoryStage-2` 사이에는 로딩 없이 즉시 전환한다.
 - 공장 내부 두 번째 맵 `factoryStage-2` 오른쪽 출구는 같은 STAGE_LOADING 이미지를 2초 표시한 뒤 `labStage-1` 왼쪽 x=128로 연결한다. 연구소 첫 맵 왼쪽 출구는 같은 2초 로딩 뒤 공장 내부 두 번째 맵 오른쪽 x=2432로 돌아간다. `labStage-1 ↔ labStage-2`는 로딩 없이 즉시 전환한다.
-- 연구소 배경 교체 후에도 `labStage-2_floor300 ↔ bossStage-1`의 기존 양방향 2초 로딩과 `bossStage-1 ↔ bossStage-2`의 즉시 전환을 유지한다.
+- 연구소/보스 배경 교체 후에도 `labStage-2_floor300 ↔ bossStage_floor300`의 기존 양방향 2초 로딩과 `bossStage_floor300 ↔ bossStage-2_floor300`의 즉시 전환을 유지한다.
 - 로딩은 물리 갱신의 최대 dt=0.1초 제한과 독립된 실제 경과 시간으로 계산한다. 처음 로딩 이미지를 표시한 뒤 2초를 기다리며, 남은 시간이 끝나기 전에 목적 맵을 표시하지 않는다. 초기 타이틀의 2초 자동 시작과 별도로 동작한다.
 - 로딩 중 월드 시간·플레이어 이동/점프/애니메이션·적 AI/공격·타격 효과·피해 숫자·차량 이동/모션/통행 대기를 멈춘다. 기존 Player의 HP·무적·방향·속도·점프/모션 상태와 맵별 객체를 보존하고, 완료 시 목적 맵의 보행 경계만 투영하여 이어간다.
 - 로딩 중 새 점프·공격·소환·N/P 입력은 소비하고 예약하지 않는다. 유지 방향키/Shift와 키 해제를 반영하며, F5는 로딩을 취소하고 첫 맵의 새 게임 상태를 복원한다. 창 닫기는 정상 종료한다.
@@ -719,7 +724,7 @@ H/J/K/L 기능 삭제에 따라 아래 HOLD/이동/A 후속 공격 사양도 함
 - 기존 N 출구 통과를 진행 기준으로 사용한다. 공장 내부 두 번째 맵 오른쪽에서 연구소로 나갈 때 기존 `HOOD_MAN_STAGE_LOADING_1280x720.png`를 창 전체에 2초 표시한 뒤 x=128에 진입한다. 연구소에서 공장 내부로 돌아갈 때도 같은 2초 로딩 뒤 x=2432에 진입한다. 두 연구소 맵 사이는 즉시 왕복한다.
 - 두 배경은 1672×941 RGB 원본 배율 1.0·월드 폭 2560px·교대 좌우 반전 연결을 사용한다. 원본 아래 280px를 월드 지면 y=100에 맞추며 첫 맵은 원본 y=583~870/월드 y=-109~178, 두 번째는 원본 y=522~809/월드 y=-48~239의 실제 바닥을 사용한다. 장비/플랫폼 기단과 앞쪽 금속 배수로를 제외하며 별도 상층/계단/발판은 없다. 주인공 68px·방패 병사 88px 좌우 여백과 소환/아이템/G·F4는 같은 바닥을 사용한다.
 - 로딩 중 월드/모션·적 AI·효과/피해 숫자를 정지하고 일회성 입력을 소비한다. 동일 Player·HP·무적·속도·점프 높이/속도/횟수·모션 시간·유지 이동 입력과 맵별 객체를 이어가며 목적 맵의 바닥 범위를 벗어난 깊이만 투영한다.
-- labStage-2_floor300 오른쪽은 기존 2초 STAGE_LOADING 뒤 bossStage-1로 이어지고 역방향도 동일하다. 연구소 이후 보스 두 맵과 최종 경계는 바꾸지 않는다. F5는 로딩을 취소하고 12개 맵의 적/효과/소환·N 표시 상태를 모두 초기화한다. 배경과 로딩 이미지는 최초 한 번 로딩해 재사용한다. 연구소에서 숫자 소환하는 방패 병사는 FR-43을 따른다.
+- labStage-2_floor300 오른쪽은 기존 2초 STAGE_LOADING 뒤 bossStage_floor300으로 이어지고 역방향도 동일하다. 보스 배경/바닥은 FR-45로 교체하되 기존 진행 순서와 최종 경계는 바꾸지 않는다. F5는 로딩을 취소하고 12개 맵의 적/효과/소환·N 표시 상태를 모두 초기화한다. 배경과 로딩 이미지는 최초 한 번 로딩해 재사용한다. 연구소에서 숫자 소환하는 방패 병사는 FR-43을 따른다.
 
 ### FR-30. 도시 전용 enemy02의 추적 도약·공중 몸체 충돌과 일반 공격
 
@@ -922,6 +927,14 @@ H/J/K/L 기능 삭제에 따라 아래 HOLD/이동/A 후속 공격 사양도 함
 - 기존 숫자 안내 위 고정 좌표 `(740,72)`에 `M 소환 적 순환: N번 맵 · 종류`를 표시하고 첫 맵은 `M 소환 적 고정`으로 안내한다. 기존 적 공격 설명은 선택한 원본 스테이지의 적을 기준으로 갱신한다. U를 숨기면 이 설명도 숨기되 M 입력은 유지한다. 적 HP바/실제 피해·기존 HUD 좌표는 바꾸지 않는다. F4의 적 점선은 선택한 소환 종류의 좌우 여백을 사용하고 기존 배우는 각자의 이동 여백을 유지한다.
 - 변경 기록은 `PRD.md`에만 남기고 다른 개발 문서는 수정하지 않는다. 기존 factoryInside-1 바닥 확장 커밋/리소스/전투 설정을 보존하며 이번 작업은 별도 스테이징·커밋·푸시 없이 유지한다.
 
+### FR-45. 보스 floor300 배경 교체·전체 바닥 이동
+
+- 열한 번째·열두 번째 맵을 `bossStage_floor300_1672x941.png → bossStage-2_floor300_1672x941.png`로 교체한다. 이전 `bossStage-1.png`·`bossStage-2.png`는 `before_sheets/`로 원본 바이트 그대로 이동하고 일반 이미지 로딩에서 제외한다. 새 PNG도 수정/재저장하지 않는다.
+- 두 맵 모두 1672×941 원본 배율 1.0·앵커 144·월드 폭 2560px·교대 좌우 반전을 유지한다. `world_y = 897 - source_y`로 첫 맵 원본 y=650~925/월드 y=-28~247, 두 번째 원본 y=655~917/월드 y=-20~242의 가구·설비 아래부터 앞쪽 바닥 턱 윗면까지 사용한다. 수직 측면·벽·가구/배경 계단은 발판으로 만들지 않는다.
+- 주인공 발 x=68~2492·기본 적 여백 88px를 유지하며 이동/경계·F4·숫자 소환/추적·초기 15개 아이템/G가 같은 단층 보행 영역을 사용한다. 세 보유 상태의 걷기/달리기로 네 모서리와 앞뒤 바닥 전체 폭에 접근하고 일반/이단 점프는 같은 바닥으로 돌아온다.
+- 연구소 두 번째 맵과 첫 보스 맵 사이는 기존 STAGE_LOADING 2초, 두 보스 맵 사이는 즉시 양방향 전환한다. 공통 깊이는 보존하고 범위 밖만 투영한다. 연구소 -48→첫 보스 -28·첫 보스 247→연구소 239, 첫 보스 -28/247→둘째 -20/242만 보정한다. 보스 둘째 오른쪽은 기존 최종 경계다.
+- 동일 Player·HP/보유 무기/무적·속도/점프/모션/유지 입력·맵별 객체/비활성 정지를 보존한다. 기존 적 HP 200/공격 20·M 소환·몽둥이 사망 드랍 없음·G·재방문/F5를 유지하고 새 보스 전투나 추가 맵을 만들지 않는다. 이번 변경은 별도 스테이징·커밋·푸시 없이 유지한다.
+
 ## 6. 개발 가정과 현재 조정값
 
 아래 값은 현재 구현 기준이며 사용자 요청으로 확정한 조정값과 개발 가정을 함께 기록한다. 하나의 설정 모듈에서 관리하고 변경 시 관련 검증 기준과 개발 기록을 함께 갱신한다. 단위는 월드 좌표의 픽셀과 초다.
@@ -934,12 +947,12 @@ H/J/K/L 기능 삭제에 따라 아래 HOLD/이동/A 후속 공격 사양도 함
 | 월드 너비                 | 2560px                  | 카메라 스크롤을 확인할 수 있도록 화면보다 넓게 구성  |
 | 배경 이미지 / 원본 크기    | 모든 배경 1672×941, 첫 공장 외부는 factory_loading_dock_no_stairs | 배경 원본 비율·배율 유지·이전 하역장 PNG는 before_sheets 보관 |
 | 배경 표시 배율 / 연결 방식 | 1.0 / 교대 좌우 반전    | 원본 크기로 표시하고 수평 반복으로 월드 구간 구성    |
-| 스테이지 순서 / 진입 위치 | changed_first_map_no_door → newStage-2_floor300 → cityStage1_ground_300px → cityStage2_ground_300px → factory_loading_dock_no_stairs → factoryOutside_floor300 → factoryInside-1 → factoryStage-2 → labStage-1_floor300 → labStage-2_floor300 → bossStage-1 → bossStage-2 / x=128·2432 | N 표시 후 유효한 맵 끝으로 이동, 이동·점프·입력 유지 |
+| 스테이지 순서 / 진입 위치 | changed_first_map_no_door → newStage-2_floor300 → cityStage1_ground_300px → cityStage2_ground_300px → factory_loading_dock_no_stairs → factoryOutside_floor300 → factoryInside-1 → factoryStage-2 → labStage-1_floor300 → labStage-2_floor300 → bossStage_floor300 → bossStage-2_floor300 / x=128·2432 | N 표시 후 유효한 맵 끝으로 이동, 이동·점프·입력 유지 |
 | 구역 경계 로딩 | 기존 HOOD_MAN_STAGE_LOADING / 2초 | 기존/도시·도시/공장 외부·공장 외부/내부·공장 내부/연구소·연구소/보스 경계 양방향, 실제 시간 기준·월드 일시 정지 |
 | 표식 위치 / 크기 | 좌우 끝 안쪽 80px·중심 y=100 / 96×60px | 맵 바닥선에 배치, 첫 맵 오른쪽·나머지 양쪽, 마지막 오른쪽 이동 대상 없음 |
 | 표식 좌우 애니메이션 | 최대 ±6px / 주기 1.6초 | 게임 경과 시간 기준 사인 왕복, 높이 고정·표시 좌표에만 적용 |
 | 배경 보행 기준 / 월드 지면 | 기존 거리·공장 내부 원본 아래 144px·공장 외부 100px·연구소 280px / y=100 | 배경 지면과 주인공·적의 발 기준 정렬               |
-| 맵별 바닥 깊이 | 첫 맵 단층 -3~277 / 두 번째 골목 -44~239 / cityStage1 -44~247·cityStage2 -44~279 / factoryInside-1 -3~172 / labStage-1_floor300 -109~178·labStage-2_floor300 -48~239 / factory_loading_dock_no_stairs 45~258 / factoryOutside_floor300 0~284 / factoryStage-2 16~200 / bossStage-1 56~148·bossStage-2 56~116 | 실제 발 좌표 기준, 첫 공장 내부 기기 아래~전면 단차 앞 타일 전체 확장·나머지 바닥 유지·2층/계단 없음 |
+| 맵별 바닥 깊이 | 첫 맵 단층 -3~277 / 두 번째 골목 -44~239 / cityStage1 -44~247·cityStage2 -44~279 / factoryInside-1 -3~172 / labStage-1_floor300 -109~178·labStage-2_floor300 -48~239 / factory_loading_dock_no_stairs 45~258 / factoryOutside_floor300 0~284 / factoryStage-2 16~200 / bossStage_floor300 -28~247·bossStage-2_floor300 -20~242 | 실제 발 좌표 기준, 보스 두 맵의 가구 아래~전면 바닥 턱 윗면까지 확장·다른 바닥 유지·2층/계단 없음 |
 | 보관 맵 전용: 적의 계단 속도 / 간격 | 240px/s / 경로상 100px | 회귀 fixture에만 적용·일반 실행 미사용 |
 | 보관 맵 전용: 주인공 계단 조작 / 속도 | ↑ 올라가기·↓ 내려가기·키 놓기/양쪽 키 정지 / 240px/s | 중간 재개·반전·단독 점유 회귀 보존 |
 | 보관 맵 전용: 2층 적 직접 낙하 / 지연 | 미배정 N명 중 무작위 1~N−1명 / 0~0.35초 | 계단/낙하 분할 회귀 보존 |
@@ -1148,7 +1161,7 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 | AC-39 | 깊이 정렬·카메라·맵 왕복·다각형 확장 | ground_y 내림차순 그리기·점프 높이 240에서도 순서 동일. 카메라 흔들림과 월드 경계 독립, 공중 왕복 시 점프 보존·목적 맵 바닥만 투영. 볼록 다각형 내부·여백·최근접 투영의 순수 로직 통과 |
 | AC-40 | 소환 적별 공격 속도 차등 | 같은 묶음·추가 묶음·네 맵의 배율 모두 서로 다름. 각 배율에 맞는 모션 프레임·공격 주기·공격당 1회 피해 적용, 상태/맵 이동 시 고정·F5 배정 초기화·렌더 FPS 독립 |
 | AC-41 | 실행 타이틀·2초 자동 시작·입력 소비·종료·F5 | 일반 실행 시 안내 문구 없이 타이틀 이미지를 먼저 표시하고 실제 시간 2초 뒤 입력 없이 HP 500·IDLE 플레이 진입. 대기 중 월드 시간 0 유지, Space/반복/다른 키로 건너뛰기·지연 없음·입력 예약으로 점프/소환 없음. 플레이 중 새 Space 점프 정상, 타이틀 창 닫기 정상 종료·F5 즉시 플레이 초기화 |
-| AC-42 | 기존/도시/공장 외부/내부/연구소/보스 구역 2초 로딩·왕복·중단 | newStage-2_floor300↔cityStage1, cityStage2↔factory_loading_dock_no_stairs, factoryOutside_floor300↔factoryInside-1, factoryStage-2↔labStage-1_floor300, labStage-2_floor300↔bossStage-1에서 기존 STAGE_LOADING 이미지를 2초 표시 후 전환, 같은 구역의 두 맵끼리는 즉시 왕복. 대기 중 월드/모션/AI/효과 정지·입력 예약 없음, 동일 Player·HP·무적·점프/속도·맵별 객체 유지, F5 로딩 취소/12개 맵 초기화·정상 종료·30/60/120/144 FPS 동일 |
+| AC-42 | 기존/도시/공장 외부/내부/연구소/보스 구역 2초 로딩·왕복·중단 | newStage-2_floor300↔cityStage1, cityStage2↔factory_loading_dock_no_stairs, factoryOutside_floor300↔factoryInside-1, factoryStage-2↔labStage-1_floor300, labStage-2_floor300↔bossStage_floor300에서 기존 STAGE_LOADING 이미지를 2초 표시 후 전환, 같은 구역의 두 맵끼리는 즉시 왕복. 대기 중 월드/모션/AI/효과 정지·입력 예약 없음, 동일 Player·HP·무적·점프/속도·맵별 객체 유지, F5 로딩 취소/12개 맵 초기화·정상 종료·30/60/120/144 FPS 동일 |
 | AC-43 | 폐기: H/J/K/L 반격 발동 | 기능 삭제로 이전 행/창/범위 검증 폐기, 현재 무동작은 AC-96 |
 | AC-44 | 폐기: A 후속 80·반격 보호 | 후속/보호 모두 제거, A 기본 10과 일반 피격은 AC-96 |
 | AC-45 | 폐기: 반격 HUD·짝 배치 | 반격 HUD/짝/전용 시트 로딩 제거를 AC-97로 검증 |
@@ -1221,6 +1234,7 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 | AC-112 | M 첫 스테이지부터 전체 순환·숫자 소환 | 첫 맵 외 11개 맵에서 기본 종류→첫 M은 1번→다음 M마다 2~12번→1번 순환. 동일 종류 연속 맵도 별도 항목·첫 맵 M 무동작·M 자체 무소환. 숫자열/키패드 요청 수/합산/반복 차단·같은 갱신 M 우선·현재 맵 바닥/생성 제한·선택 클래스 HP/전투 정상 |
 | AC-113 | M 기존 적 보존·맵별 선택/난수·HUD/입력/F5 | 기존 적 종류/HP/동작·피드백/아이템/누적 수 불변·다섯 종류 혼합 전투·난수/속도 순서 보존. 맵별 독립 선택/재방문·선택 번호/종류/공격 설명 픽셀·U/F4·슬로/사망/타이틀/로딩/포커스·키 유지/반복 예약 없음·F5 전체 기본값 복원·30~144 FPS 동일 |
 | AC-114 | 단일 몽둥이 적 사망 드랍 삭제·기존 무기 보존 | 일반/무기/강화/W·다중 처치·M으로 다른 맵에 소환·보관 차량/2층/계단·주인공 사망 중에도 생성 0개, 시체 페이드/맵 복귀/로딩 뒤 추가 없음. 피해 숫자/타격 효과/사망·페이드 유지·몽둥이 PNG 원본 보존/미로딩, 초기 15개/단검·쇠파이프 G 획득·교체·버리기/중력 낙하/F5·난수·30~144 FPS 유지 |
+| AC-115 | 보스 floor300 교체·원본 보관·전체 바닥/F4·연결 | 11/12번은 bossStage_floor300→bossStage-2_floor300, 이전 두 PNG는 before_sheets 원본 보관/일반 미로딩. 원본 650~925/655~917·월드 x=0~2560/y=-28~247/-20~242, 세 보유 상태×걷기/달리기×네 모서리 48개 경우·전체 폭 이동/경계 이단 점프·실제 발/F4 일치·적 200/20·15개/G·몽둥이 무드랍 유지. 연구소 2초 로딩·보스 즉시 왕복/공통 깊이 보존·범위 밖만 투영·마지막 경계/맵 보존/F5·원본 배율/반전/카메라 정상 |
 
 ### 9.2 경계 및 반복 검증
 
@@ -1271,6 +1285,7 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 - 공장 외부 floor300 교체는 `python -m unittest tests.test_factory_exterior tests.test_factory_stage tests.test_floor_bounds tests.test_stages`로 새/보관 해시·실제 파일명/로딩·전체 바닥 모든 행·24개 모서리 경우·경계 이단 점프/G·기본 적/아이템/추적/재방문/F5·하역장/내부 8개 깊이 전환을 검증한다. `python tools/check_belt_scroll.py`에서 새 공장 외부와 기존 두 골목의 실제 SDL F4·앞뒤 원본/반전 타일 전체 폭 달리기·경계 점프·2/5/10명 모서리 집단/넉백을, `check_stages.py`에서 배경 픽셀/흔들림·하역장 즉시 왕복/내부 2초 로딩을 확인한다. `check_drop_items.py`의 새 외부 맵 G와 전 맵 바닥 배치, `check_researcher.py`의 기존 점선 사격 경고도 검증한다.
 - factoryInside-1 전체 바닥은 `python -m unittest tests.test_factory_inside tests.test_factory_exterior tests.test_floor_bounds tests.test_stages tests.test_researcher_aim tests.test_researcher_ballistics`로 원본 해시/전체 바닥 행·24개 모서리·경계 이단 점프/G·연구원/아이템/추적·재방문/F5·이웃 맵 8개 깊이 전환을 검증한다. `check_belt_scroll.py`의 `check_full_floor(game, index=6)`에서 실제 SDL 이동/F4·원본 y=725/900·전체 폭/경계 점프를, `check_stages.py`에서 배경/왕복/기존 로딩을, `check_drop_items.py`에서 첫 내부 맵의 실제 G와 전 맵 배치를 확인한다. `check_researcher.py`로 기존 사격/점선/포물선/재장전을 회귀 검증하며 별도 커밋은 만들지 않는다.
 - 연구소 교체/방패 병사는 `python -m unittest tests.test_lab_stages tests.test_shield_soldier tests.test_floor_bounds`로 원본/보관 해시·바닥 모든 행/48개 모서리·경계 점프/G·12개 깊이 전환·소환/400/40·행/50% 추첨·방어 피해 절반/일반·무기·강화/W·시간/수명/FPS를 검증한다. `python tools/check_shield_soldier.py`에서 실제 SDL 숫자열/키패드·56프레임×좌우·방어/공격·HP바/피해 숫자/effect 픽셀·P·무기 D·사망/페이드·슬로/맵/로딩/F5·4명 자연 전투/성능을 확인한다. `check_belt_scroll.py`는 양 연구소의 실제 F4/발 경계·전체 폭 이동·경계 점프를, `check_stages.py`는 새 배경 픽셀/왕복/기존 로딩을, `check_drop_items.py`는 양 연구소 G/전 맵 배치·재방문/F5를 확인한다.
+- 보스 floor300 교체는 `python -m unittest tests.test_boss_stages tests.test_floor_bounds tests.test_stages tests.test_lab_stages tests.test_city_stages`로 새/보관 해시·로딩/순서·바닥 전 행/48개 모서리·경계 점프/G·소환/추적/재방문/F5·연구소/보스 깊이 전환/마지막 경계를 검증한다. `check_belt_scroll.py`의 `check_full_floor(game, index=10/11)`에서 실제 SDL 발/F4·전체 폭/모서리/점프를, `check_stages.py`의 보스 배경/즉시 왕복·연구소 양방향 로딩/상태 보존을, `check_drop_items.py`의 전 맵 바닥 배치/두 보스 G를 확인한다.
 - 도시 새 배경/전체 바닥은 `python -m unittest tests.test_city_stages tests.test_floor_bounds tests.test_drop_items tests.test_weapon_pickup tests.test_traffic_removed tests.test_stages tests.test_enemy02`로 보관 해시/미로딩·진행 순서·바닥 좌표/48개 모서리 경우·경계 점프/G·맵별 보도 적/드랍·보존/F5를 확인한다. `python tools/check_city_walking.py`의 실제 SDL F4·원본/반전 타일 전체 폭 달리기·상하 경계 이단 점프·새 보도 걷기 8프레임/차도 유인, `check_stages.py`의 두 배경 픽셀/흔들림·도시 즉시 왕복/구역 로딩, `check_enemy02.py`·`check_drop_items.py`·`check_weapons.py`의 기존 전투/아이템 회귀를 함께 검증한다.
 - 차량 피격 이미지 보관은 `python -m unittest tests.test_traffic_removed tests.test_traffic tests.test_integration tests.test_weapon_pickup tests.test_removed_counters`로 원본 해시/루트 제외·일반 이미지 미로딩·보관 클립/기존 피격 수명·진단의 명시적 1회 로딩/재사용을 검증한다. `python tools/check_traffic.py`는 정상 게임의 본체/두 피격 시트 미로딩·도로 30초 안전·재방문/F5를 확인한다. 이전 시트 렌더링은 같은 도구의 `city(game)`·`check_impacts_and_fade(game)`를 명시적으로 호출한 진단에서만 검증하며 일반 실행 경로에는 연결하지 않는다.
 - 무기 전투는 `python -m unittest tests.test_weapon_combat -v`와 `python tools/check_weapon_combat.py`로 G 획득 후 6개 A/S/D 공격의 원본 행/클립·지정 유효 프레임·두 적/양방향/단발 피해·기존 타격 효과 실제 픽셀·피해 숫자/HUD·G 취소/교체·F/F5·FPS 독립성을 검증한다. H/J/K/L과 함께 누른 A의 기본 10 피해는 삭제 회귀에서 확인한다.
@@ -2287,3 +2302,14 @@ HP 250 표시는 테스트 상태 설정으로 확인한다.
 - 실제 SDL 검증: `tools/check_enemy_death_drops.py`를 삭제 검증으로 갱신해 단일/두 몽둥이 적과 M 선택 적을 S로 처치한 직후/시체 페이드 후에도 초기 무기 15개만 유지함을 확인했다. 빈 G 무동작·단검/쇠파이프 획득/교체/버리기·중력 착지·F5/이미지 재사용도 통과했다. 캡처는 Git 제외 대상인 `artifacts/no_enemy_drop_*.png`에 저장했다.
 - 최종 검증: `.\.venv\Scripts\python.exe -m unittest discover -s tests` 전체 **733개 통과(55.501초)**. 별도 작업 폴더에서 전체 경로 `main.py --smoke-test 60` 실행/정상 종료와 변경분 공백 검사도 통과했다. 첫 맵 시체 제거 후 및 연구소 M 선택 적 처치 캡처에서 기존 무기/적 외형·피해 숫자는 유지되고 새 몽둥이 드랍은 없음을 검토했다.
 - 기록 정책: 현재 리소스·FR-10/12/36/44·조정값·AC-114와 검증 방법/변경 이력을 **PRD.md에만 기록**한다. 이전 개발 이력과 다른 문서/원본 리소스/메타데이터는 변경하지 않으며 **별도 스테이징·커밋·푸시 없이 작업 트리에 유지**한다.
+
+### 보스 floor300 두 배경 연결·이전 원본 보관·전체 바닥 이동 (2026-11-22, 커밋 없음)
+
+- 변경/보관: `config.py`의 보스 이미지 목록을 사용자 제공 `bossStage_floor300_1672x941.png`·`bossStage-2_floor300_1672x941.png`로 교체했다. 이전 `bossStage-1.png`·`bossStage-2.png`는 `before_sheets/`에 원본 그대로 이동하고 일반 이미지 로딩에서 제외했다. 새 PNG는 각각 RGB/RGBA·1672×941이며 재저장/리사이즈/색상 변환하지 않았다.
+- 원본 해시: 새 두 파일의 SHA-256은 순서대로 `7ca981b46088c3bcb29c074b0be1f7a131fa7330d9710e38d19c98b43fc2f2e7`·`070a369d7eb381bbc30713cbf22cba492532a8f799202d405d2801ffe4aa3d0e`, 보관 두 파일은 `8f46fa912eaad669e2c5d86d586b98ef1ea02b40513393646561a37c5d6b773d`·`05e3ec5c3c57fac6057d8fade866a27b6ee4c6e65b3eaea4f7c7ec300b276468`로 보존했다.
+- 실제 바닥: 원본 배율 1.0·앵커 144·반전 연결·월드 폭 2560을 유지했다. `world_y = 897 - source_y`로 첫 맵 원본 y=650~925/월드 **y=-28~247**, 둘째 원본 y=655~917/월드 **y=-20~242**를 사용한다. 가구·설비 아래부터 전면 턱 윗면까지 전체 폭을 이동하되 수직 측면/벽/장식 계단은 제외한다. 실제 주인공 발 x=68~2492·적 여백 88과 F4·소환/추적·아이템/G가 같은 영역을 공유한다.
+- 연결/보존: 기존 11/12번 위치와 총 12개 맵 순서를 유지한다. 연구소↔첫 보스는 기존 2초 STAGE_LOADING, 보스 두 맵은 즉시 왕복하고 두 번째 보스 오른쪽은 최종 경계다. 공통 깊이/Player·HP/무기/무적·속도/점프/모션/유지 입력·맵별 객체/정지를 이어간다. 기본 적 200/20·M 선택 소환·몽둥이 사망 드랍 없음·단검/쇠파이프 15개·G·재방문/F5와 다른 열 맵은 변경하지 않았다.
+- 자동 검증: `tests/test_boss_stages.py` **7개**와 실제 F4 외곽선 **1개**를 추가하고 기존 맵 순서/바닥 목록·연구소와의 깊이 전환 기대값을 갱신했다. 원본/보관 해시·일반 미로딩·전체 바닥 전 행·48개 보유/이동/모서리 경우·경계 이단 점프/G·소환/추적/재방문/F5·12개 이웃 깊이 전환/최종 경계를 확인했다. 집중 **62개 통과(1.835초)**, 전체 `.\.venv\Scripts\python.exe -m unittest discover -s tests` **741개 통과(54.218초)**다.
+- 실제 SDL 검증: `check_belt_scroll.py`의 `check_full_floor(game, index=10/11)`로 세 보유 상태×걷기/달리기×네 모서리·실제 발/F4·앞뒤 전체 폭·상하 경계 이단 점프/착지/F5를 통과했다. `check_stages.py`의 보스 배경 18개 원본/반전/흔들림 뷰·양방향 걷기/달리기/상승·하강 점프 8가지·마지막 경계·로딩 중 F5를 확인했다. 연구소→보스 **2.007초**, 역방향 **2.008초**였으며 기존 로딩 이미지/정지/객체·입력·HP/점프를 유지했다.
+- 아이템/실행/화면: `check_drop_items.py`의 전 맵 15개 배치/실제 바닥 픽셀/출구 제외와 두 보스의 실제 G 획득·버리기/중력 착지·재획득/재방문/F5·이미지 재사용을 확인했다. 별도 작업 폴더에서 전체 경로 `main.py --smoke-test 60`이 정상 종료했다. `artifacts/boss_1_floor300_walk_-1_1.png`·`boss_2_floor300_walk_-1_1.png`와 두 `front_traverse` 캡처에서 가구 아래 뒷경계·전면 턱 윗면/반전 전체 폭 이동을 검토했다. 캡처는 Git 제외 대상이며 장시간 직접 키보드 플레이는 수행하지 않았다.
+- 기록 정책: 현재 리소스/경로·맵 연결/바닥·FR-15/16/19/21/29/45·조정값·AC-42/115·검증 방법/변경 이력은 **PRD.md에만 기록**했다. 다른 개발 문서·이전 이력·스프라이트 메타데이터·기존 전투 설정은 보존하며 **스테이징·커밋·푸시 없이 작업 트리에 유지**한다.

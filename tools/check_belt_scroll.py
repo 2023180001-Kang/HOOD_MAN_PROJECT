@@ -122,6 +122,10 @@ def check_full_floor(game, index=0):
         assert config.LAB_STAGE_IMAGES[index - 8] in game.assets.images
         archived = config.ARCHIVED_LAB_STAGE_IMAGES[index - 8]
         assert archived not in game.assets.images and Path(archived).name not in game.assets.images
+    elif index in (10, 11):
+        assert config.BOSS_STAGE_IMAGES[index - 10] in game.assets.images
+        archived = config.ARCHIVED_BOSS_STAGE_IMAGES[index - 10]
+        assert archived not in game.assets.images and Path(archived).name not in game.assets.images
     bottom, top, source_top, source_bottom, prefix = {
         0: (-3, 277, 620, 900, "first_floor_full"),
         1: (-44, 239, 658, 941, "second_alley_floor300"),
@@ -129,6 +133,8 @@ def check_full_floor(game, index=0):
         6: (-3, 172, 725, 900, "factory_inside_1_full_floor"),
         8: (-109, 178, 583, 870, "lab_1_floor300"),
         9: (-48, 239, 522, 809, "lab_2_floor300"),
+        10: (-28, 247, 650, 925, "boss_1_floor300"),
+        11: (-20, 242, 655, 917, "boss_2_floor300"),
     }[index]
     visible, details = game.ui.floor_bounds_visible, game.ui.details_visible
     game.ui.floor_bounds_visible, game.ui.details_visible = True, False
@@ -440,6 +446,8 @@ def main():
         check_full_floor(game, index=6)
         check_full_floor(game, index=8)
         check_full_floor(game, index=9)
+        check_full_floor(game, index=10)
+        check_full_floor(game, index=11)
         check_movement(game)
         check_jump(game)
         check_depth_and_order(game)

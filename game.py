@@ -53,6 +53,8 @@ class Game:
         self.world = World()
         self.menu = MainMenu()
         self.running = True
+        self._menu_requested = False
+        self._escape_held = False
         pico2d.SDL_SetWindowTitle(backend.window, b"HOOD_MAN_PROJECT")
 
     def handle_events(self, *, menu_screen=False):
@@ -67,9 +69,20 @@ class Game:
                 self.world.controls.held.clear()
                 self.world.controls.pressed.clear()
                 self.menu.clear_hover()
+                self._escape_held = False
                 start_requested = False
             elif event.type == SDL_WINDOWEVENT and event.window.event == SDL_WINDOWEVENT_LEAVE:
                 self.menu.clear_hover()
+            elif (event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP)
+                  and event.key.keysym.sym == pico2d.SDLK_ESCAPE):
+                if event.type == pico2d.SDL_KEYUP:
+                    self._escape_held = False
+                elif not event.key.repeat and not self._escape_held:
+                    self._escape_held = True
+                    if not menu_screen:
+                        self._menu_requested = True
+                        self.world.controls.held.clear()
+                        self.world.controls.pressed.clear()
             elif menu_screen:
                 if event.type == pico2d.SDL_MOUSEMOTION:
                     self.menu.move_pointer(
@@ -83,7 +96,7 @@ class Game:
                     if self.menu.bag_open != was_bag_open:
                         # Navigation cancels an earlier start click in this batch.
                         start_requested = False
-            elif event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
+            elif not self._menu_requested and event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if key is not None:
                     if event.type == pico2d.SDL_KEYDOWN and not event.key.repeat:
@@ -103,6 +116,7 @@ class Game:
     def show_main_menu(self):
         if not self.running:
             return
+        self._menu_requested = False
         self.menu.show_main()
         self.world.controls.held.clear()
         self.world.controls.pressed.clear()
@@ -198,6 +212,12 @@ class Game:
             self.handle_events()
             if not self.running:
                 break
+            if self._menu_requested:
+                self._menu_requested = False
+                self.show_main_menu()
+                # Menu waiting must not become gameplay dt or a late FPS deadline.
+                previous = deadline = perf_counter()
+                continue
             was_loading = self.world.stage_loading
             self.update(dt)
             self.draw()

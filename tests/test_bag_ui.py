@@ -231,6 +231,8 @@ class BagUIFlowTests(unittest.TestCase):
         self.game.world = World()
         self.game.ui = UI()
         self.game.running = True
+        self.game._menu_requested = False
+        self.game._escape_held = False
 
     def click_event(self, button, mouse_button=SDL_BUTTON_LEFT):
         return mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, button.x, button.y, mouse_button)

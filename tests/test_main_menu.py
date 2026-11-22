@@ -29,7 +29,7 @@ def mouse_event(kind, x, y, button=SDL_BUTTON_LEFT):
     return event
 
 
-def process_menu_events(game, *events):
+def process_menu_events(game, *events, menu_screen=True):
     queue = iter(events)
 
     def poll(pointer):
@@ -40,7 +40,7 @@ def process_menu_events(game, *events):
         return 1
 
     with patch("game.SDL_PollEvent", side_effect=poll):
-        return Game.handle_events(game, menu_screen=True)
+        return Game.handle_events(game, menu_screen=menu_screen)
 
 
 class MainMenuTests(unittest.TestCase):
@@ -167,6 +167,8 @@ class MainMenuFlowTests(unittest.TestCase):
         self.game.world = World()
         self.game.ui = UI()
         self.game.running = True
+        self.game._menu_requested = False
+        self.game._escape_held = False
 
     def process(self, *events):
         return process_menu_events(self.game, *events)

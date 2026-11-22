@@ -26,6 +26,8 @@ def scene():
     game.world = World(rng=random.Random(41))
     game.ui = UI()
     game.running = True
+    game._menu_requested = False
+    game._escape_held = False
     return game
 
 

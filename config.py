@@ -78,8 +78,18 @@ KNOCKBACK_FRICTION = 900.0
 KNOCKBACK_RADIUS = 160.0
 SPAWN_COUNTS = tuple(range(1, 10))
 
-TITLE_IMAGE = "HOOD_MAN_TITLE_SCREEN_1280x720.png"
-TITLE_SCREEN_DURATION = 2.0
+ARCHIVED_TITLE_IMAGE = "before_sheets/HOOD_MAN_TITLE_SCREEN_1280x720.png"
+MAIN_MENU_IMAGE = "HOOD_MAN_main_menu_background_1280x720.png"
+MAIN_MENU_BUTTONS = (
+    ("game_start", "menu_game_start.png"),
+    ("stage_progress", "menu_stage_progress.png"),
+    ("controls", "menu_controls.png"),
+    ("backpack", "menu_backpack.png"),
+)
+MAIN_MENU_BUTTON_SIZE = (580, 110)  # Preserve each 928x176 source frame's aspect ratio.
+MAIN_MENU_RIGHT_MARGIN = 48
+MAIN_MENU_TOP_MARGIN = 144
+MAIN_MENU_BUTTON_GAP = 24
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 WEAPON_POSE_IMAGES = {
     "combat_knife": "HOOD_MAN_DAGGER_move and fight.png",

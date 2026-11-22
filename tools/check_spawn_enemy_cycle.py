@@ -158,7 +158,7 @@ def check_preservation_and_lifecycle(game):
 
     world = fresh(game)
     push_key(pico2d.SDLK_m)
-    game.handle_events(title_screen=True)
+    game.handle_events(menu_screen=True)
     game.update(config.FIXED_DT)
     release(game, pico2d.SDLK_m)
     assert world.stage.spawn_cycle_index is None
@@ -202,7 +202,7 @@ def check_preservation_and_lifecycle(game):
                and stage.spawner.enemy_type is TYPES[stage.index]
                and not stage.enemies and stage.spawner.spawned_count == 0 for stage in world.stages)
     print("PASS: M leaves old shields/HP intact while new numbers create thugs; selections are "
-          "independent per map and survive revisits; focus loss/title/death/loading consume M without "
+          "independent per map and survive revisits; focus loss/menu/death/loading consume M without "
           "reservation, held loading input does not replay, F5 restores all native selections.")
 
 

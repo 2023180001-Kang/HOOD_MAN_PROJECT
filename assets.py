@@ -13,7 +13,8 @@ class Assets:
     def __init__(self):
         self.images = {
             name: pico2d.load_image(str(config.ROOT / name))
-            for name in (config.TITLE_IMAGE, config.STAGE_LOADING_IMAGE,
+            for name in (config.MAIN_MENU_IMAGE, config.STAGE_LOADING_IMAGE,
+                         *(image for _, image in config.MAIN_MENU_BUTTONS),
                          config.PLAYER_IMAGE, config.COMBAT_IMAGE,
                          config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,

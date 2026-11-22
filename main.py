@@ -27,7 +27,7 @@ def main():
     try:
         game = Game()
         if args.smoke_test is None:
-            game.show_title_screen()
+            game.show_main_menu()
         frames = game.run(args.smoke_test)
         if args.smoke_test:
             print(f"Smoke test complete: {frames} frames.")

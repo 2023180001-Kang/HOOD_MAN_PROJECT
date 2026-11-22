@@ -837,12 +837,12 @@ def check_hud_toggle(game):
     game.update(0)
     assert game.ui.details_visible and not game.world.controls.held
     push_key(pico2d.SDLK_u)
-    game.handle_events(title_screen=True)
+    game.handle_events(menu_screen=True)
     game.update(0)
     assert game.ui.details_visible
     print("PASS: SDL U toggles supplemental HUD off/on once per fresh press; "
           "player HP image/current value and enemy HP bars remain, exact pixels restore, HP still updates; "
-          "stage/loading/death/F5 preserve the setting, focus loss/title input stay clean.")
+          "stage/loading/death/F5 preserve the setting, focus loss/menu input stay clean.")
 
 
 def check_focus_loss(game):

@@ -5,12 +5,16 @@ from time import perf_counter, sleep
 
 import pico2d
 from pico2d import pico2d as backend
-from sdl2 import SDL_Event, SDL_PollEvent, SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST
+from sdl2 import (
+    SDL_BUTTON_LEFT, SDL_Event, SDL_PollEvent,
+    SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST, SDL_WINDOWEVENT_LEAVE,
+)
 
 import config
 from assets import Assets
 from drop_items import DropItem
 from effects import SpriteAfterimage
+from main_menu import MainMenu
 from projectiles import ResearcherBullet
 from researcher import Researcher
 from ui import UI
@@ -47,49 +51,66 @@ class Game:
         self.assets = Assets()
         self.ui = UI()
         self.world = World()
+        self.menu = MainMenu()
         self.running = True
         pico2d.SDL_SetWindowTitle(backend.window, b"HOOD_MAN_PROJECT")
 
-    def handle_events(self, *, title_screen=False):
+    def handle_events(self, *, menu_screen=False):
         # pico2d.get_events filters out focus events, so poll its SDL event queue
         # directly to prevent stuck keys after Alt+Tab or clicking another window.
         event = SDL_Event()
+        start_requested = False
         while SDL_PollEvent(ctypes.byref(event)):
             if event.type == pico2d.SDL_QUIT:
                 self.running = False
             elif event.type == SDL_WINDOWEVENT and event.window.event == SDL_WINDOWEVENT_FOCUS_LOST:
                 self.world.controls.held.clear()
                 self.world.controls.pressed.clear()
-            elif not title_screen and event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
+                self.menu.clear_hover()
+                start_requested = False
+            elif event.type == SDL_WINDOWEVENT and event.window.event == SDL_WINDOWEVENT_LEAVE:
+                self.menu.clear_hover()
+            elif menu_screen:
+                if event.type == pico2d.SDL_MOUSEMOTION:
+                    self.menu.move_pointer(
+                        event.motion.x, config.SCREEN_HEIGHT - 1 - event.motion.y,
+                    )
+                elif event.type == pico2d.SDL_MOUSEBUTTONDOWN and event.button.button == SDL_BUTTON_LEFT:
+                    start_requested |= self.menu.click(
+                        event.button.x, config.SCREEN_HEIGHT - 1 - event.button.y,
+                    )
+            elif event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if key is not None:
                     if event.type == pico2d.SDL_KEYDOWN and not event.key.repeat:
                         self.world.controls.press(key)
                     elif event.type == pico2d.SDL_KEYUP:
                         self.world.controls.release(key)
+        # Drain the entire menu batch so click/keyboard input cannot leak into play.
+        # A quit in the same batch must win over a game-start click.
+        return start_requested and self.running
 
-    def draw_title_screen(self, present=True):
+    def draw_main_menu(self, present=True):
         pico2d.clear_canvas()
-        self.assets.images[config.TITLE_IMAGE].draw(
-            config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2,
-            config.SCREEN_WIDTH, config.SCREEN_HEIGHT,
-        )
+        self.menu.draw(self.assets)
         if present:
             pico2d.update_canvas()
 
-    def show_title_screen(self):
+    def show_main_menu(self):
         if not self.running:
             return
-        self.draw_title_screen()
-        deadline = perf_counter() + config.TITLE_SCREEN_DURATION
+        self.menu.clear_hover()
+        self.world.controls.held.clear()
+        self.world.controls.pressed.clear()
+        self.draw_main_menu()
         while self.running:
-            # Consume title inputs without advancing gameplay or skipping the wait.
-            self.handle_events(title_screen=True)
-            remaining = deadline - perf_counter()
-            if not self.running or remaining <= 0:
-                break
-            self.draw_title_screen()
-            sleep(min(1 / config.TARGET_FPS, remaining))
+            if self.handle_events(menu_screen=True):
+                self.world.reset()
+                self.ui.update(0, self.world.player)
+                return
+            if self.running:
+                self.draw_main_menu()
+                sleep(1 / config.TARGET_FPS)
 
     def update(self, dt):
         # Presentation remains toggleable while gameplay is loading or dead.

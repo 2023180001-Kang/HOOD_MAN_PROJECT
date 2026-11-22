@@ -1,5 +1,6 @@
 """Exercise automatic AR fire, twenty-round reloads and real pixels through SDL."""
 
+from itertools import combinations
 from math import hypot
 from pathlib import Path
 import random
@@ -16,6 +17,8 @@ import pico2d
 
 import config
 from ar_soldier import ARSoldier
+from collision import bodies_overlap
+from enemy_spacing import ranged_half_width
 from game import Game
 from projectiles import RifleBullet
 from tools.check_damage_numbers import capture_number
@@ -331,6 +334,33 @@ def check_pause_restart(game):
     print("PASS: reload pauses across visits/loading; F5 clears shots/enemies and reuses textures.")
 
 
+def check_ar_spacing(game):
+    for index in (10, 11):
+        world, _ = encounter(game, index)
+        world.enemies.clear()
+        seen_reload = False
+        for wave in range(2):
+            push_key(pico2d.SDLK_9)
+            tick(game)
+            release(game, pico2d.SDLK_9)
+            assert len(world.enemies) == (wave + 1) * 9
+            for frame in range(360):
+                tick(game)
+                for enemy in world.enemies:
+                    assert world.stage.walkable.contains(enemy.x, enemy.ground_y, enemy.boundary_padding)
+                    assert not bodies_overlap(enemy, world.player)
+                for first, second in combinations(world.enemies, 2):
+                    assert not bodies_overlap(first, second)
+                    assert (abs(first.x - second.x) >= ranged_half_width(first) + ranged_half_width(second) - 1e-8
+                            or abs(first.ground_y - second.ground_y) >= config.AR_SOLDIER_SPACING_DEPTH - 1e-8)
+                seen_reload |= any(enemy.state == "RELOAD" for enemy in world.enemies)
+                if frame in (0, 179, 359):
+                    capture(game, f"ar_spacing_{index}_{len(world.enemies)}_{frame}")
+        assert any(enemy.ammo < 20 for enemy in world.enemies) and seen_reload
+    print("PASS: SDL 9+9 AR summons remain separated throughout approach, fire/reload and reinforcements; "
+          "both bosses keep every footprint inside the floor without player overlap.")
+
+
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()
@@ -348,14 +378,15 @@ def main():
         check_hits(game)
         check_bullet_pixels(game)
         check_pause_restart(game)
+        check_ar_spacing(game)
         game.world = World(rng=random.Random(42))
         game.world.select_stage(10)
         game.world.player.invincible = True
-        game.world.enemies.extend(game.world.spawner.spawn(4, 0))
+        game.world.enemies.extend(game.world.spawner.spawn(18, 0))
         start = perf_counter()
         frames = game.run(max_frames=180)
         seconds = perf_counter() - start
-        print(f"BENCHMARK: AR soldiers: {frames} frames / {seconds:.3f}s = {frames / seconds:.2f} FPS.")
+        print(f"BENCHMARK: 18 AR soldiers: {frames} frames / {seconds:.3f}s = {frames / seconds:.2f} FPS.")
     finally:
         if game is not None:
             game.close()

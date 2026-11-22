@@ -223,6 +223,7 @@ AR_SOLDIER_SHOOT_RANGE = 600.0
 AR_SOLDIER_SHOOT_FRAME = 2  # First muzzle flash in source row 4, zero-based column.
 AR_SOLDIER_AIM_DURATION = 1.0
 AR_SOLDIER_AIM_CANCEL_DELAY = 0.5  # Vertical-dodge reaction only; pursuit speed is unchanged.
+AR_SOLDIER_SPACING_DEPTH = 192.0  # Full sprite-height lanes, not compressed melee depth.
 # New planted firing pose: center x=128, barrel exit near (208, 143), feet y=248.
 AR_SOLDIER_MUZZLE_X = 60.0
 AR_SOLDIER_MUZZLE_HEIGHT = 78.75

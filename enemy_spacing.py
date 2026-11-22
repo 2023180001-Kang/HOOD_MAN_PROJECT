@@ -1,4 +1,4 @@
-"""Persistent, side-local 2D melee slots with bounded ground-plane separation."""
+"""Melee formations and independent ranged-peer ground-plane separation."""
 
 from functools import lru_cache
 import json
@@ -10,7 +10,7 @@ from collision import same_floor
 from physics import clamp
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=16)
 def sprite_extents(image_name=config.ENEMY_IMAGE):
     """Reserve the occupied PNG envelope, including offsets and attack frames.
 
@@ -41,6 +41,147 @@ def slot_cell(slot, columns=2):
     lane = block * lanes + cell % lanes
     column = (cell // lanes + lane % 2) % 2
     return lane, column
+
+
+def ranged_half_width(enemy):
+    left, right = sprite_extents(enemy.image_name)
+    return max(config.ENEMY_HALF_WIDTH, abs(left), abs(right)) + config.ENEMY_SPACING_MARGIN / 2
+
+
+def _ranged_position_free(x, y, obstacles):
+    return all(abs(x - ox) >= width - 1e-9 or abs(y - oy) >= depth - 1e-9
+               for ox, oy, width, depth in obstacles)
+
+
+def _ranged_obstacles(enemy, peers, player=None, positions=None):
+    positions = {} if positions is None else positions
+    obstacles = [(*positions.get(other, (other.x, other.ground_y)),
+                  ranged_half_width(enemy) + ranged_half_width(other),
+                  max(enemy.peer_spacing_depth, other.peer_spacing_depth))
+                 for other in peers
+                 if other is not enemy and same_floor(enemy, other)
+                 and enemy.body.overlaps_vertically(other.body)]
+    if player is not None and same_floor(enemy, player) and enemy.body.overlaps_vertically(player.body):
+        obstacles.append((player.x, player.ground_y,
+                          config.ENEMY_HALF_WIDTH + config.PLAYER_HALF_WIDTH,
+                          config.BODY_DEPTH_TOLERANCE))
+    return obstacles
+
+
+def _nearest_ranged_position(enemy, obstacles):
+    """Find the nearest free footprint without iterative pushes or wall escape."""
+    x, y = enemy.x, enemy.ground_y
+    if _ranged_position_free(x, y, obstacles):
+        return x, y
+    area, padding = enemy.walkable, enemy.boundary_padding
+    lanes = {y, enemy.previous_ground_y, *(py for _, py in area.inset(padding))}
+    for _, oy, _, depth in obstacles:
+        lanes.update((oy - depth, oy + depth))
+    candidates = []
+    for lane in sorted(lanes):
+        limits = area.x_limits(lane, padding)
+        if limits is None:
+            continue
+        low, high = limits
+        intervals = sorted((ox - width, ox + width) for ox, oy, width, depth in obstacles
+                           if abs(lane - oy) < depth - 1e-9)
+        merged = []
+        for start, end in intervals:
+            if merged and start < merged[-1][1] - 1e-9:
+                merged[-1] = merged[-1][0], max(merged[-1][1], end)
+            else:
+                merged.append((start, end))
+        target = clamp(x, low, high)
+        options = (target,)
+        for start, end in merged:
+            if start + 1e-9 < target < end - 1e-9:
+                options = tuple(edge for edge in (start, end) if low <= edge <= high)
+                break
+        for target in options:
+            # Compare in footprint units, so sideways spacing is not sacrificed
+            # just because belt depth is smaller than the visible sprite width.
+            cost = ((target - x) / (2 * ranged_half_width(enemy))) ** 2
+            cost += ((lane - y) / enemy.peer_spacing_depth) ** 2
+            candidates.append((cost, abs(lane - y), target, lane))
+    if not candidates:
+        return None
+    _, _, x, y = min(candidates)
+    return x, y
+
+
+def _place_ranged_actor(enemy, position):
+    x, y = position
+    moved_x, moved_y = abs(x - enemy.x) > 1e-9, abs(y - enemy.ground_y) > 1e-9
+    if not (moved_x or moved_y):
+        return
+    enemy.x, enemy.ground_y = x, y
+    if moved_x:
+        enemy.vx = 0.0
+    if moved_y:
+        enemy.ground_vy = 0.0
+    if enemy.state == "ATTACK":
+        # Only a displaced shooter needs a fresh warning; unchanged neighbours
+        # keep their clocks and already-fired rounds.
+        enemy.stop()
+    elif (enemy.state in ("WALK", "RUN")
+          and hypot(x - enemy.previous_x, y - enemy.previous_ground_y) <= 1e-9):
+        enemy.animation.set_state("IDLE")
+
+
+def _reflow_ranged_peer(enemy, placed, player):
+    """Open a second full-height row only when lateral space has run out."""
+    # Prefer relocating the last arrival over an established front-line shooter.
+    for other in reversed(placed):
+        if not same_floor(enemy, other) or not enemy.body.overlaps_vertically(other.body):
+            continue
+        area = other.walkable
+        _, bottom, _, top = area.bounds
+        for lane in sorted((bottom, top), key=lambda y: abs(y - other.ground_y)):
+            position = area.project(other.x, lane, other.boundary_padding)
+            if not _ranged_position_free(*position, _ranged_obstacles(other, placed, player)):
+                continue
+            obstacles = _ranged_obstacles(enemy, placed, player, {other: position})
+            destination = _nearest_ranged_position(enemy, obstacles)
+            if destination is not None:
+                _place_ranged_actor(other, position)
+                return destination
+    return None
+
+
+def resolve_ranged_spacing(player, enemies):
+    """Reserve AR footprints, keeping stationary shooters ahead of incoming peers."""
+    active = [enemy for enemy in enemies
+              if enemy.uses_ranged_spacing and enemy.alive
+              and enemy.staircase is None and not enemy.falling_from_upper
+              and enemy.state != "RUSH_CARRIED"]
+    if len(active) < 2 or not player.alive:
+        return
+    # Stable snapshot ordering: a moving rifleman yields to an established aim,
+    # burst/reload or flinch, instead of dragging its neighbour's firing lane.
+    active.sort(key=lambda enemy: (
+        hypot(enemy.x - enemy.previous_x, enemy.ground_y - enemy.previous_ground_y) > 1e-9,
+        enemy.state not in ("ATTACK", "RELOAD", "HIT"),
+        enemy.spawned_at, enemy.previous_x, enemy.previous_ground_y))
+    placed = []
+    for index, enemy in enumerate(active):
+        obstacles = _ranged_obstacles(enemy, placed, player)
+        # A valid previous footprint is a reservation too. Otherwise two moving
+        # rows can push one another across the map every tick instead of yielding.
+        future = [other for other in active[index + 1:]
+                  if (abs(enemy.previous_x - other.previous_x)
+                      >= ranged_half_width(enemy) + ranged_half_width(other) - 1e-9
+                      or abs(enemy.previous_ground_y - other.previous_ground_y)
+                      >= max(enemy.peer_spacing_depth, other.peer_spacing_depth) - 1e-9)]
+        previous = {other: (other.previous_x, other.previous_ground_y) for other in future}
+        reserved = _ranged_obstacles(enemy, future, positions=previous)
+        position = _nearest_ranged_position(enemy, obstacles + reserved)
+        if position is None:
+            position = _nearest_ranged_position(enemy, obstacles)
+        if position is None:
+            position = _reflow_ranged_peer(enemy, placed, player)
+        if position is not None:
+            _place_ranged_actor(enemy, position)
+        placed.append(enemy)
 
 
 def prepare_enemy_spacing(player, enemies, walkable=None):
@@ -177,6 +318,7 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
             error_x = side * max(side * error_x, min(0.0, minimum - distance))
         enemy.x += error_x
         enemy.ground_y += error_y
+    resolve_ranged_spacing(player, enemies)
     for enemy in enemies:
         if enemy.staircase is None:
             area = walkable if same_floor(player, enemy) else enemy.walkable

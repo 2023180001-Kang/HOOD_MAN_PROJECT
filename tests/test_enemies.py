@@ -149,8 +149,16 @@ class EnemyTests(unittest.TestCase):
                 for enemy in stage.enemies:
                     sides.add(enemy.facing)
                     distance_from_edge = min(enemy.x, config.WORLD_WIDTH - enemy.x)
-                    self.assertLessEqual(distance_from_edge,
-                                         enemy.boundary_padding + max(config.ENEMY_RUN_SPEEDS) * config.FIXED_DT)
+                    if enemy.uses_ranged_spacing:
+                        # AR peers spread before the first visible frame; their
+                        # source edge/RNG profile must still be preserved.
+                        self.assertEqual(enemy.spawn_source, ("edge", -enemy.facing))
+                        self.assertTrue(all(not bodies_overlap(enemy, other)
+                                            for other in stage.enemies if other is not enemy))
+                    else:
+                        self.assertLessEqual(
+                            distance_from_edge,
+                            enemy.boundary_padding + max(config.ENEMY_RUN_SPEEDS) * config.FIXED_DT)
                     self.assertTrue(stage.spawn_area.contains(enemy.x, enemy.ground_y,
                                                               enemy.boundary_padding))
                     hp = (400 if stage.image_name == config.FACTORY_OUTSIDE_IMAGE

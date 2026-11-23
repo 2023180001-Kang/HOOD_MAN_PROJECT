@@ -106,7 +106,7 @@ def check_pixels_and_placeholders(game):
                 assert ImageChops.difference(normal.crop(box), hovered.crop(box)).getbbox() is None
         if button.action in ("stage_progress", "controls"):
             push_click(button)
-            assert not game.handle_events(menu_screen=True)
+            assert game.handle_events(menu_screen=True) == (button.action == "controls")
             assert game.world is world and world.player is player and world.elapsed == 0
             if button.action == "stage_progress":
                 progress = menu_image(game, "main_menu_stage_progress")
@@ -126,7 +126,7 @@ def check_pixels_and_placeholders(game):
                 push_click(back)
                 assert not game.handle_events(menu_screen=True)
             else:
-                assert ImageChops.difference(hovered, menu_image(game)).getbbox() is None
+                assert game.menu.launch_action == "controls"
         push_mouse(10, 10)
         assert not game.handle_events(menu_screen=True)
         assert ImageChops.difference(normal, menu_image(game)).getbbox() is None
@@ -167,9 +167,6 @@ def check_wait_start_and_restart(game):
                 push_key(key)
                 push_key(key, repeat=True)
                 push_key(key, down=False)
-            for button in game.menu.buttons:
-                if button.action == "controls":
-                    push_click(button)
             for mouse_button in (SDL_BUTTON_RIGHT, SDL_BUTTON_MIDDLE):
                 push_click(game.menu.buttons[0], mouse_button)
             push_mouse(10, 10, kind=pico2d.SDL_MOUSEBUTTONDOWN)

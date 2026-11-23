@@ -14,6 +14,7 @@ from player import Player
 from projectiles import PlayerProjectile, SteelClubProjectile
 from rush import RushSequence
 from stage import Stage
+from training_room import TrainingRoom
 
 
 class World:
@@ -23,6 +24,7 @@ class World:
         self.traffic_rng = traffic_rng
         self.item_rng = item_rng
         self.starting_weapon = None
+        self.training = False
         self.reset()
 
     def reset(self):
@@ -36,13 +38,18 @@ class World:
         self.controls.reset_for_restart()
         self.rush = None
         self.player = Player()
-        self.player.equip_weapon(self.starting_weapon)
-        self.camera = Camera(self.player.x)
-        attack_sequence = count()
-        self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,
-                             traffic_rng=self.traffic_rng, item_rng=self.item_rng)
-                       for index in range(len(config.STAGE_IMAGES))]
+        if self.training:
+            self.stages = [TrainingRoom()]
+            self.player.x = self.player.previous_x = config.SCREEN_WIDTH / 2
+        else:
+            self.player.equip_weapon(self.starting_weapon)
+            attack_sequence = count()
+            self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,
+                                 traffic_rng=self.traffic_rng, item_rng=self.item_rng)
+                           for index in range(len(config.STAGE_IMAGES))]
         self.stage_index = 0
+        self.stage.constrain_actor(self.player)
+        self.camera = Camera(self.player.x, self.stage.width)
         self.pending_stage_index = None
         self.stage_loading_remaining = 0.0
         self.death_handled = False
@@ -122,8 +129,9 @@ class World:
         left, bottom, right, top = area.bounds
         exit_edge = (config.STAGE_EXIT_MARGIN + config.STAGE_ARROW_WIDTH / 2
                      + config.STAGE_ARROW_SWAY_AMPLITUDE + config.DROP_ITEM_EXIT_GAP)
-        x = clamp(x, max(left, exit_edge) + config.DROP_ITEM_HALF_WIDTH,
-                  min(right, config.WORLD_WIDTH - exit_edge) - config.DROP_ITEM_HALF_WIDTH)
+        if not self.training:
+            x = clamp(x, max(left, exit_edge) + config.DROP_ITEM_HALF_WIDTH,
+                      min(right, self.stage.width - exit_edge) - config.DROP_ITEM_HALF_WIDTH)
         height = (config.PISTOL_ITEM_CLIP[3] * config.PISTOL_DROP_SCALE
                   if kind == "pistol" else config.DROP_ITEM_HEIGHT)
         ground_y = clamp(ground_y, bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH, top - height)
@@ -315,6 +323,7 @@ class World:
         if self.player.alive:
             bullet = self.player.take_projectile()
             if bullet is not None:
+                bullet.world_width = self.stage.width
                 self.projectiles.append(bullet)
                 if bullet.update(0, self.enemies):
                     self.projectile_impact(bullet)
@@ -430,7 +439,7 @@ class World:
         resolve_bodies(self.player, self.enemies, self.stage.area_for(self.player))
         self.player.previous_x = self.player.x
         self.player.previous_ground_y = self.player.ground_y
-        self.camera = Camera(self.player.x)
+        self.camera = Camera(self.player.x, self.stage.width)
         self.update_camera(0)
         return True
 
@@ -458,7 +467,7 @@ class World:
         self.stage.constrain_actor(player)
         player.previous_x = player.x
         player.previous_ground_y = player.ground_y
-        self.camera = Camera(player.x)
+        self.camera = Camera(player.x, self.stage.width)
         self.update_camera(0)
 
     def handle_death(self):

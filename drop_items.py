@@ -20,6 +20,11 @@ class DropItem:
     vy: float = 0.0
     floor: int = 0
     pistol_ammo: int | None = None
+    support_height: float = 0.0
+
+    @property
+    def surface_y(self):
+        return self.ground_y + self.support_height
 
     @property
     def grounded(self):

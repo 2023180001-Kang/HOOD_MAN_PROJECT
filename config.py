@@ -91,6 +91,13 @@ MAIN_MENU_BUTTONS = (
     ("controls", "menu_controls.png"),
     ("backpack", "menu_backpack.png"),
 )
+TRAINING_ROOM_IMAGE = "training_room_1280x720_v2.png"
+# Source y=420 is the wall/floor seam; the tabletop spans source y=322..344.
+TRAINING_FLOOR = (0, 0, 1280, 300)
+TRAINING_TABLE_ITEMS = (("steel_pipe", 200), ("combat_knife", 420),
+                        ("steel_club", 640), ("pistol", 860))
+TRAINING_TABLE_APPROACH_Y = 280
+TRAINING_TABLE_SURFACE_Y = 383
 MAIN_MENU_BUTTON_SIZE = (580, 110)  # Preserve each 928x176 source frame's aspect ratio.
 MAIN_MENU_RIGHT_MARGIN = 48
 MAIN_MENU_TOP_MARGIN = 144
@@ -450,6 +457,7 @@ STAGE_IMAGE_HEIGHT = 941.0
 # Walking line measured upward from the source image's bottom edge (941 - 797).
 STAGE_GROUND_Y = 144.0
 STAGE_GROUND_ANCHORS = {
+    TRAINING_ROOM_IMAGE: GROUND_Y,
     FACTORY_OUTSIDE_IMAGE: 100.0,
     FACTORY_EXTERIOR_IMAGE: 100.0,
     # Keep feet on the raised lab walkway, above the foreground machinery.

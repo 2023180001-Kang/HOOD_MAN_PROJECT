@@ -101,9 +101,9 @@ class MainMenuTests(unittest.TestCase):
             for item in self.menu.buttons:
                 self.assertEqual(self.assets.images[item.image_name].clip_draw.call_args.args[0], 0)
 
-    def test_only_game_start_requests_play_and_submenus_have_a_back_button(self):
+    def test_play_buttons_select_a_scene_and_submenus_have_a_back_button(self):
         for button in self.menu.buttons:
-            self.assertEqual(self.menu.click(button.x, button.y), button.action == "game_start")
+            self.assertEqual(self.menu.click(button.x, button.y), button.action in ("controls", "game_start"))
             if button.action in ("backpack", "stage_progress"):
                 self.assertEqual(self.menu.screen, button.action)
                 self.assertIsNone(self.menu.hovered_button)
@@ -182,7 +182,7 @@ class MainMenuFlowTests(unittest.TestCase):
             self.assertFalse(self.process(mouse_event(pico2d.SDL_MOUSEMOTION, button.x, button.y)))
             self.assertIs(self.game.menu.hovered_button, button)
             self.assertEqual(self.process(mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, button.x, button.y)),
-                             button.action == "game_start")
+                             button.action in ("controls", "game_start"))
             if self.game.menu.screen != "main":
                 back, = self.game.menu.buttons
                 self.assertFalse(self.process(mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, back.x, back.y)))

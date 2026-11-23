@@ -35,7 +35,10 @@ def enemy_type_for_stage(index):
 
 
 class Stage:
-    def __init__(self, index=0, *, rng=None, attack_sequence=None, traffic_rng=None, item_rng=None):
+    width = config.WORLD_WIDTH
+
+    def __init__(self, index=0, *, rng=None, attack_sequence=None, traffic_rng=None, item_rng=None,
+                 walkable=None, drop_items=None):
         self.index = index
         self.arrows_visible = False
         self.spawn_cycle_index = None  # None preserves this map's native default.
@@ -46,7 +49,7 @@ class Stage:
         self.projectiles = []
         self.doors = [StageDoor(kind, rect)
                       for kind, rect in config.STAGE_DOOR_SPECS.get(self.image_name, ())]
-        self.walkable = for_stage(index)
+        self.walkable = for_stage(index) if walkable is None else walkable
         self.route_rng = random.Random()
         if rng is not None:
             # Navigation decisions never consume spawn or combat randomness.
@@ -58,8 +61,8 @@ class Stage:
         drop_bounds = config.STAGE_DROP_ITEM_SPAWN_BOUNDS.get(self.image_name)
         self.drop_spawn_area = (WalkableArea.rectangle(*drop_bounds) if drop_bounds is not None
                                 else self.walkable)
-        self.drop_items = spawn_drop_items(self.drop_spawn_area, rng=item_rng,
-                                          upper_walkable=self.upper_walkable)
+        self.drop_items = (spawn_drop_items(self.drop_spawn_area, rng=item_rng, upper_walkable=self.upper_walkable)
+                           if drop_items is None else drop_items)
         spawn_bounds = config.STAGE_ENEMY_SPAWN_BOUNDS.get(self.image_name)
         self.spawn_area = (WalkableArea.rectangle(*spawn_bounds) if spawn_bounds is not None
                            else self.walkable)
@@ -374,7 +377,7 @@ class Stage:
         roof = bottom + height
         headroom = max(0.0, config.SCREEN_HEIGHT - roof)
         first = max(0, floor(camera_x / width))
-        last = min(ceil(config.WORLD_WIDTH / width),
+        last = min(ceil(self.width / width),
                    ceil((camera_x + config.SCREEN_WIDTH) / width))
         for index in range(first, last):
             image.composite_draw(

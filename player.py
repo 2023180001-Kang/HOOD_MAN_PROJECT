@@ -160,7 +160,8 @@ class Player:
             return None
         offset_x, offset_y = self._pistol_muzzle_offset(self.animation.frame)
         height = self.y + offset_y
-        end = max(0.0, min(config.WORLD_WIDTH, self.x + self.facing * config.PLAYER_PISTOL_RANGE))
+        left, _, right, _ = self.walkable.bounds
+        end = max(left, min(right, self.x + self.facing * config.PLAYER_PISTOL_RANGE))
         return self.x + offset_x, height, end, height
 
     def start_pistol_shot(self, direction=0):

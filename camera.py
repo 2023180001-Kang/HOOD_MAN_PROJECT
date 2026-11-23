@@ -7,7 +7,8 @@ from physics import clamp
 
 
 class Camera:
-    def __init__(self, player_x):
+    def __init__(self, player_x, world_width=config.WORLD_WIDTH):
+        self.max_x = max(0.0, world_width - config.SCREEN_WIDTH)
         self.x = 0.0
         self.y = 0.0
         self.vertical_bounds = None
@@ -24,8 +25,7 @@ class Camera:
         self.offset_y = self.shake_strength / 2
 
     def update(self, dt, player_x, *, player_y=None, vertical_bounds=None):
-        self.x = clamp(player_x - config.SCREEN_WIDTH / 2, 0,
-                       config.WORLD_WIDTH - config.SCREEN_WIDTH)
+        self.x = clamp(player_x - config.SCREEN_WIDTH / 2, 0, self.max_x)
         if vertical_bounds is not None:
             self.vertical_bounds = vertical_bounds
         if player_y is not None and self.vertical_bounds is not None:
@@ -45,8 +45,7 @@ class Camera:
 
     @property
     def render_x(self):
-        return clamp(self.x + self.offset_x, 0,
-                     config.WORLD_WIDTH - config.SCREEN_WIDTH)
+        return clamp(self.x + self.offset_x, 0, self.max_x)
 
     @property
     def render_y(self):

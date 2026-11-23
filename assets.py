@@ -15,7 +15,7 @@ class Assets:
         self.images = {
             name: pico2d.load_image(str(config.ROOT / name))
             for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE, config.STAGE_LOCK_IMAGE,
-                         config.STAGE_LOADING_IMAGE,
+                         config.STAGE_LOADING_IMAGE, config.TRAINING_ROOM_IMAGE,
                          *(image for _, image in config.MAIN_MENU_BUTTONS),
                          config.BAG_UI_IMAGE, config.BAG_BUTTON_IMAGE,
                          *(image for _, image, _ in config.BAG_ITEM_SPECS),
@@ -143,9 +143,9 @@ class Assets:
                                   image.w * config.SPRITE_SCALE, image.h * config.SPRITE_SCALE)
 
     def draw_drop_item(self, item, camera_x, camera_y):
+        x, ground_y = item.x - camera_x, item.surface_y - camera_y
         if item.kind == "steel_club":
-            self.draw_steel_club(item.x - camera_x,
-                                 item.ground_y - camera_y + item.jump_height + item.display_height / 2,
+            self.draw_steel_club(x, ground_y + item.jump_height + item.display_height / 2,
                                  item.facing, item.elapsed, grounded=item.grounded)
             return
         image = self.images[item.image_name]
@@ -154,15 +154,13 @@ class Assets:
             scale = config.PISTOL_DROP_SCALE
             image.clip_composite_draw(
                 left, bottom, width, height, 0, "h" if item.facing < 0 else "",
-                item.x - camera_x,
-                item.ground_y - camera_y + item.jump_height + item.display_height / 2,
+                x, ground_y + item.jump_height + item.display_height / 2,
                 width * scale, height * scale,
             )
             return
         width = image.w // config.DROP_ITEM_FRAMES
         left = item.frame * width
         scale = config.DROP_ITEM_SCALE
-        x, ground_y = item.x - camera_x, item.ground_y - camera_y
         flip = "h" if item.facing < 0 else ""
         # The source shadow stays still while the weapon hovers above it. Keep
         # the shadow on the floor, then pin every weapon frame's bottom to it.

@@ -46,6 +46,7 @@ class MainMenu:
             width, height,
         )
         self.screen = "main"
+        self.launch_action = "game_start"
         self.bag_items = list(config.BAG_ITEM_SPECS)
         self.equipped_weapon = None
         self.cancel_drag()
@@ -62,6 +63,7 @@ class MainMenu:
 
     def show_main(self):
         self.screen = "main"
+        self.launch_action = "game_start"
         self.cancel_drag()
         self.clear_hover()
 
@@ -158,12 +160,13 @@ class MainMenu:
             self.bag_player_animation.update(max(0.0, dt))
 
     def click(self, x, y):
-        """Navigate locally; only a game-start click requests gameplay."""
+        """Navigate locally or select the playable scene to launch."""
         self.move_pointer(x, y)
         if self.hovered_button is None:
             return False
         action = self.hovered_button.action
-        if action == "game_start":
+        if action in ("game_start", "controls"):
+            self.launch_action = action
             return True
         if action in ("backpack", "stage_progress"):
             self.screen = action

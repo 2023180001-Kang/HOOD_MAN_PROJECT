@@ -30,6 +30,7 @@ class ResearcherBullet:
     scale = config.RESEARCHER_BULLET_SCALE
     anchor_y = config.RESEARCHER_BULLET_ANCHOR_Y
     range_limited = False
+    world_width = config.WORLD_WIDTH
 
     @property
     def y(self):
@@ -57,7 +58,7 @@ class ResearcherBullet:
 
     @property
     def horizontal_limits(self):
-        return -self.half_width, config.WORLD_WIDTH + self.half_width
+        return -self.half_width, self.world_width + self.half_width
 
     @property
     def finished(self):
@@ -197,7 +198,10 @@ class SteelClubProjectile(PlayerProjectile):
     straight_range = 360.0
     gravity = 1200.0
     half_width = half_height = 20.0
-    horizontal_limits = (config.DROP_ITEM_HALF_WIDTH, config.WORLD_WIDTH - config.DROP_ITEM_HALF_WIDTH)
+
+    @property
+    def horizontal_limits(self):
+        return config.DROP_ITEM_HALF_WIDTH, self.world_width - config.DROP_ITEM_HALF_WIDTH
 
 
 class RifleBullet(ResearcherBullet):

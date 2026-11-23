@@ -159,7 +159,7 @@ class UI:
         if item is None:
             return
         x = item.x - camera_x - 5
-        y = (item.ground_y - camera_y
+        y = (item.surface_y - camera_y
              + item.display_height
              + config.WEAPON_PROMPT_GAP)
         assets.font.draw(x + 1, y - 1, "G", (12, 15, 20))

@@ -52,7 +52,7 @@ class PlayerRifleTests(unittest.TestCase):
         world.update(config.FIXED_DT)
         self.assertEqual(player.rifle_ammo, 19)
 
-    def test_tap_hits_once_for_ten_in_either_direction(self):
+    def test_tap_hits_once_for_twenty_in_either_direction(self):
         for side in (-1, 1):
             with self.subTest(side=side):
                 world = rifle_world()
@@ -64,7 +64,7 @@ class PlayerRifleTests(unittest.TestCase):
                 world.controls.release("combat_a")
                 advance(world, 0.5)
                 self.assertEqual(player.rifle_ammo, 19)
-                self.assertEqual((enemy.max_hp - enemy.hp, world.damage_numbers[0].damage), (10, 10))
+                self.assertEqual((enemy.max_hp - enemy.hp, world.damage_numbers[0].damage), (20, 20))
                 self.assertEqual(player.hp, config.MAX_HP)
 
     def test_walk_run_jump_and_land_during_fire_and_reload(self):

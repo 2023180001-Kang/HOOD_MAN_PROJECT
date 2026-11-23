@@ -65,13 +65,16 @@ class Game:
         while SDL_PollEvent(ctypes.byref(event)):
             if event.type == pico2d.SDL_QUIT:
                 self.running = False
+                self.menu.cancel_drag()
             elif event.type == SDL_WINDOWEVENT and event.window.event == SDL_WINDOWEVENT_FOCUS_LOST:
                 self.world.controls.held.clear()
                 self.world.controls.pressed.clear()
+                self.menu.cancel_drag()
                 self.menu.clear_hover()
                 self._escape_held = False
                 start_requested = False
             elif event.type == SDL_WINDOWEVENT and event.window.event == SDL_WINDOWEVENT_LEAVE:
+                self.menu.cancel_drag()
                 self.menu.clear_hover()
             elif (event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP)
                   and event.key.keysym.sym == pico2d.SDLK_ESCAPE):
@@ -90,12 +93,16 @@ class Game:
                     )
                 elif event.type == pico2d.SDL_MOUSEBUTTONDOWN and event.button.button == SDL_BUTTON_LEFT:
                     was_bag_open = self.menu.bag_open
-                    start_requested |= self.menu.click(
+                    start_requested |= self.menu.press_pointer(
                         event.button.x, config.SCREEN_HEIGHT - 1 - event.button.y,
                     )
                     if self.menu.bag_open != was_bag_open:
                         # Navigation cancels an earlier start click in this batch.
                         start_requested = False
+                elif event.type == pico2d.SDL_MOUSEBUTTONUP and event.button.button == SDL_BUTTON_LEFT:
+                    self.menu.release_pointer(
+                        event.button.x, config.SCREEN_HEIGHT - 1 - event.button.y,
+                    )
             elif not self._menu_requested and event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if key is not None:

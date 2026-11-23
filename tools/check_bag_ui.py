@@ -1,4 +1,4 @@
-"""Verify bag navigation and native black/gray button pixels with real SDL."""
+"""Verify bag navigation, item drag/swaps and original pixels with real SDL."""
 
 from pathlib import Path
 import sys
@@ -147,7 +147,7 @@ def check_bag_pixels_and_navigation(game):
     assert all(game.assets.images[name] is image for name, image in textures.items())
     print("PASS: new bag background is pixel-identical except the idle preview, arrow and six item icons; "
           "old background is not loaded, each icon stays in its padded slot, "
-          "title is intact, item clicks have no action, "
+          "title is intact, clicks within one slot do not reorder or navigate, "
           "black/gray arrow clips and hover-only pixel changes match, "
           "leave/focus restore black, hidden menu/buttons/keys do not activate, "
           "20 round trips reuse textures without advancing/resetting the world.")
@@ -212,6 +212,126 @@ def check_idle_preview(game):
     print("PASS: basic HoodMan IDLE shows all eight distinct source frames at 7 FPS/1.7 scale, "
           "loops twice with fixed feet, changes only the preview region, and is independent of "
           "the armed/slow gameplay player; hidden preview stops and reopening restarts frame 0.")
+
+
+def check_item_drag_and_swap(game):
+    menu, world = game.menu, game.world
+    player = world.player
+    before_world = (world.elapsed, world.stage_index, player.hp, player.weapon,
+                    player.state, player.animation.elapsed, world.time_scale)
+    textures = dict(game.assets.images)
+    push_click(menu.main_buttons[-1])
+    assert not game.handle_events(menu_screen=True) and menu.bag_open
+    original = menu.bag_items[:]
+    normal = menu_image(game)
+    with patch.object(menu, "draw_bag_items"):
+        empty = menu_image(game)
+
+    def point(slot):
+        left, top, right, bottom = config.BAG_ITEM_SLOT_RECTS[slot]
+        return (left + right) / 2, config.SCREEN_HEIGHT - (top + bottom) / 2
+
+    def drag(source, target):
+        before = menu.bag_items[:]
+        push_mouse(*point(source), kind=pico2d.SDL_MOUSEBUTTONDOWN)
+        assert not game.handle_events(menu_screen=True)
+        assert menu.dragged_slot == source
+        push_mouse(*point(target))
+        assert not game.handle_events(menu_screen=True)
+        assert menu.bag_items == before
+        push_mouse(*point(target), kind=pico2d.SDL_MOUSEBUTTONUP)
+        assert not game.handle_events(menu_screen=True)
+        before[source], before[target] = before[target], before[source]
+        assert menu.bag_items == before and menu.dragged_slot is None
+
+    with patch.object(world, "update", wraps=world.update) as update, \
+            patch.object(world, "reset", wraps=world.reset) as reset:
+        push_mouse(*point(0), kind=pico2d.SDL_MOUSEBUTTONDOWN)
+        assert not game.handle_events(menu_screen=True)
+        push_mouse(950, 370)
+        assert not game.handle_events(menu_screen=True)
+        assert menu.dragged_slot == 0 and menu.drag_position == (950.5, 370)
+        held = menu_image(game, "bag_item_dragging")
+        source_box = config.BAG_ITEM_SLOT_RECTS[0]
+        assert held.crop(source_box).tobytes() == empty.crop(source_box).tobytes()
+        # Remove the real dragged texture to find only its floating pixels.
+        with patch.object(game.assets.images[original[0][1]], "clip_draw"):
+            without_held = menu_image(game)
+        held_bounds = ImageChops.difference(held, without_held).getbbox()
+        assert held_bounds is not None
+        assert 870 <= held_bounds[0] < held_bounds[2] <= 1030
+        assert 310 <= held_bounds[1] < held_bounds[3] <= 390
+        assert menu.bag_items == original
+
+        push_mouse(*point(5), kind=pico2d.SDL_MOUSEBUTTONUP)
+        assert not game.handle_events(menu_screen=True)
+        assert menu.bag_items[0] == original[5] and menu.bag_items[5] == original[0]
+        swapped_order = menu.bag_items[:]
+        swapped = menu_image(game, "bag_items_swapped")
+        changed = ImageChops.difference(normal, swapped)
+        assert changed.getbbox() is not None
+        for slot in (0, 5):
+            changed.paste((0, 0, 0), config.BAG_ITEM_SLOT_RECTS[slot])
+        assert changed.getbbox() is None, "Swap changed pixels outside the two slots"
+        padding = config.BAG_ITEM_SLOT_PADDING
+        for (_, name, _), (left, top, right, bottom) in zip(
+                menu.bag_items, config.BAG_ITEM_SLOT_RECTS):
+            with patch.object(game.assets.images[name], "clip_draw"):
+                without_item = menu_image(game)
+            bounds = ImageChops.difference(swapped, without_item).getbbox()
+            assert bounds is not None
+            assert left + padding <= bounds[0] < bounds[2] <= right - padding
+            assert top + padding <= bounds[1] < bounds[3] <= bottom - padding
+
+        push_click(menu.bag_back_button)
+        push_click(menu.main_buttons[-1])
+        assert not game.handle_events(menu_screen=True) and menu.bag_open
+        assert menu.bag_items == swapped_order
+        assert ImageChops.difference(swapped, menu_image(game)).getbbox() is None
+
+        for source in range(6):
+            for target in range(6):
+                drag(source, target)
+
+        back = menu.bag_back_button
+        for target in ((640, 350), (267, 148), (back.x, back.y)):
+            before = menu.bag_items[:]
+            push_mouse(*point(0), kind=pico2d.SDL_MOUSEBUTTONDOWN)
+            push_mouse(*target)
+            push_mouse(*target, kind=pico2d.SDL_MOUSEBUTTONUP)
+            assert not game.handle_events(menu_screen=True)
+            assert menu.bag_items == before and menu.bag_open and menu.dragged_slot is None
+        for kind in (SDL_WINDOWEVENT_LEAVE, SDL_WINDOWEVENT_FOCUS_LOST):
+            before = menu.bag_items[:]
+            push_mouse(*point(0), kind=pico2d.SDL_MOUSEBUTTONDOWN)
+            push_mouse(*point(5))
+            assert not game.handle_events(menu_screen=True)
+            event = SDL_Event()
+            event.type, event.window.event = SDL_WINDOWEVENT, kind
+            push(event)
+            push_mouse(*point(5), kind=pico2d.SDL_MOUSEBUTTONUP)
+            assert not game.handle_events(menu_screen=True)
+            assert menu.bag_items == before and menu.dragged_slot is None
+
+        # Restore via real input, not by resetting the layout behind the UI.
+        for slot, item in enumerate(original):
+            current = menu.bag_items.index(item)
+            if current != slot:
+                drag(current, slot)
+        push_mouse(640, 350)
+        assert not game.handle_events(menu_screen=True)
+        assert ImageChops.difference(normal, menu_image(game, "bag_drag_restored")).getbbox() is None
+        push_click(menu.bag_back_button)
+        assert not game.handle_events(menu_screen=True) and not menu.bag_open
+        update.assert_not_called()
+        reset.assert_not_called()
+    assert before_world == (world.elapsed, world.stage_index, player.hp, player.weapon,
+                            player.state, player.animation.elapsed, world.time_scale)
+    assert all(game.assets.images[name] is image for name, image in textures.items())
+    print("PASS: real SDL drag follows the grabbed point, leaves the source empty, "
+          "and draws once above other items; all 36 source/target pairs swap on release, "
+          "swapped textures fit destination padding, reopening preserves order, "
+          "outside/back drops and leave/focus cancel safely; world and shared textures stay unchanged.")
 
 
 def check_bag_wait_return_and_start(game):
@@ -352,6 +472,7 @@ def main():
         game.handle_events(menu_screen=True)
         check_bag_pixels_and_navigation(game)
         check_idle_preview(game)
+        check_item_drag_and_swap(game)
         check_bag_wait_return_and_start(game)
     finally:
         if game is not None:

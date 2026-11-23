@@ -304,13 +304,16 @@ class BagUITests(unittest.TestCase):
         for _, name, _ in config.BAG_ITEM_SPECS:
             self.assets.images[name].clip_draw.assert_not_called()
 
-    def test_item_slots_are_display_only_not_new_buttons(self):
+    def test_item_slot_clicks_do_not_navigate_or_add_buttons(self):
         self.open_bag()
         for left, top, right, bottom in config.BAG_ITEM_SLOT_RECTS:
-            self.assertFalse(self.menu.click((left + right) / 2,
-                                            config.SCREEN_HEIGHT - (top + bottom) / 2))
+            x, y = (left + right) / 2, config.SCREEN_HEIGHT - (top + bottom) / 2
+            self.assertFalse(self.menu.press_pointer(x, y))
+            self.menu.release_pointer(x, y)
             self.assertTrue(self.menu.bag_open)
             self.assertIsNone(self.menu.hovered_button)
+            self.assertIsNone(self.menu.dragged_slot)
+            self.assertEqual(self.menu.bag_items, list(config.BAG_ITEM_SPECS))
         self.assertEqual(self.menu.buttons, (self.menu.bag_back_button,))
 
     def test_item_layout_is_unchanged_during_back_button_hover(self):
@@ -351,7 +354,10 @@ class BagUIFlowTests(unittest.TestCase):
         self.assertFalse(self.process(mouse_event(pico2d.SDL_MOUSEMOTION, back.x, back.y)))
         self.assertIs(self.game.menu.hovered_button, back)
         for button in self.game.menu.main_buttons:
-            self.assertFalse(self.process(self.click_event(button)))
+            self.assertFalse(self.process(
+                self.click_event(button),
+                mouse_event(pico2d.SDL_MOUSEBUTTONUP, button.x, button.y),
+            ))
             self.assertTrue(self.game.menu.bag_open)
         self.assertFalse(self.process(self.click_event(back)))
         self.assertFalse(self.game.menu.bag_open)

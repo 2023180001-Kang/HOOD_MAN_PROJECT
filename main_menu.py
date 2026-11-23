@@ -1,4 +1,4 @@
-"""Screen-fixed main menu/bag navigation and two-frame buttons, without SDL."""
+"""Screen-fixed menu/bag navigation, item dragging and buttons, without SDL."""
 
 from dataclasses import dataclass
 
@@ -39,6 +39,8 @@ class MainMenu:
             width, height,
         )
         self.bag_open = False
+        self.bag_items = list(config.BAG_ITEM_SPECS)
+        self.cancel_drag()
         self.bag_player_animation = Animation({"IDLE": config.PLAYER_ANIMATIONS["IDLE"]})
         self.hovered_button = None
 
@@ -48,12 +50,61 @@ class MainMenu:
 
     def show_main(self):
         self.bag_open = False
+        self.cancel_drag()
         self.clear_hover()
 
     def move_pointer(self, x, y):
+        if self.dragged_slot is not None:
+            self.drag_position = (x + self.drag_offset[0], y + self.drag_offset[1])
+            self.clear_hover()
+            return
         self.hovered_button = next(
             (button for button in self.buttons if button.contains(x, y)), None,
         )
+
+    def press_pointer(self, x, y):
+        if self.dragged_slot is not None:
+            return False
+        slot = self.bag_slot_at(x, y)
+        if slot is None:
+            return self.click(x, y)
+        self.dragged_slot = slot
+        center_x, center_y = self.bag_slot_center(slot)
+        # Keep the grabbed point under the mouse instead of snapping to center.
+        self.drag_offset = (center_x - x, center_y - y)
+        self.move_pointer(x, y)
+        return False
+
+    def release_pointer(self, x, y):
+        if self.dragged_slot is None:
+            return
+        target = self.bag_slot_at(x, y)
+        if target is not None:
+            source = self.dragged_slot
+            self.bag_items[source], self.bag_items[target] = (
+                self.bag_items[target], self.bag_items[source],
+            )
+        self.cancel_drag()
+        self.move_pointer(x, y)
+
+    def cancel_drag(self):
+        # The layout is committed only on a valid drop, so cancellation is lossless.
+        self.dragged_slot = None
+        self.drag_position = None
+        self.drag_offset = (0.0, 0.0)
+
+    def bag_slot_at(self, x, y):
+        if self.bag_open:
+            for slot, (left, top, right, bottom) in enumerate(config.BAG_ITEM_SLOT_RECTS):
+                if (left <= x < right
+                        and config.SCREEN_HEIGHT - bottom <= y < config.SCREEN_HEIGHT - top):
+                    return slot
+        return None
+
+    @staticmethod
+    def bag_slot_center(slot):
+        left, top, right, bottom = config.BAG_ITEM_SLOT_RECTS[slot]
+        return (left + right) / 2, config.SCREEN_HEIGHT - (top + bottom) / 2
 
     def clear_hover(self):
         self.hovered_button = None
@@ -73,6 +124,7 @@ class MainMenu:
             return True
         if action == "backpack":
             self.bag_open = True
+            self.cancel_drag()
             self.bag_player_animation.elapsed = 0.0
             self.clear_hover()
         elif action == "back":
@@ -103,14 +155,19 @@ class MainMenu:
                            scale=config.BAG_PLAYER_SCALE)
 
     def draw_bag_items(self, assets):
+        for slot in range(len(self.bag_items)):
+            if slot != self.dragged_slot:
+                self.draw_bag_item(assets, slot)
+        if self.dragged_slot is not None:
+            # Draw the held icon once, above all stationary items.
+            self.draw_bag_item(assets, self.dragged_slot, self.drag_position)
+
+    def draw_bag_item(self, assets, slot, position=None):
         padding = config.BAG_ITEM_SLOT_PADDING
-        for (_, image_name, clip), (left, top, right, bottom) in zip(
-                config.BAG_ITEM_SPECS, config.BAG_ITEM_SLOT_RECTS):
-            width, height = clip[2:]
-            scale = min((right - left - padding * 2) / width,
-                        (bottom - top - padding * 2) / height)
-            assets.images[image_name].clip_draw(
-                *clip, (left + right) / 2,
-                config.SCREEN_HEIGHT - (top + bottom) / 2,
-                width * scale, height * scale,
-            )
+        _, image_name, clip = self.bag_items[slot]
+        left, top, right, bottom = config.BAG_ITEM_SLOT_RECTS[slot]
+        width, height = clip[2:]
+        scale = min((right - left - padding * 2) / width,
+                    (bottom - top - padding * 2) / height)
+        x, y = self.bag_slot_center(slot) if position is None else position
+        assets.images[image_name].clip_draw(*clip, x, y, width * scale, height * scale)

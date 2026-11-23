@@ -99,8 +99,8 @@ class Player:
             return config.PLAYER_CAR_HIT_IMAGE
         if self.active_move is not None:
             return self.active_move.image_name
-        if self.weapon == "pistol":
-            return config.PLAYER_PISTOL_IMAGE
+        if self.weapon in config.PLAYER_EQUIPPED_SHEETS:
+            return config.PLAYER_EQUIPPED_SHEETS[self.weapon]
         if self.state in config.WEAPON_POSE_ROWS.get(self.weapon, {}):
             return config.WEAPON_POSE_IMAGES[self.weapon]
         return config.PLAYER_IMAGE
@@ -137,7 +137,7 @@ class Player:
         self.weapon = weapon
         self.pistol_reload_interrupted = False
         hit_fps = self.animation.definitions["HIT"][1]
-        poses = config.PLAYER_PISTOL_ANIMATIONS if weapon == "pistol" else config.PLAYER_ANIMATIONS
+        poses = config.EQUIPPED_ANIMATIONS.get(weapon, config.PLAYER_ANIMATIONS)
         self.animation.definitions.update(poses)
         if self.state == "HIT":
             # A mid-flinch G swap changes the sheet/row, not the chosen recovery speed.
@@ -429,7 +429,7 @@ class Player:
         if self.hp and self.state != "HIT":
             # Choose recovery speed once per reaction; further hits must not
             # restart or prolong it, even if equipment changes during HIT.
-            poses = config.PLAYER_PISTOL_ANIMATIONS if self.weapon == "pistol" else config.PLAYER_ANIMATIONS
+            poses = config.EQUIPPED_ANIMATIONS.get(self.weapon, config.PLAYER_ANIMATIONS)
             row, fps, loop = poses["HIT"]
             if self.weapon in config.WEAPON_POSE_IMAGES:
                 fps = config.WEAPON_HIT_FPS

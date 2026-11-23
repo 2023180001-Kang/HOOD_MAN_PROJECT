@@ -78,11 +78,12 @@ class MainMenu:
         if self.dragged_slot is not None:
             return False
         slot = self.bag_slot_at(x, y)
-        if (self.bag_open and self.equipped_weapon == "pistol"
-                and self.bag_equipped_pistol_contains(x, y)):
-            slot = next(index for index, item in enumerate(self.bag_items) if item[0] == "pistol")
+        equipped_rect = config.BAG_EQUIPPED_RECTS.get(self.equipped_weapon)
+        if self.bag_open and equipped_rect and self.rect_contains(equipped_rect, x, y):
+            slot = next(index for index, item in enumerate(self.bag_items)
+                        if item[0] == self.equipped_weapon)
             self.dragged_from_player = True
-            left, top, right, bottom = config.BAG_EQUIPPED_PISTOL_RECT
+            left, top, right, bottom = equipped_rect
             center_x, center_y = (left + right) / 2, config.SCREEN_HEIGHT - (top + bottom) / 2
         elif slot is None:
             return self.click(x, y)
@@ -98,6 +99,7 @@ class MainMenu:
         if self.dragged_slot is None:
             return
         target = self.bag_slot_at(x, y)
+        weapon = self.bag_items[self.dragged_slot][0]
         if self.dragged_from_player:
             if target is not None:
                 source = self.dragged_slot
@@ -106,8 +108,8 @@ class MainMenu:
                 )
                 self.equipped_weapon = None
                 self.bag_player_animation.elapsed = 0.0
-        elif self.bag_items[self.dragged_slot][0] == "pistol" and self.bag_player_contains(x, y):
-            self.equipped_weapon = "pistol"
+        elif weapon in config.PLAYER_EQUIPPED_SHEETS and self.bag_player_contains(x, y):
+            self.equipped_weapon = weapon
             self.bag_player_animation.elapsed = 0.0
         elif target is not None:
             source = self.dragged_slot
@@ -134,13 +136,11 @@ class MainMenu:
 
     @staticmethod
     def bag_player_contains(x, y):
-        left, top, right, bottom = config.BAG_PLAYER_RECT
-        return (left <= x < right
-                and config.SCREEN_HEIGHT - bottom <= y < config.SCREEN_HEIGHT - top)
+        return MainMenu.rect_contains(config.BAG_PLAYER_RECT, x, y)
 
     @staticmethod
-    def bag_equipped_pistol_contains(x, y):
-        left, top, right, bottom = config.BAG_EQUIPPED_PISTOL_RECT
+    def rect_contains(rect, x, y):
+        left, top, right, bottom = rect
         return (left <= x < right
                 and config.SCREEN_HEIGHT - bottom <= y < config.SCREEN_HEIGHT - top)
 
@@ -198,9 +198,8 @@ class MainMenu:
 
     def draw_bag_player(self, assets):
         animation = self.bag_player_animation
-        image = (config.PLAYER_PISTOL_IMAGE
-                 if self.equipped_weapon == "pistol" and not self.dragged_from_player
-                 else config.PLAYER_IMAGE)
+        weapon = None if self.dragged_from_player else self.equipped_weapon
+        image = config.PLAYER_EQUIPPED_SHEETS.get(weapon, config.PLAYER_IMAGE)
         assets.draw_sprite(image, animation.row, animation.frame,
                            config.BAG_PLAYER_X, config.BAG_PLAYER_FEET_Y,
                            scale=config.BAG_PLAYER_SCALE)

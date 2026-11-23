@@ -106,6 +106,10 @@ BAG_PLAYER_FEET_Y = 320
 BAG_PLAYER_SCALE = 1.7
 BAG_PLAYER_RECT = (528, 24, 752, 410)  # Screen top-left coordinates, including the pistol IDLE.
 BAG_EQUIPPED_PISTOL_RECT = (640, 196, 752, 262)  # Grab the pistol/hand, not the entire character.
+BAG_EQUIPPED_RECTS = {
+    "pistol": BAG_EQUIPPED_PISTOL_RECT,
+    "steel_club": (642, 162, 784, 276),
+}
 PISTOL_ITEM_IMAGE = "pistol_item_256.png"
 PISTOL_ITEM_CLIP = (22, 49, 212, 158)
 PISTOL_DROP_SCALE = 0.18  # Also fits City 1's narrow 32px weapon-placement pavement.
@@ -131,6 +135,8 @@ BAG_ITEM_SLOT_RECTS = (
 BAG_ITEM_SLOT_PADDING = 18
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 PLAYER_PISTOL_IMAGE = "HOOD_MAN_pistol_IDLE_matched_2048x2048.png"
+PLAYER_STEEL_CLUB_IMAGE = "HoodMan_SteelClub_2048x2048.png"
+PLAYER_EQUIPPED_SHEETS = {"pistol": PLAYER_PISTOL_IMAGE, "steel_club": PLAYER_STEEL_CLUB_IMAGE}
 PLAYER_PISTOL_DAMAGE = 20
 PLAYER_PISTOL_MAGAZINE_SIZE = 7
 PLAYER_PISTOL_RANGE = 480.0
@@ -216,7 +222,8 @@ COMBAT_MOVE_SPECS = (
     ("d", "왼발 차기", 1, 50, 115.0, 146.0, COMBAT_KICK_FPS),
     ("f", "오른발 차기", 2, 60, 130.0, 146.0, COMBAT_KICK_FPS),
 )
-WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프", "pistol": "권총"}
+WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프", "pistol": "권총",
+                "steel_club": "쇠몽둥이"}
 WEAPON_HIT_IMAGES = {"combat_knife": PUNCH_KICK_HIT_IMAGE, "steel_pipe": CLUB_HIT_IMAGE}
 # The three new attacks inherit the existing A/S/D balance. Impact windows
 # follow the source strike poses; overhead/jump attacks hit on their downswing.
@@ -499,14 +506,18 @@ PLAYER_ANIMATIONS = {
     "DYING": (5, 10.0, False),
     "DEAD": (5, 10.0, False),
 }
-PLAYER_PISTOL_ANIMATIONS = {
+ARMED_PLAYER_POSES = {
     **PLAYER_ANIMATIONS,
-    "SHOOT": (5, 16.0, False),
-    "RELOAD": (6, 8.0, False),
     "HIT": (7, 12.0, False),
     "DYING": (8, 10.0, False),
     "DEAD": (8, 10.0, False),
 }
+PLAYER_PISTOL_ANIMATIONS = {
+    **ARMED_PLAYER_POSES,
+    "SHOOT": (5, 16.0, False),
+    "RELOAD": (6, 8.0, False),
+}
+EQUIPPED_ANIMATIONS = {"steel_club": ARMED_PLAYER_POSES, "pistol": PLAYER_PISTOL_ANIMATIONS}
 ENEMY_ANIMATIONS = {
     "IDLE": (1, 7.0, True),
     "WALK": (2, 10.0, True),

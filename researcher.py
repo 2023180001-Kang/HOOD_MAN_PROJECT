@@ -103,9 +103,13 @@ class Researcher(Enemy):
             self.x + self.facing * (self.muzzle_x + self.projectile_type.half_width),
             self.ground_y, self.jump_height + self.muzzle_height, self.facing, self.floor)
 
+    def pursuit_delta(self, dx, dy):
+        return (self.facing * max(0.0, abs(dx) - self.shoot_range),
+                dy if abs(dy) > config.ATTACK_DEPTH_TOLERANCE else 0.0)
+
     def _update_ai(self, dt, player):
         if (not self.alive or not player.alive or self.knockback_started
-                or self.falling_from_upper
+                or self.falling_from_upper or self.navigation_target is not None
                 or self.state in ("HIT", "CAR_HIT", "STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")):
             self.aim_remaining = 0.0
             super()._update_ai(dt, player)
@@ -134,8 +138,8 @@ class Researcher(Enemy):
         if dx:
             self.facing = 1 if dx > 0 else -1
         self.vx = self.ground_vy = 0.0
-        if (abs(dx) <= self.shoot_range
-                and abs(dy) <= config.ATTACK_DEPTH_TOLERANCE):
+        target_x, target_y = self.pursuit_delta(dx, dy)
+        if abs(target_x) <= 1e-9 and abs(target_y) <= 1e-9:
             self.running = False
             if self.cooldown <= 0:
                 self.start_attack()
@@ -149,8 +153,6 @@ class Researcher(Enemy):
         elif gap <= config.ENEMY_RUN_STOP_DISTANCE:
             self.running = False
         # Align to the firing lane instead of walking into a melee slot.
-        target_x = self.facing * max(0.0, abs(dx) - self.shoot_range)
-        target_y = dy if abs(dy) > config.ATTACK_DEPTH_TOLERANCE else 0.0
         distance = hypot(target_x, target_y)
         speed = self.run_speed if self.running else config.ENEMY_SPEED
         if distance:

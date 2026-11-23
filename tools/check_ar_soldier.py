@@ -117,10 +117,6 @@ def check_warning(game):
                 capture(game, f"ar_warning_{index}_{side}_{speed}")
                 tick(game, 29)
                 assert enemy.aiming and not world.projectiles
-                check_warning_pixels(game)  # The former half-second limit must no longer fire.
-                tick(game, 30)
-                assert enemy.aiming and enemy.ammo == 20 and not world.projectiles
-                check_warning_pixels(game)
                 tick(game)
                 assert enemy.ammo == 19
                 assert len(world.projectiles) == 1 and isinstance(world.projectiles[0], RifleBullet)
@@ -135,7 +131,7 @@ def check_warning(game):
     assert not enemy.aiming and not world.projectiles
     wait(game, lambda: enemy.aiming)
     assert enemy.ammo == 20 and not world.projectiles
-    print("PASS: full 1s red-dot warning (still no shot at 0.5s), then 0.1s automatic fire/two visible rounds, "
+    print("PASS: full 0.5s red-dot warning, then 0.1s automatic fire/two visible rounds, "
           "both bosses/facings/speed endpoints; range entry starts a new warning.")
 
 
@@ -152,7 +148,7 @@ def check_twenty_rounds(game):
                     warnings.append(world.elapsed)
                 if enemy.ammo == previous_ammo - 1:
                     if len(shots) % 20 == 0:
-                        assert abs(world.elapsed - warnings[-1] - 1.0) < 1e-8
+                        assert abs(world.elapsed - warnings[-1] - enemy.aim_duration) < 1e-8
                     else:
                         assert abs(world.elapsed - shots[-1] - 0.1) < 1e-8
                     shots.append(world.elapsed)
@@ -173,8 +169,8 @@ def check_twenty_rounds(game):
             assert (len(shots), len(warnings), refilled, enemy.ammo) == (21, 2, True, 19)
             assert abs(shots[19] - shots[0] - 1.9) < 1e-8
             assert frames_seen == set(range(8))
-    print("PASS: both bosses/facings fire 20 rounds at 10/s after ONE 1s warning, loop row-4 frames 2..5, "
-          "then all 8 row-6 frames/1s refill and a new 1s warning before round 21.")
+    print("PASS: both bosses/facings fire 20 rounds at 10/s after one 0.5s warning, loop row-4 frames 2..5, "
+          "then all 8 row-6 frames/1s refill and a new 0.5s warning before round 21.")
 
 
 def check_depth_evasion_and_pursuit(game):
@@ -202,7 +198,7 @@ def check_depth_evasion_and_pursuit(game):
                 release(game, key)
                 wait(game, lambda: enemy.aiming)
                 assert enemy.ammo == 20 and not world.projectiles
-                tick(game, 59)
+                tick(game, 29)
                 assert enemy.aiming and enemy.ammo == 20
                 tick(game)
                 assert enemy.ammo == 19
@@ -215,7 +211,7 @@ def check_depth_evasion_and_pursuit(game):
                 assert abs(hypot(enemy.vx, enemy.ground_vy) - run_speed) < 1e-8
                 assert abs(hypot(enemy.x - before[0], enemy.ground_y - before[1]) - run_speed / 60) < 1e-8
     print("PASS: SDL up/down during aiming delays cancellation by 0.5s with no shot or lane tracking, "
-          "then resumes original 120px/s walking and a new 1s warning. All run speeds/diagonals are unchanged.")
+          "then resumes original 120px/s walking and a new 0.5s warning. All run speeds/diagonals are unchanged.")
 
 
 def check_burst_interruptions(game):

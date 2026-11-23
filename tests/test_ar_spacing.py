@@ -131,11 +131,62 @@ class ARSpacingTests(unittest.TestCase):
                              control.aim_remaining, control.fire_remaining, control.animation.elapsed))
                         self.assert_separated(world)
 
+    def test_reinforcement_joins_a_live_burst_from_inside_and_outside_range(self):
+        for side in (-1, 1):
+            for front_gap, rear_gap in ((300, 550), (600, 1050)):
+                with self.subTest(side=side, rear_gap=rear_gap):
+                    world, (front,) = crowd(1, side, distance=front_gap)
+                    advance(world, 0.65)
+                    anchor = front.x, front.ground_y
+                    self.assertLess(front.ammo, front.magazine_size)
+                    rear = ARSoldier(world.player.x + side * rear_gap, -side, ground_y=front.ground_y)
+                    world.enemies.append(rear)
+                    start = rear.x, rear.ground_y
+                    for _ in range(2 * 120):
+                        world.step(config.FIXED_DT)
+                        self.assert_separated(world)
+                        if rear.ammo < rear.magazine_size:
+                            break
+                    self.assertLess(rear.ammo, rear.magazine_size)
+                    self.assertNotEqual((rear.x, rear.ground_y), start)
+                    self.assertEqual((front.x, front.ground_y), anchor)
+                    self.assertEqual(front.state, "ATTACK")
+                    self.assertTrue(any(bullet.ground_y == rear.ground_y for bullet in world.projectiles))
+
+    def test_a_solo_edge_spawn_pursues_immediately_and_reacquires_a_distant_player(self):
+        for index in (10, 11):
+            world, _ = crowd(0, index=index)
+            tap(world.controls, "spawn_1")
+            world.step(config.FIXED_DT)
+            enemy, = world.enemies
+            self.assertGreater(abs(enemy.x - world.player.x), enemy.shoot_range)
+            self.assertLess(abs(enemy.x - world.player.x), abs(enemy.previous_x - world.player.x))
+            advance(world, 3)
+            self.assertLess(enemy.ammo, enemy.magazine_size)
+            side = 1 if enemy.x < world.player.x else -1
+            world.player.x = enemy.x + side * 1000
+            world.step(config.FIXED_DT)
+            self.assertEqual(enemy.state, "RUN")
+            self.assertGreater((enemy.x - enemy.previous_x) * side, 0)
+
+    def test_every_summoned_rifleman_fires_when_more_arrive_than_fit_in_range(self):
+        for index in (10, 11):
+            world, _ = crowd(0, index=index)
+            tap(world.controls, "spawn_9")
+            world.step(config.FIXED_DT)
+            fired = set()
+            for _ in range(15 * 120):
+                world.step(config.FIXED_DT)
+                fired.update(enemy for enemy in world.enemies if enemy.ammo < enemy.magazine_size)
+                if len(fired) == 9:
+                    break
+            self.assertEqual(len(fired), 9)
+
     def test_a_displaced_warning_is_cancelled_without_a_shot_and_gets_a_full_new_warning(self):
         world, enemies = crowd(2, distance=300)
         for enemy in enemies:
             enemy.start_attack()
-            enemy.update(1 - config.FIXED_DT, world.player)
+            enemy.update(enemy.aim_duration - config.FIXED_DT, world.player)
         world.step(config.FIXED_DT)
         self.assert_separated(world)
         displaced = next(enemy for enemy in enemies if enemy.state != "ATTACK")
@@ -144,7 +195,7 @@ class ARSpacingTests(unittest.TestCase):
         for _ in range(240):
             world.step(config.FIXED_DT)
             if displaced.aiming:
-                self.assertEqual(displaced.aim_remaining, 1)
+                self.assertEqual(displaced.aim_remaining, displaced.aim_duration)
                 break
         else:
             self.fail("A separated rifleman never resumed aiming")
@@ -176,15 +227,17 @@ class ARSpacingTests(unittest.TestCase):
         self.assertEqual({enemy: (enemy.x, enemy.ground_y) for enemy in enemies}, before)
         self.assert_separated(world)
 
-    def test_packed_full_height_rows_do_not_push_one_another_or_jitter_after_settling(self):
+    def test_packed_full_height_rows_keep_active_shooters_planted_while_reserves_reposition(self):
         world, enemies = crowd(18)
         advance(world, 6)
         self.assert_separated(world)
-        before = [(enemy.x, enemy.ground_y) for enemy in enemies]
         for _ in range(120):
+            before = {e: (e.x, e.ground_y) for e in enemies if e.state == "ATTACK" and e.ammo}
+            self.assertTrue(before)
             world.step(config.FIXED_DT)
             self.assert_separated(world)
-            self.assertEqual([(enemy.x, enemy.ground_y) for enemy in enemies], before)
+            for enemy, position in before.items():
+                self.assertEqual((enemy.x, enemy.ground_y), position)
 
     def test_dead_carried_other_floor_and_other_enemy_types_are_not_pushed(self):
         world, enemies = crowd(1, distance=300)

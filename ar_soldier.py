@@ -26,6 +26,7 @@ class ARSoldier(Researcher):
         super().__init__(*args, **kwargs)
         self.fire_remaining = 0.0
         self.burst_shots = 0
+        self.rounds_fired = 0
         self.aim_cancel_remaining = 0.0
         self._last_player_ground_y = None
 
@@ -96,9 +97,21 @@ class ARSoldier(Researcher):
         bullet = super().take_projectile()
         if bullet is not None:
             self.burst_shots += 1
+            self.rounds_fired += 1
             self.fire_remaining = max(0.0, self.fire_remaining + self.fire_interval)
             self.show_fire_pose()
         return bullet
+
+    def pursuit_delta(self, dx, dy):
+        # Outside range, close on the player even when no squad slot exists.
+        # Once in range a solo rifleman only needs to align on the depth axis.
+        target_x = dx if abs(dx) > self.shoot_range + 1e-9 else 0.0
+        target_y = dy if abs(dy) > config.ATTACK_DEPTH_TOLERANCE else 0.0
+        if self.target_x is not None:
+            target_x = self.facing * max(0.0, (self.target_x - self.x) * self.facing)
+        if self.target_ground_y is not None:
+            target_y = self.target_ground_y - self.ground_y
+        return target_x, target_y
 
     def _update_ai(self, dt, player):
         player_changing_depth = (
@@ -113,7 +126,7 @@ class ARSoldier(Researcher):
         if self.alive and self.state == "ATTACK":
             dx = player.x - self.x
             if (not player.alive or not same_floor(self, player)
-                    or abs(dx) > self.shoot_range
+                    or abs(dx) > self.shoot_range + 1e-9
                     or dx * self.facing < 0):
                 self.stop()
             elif self.aiming and (player_changing_depth or self.aim_cancel_remaining > 0):

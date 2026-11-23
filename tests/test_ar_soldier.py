@@ -91,7 +91,7 @@ class ARSoldierTests(unittest.TestCase):
                 self.assertFalse(enemy.try_hit(player))
                 self.assertEqual(player.hp, 500)
 
-    def test_full_one_second_warning_precedes_the_first_round_at_every_attack_speed(self):
+    def test_half_second_warning_precedes_the_first_round_at_every_attack_speed(self):
         for index in (10, 11):
             for side in (-1, 1):
                 for speed in (0.8, 1, 1.4):
@@ -99,8 +99,8 @@ class ARSoldierTests(unittest.TestCase):
                         world, enemy = encounter(index, side, speed=speed)
                         world.step(config.FIXED_DT)
                         warning = enemy.aim_line
-                        self.assertEqual(enemy.aim_remaining, 1.0)
-                        for _ in range(119):
+                        self.assertEqual(enemy.aim_remaining, 0.5)
+                        for _ in range(round(enemy.aim_duration / config.FIXED_DT) - 1):
                             world.step(config.FIXED_DT)
                             self.assertEqual((enemy.ammo, enemy.animation.frame), (20, 1))
                             self.assertTrue(enemy.aiming)
@@ -124,7 +124,7 @@ class ARSoldierTests(unittest.TestCase):
         enemy.animation.elapsed = 5 / enemy.attack_fps
         self.assertIsNone(enemy.take_projectile())
         self.assertEqual(enemy.ammo, 20)
-        enemy.update(1.0 - config.FIXED_DT, world.player)
+        enemy.update(enemy.aim_duration - config.FIXED_DT, world.player)
         self.assertIsNone(enemy.take_projectile())
         enemy.update(config.FIXED_DT, world.player)
         self.assertIsInstance(enemy.take_projectile(), RifleBullet)
@@ -154,14 +154,14 @@ class ARSoldierTests(unittest.TestCase):
                     self.assertEqual(enemy.aim_cancel_remaining, 0.5)
                     enemy.update(0.5, world.player)
                 if reason == "behind":
-                    self.assertEqual((enemy.facing, enemy.aim_remaining), (-1, 1.0))
+                    self.assertEqual((enemy.facing, enemy.aim_remaining), (-1, enemy.aim_duration))
                 else:
                     self.assertFalse(enemy.aiming)
                 world.player.x = enemy.x + 300
                 world.player.ground_y = enemy.ground_y
                 world.player.floor = 0
                 enemy.update(config.FIXED_DT, world.player)
-                self.assertEqual((enemy.facing, enemy.aim_remaining), (1, 1.0))
+                self.assertEqual((enemy.facing, enemy.aim_remaining), (1, enemy.aim_duration))
                 self.assertIsNone(enemy.take_projectile())
 
     def test_vertical_dodge_delays_cancellation_without_firing_even_on_the_last_warning_tick(self):
@@ -171,7 +171,7 @@ class ARSoldierTests(unittest.TestCase):
                     with self.subTest(index=index, side=side, depth_change=depth_change):
                         world, enemy = encounter(index, side)
                         world.step(config.FIXED_DT)
-                        for _ in range(119):
+                        for _ in range(round(enemy.aim_duration / config.FIXED_DT) - 1):
                             world.step(config.FIXED_DT)
                         self.assertTrue(enemy.aiming)
                         before = enemy.x, enemy.ground_y, enemy.aim_line, enemy.aim_remaining
@@ -194,8 +194,8 @@ class ARSoldierTests(unittest.TestCase):
                                          (0, 0, 20))
                         self.assertEqual((enemy.x, enemy.ground_y), before[:2])
                         world.step(config.FIXED_DT)
-                        self.assertEqual(enemy.aim_remaining, 1.0)
-                        for _ in range(119):
+                        self.assertEqual(enemy.aim_remaining, 0.5)
+                        for _ in range(round(enemy.aim_duration / config.FIXED_DT) - 1):
                             world.step(config.FIXED_DT)
                             self.assertEqual(enemy.ammo, 20)
                         world.step(config.FIXED_DT)
@@ -231,7 +231,7 @@ class ARSoldierTests(unittest.TestCase):
                             world.step(config.FIXED_DT)
                             if enemy.aiming:
                                 break
-                        self.assertEqual((enemy.aim_remaining, enemy.ammo), (1.0, 20))
+                        self.assertEqual((enemy.aim_remaining, enemy.ammo), (enemy.aim_duration, 20))
 
     def test_all_ar_walking_running_and_diagonal_pursuit_speeds_remain_unchanged(self):
         for index in (10, 11):
@@ -256,7 +256,7 @@ class ARSoldierTests(unittest.TestCase):
         for action in ("horizontal", "jump"):
             world, enemy = encounter()
             world.step(config.FIXED_DT)
-            advance(world, 0.4)
+            advance(world, 0.2)
             if action == "horizontal":
                 world.player.x += 10
             else:
@@ -264,15 +264,15 @@ class ARSoldierTests(unittest.TestCase):
             enemy.update(0.1, world.player)
             self.assertTrue(enemy.aiming)
             self.assertEqual(enemy.aim_cancel_remaining, 0)
-            self.assertAlmostEqual(enemy.aim_remaining, 0.5)
-            enemy.update(0.5, world.player)
+            self.assertAlmostEqual(enemy.aim_remaining, 0.2)
+            enemy.update(0.2, world.player)
             self.assertIsInstance(enemy.take_projectile(), RifleBullet)
             self.assertEqual(enemy.ammo, 19)
 
     def test_small_vertical_movement_during_active_fire_keeps_the_existing_burst_lane(self):
         world, enemy = encounter()
         enemy.start_attack()
-        enemy.update(1.0, world.player)
+        enemy.update(enemy.aim_duration, world.player)
         first = enemy.take_projectile()
         world.player.ground_y += 1
         enemy.update(0.1, world.player)
@@ -347,7 +347,7 @@ class ARSoldierTests(unittest.TestCase):
         for speed in (0.8, 1, 1.4):
             world, enemy = encounter(side=-1, speed=speed)
             enemy.start_attack()
-            enemy.update(1.0 - config.FIXED_DT, world.player)
+            enemy.update(enemy.aim_duration - config.FIXED_DT, world.player)
             self.assertIsNone(enemy.take_projectile())
             enemy.update(config.FIXED_DT, world.player)
             for remaining in range(19, -1, -1):
@@ -372,7 +372,7 @@ class ARSoldierTests(unittest.TestCase):
             self.assertEqual((enemy.ammo, enemy.state), (20, "IDLE"))
             enemy.cooldown = 0
             enemy.update(config.FIXED_DT, world.player)
-            self.assertEqual((enemy.ammo, enemy.aim_remaining, enemy.animation.frame), (20, 1.0, 1))
+            self.assertEqual((enemy.ammo, enemy.aim_remaining, enemy.animation.frame), (20, enemy.aim_duration, 1))
 
     def test_natural_automatic_fire_warns_once_and_spaces_twenty_rounds_by_a_tenth_of_a_second(self):
         for index in (10, 11):
@@ -389,7 +389,7 @@ class ARSoldierTests(unittest.TestCase):
                                 warnings.append(world.elapsed)
                             if enemy.ammo == previous_ammo - 1:
                                 if len(shots) % 20 == 0:
-                                    self.assertAlmostEqual(world.elapsed - warnings[-1], 1.0)
+                                    self.assertAlmostEqual(world.elapsed - warnings[-1], enemy.aim_duration)
                                 else:
                                     self.assertAlmostEqual(world.elapsed - shots[-1], 0.1)
                                 shots.append(world.elapsed)
@@ -410,7 +410,7 @@ class ARSoldierTests(unittest.TestCase):
             with self.subTest(reason=reason):
                 world, enemy = encounter(side=-1)
                 enemy.start_attack()
-                enemy.update(1.0, world.player)
+                enemy.update(enemy.aim_duration, world.player)
                 self.assertIsInstance(enemy.take_projectile(), RifleBullet)
                 if reason == "range":
                     world.player.x = enemy.x + 601
@@ -427,8 +427,8 @@ class ARSoldierTests(unittest.TestCase):
                 world.player.ground_y = enemy.ground_y
                 world.player.floor = 0
                 enemy.update(config.FIXED_DT, world.player)
-                self.assertEqual((enemy.facing, enemy.aim_remaining, enemy.burst_shots), (1, 1.0, 0))
-                enemy.update(1.0 - config.FIXED_DT, world.player)
+                self.assertEqual((enemy.facing, enemy.aim_remaining, enemy.burst_shots), (1, enemy.aim_duration, 0))
+                enemy.update(enemy.aim_duration - config.FIXED_DT, world.player)
                 self.assertIsNone(enemy.take_projectile())
                 enemy.update(config.FIXED_DT, world.player)
                 self.assertIsInstance(enemy.take_projectile(), RifleBullet)
@@ -437,7 +437,7 @@ class ARSoldierTests(unittest.TestCase):
     def test_repeated_projectile_reads_or_animation_changes_cannot_accelerate_the_fire_clock(self):
         world, enemy = encounter()
         enemy.start_attack()
-        enemy.update(1.0, world.player)
+        enemy.update(enemy.aim_duration, world.player)
         self.assertIsInstance(enemy.take_projectile(), RifleBullet)
         for _ in range(11):
             enemy.animation.elapsed = 100
@@ -454,7 +454,7 @@ class ARSoldierTests(unittest.TestCase):
     def test_mid_burst_hit_resumes_with_remaining_ammo_and_a_full_new_warning(self):
         world, enemy = encounter()
         enemy.start_attack()
-        enemy.update(1.0, world.player)
+        enemy.update(enemy.aim_duration, world.player)
         self.assertIsInstance(enemy.take_projectile(), RifleBullet)
         enemy.update(0.05, world.player)
         enemy.take_damage(10)
@@ -462,8 +462,8 @@ class ARSoldierTests(unittest.TestCase):
         self.assertIsNone(enemy.take_projectile())
         enemy.cooldown = 0
         enemy.update(config.FIXED_DT, world.player)
-        self.assertEqual((enemy.ammo, enemy.aim_remaining, enemy.burst_shots), (19, 1.0, 0))
-        enemy.update(1.0 - config.FIXED_DT, world.player)
+        self.assertEqual((enemy.ammo, enemy.aim_remaining, enemy.burst_shots), (19, enemy.aim_duration, 0))
+        enemy.update(enemy.aim_duration - config.FIXED_DT, world.player)
         self.assertIsNone(enemy.take_projectile())
         enemy.update(config.FIXED_DT, world.player)
         self.assertIsInstance(enemy.take_projectile(), RifleBullet)
@@ -471,7 +471,7 @@ class ARSoldierTests(unittest.TestCase):
 
     def test_active_fire_clock_pauses_off_scene_and_during_loading_without_catch_up_shots(self):
         world, enemy = encounter()
-        advance(world, 1.0)
+        advance(world, enemy.aim_duration)
         world.step(config.FIXED_DT)
         self.assertEqual(enemy.ammo, 19)
         for _ in range(6):
@@ -493,7 +493,7 @@ class ARSoldierTests(unittest.TestCase):
 
     def test_automatic_fire_interval_uses_the_same_r_slow_motion_clock(self):
         world, enemy = encounter()
-        advance(world, 1.0)
+        advance(world, enemy.aim_duration)
         world.step(config.FIXED_DT)
         tap(world.controls, "combat_r")
         for _ in range(59):
@@ -534,7 +534,7 @@ class ARSoldierTests(unittest.TestCase):
                     world, enemy = encounter()
                     enemy.start_attack()
                     fired = phase == "firing"
-                    enemy.update(1.0 if fired else 0.2, world.player)
+                    enemy.update(enemy.aim_duration if fired else 0.2, world.player)
                     if fired:
                         self.assertIsInstance(enemy.take_projectile(), RifleBullet)
                     if phase == "cancel_delay":
@@ -564,7 +564,7 @@ class ARSoldierTests(unittest.TestCase):
         world, enemy = encounter()
         enemy.start_attack()
         tap(world.controls, "combat_r")
-        for _ in range(599):
+        for _ in range(round(enemy.aim_duration / (config.FIXED_DT * config.R_RAISE_TIME_SCALE)) - 1):
             world.step(config.FIXED_DT)
             self.assertTrue(enemy.aiming)
             self.assertEqual(enemy.ammo, 20)

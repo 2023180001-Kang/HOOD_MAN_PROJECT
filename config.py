@@ -273,7 +273,7 @@ AR_SOLDIER_FIRE_INTERVAL = 0.1  # Ten rounds/second on the shared gameplay clock
 AR_SOLDIER_FIRE_FRAMES = (2, 3, 4, 5)  # Row-4 muzzle-flash/recoil loop, zero-based.
 AR_SOLDIER_SHOOT_RANGE = 600.0
 AR_SOLDIER_SHOOT_FRAME = 2  # First muzzle flash in source row 4, zero-based column.
-AR_SOLDIER_AIM_DURATION = 1.0
+AR_SOLDIER_AIM_DURATION = 0.5
 AR_SOLDIER_AIM_CANCEL_DELAY = 0.5  # Vertical-dodge reaction only; pursuit speed is unchanged.
 AR_SOLDIER_SPACING_DEPTH = 192.0  # Full sprite-height lanes, not compressed melee depth.
 # New planted firing pose: center x=128, barrel exit near (208, 143), feet y=248.

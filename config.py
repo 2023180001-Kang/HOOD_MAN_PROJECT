@@ -160,7 +160,8 @@ PLAYER_AXE_IMAGE = "HoodMan_Axe_2048x2048.png"
 AXE_PROJECTILE_IMAGE = "HoodMan_Axe_Projectile_256.png"
 STEEL_CLUB_PROJECTILE_IMAGE = "HoodMan_SteelClub_Projectile_256.png"
 STEEL_CLUB_THROW_DAMAGE = 40
-STEEL_CLUB_RELEASE_FRAME = 4  # Fifth cell of row six, counted from zero.
+AXE_THROW_DAMAGE = 70
+THROWN_WEAPON_RELEASE_FRAME = 4  # Fifth cell of row six, counted from zero.
 THROWN_WEAPON_TURNS_PER_SECOND = 4.0
 # The held club spans about 108 source pixels end to end. The loose sprite,
 # rotated into its resting pose, occupies only 93 x 25 of its transparent canvas.

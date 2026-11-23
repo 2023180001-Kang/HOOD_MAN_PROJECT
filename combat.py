@@ -66,6 +66,12 @@ STEEL_CLUB_DIVE = replace(MOVES["combat_d"], name="쇠몽둥이 내려찍기",
                           hit_image=STEEL_CLUB_SWING.hit_image, jump_attack=True)
 STEEL_CLUB_DOUBLE_JUMP_MOVES = {**WEAPON_LOADOUTS["steel_club"], "combat_d": STEEL_CLUB_DIVE}
 
+AXE_SWING = Move("a", "도끼 휘두르기", 5, 60, 105.0, 146.0, 16.0,
+                 image_name=config.PLAYER_AXE_IMAGE, active_frames=(4, 5), hit_image=config.CLUB_HIT_IMAGE)
+AXE_THROW = Move("s", "도끼 던지기", 6, config.AXE_THROW_DAMAGE, 0, 0, 16.0,
+                 image_name=config.PLAYER_AXE_IMAGE, active_frames=())
+WEAPON_LOADOUTS["axe"] = {**MOVES, "combat_a": AXE_SWING, "combat_s": AXE_THROW}
+
 
 def moves_for_weapon(weapon, *, double_jump=False):
     if weapon == "steel_club" and double_jump:

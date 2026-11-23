@@ -280,6 +280,8 @@ class UI:
                     help_text = "시간 가속: 선택한 방향으로 내려찍기!"
                 elif world.player.weapon == "steel_club":
                     help_text = "A 휘두르기 · S 던지기 · G 회수 · 이단 점프 중 D 조준 → D 내려찍기"
+                elif world.player.weapon == "axe":
+                    help_text = "A 도끼 휘두르기 · S 도끼 던지기 · G 회수"
                 else:
                     help_text = "무기 내려찍기: Space 두 번 → D 슬로 모션 / 방향키 조준 → D 급강하"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))

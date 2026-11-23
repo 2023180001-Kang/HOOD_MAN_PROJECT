@@ -11,7 +11,7 @@ from effects import DamageNumber, HitEffect, SpriteAfterimage
 from enemy_spacing import place_ranged_spawns, prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
 from player import Player
-from projectiles import PlayerProjectile, SteelClubProjectile
+from projectiles import PlayerProjectile, ThrownWeaponProjectile
 from rush import RushSequence
 from stage import Stage
 from training_room import TrainingRoom
@@ -136,6 +136,8 @@ class World:
             height = clip[3] * scale
         else:
             bottom += config.DROP_ITEM_SHADOW_HALF_DEPTH
+            if kind in config.THROWN_WEAPON_SPRITES:
+                height = max(height, config.THROWN_WEAPON_SPRITES[kind].rest_height)
         x, ground_y = area.project(player.x, player.ground_y, half_width)
         exit_edge = (config.STAGE_EXIT_MARGIN + config.STAGE_ARROW_WIDTH / 2
                      + config.STAGE_ARROW_SWAY_AMPLITUDE + config.DROP_ITEM_EXIT_GAP)
@@ -346,14 +348,14 @@ class World:
                 if not self.player.alive:
                     break
         for bullet in self.projectiles:
-            if isinstance(bullet, SteelClubProjectile) and bullet.finished:
+            if isinstance(bullet, ThrownWeaponProjectile) and bullet.finished:
                 # Land in the impact lane, even when the city's random loot spawns only on the sidewalk.
                 x, ground_y = self.stage.area_for(bullet).project(bullet.x, bullet.ground_y,
                                                                   config.DROP_ITEM_HALF_WIDTH)
-                item = DropItem("steel_club", x, ground_y, bullet.facing,
+                item = DropItem(bullet.weapon_kind, x, ground_y, bullet.facing,
                                 elapsed=bullet.elapsed, floor=bullet.floor)
                 if bullet.height > bullet.half_height:
-                    # On impact the club stops travelling forward and falls from the contact point.
+                    # On impact the weapon stops travelling forward and falls from the contact point.
                     item.jump_height = bullet.height - item.display_height / 2
                     item.vy = bullet.vy
                 self.stage.drop_items.append(item)

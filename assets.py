@@ -8,6 +8,7 @@ from pathlib import Path
 import pico2d
 
 import config
+from projectiles import ThrownWeaponProjectile
 
 
 class Assets:
@@ -84,8 +85,9 @@ class Assets:
         )
 
     def draw_projectile(self, bullet, camera_x, camera_y):
-        if bullet.image_name == config.STEEL_CLUB_PROJECTILE_IMAGE:
-            self.draw_thrown_weapon("steel_club", bullet.x - camera_x, bullet.y - camera_y, bullet.facing, bullet.elapsed)
+        if isinstance(bullet, ThrownWeaponProjectile):
+            self.draw_thrown_weapon(bullet.weapon_kind, bullet.x - camera_x, bullet.y - camera_y,
+                                   bullet.facing, bullet.elapsed)
             return
         image = self.images[bullet.image_name]
         tile = self.frames[bullet.image_name][0][bullet.frame]

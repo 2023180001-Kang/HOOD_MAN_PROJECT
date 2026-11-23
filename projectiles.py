@@ -190,9 +190,9 @@ class PlayerPistolBullet(PlayerProjectile):
     damage = config.PLAYER_PISTOL_DAMAGE
 
 
-class SteelClubProjectile(PlayerProjectile):
-    image_name = config.STEEL_CLUB_PROJECTILE_IMAGE
-    damage = config.STEEL_CLUB_THROW_DAMAGE
+class ThrownWeaponProjectile(PlayerProjectile):
+    """A spinning weapon that drops in its own lane when flight ends."""
+
     speed = 840.0
     straight_range = 360.0
     gravity = 1200.0
@@ -201,6 +201,21 @@ class SteelClubProjectile(PlayerProjectile):
     @property
     def horizontal_limits(self):
         return config.DROP_ITEM_HALF_WIDTH, self.world_width - config.DROP_ITEM_HALF_WIDTH
+
+
+class SteelClubProjectile(ThrownWeaponProjectile):
+    weapon_kind = "steel_club"
+    image_name = config.STEEL_CLUB_PROJECTILE_IMAGE
+    damage = config.STEEL_CLUB_THROW_DAMAGE
+    release_offset = (76, 103)
+
+
+class AxeProjectile(ThrownWeaponProjectile):
+    weapon_kind = "axe"
+    image_name = config.AXE_PROJECTILE_IMAGE
+    damage = config.AXE_THROW_DAMAGE
+    release_offset = (56, 133)  # Put the grip at the extended hand in row 6, cell 5.
+    half_height = config.THROWN_WEAPON_SPRITES["axe"].rest_height / 2
 
 
 class RifleBullet(ResearcherBullet):

@@ -121,12 +121,14 @@ BAG_EQUIPPED_RECTS = {
 }
 PISTOL_ITEM_IMAGE = "pistol_item_256.png"
 PISTOL_ITEM_CLIP = (22, 49, 212, 158)
-PISTOL_DROP_SCALE = 0.18  # Also fits City 1's narrow 32px weapon-placement pavement.
 RIFLE_ITEM_IMAGE = "ar_rifle_item_256.png"
 RIFLE_ITEM_CLIP = (15, 86, 226, 84)
+# Grip to muzzle (pistol) and stock to muzzle (rifle), measured on the player's 256px cells.
+PISTOL_DROP_SCALE = 57 * SPRITE_SCALE / PISTOL_ITEM_CLIP[2]
+RIFLE_DROP_SCALE = 136 * SPRITE_SCALE / RIFLE_ITEM_CLIP[2]
 FIREARM_DROP_SPRITES = {
     "pistol": (PISTOL_ITEM_IMAGE, PISTOL_ITEM_CLIP, PISTOL_DROP_SCALE),
-    "ar_rifle": (RIFLE_ITEM_IMAGE, RIFLE_ITEM_CLIP, 0.30),
+    "ar_rifle": (RIFLE_ITEM_IMAGE, RIFLE_ITEM_CLIP, RIFLE_DROP_SCALE),
 }
 # Item order and visible source clips (pico2d bottom-left coordinates).
 # Alpha > 8 ignores almost-invisible stray pixels in the club/axe originals.
@@ -156,7 +158,10 @@ STEEL_CLUB_PROJECTILE_IMAGE = "HoodMan_SteelClub_Projectile_256.png"
 STEEL_CLUB_THROW_DAMAGE = 40
 STEEL_CLUB_RELEASE_FRAME = 4  # Fifth cell of row six, counted from zero.
 STEEL_CLUB_TURNS_PER_SECOND = 4.0
-STEEL_CLUB_REST_HEIGHT = 16.0
+# The held club spans about 108 source pixels end to end. The loose sprite,
+# rotated into its resting pose, occupies only 93 x 25 of its transparent canvas.
+STEEL_CLUB_DRAW_SCALE = 108 * SPRITE_SCALE / 93
+STEEL_CLUB_REST_HEIGHT = 25 * STEEL_CLUB_DRAW_SCALE
 PLAYER_EQUIPPED_SHEETS = {"pistol": PLAYER_PISTOL_IMAGE, "ar_rifle": PLAYER_RIFLE_IMAGE,
                           "steel_club": PLAYER_STEEL_CLUB_IMAGE}
 PLAYER_PISTOL_DAMAGE = 20

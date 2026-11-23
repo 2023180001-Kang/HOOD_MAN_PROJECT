@@ -128,17 +128,24 @@ class World:
         if self.training and self.stage.can_return_to_table(player, kind):
             return self.stage.place_on_table(kind, pistol_ammo)
         area = (self.stage.drop_spawn_area if player.floor == 0 else self.stage.area_for(player))
-        x, ground_y = area.project(player.x, player.ground_y, config.DROP_ITEM_HALF_WIDTH)
         left, bottom, right, top = area.bounds
+        half_width, height = config.DROP_ITEM_HALF_WIDTH, config.DROP_ITEM_HEIGHT
+        if kind in config.FIREARM_DROP_SPRITES:
+            _, clip, scale = config.FIREARM_DROP_SPRITES[kind]
+            half_width = max(half_width, clip[2] * scale / 2)
+            height = clip[3] * scale
+        else:
+            bottom += config.DROP_ITEM_SHADOW_HALF_DEPTH
+        x, ground_y = area.project(player.x, player.ground_y, half_width)
         exit_edge = (config.STAGE_EXIT_MARGIN + config.STAGE_ARROW_WIDTH / 2
                      + config.STAGE_ARROW_SWAY_AMPLITUDE + config.DROP_ITEM_EXIT_GAP)
         if not self.training:
-            x = clamp(x, max(left, exit_edge) + config.DROP_ITEM_HALF_WIDTH,
-                      min(right, self.stage.width - exit_edge) - config.DROP_ITEM_HALF_WIDTH)
+            x = clamp(x, max(left, exit_edge) + half_width,
+                      min(right, self.stage.width - exit_edge) - half_width)
         item = DropItem(kind, x, ground_y, player.facing, floor=player.floor, pistol_ammo=pistol_ammo,
                         rifle_ammo=player.rifle_ammo if kind == "ar_rifle" else None)
-        height = item.display_height if kind in config.FIREARM_DROP_SPRITES else config.DROP_ITEM_HEIGHT
-        item.ground_y = clamp(ground_y, bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH, top - height)
+        # A tall rifle may overhang the narrow city sidewalk. Its base stays on it.
+        item.ground_y = clamp(ground_y, bottom, max(bottom, top - height))
         item.jump_height = max(0.0, player.y + config.WEAPON_DROP_HAND_HEIGHT - item.ground_y)
         self.stage.drop_items.append(item)
         return item

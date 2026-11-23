@@ -1,9 +1,12 @@
 import random
 import unittest
+from math import degrees
+from unittest.mock import Mock
 
 from PIL import Image
 
 import config
+from assets import Assets
 from drop_items import DropItem
 from tests.helpers import advance, archived_two_floor_map, tap
 from world import World
@@ -15,6 +18,24 @@ def layout(stage):
 
 
 class DropItemTests(unittest.TestCase):
+    def test_dropped_weapon_lengths_match_the_equipped_sprites(self):
+        assets = Assets.__new__(Assets)
+        for kind, held_length in (("steel_club", 108), ("pistol", 57), ("ar_rifle", 136)):
+            with self.subTest(kind=kind):
+                item = DropItem(kind, 500, 100)
+                with Image.open(config.ROOT / item.image_name) as image:
+                    texture = Mock(w=image.width, h=image.height)
+                    assets.images = {item.image_name: texture}
+                    assets.draw_drop_item(item, 0, 0)
+                    args = texture.clip_composite_draw.call_args.args
+                    length = args[-2]
+                    if kind == "steel_club":
+                        # Its draw rectangle also contains the transparent rotation margins.
+                        alpha = image.getchannel("A").rotate(degrees(args[4]), expand=True)
+                        left, _, right, _ = alpha.getbbox()
+                        length *= (right - left) / image.width
+                self.assertAlmostEqual(length, held_length * config.SPRITE_SCALE, delta=1)
+
     def test_every_stage_has_fifteen_randomly_placed_items_including_both_kinds(self):
         counts, layouts = set(), set()
         for seed in range(32):

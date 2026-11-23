@@ -140,7 +140,7 @@ class Assets:
         angle = radians(63.4) if grounded else -tau * config.STEEL_CLUB_TURNS_PER_SECOND * elapsed
         image.clip_composite_draw(0, 0, image.w, image.h, facing * angle,
                                   "h" if facing < 0 else "", x, y,
-                                  image.w * config.SPRITE_SCALE, image.h * config.SPRITE_SCALE)
+                                  image.w * config.STEEL_CLUB_DRAW_SCALE, image.h * config.STEEL_CLUB_DRAW_SCALE)
 
     def draw_drop_item(self, item, camera_x, camera_y):
         x, ground_y = item.x - camera_x, item.surface_y - camera_y

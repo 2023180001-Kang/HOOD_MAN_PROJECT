@@ -305,6 +305,23 @@ class WeaponPickupTests(unittest.TestCase):
                                                    for item in world.stage.drop_items]))
         self.assertTrue(all(outcome == outcomes[0] for outcome in outcomes))
 
+    def test_full_size_rifle_fits_the_city_floor_and_stays_clear_of_both_exits(self):
+        world = World()
+        world.select_stage(config.STAGE_IMAGES.index(config.CITY_STAGE_IMAGES[0]))
+        player = world.player
+        _, bottom, right, top = world.stage.drop_spawn_area.bounds
+        exit_width = (config.STAGE_EXIT_MARGIN + config.STAGE_ARROW_WIDTH / 2
+                      + config.STAGE_ARROW_SWAY_AMPLITUDE + config.DROP_ITEM_EXIT_GAP)
+        half_width = config.RIFLE_ITEM_CLIP[2] * config.RIFLE_DROP_SCALE / 2
+        for x in (player.boundary_padding, right - player.boundary_padding):
+            player.x, player.ground_y = x, top
+            item = world.drop_weapon("ar_rifle")
+            self.assertLessEqual(bottom, item.ground_y)
+            self.assertLessEqual(item.ground_y, top)
+            self.assertLessEqual(item.ground_y + item.display_height, world.stage.walkable.bounds[3])
+            self.assertGreaterEqual(item.x - half_width, exit_width)
+            self.assertLessEqual(item.x + half_width, right - exit_width)
+
     def test_manual_drops_keep_floor_exit_and_city_sidewalk_limits_at_all_stage_corners(self):
         for index in range(len(config.STAGE_IMAGES)):
             for side in (-1, 1):

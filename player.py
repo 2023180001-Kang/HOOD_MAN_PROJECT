@@ -5,9 +5,9 @@ from math import hypot
 import config
 from animation import Animation
 from collision import Rect, attack_hits_body
-from combat import ALL_MOVES, STRONG_MOVES, moves_for_weapon
+from combat import ALL_MOVES, STEEL_CLUB_THROW, STRONG_MOVES, moves_for_weapon
 from physics import approach_vector
-from projectiles import PlayerPistolBullet
+from projectiles import PlayerPistolBullet, SteelClubProjectile
 from traffic import start_car_hit, update_car_hit
 from walkable import default_area
 
@@ -185,8 +185,21 @@ class Player:
         self.animation.elapsed = 0.0
 
     def take_projectile(self):
-        if (not self.alive or self.weapon != "pistol" or self.state != "SHOOT"
-                or self.staircase is not None
+        if not self.alive or self.staircase is not None:
+            return None
+        if self.weapon == "steel_club" and self.active_move is STEEL_CLUB_THROW:
+            release_time = config.STEEL_CLUB_RELEASE_FRAME / STEEL_CLUB_THROW.fps
+            if self.animation.elapsed + 1e-9 < release_time:
+                return None
+            self.animation.elapsed = max(self.animation.elapsed, release_time)
+            # The remaining throw cells already show empty hands. Finish this
+            # motion, but relinquish the weapon now so it can be emitted only once.
+            self.weapon = None
+            self.animation.definitions.update(config.PLAYER_ANIMATIONS)
+            return SteelClubProjectile(self.x + self.facing * 76 * config.SPRITE_SCALE,
+                                       self.ground_y, self.jump_height + 103 * config.SPRITE_SCALE,
+                                       self.facing, self.floor)
+        if (self.weapon != "pistol" or self.state != "SHOOT"
                 or not self.pistol_shot_pending or self.pistol_ammo <= 0
                 or self.animation.finished):
             return None
@@ -495,6 +508,8 @@ class Player:
             return
         jump_pressed = controls.take_press("jump")
         if self.staircase is not None or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD"):
+            return
+        if self.active_move is STEEL_CLUB_THROW:
             return
         if self.weapon == "pistol" and combat_pressed == "combat_r":
             combat_pressed = None

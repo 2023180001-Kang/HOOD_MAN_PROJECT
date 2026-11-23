@@ -53,6 +53,12 @@ WEAPON_MOVES = {
 # F remains the right-foot kick; A/S/D are replaced by the equipped attacks.
 WEAPON_LOADOUTS = {kind: {**MOVES, **moves} for kind, moves in WEAPON_MOVES.items()}
 WEAPON_LOADOUTS["pistol"] = {key: move for key, move in MOVES.items() if key != "combat_a"}
+STEEL_CLUB_SWING = Move("a", "쇠몽둥이 휘두르기", 5, 40, 105.0, 146.0, 16.0,
+                       image_name=config.PLAYER_STEEL_CLUB_IMAGE, active_frames=(4, 5),
+                       hit_image=config.CLUB_HIT_IMAGE)
+STEEL_CLUB_THROW = Move("s", "쇠몽둥이 던지기", 6, config.STEEL_CLUB_THROW_DAMAGE, 0, 0, 16.0,
+                       image_name=config.PLAYER_STEEL_CLUB_IMAGE, active_frames=())
+WEAPON_LOADOUTS["steel_club"] = {**MOVES, "combat_a": STEEL_CLUB_SWING, "combat_s": STEEL_CLUB_THROW}
 
 
 def moves_for_weapon(weapon):

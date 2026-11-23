@@ -56,10 +56,14 @@ class ResearcherBullet:
         return -self.gravity * max(0.0, self.elapsed - self.straight_duration) if self.falling else 0.0
 
     @property
+    def horizontal_limits(self):
+        return -self.half_width, config.WORLD_WIDTH + self.half_width
+
+    @property
     def finished(self):
-        margin = self.half_width
+        left, right = self.horizontal_limits
         return (self.spent or self.height <= self.half_height
-                or self.x < -margin or self.x > config.WORLD_WIDTH + margin
+                or self.x < left or self.x > right
                 or (self.range_limited and self.elapsed + 1e-12 >= self.straight_duration))
 
     def update(self, dt, player):
@@ -82,9 +86,8 @@ class ResearcherBullet:
                 clearance = self.height - self.half_height
                 ground_time = 2 * clearance / (sqrt(vy * vy + 2 * gravity * clearance) - vy)
                 step = min(step, ground_time)
-            margin = self.half_width
-            edge_gap = (config.WORLD_WIDTH + margin - self.x if self.facing > 0
-                        else self.x + margin)
+            left, right = self.horizontal_limits
+            edge_gap = right - self.x if self.facing > 0 else self.x - left
             edge_time = edge_gap / self.speed
             step = min(step, edge_time)
             terminal = min(ground_time, edge_time, range_time) <= step + 1e-12
@@ -171,10 +174,8 @@ class ResearcherBullet:
         return None
 
 
-class PlayerPistolBullet(ResearcherBullet):
-    """Same pistol flight profile, but hit only the first living enemy in the path."""
-
-    damage = config.PLAYER_PISTOL_DAMAGE
+class PlayerProjectile(ResearcherBullet):
+    """Player projectiles hit the first living enemy along the swept path."""
 
     def _first_contact(self, enemies, duration, offset, tick_duration, gravity):
         first, target = None, None
@@ -183,6 +184,20 @@ class PlayerPistolBullet(ResearcherBullet):
             if contact is not None and (first is None or contact < first):
                 first, target = contact, enemy
         return first, target
+
+
+class PlayerPistolBullet(PlayerProjectile):
+    damage = config.PLAYER_PISTOL_DAMAGE
+
+
+class SteelClubProjectile(PlayerProjectile):
+    image_name = config.STEEL_CLUB_PROJECTILE_IMAGE
+    damage = config.STEEL_CLUB_THROW_DAMAGE
+    speed = 840.0
+    straight_range = 360.0
+    gravity = 1200.0
+    half_width = half_height = 20.0
+    horizontal_limits = (config.DROP_ITEM_HALF_WIDTH, config.WORLD_WIDTH - config.DROP_ITEM_HALF_WIDTH)
 
 
 class RifleBullet(ResearcherBullet):

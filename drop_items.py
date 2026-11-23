@@ -27,20 +27,24 @@ class DropItem:
 
     @property
     def image_name(self):
+        if self.kind == "steel_club":
+            return config.STEEL_CLUB_PROJECTILE_IMAGE
         if self.kind == "pistol":
             return config.PISTOL_ITEM_IMAGE
         return config.DROP_ITEM_IMAGES[self.kind]
 
     @property
     def display_height(self):
+        if self.kind == "steel_club":
+            return config.STEEL_CLUB_REST_HEIGHT
         if self.kind == "pistol":
             return config.PISTOL_ITEM_CLIP[3] * config.PISTOL_DROP_SCALE
         return config.DROP_ITEM_BODY_HEIGHTS[self.kind] * config.DROP_ITEM_SCALE
 
     @property
     def frame(self):
-        if self.kind == "pistol":
-            return 0  # The shared pistol icon is a single image, not an eight-cell sheet.
+        if self.kind in ("pistol", "steel_club"):
+            return 0
         return int(self.elapsed * config.DROP_ITEM_FPS + 1e-9) % self.frame_count
 
     def update(self, dt):

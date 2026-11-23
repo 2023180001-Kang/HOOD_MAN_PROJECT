@@ -2,6 +2,7 @@
 
 import json
 import os
+from math import radians, tau
 from pathlib import Path
 
 import pico2d
@@ -19,6 +20,7 @@ class Assets:
                          config.BAG_UI_IMAGE, config.BAG_BUTTON_IMAGE,
                          *(image for _, image, _ in config.BAG_ITEM_SPECS),
                          config.PLAYER_IMAGE, *config.PLAYER_EQUIPPED_SHEETS.values(), config.COMBAT_IMAGE,
+                         config.STEEL_CLUB_PROJECTILE_IMAGE,
                          config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
                          config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,
@@ -82,6 +84,9 @@ class Assets:
         )
 
     def draw_projectile(self, bullet, camera_x, camera_y):
+        if bullet.image_name == config.STEEL_CLUB_PROJECTILE_IMAGE:
+            self.draw_steel_club(bullet.x - camera_x, bullet.y - camera_y, bullet.facing, bullet.elapsed)
+            return
         image = self.images[bullet.image_name]
         tile = self.frames[bullet.image_name][0][bullet.frame]
         left, bottom, width, height = tile["clip"]
@@ -130,7 +135,19 @@ class Assets:
             cell * scale_x * scale, cell * scale_y * scale,
         )
 
+    def draw_steel_club(self, x, y, facing, elapsed, *, grounded=False):
+        image = self.images[config.STEEL_CLUB_PROJECTILE_IMAGE]
+        angle = radians(63.4) if grounded else -tau * config.STEEL_CLUB_TURNS_PER_SECOND * elapsed
+        image.clip_composite_draw(0, 0, image.w, image.h, facing * angle,
+                                  "h" if facing < 0 else "", x, y,
+                                  image.w * config.SPRITE_SCALE, image.h * config.SPRITE_SCALE)
+
     def draw_drop_item(self, item, camera_x, camera_y):
+        if item.kind == "steel_club":
+            self.draw_steel_club(item.x - camera_x,
+                                 item.ground_y - camera_y + item.jump_height + item.display_height / 2,
+                                 item.facing, item.elapsed, grounded=item.grounded)
+            return
         image = self.images[item.image_name]
         if item.kind == "pistol":
             left, bottom, width, height = config.PISTOL_ITEM_CLIP

@@ -227,6 +227,9 @@ class UI:
                 action = "재장전 중" if world.player.state == "RELOAD" else "A키 사격"
                 assets.font.draw(22, 132, f"권총 {action} · 피해 20 · 7발 후 자동 재장전",
                                  (126, 218, 255))
+            elif world.player.weapon == "steel_club":
+                assets.font.draw(22, 132, "A 휘두르기 · S 던지기 · 바닥에 떨어진 쇠몽둥이 근처에서 G 회수",
+                                 (126, 218, 255))
             elif world.player.weapon in config.WEAPON_NAMES:
                 phase = world.player.weapon_leap_phase
                 if phase == "AIM":

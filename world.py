@@ -11,7 +11,7 @@ from effects import DamageNumber, HitEffect, SpriteAfterimage
 from enemy_spacing import place_ranged_spawns, prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
 from player import Player
-from projectiles import PlayerPistolBullet
+from projectiles import PlayerProjectile, SteelClubProjectile
 from rush import RushSequence
 from stage import Stage
 
@@ -309,7 +309,7 @@ class World:
         # Existing rounds survive their shooter's death. New shots are emitted
         # only after the player's strikes have had a chance to interrupt them.
         for bullet in self.projectiles:
-            targets = self.enemies if isinstance(bullet, PlayerPistolBullet) else self.player
+            targets = self.enemies if isinstance(bullet, PlayerProjectile) else self.player
             if bullet.update(dt, targets):
                 self.projectile_impact(bullet)
         if self.player.alive:
@@ -327,12 +327,24 @@ class World:
                     self.projectile_impact(bullet)
                 if not self.player.alive:
                     break
+        for bullet in self.projectiles:
+            if isinstance(bullet, SteelClubProjectile) and bullet.finished:
+                # Land in the impact lane, even when the city's random loot spawns only on the sidewalk.
+                x, ground_y = self.stage.area_for(bullet).project(bullet.x, bullet.ground_y,
+                                                                  config.DROP_ITEM_HALF_WIDTH)
+                item = DropItem("steel_club", x, ground_y, bullet.facing,
+                                elapsed=bullet.elapsed, floor=bullet.floor)
+                if bullet.height > bullet.half_height:
+                    # On impact the club stops travelling forward and falls from the contact point.
+                    item.jump_height = bullet.height - item.display_height / 2
+                    item.vy = bullet.vy
+                self.stage.drop_items.append(item)
         self.projectiles[:] = [bullet for bullet in self.projectiles if not bullet.finished]
 
     def projectile_impact(self, bullet):
         self.effects.append(HitEffect(bullet.impact_x, bullet.y, bullet.facing,
                                       image_name=config.CLUB_HIT_IMAGE))
-        if isinstance(bullet, PlayerPistolBullet):
+        if isinstance(bullet, PlayerProjectile):
             enemy = bullet.impact_target
             self.damage_numbers.append(DamageNumber.above_body(
                 enemy.body, bullet.impact_damage, depth=enemy.ground_y - config.GROUND_Y))

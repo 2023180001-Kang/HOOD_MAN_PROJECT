@@ -363,8 +363,8 @@ class AxeEnemyTests(unittest.TestCase):
             self.assertNotIn(name, SHEETS)
         self.assertIn(config.AXE_ENEMY_IMAGE, assets.images)
         self.assertEqual(SHEETS[config.AXE_ENEMY_IMAGE], 6)
-        self.assertEqual(len(assets.frames), 16)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 648)
+        self.assertEqual(len(assets.frames), 17)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 712)
 
     def test_revisiting_pauses_axe_hp_animation_and_effects_and_f5_restores_fresh_summons(self):
         world, enemy = encounter()

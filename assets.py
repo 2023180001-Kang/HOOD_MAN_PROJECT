@@ -17,7 +17,7 @@ class Assets:
                          *(image for _, image in config.MAIN_MENU_BUTTONS),
                          config.BAG_UI_IMAGE, config.BAG_BUTTON_IMAGE,
                          *(image for _, image, _ in config.BAG_ITEM_SPECS),
-                         config.PLAYER_IMAGE, config.COMBAT_IMAGE,
+                         config.PLAYER_IMAGE, config.PLAYER_PISTOL_IMAGE, config.COMBAT_IMAGE,
                          config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
                          config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,

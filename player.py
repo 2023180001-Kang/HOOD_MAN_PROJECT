@@ -95,6 +95,8 @@ class Player:
             return config.PLAYER_CAR_HIT_IMAGE
         if self.active_move is not None:
             return self.active_move.image_name
+        if self.weapon == "pistol":
+            return config.PLAYER_PISTOL_IMAGE
         if self.state in config.WEAPON_POSE_ROWS.get(self.weapon, {}):
             return config.WEAPON_POSE_IMAGES[self.weapon]
         return config.PLAYER_IMAGE
@@ -128,6 +130,8 @@ class Player:
         if weapon == self.weapon:
             return
         self.weapon = weapon
+        self.animation.definitions.update(
+            config.PLAYER_PISTOL_ANIMATIONS if weapon == "pistol" else config.PLAYER_ANIMATIONS)
         if self.active_move is not None:
             # Dropping/swapping a weapon cannot leave its old strike pending.
             self.cancel_combat()
@@ -337,7 +341,8 @@ class Player:
         if self.hp and self.state != "HIT":
             # Choose recovery speed once per reaction; further hits must not
             # restart or prolong it, even if equipment changes during HIT.
-            row, fps, loop = config.PLAYER_ANIMATIONS["HIT"]
+            poses = config.PLAYER_PISTOL_ANIMATIONS if self.weapon == "pistol" else config.PLAYER_ANIMATIONS
+            row, fps, loop = poses["HIT"]
             if self.weapon in config.WEAPON_POSE_IMAGES:
                 fps = config.WEAPON_HIT_FPS
             self.animation.definitions["HIT"] = (row, fps, loop)

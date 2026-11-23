@@ -99,6 +99,7 @@ BAG_BACK_BUTTON_TOP = 24
 BAG_PLAYER_X = SCREEN_WIDTH / 2
 BAG_PLAYER_FEET_Y = 320
 BAG_PLAYER_SCALE = 1.7
+BAG_PLAYER_RECT = (528, 24, 752, 410)  # Screen top-left coordinates, including the pistol IDLE.
 # Item order and visible source clips (pico2d bottom-left coordinates).
 # Alpha > 8 ignores almost-invisible stray pixels in the club/axe originals.
 BAG_ITEM_SPECS = (
@@ -120,6 +121,7 @@ BAG_ITEM_SLOT_RECTS = (
 )
 BAG_ITEM_SLOT_PADDING = 18
 PLAYER_IMAGE = "HoodMan_Sprite.png"
+PLAYER_PISTOL_IMAGE = "HOOD_MAN_pistol_matched_base_2048x2048.png"
 WEAPON_POSE_IMAGES = {
     "combat_knife": "HOOD_MAN_DAGGER_move and fight.png",
     "steel_pipe": "HOOD_MAN_STEEL_PIPE_move and fight.png",
@@ -475,6 +477,14 @@ PLAYER_ANIMATIONS = {
     "CAR_HIT": (1, CAR_HIT_FPS, False),
     "DYING": (5, 10.0, False),
     "DEAD": (5, 10.0, False),
+}
+PLAYER_PISTOL_ANIMATIONS = {
+    **PLAYER_ANIMATIONS,
+    "SHOOT": (5, 16.0, False),
+    "RELOAD": (6, 8.0, False),
+    "HIT": (7, 12.0, False),
+    "DYING": (8, 10.0, False),
+    "DEAD": (8, 10.0, False),
 }
 ENEMY_ANIMATIONS = {
     "IDLE": (1, 7.0, True),

@@ -40,6 +40,7 @@ class MainMenu:
         )
         self.bag_open = False
         self.bag_items = list(config.BAG_ITEM_SPECS)
+        self.equipped_weapon = None
         self.cancel_drag()
         self.bag_player_animation = Animation({"IDLE": config.PLAYER_ANIMATIONS["IDLE"]})
         self.hovered_button = None
@@ -79,7 +80,10 @@ class MainMenu:
         if self.dragged_slot is None:
             return
         target = self.bag_slot_at(x, y)
-        if target is not None:
+        if self.bag_items[self.dragged_slot][0] == "pistol" and self.bag_player_contains(x, y):
+            self.equipped_weapon = "pistol"
+            self.bag_player_animation.elapsed = 0.0
+        elif target is not None:
             source = self.dragged_slot
             self.bag_items[source], self.bag_items[target] = (
                 self.bag_items[target], self.bag_items[source],
@@ -100,6 +104,12 @@ class MainMenu:
                         and config.SCREEN_HEIGHT - bottom <= y < config.SCREEN_HEIGHT - top):
                     return slot
         return None
+
+    @staticmethod
+    def bag_player_contains(x, y):
+        left, top, right, bottom = config.BAG_PLAYER_RECT
+        return (left <= x < right
+                and config.SCREEN_HEIGHT - bottom <= y < config.SCREEN_HEIGHT - top)
 
     @staticmethod
     def bag_slot_center(slot):
@@ -150,7 +160,8 @@ class MainMenu:
 
     def draw_bag_player(self, assets):
         animation = self.bag_player_animation
-        assets.draw_sprite(config.PLAYER_IMAGE, animation.row, animation.frame,
+        image = config.PLAYER_PISTOL_IMAGE if self.equipped_weapon == "pistol" else config.PLAYER_IMAGE
+        assets.draw_sprite(image, animation.row, animation.frame,
                            config.BAG_PLAYER_X, config.BAG_PLAYER_FEET_Y,
                            scale=config.BAG_PLAYER_SCALE)
 

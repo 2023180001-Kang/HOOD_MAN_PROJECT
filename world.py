@@ -21,6 +21,7 @@ class World:
         self.spawn_rng = rng
         self.traffic_rng = traffic_rng
         self.item_rng = item_rng
+        self.starting_weapon = None
         self.reset()
 
     def reset(self):
@@ -34,6 +35,7 @@ class World:
         self.controls.reset_for_restart()
         self.rush = None
         self.player = Player()
+        self.player.equip_weapon(self.starting_weapon)
         self.camera = Camera(self.player.x)
         attack_sequence = count()
         self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,
@@ -135,13 +137,14 @@ class World:
             return False
         item = self.pickup_item
         if item is not None:
-            if player.weapon is not None:
+            if player.weapon in config.DROP_ITEM_IMAGES:
                 self.drop_weapon(player.weapon)
             self.stage.drop_items.remove(item)
             player.equip_weapon(item.kind)
             return True
         if player.weapon is not None:
-            self.drop_weapon(player.weapon)
+            if player.weapon in config.DROP_ITEM_IMAGES:
+                self.drop_weapon(player.weapon)
             player.equip_weapon(None)
             return True
         return False

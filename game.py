@@ -134,6 +134,7 @@ class Game:
             self.menu.update(now - previous)
             previous = now
             if self.handle_events(menu_screen=True):
+                self.world.starting_weapon = self.menu.equipped_weapon
                 self.world.reset()
                 self.ui.update(0, self.world.player)
                 return

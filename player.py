@@ -7,7 +7,7 @@ from animation import Animation
 from collision import Rect, attack_hits_body
 from combat import ALL_MOVES, STEEL_CLUB_THROW, STRONG_MOVES, moves_for_weapon
 from physics import approach_vector
-from projectiles import PlayerPistolBullet, SteelClubProjectile
+from projectiles import PlayerPistolBullet, PlayerRifleBullet, SteelClubProjectile
 from traffic import start_car_hit, update_car_hit
 from walkable import default_area
 
@@ -42,8 +42,11 @@ class Player:
         self.car_hit = False
         self.weapon = None
         self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
+        self.rifle_ammo = config.PLAYER_RIFLE_MAGAZINE_SIZE
+        self.rifle_cooldown = 0.0
+        self.rifle_trigger = False
         self.pistol_shot_pending = False
-        self.pistol_gait = "IDLE"
+        self.firearm_gait = "IDLE"
         self.pistol_reload_interrupted = False
         self.active_move = None
         self.weapon_leap_phase = None
@@ -73,6 +76,17 @@ class Player:
     def moves(self):
         double_jump = self.jump_count == 2 or self.weapon_leap_phase is not None
         return moves_for_weapon(self.weapon, double_jump=double_jump)
+
+    @property
+    def firearm_ammo(self):
+        return self.rifle_ammo if self.weapon == "ar_rifle" else self.pistol_ammo
+
+    @firearm_ammo.setter
+    def firearm_ammo(self, rounds):
+        if self.weapon == "ar_rifle":
+            self.rifle_ammo = rounds
+        else:
+            self.pistol_ammo = rounds
 
     @property
     def time_scale(self):
@@ -113,14 +127,15 @@ class Player:
         if self.active_move is not None:
             return self.active_move.row
         if self.state in ("SHOOT", "RELOAD"):
-            pose = self._pistol_pose_for_frame(self.animation.frame)
-            return config.PLAYER_PISTOL_ANIMATIONS[pose][0]
+            pose = self._firearm_pose_for_frame(self.animation.frame)
+            return self.animation.definitions[pose][0]
         if self.sprite_image in config.WEAPON_POSE_IMAGES.values():
             return config.WEAPON_POSE_ROWS[self.weapon][self.state]
         return self.animation.row
 
     def cancel_combat(self):
         self.pistol_shot_pending = False
+        self.rifle_trigger = False
         self.active_move = None
         self.hit_enemies.clear()
         self.weapon_leap_phase = None
@@ -141,6 +156,7 @@ class Player:
         if weapon == self.weapon:
             return
         self.weapon = weapon
+        self.rifle_cooldown = 0.0
         self.pistol_reload_interrupted = False
         hit_fps = self.animation.definitions["HIT"][1]
         poses = config.EQUIPPED_ANIMATIONS.get(weapon, config.PLAYER_ANIMATIONS)
@@ -154,17 +170,17 @@ class Player:
             self.cancel_combat()
             self.animation.set_state("IDLE" if self.grounded else "JUMP")
 
-    def _pistol_pose_for_frame(self, frame):
-        if self.state in ("SHOOT", "RELOAD") and self.pistol_gait in ("WALK", "RUN"):
+    def _firearm_pose_for_frame(self, frame):
+        if self.state in ("SHOOT", "RELOAD") and self.firearm_gait in ("WALK", "RUN"):
             # The moving shots flash again in column seven. Use the matching
             # non-firing stride there because one A press fires one round.
-            if self.state == "SHOOT" and frame == 6:
-                return self.pistol_gait
-            return f"{self.pistol_gait}_{self.state}"
+            if self.weapon == "pistol" and self.state == "SHOOT" and frame == 6:
+                return self.firearm_gait
+            return f"{self.firearm_gait}_{self.state}"
         return self.state
 
     def _pistol_muzzle_offset(self, frame):
-        pose = self._pistol_pose_for_frame(frame)
+        pose = self._firearm_pose_for_frame(frame)
         forward, height = config.PLAYER_PISTOL_MUZZLE_OFFSETS[pose][frame]
         return self.facing * forward * config.SPRITE_SCALE, height * config.SPRITE_SCALE
 
@@ -191,14 +207,17 @@ class Player:
         if direction:
             self.facing = direction
         self.cancel_combat()
-        self.pistol_gait = self.state if self.grounded else "JUMP"
+        self.firearm_gait = self.state if self.grounded else "JUMP"
         self.pistol_shot_pending = True
         self.animation.set_state("SHOOT")
         return True
 
     def start_pistol_reload(self):
+        self.start_firearm_reload()
+
+    def start_firearm_reload(self):
         if self.state in ("IDLE", "WALK", "RUN", "JUMP"):
-            self.pistol_gait = self.state
+            self.firearm_gait = self.state
         self.cancel_combat()
         self.animation.set_state("RELOAD")
         self.animation.elapsed = 0.0
@@ -206,6 +225,20 @@ class Player:
     def take_projectile(self):
         if not self.alive or self.staircase is not None:
             return None
+        if self.weapon == "ar_rifle" and self.state == "SHOOT":
+            if not self.rifle_trigger or self.rifle_cooldown > 1e-9 or self.rifle_ammo == 0:
+                return None
+            # Alternate the sheet's two flash poses on successive rounds.
+            flash = self.rifle_ammo % 2
+            frame = (1, 4)[flash]
+            self.animation.elapsed = (frame + 1e-9) / self.animation.definitions["SHOOT"][1]
+            pose = self._firearm_pose_for_frame(frame)
+            forward, height = config.PLAYER_RIFLE_FLASH_OFFSETS[pose][flash]
+            self.rifle_ammo -= 1
+            self.rifle_cooldown = config.PLAYER_RIFLE_FIRE_INTERVAL
+            return PlayerRifleBullet(
+                self.x + self.facing * (forward * config.SPRITE_SCALE + PlayerRifleBullet.half_width),
+                self.ground_y, self.jump_height + height * config.SPRITE_SCALE, self.facing, self.floor)
         if self.weapon == "steel_club" and self.active_move is STEEL_CLUB_THROW:
             release_time = config.STEEL_CLUB_RELEASE_FRAME / STEEL_CLUB_THROW.fps
             if self.animation.elapsed + 1e-9 < release_time:
@@ -236,25 +269,29 @@ class Player:
             self.ground_y, self.jump_height + offset_y,
             self.facing, self.floor)
 
-    def update_pistol(self, dt, controls):
-        if self.grounded:
+    def update_firearm(self, dt, controls):
+        if self.grounded or self.weapon == "ar_rifle":
             speed = config.RUN_SPEED if controls.running else config.WALK_SPEED
             self.move_on_ground(dt, controls, speed)
         else:
             self.vx = self.ground_vy = 0.0
         self.update_vertical(dt)
-        self.pistol_gait = self.movement_state(controls)
+        self.firearm_gait = self.movement_state(controls)
         self.animation.update(dt)
+        if self.weapon == "ar_rifle" and self.state == "SHOOT":
+            if not self.rifle_trigger and self.rifle_cooldown <= 1e-9:
+                self.animation.set_state(self.firearm_gait)
+            return
         if self.animation.elapsed + 1e-9 < 8 / self.animation.definitions[self.state][1]:
             return
         if self.state == "SHOOT" and self.pistol_ammo == 0:
             self.start_pistol_reload()
         else:
             if self.state == "RELOAD":
-                self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
+                self.firearm_ammo = config.FIREARM_MAGAZINE_SIZES[self.weapon]
                 self.pistol_reload_interrupted = False
             self.pistol_shot_pending = False
-            self.animation.set_state(self.pistol_gait)
+            self.animation.set_state(self.firearm_gait)
 
     def start_move(self, move, direction):
         if move.jump_attack and (self.grounded or self.jump_count != 2):
@@ -455,7 +492,7 @@ class Player:
             return False
         self.last_hit_damage = min(self.hp, damage)
         self.hp -= self.last_hit_damage
-        if self.state == "RELOAD" and self.hp:
+        if self.weapon == "pistol" and self.state == "RELOAD" and self.hp:
             self.pistol_reload_interrupted = True
         self.vx = 0.0
         self.ground_vy = 0.0
@@ -504,6 +541,8 @@ class Player:
         else:
             self.vy = config.DOUBLE_JUMP_SPEED
         self.jump_count += 1
+        if self.weapon == "ar_rifle" and self.state in ("SHOOT", "RELOAD"):
+            return
         self.animation.set_state("JUMP")
         self.animation.elapsed = 0.0
 
@@ -532,14 +571,25 @@ class Player:
             return
         if self.active_move is STEEL_CLUB_THROW:
             return
-        if self.weapon == "pistol" and combat_pressed == "combat_r":
+        if self.weapon in config.FIREARM_MAGAZINE_SIZES and combat_pressed == "combat_r":
             combat_pressed = None
-            if (self.active_move is None and self.state in ("IDLE", "WALK", "RUN", "JUMP")
-                    and self.pistol_ammo < config.PLAYER_PISTOL_MAGAZINE_SIZE):
+            can_reload = self.state in ("IDLE", "WALK", "RUN", "JUMP") or (
+                self.weapon == "ar_rifle" and self.state == "SHOOT")
+            if (self.active_move is None and can_reload
+                    and self.firearm_ammo < config.FIREARM_MAGAZINE_SIZES[self.weapon]):
                 if jump_pressed:
                     self.start_jump(controls)
                 self.pistol_reload_interrupted = False
-                self.start_pistol_reload()
+                self.start_firearm_reload()
+                return
+        if self.weapon == "ar_rifle" and self.active_move is None:
+            firing = combat_pressed == "combat_a" or (combat_pressed is None and "combat_a" in controls.held)
+            self.rifle_trigger = firing and self.rifle_ammo > 0
+            if self.state in ("SHOOT", "RELOAD") or self.rifle_trigger:
+                if jump_pressed:
+                    self.start_jump(controls)
+                if self.rifle_trigger and self.state != "RELOAD":
+                    self.animation.set_state("SHOOT")
                 return
         if self.weapon == "pistol" and self.active_move is None:
             if self.pistol_reload_interrupted and (controls.moving or jump_pressed or not self.grounded):
@@ -575,6 +625,8 @@ class Player:
                 self.start_move(move, controls.direction)
 
     def _update(self, dt, controls):
+        if self.rifle_cooldown > 0:
+            self.rifle_cooldown = max(0.0, self.rifle_cooldown - dt)
         if self.state == "CAR_HIT":
             update_car_hit(self, dt)
             return
@@ -597,7 +649,7 @@ class Player:
             return
 
         if self.state in ("SHOOT", "RELOAD"):
-            self.update_pistol(dt, controls)
+            self.update_firearm(dt, controls)
             return
 
         if self.active_move is not None:

@@ -216,3 +216,7 @@ class RifleBullet(ResearcherBullet):
     scale = config.RIFLE_BULLET_SCALE
     anchor_y = config.RIFLE_BULLET_ANCHOR_Y
     range_limited = True
+
+
+class PlayerRifleBullet(PlayerProjectile, RifleBullet):
+    damage = config.PLAYER_RIFLE_DAMAGE

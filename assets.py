@@ -149,9 +149,8 @@ class Assets:
                                  item.facing, item.elapsed, grounded=item.grounded)
             return
         image = self.images[item.image_name]
-        if item.kind == "pistol":
-            left, bottom, width, height = config.PISTOL_ITEM_CLIP
-            scale = config.PISTOL_DROP_SCALE
+        if item.kind in config.FIREARM_DROP_SPRITES:
+            _, (left, bottom, width, height), scale = config.FIREARM_DROP_SPRITES[item.kind]
             image.clip_composite_draw(
                 left, bottom, width, height, 0, "h" if item.facing < 0 else "",
                 x, ground_y + item.jump_height + item.display_height / 2,

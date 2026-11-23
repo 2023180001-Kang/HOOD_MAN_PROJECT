@@ -135,12 +135,11 @@ class World:
         if not self.training:
             x = clamp(x, max(left, exit_edge) + config.DROP_ITEM_HALF_WIDTH,
                       min(right, self.stage.width - exit_edge) - config.DROP_ITEM_HALF_WIDTH)
-        height = (config.PISTOL_ITEM_CLIP[3] * config.PISTOL_DROP_SCALE
-                  if kind == "pistol" else config.DROP_ITEM_HEIGHT)
-        ground_y = clamp(ground_y, bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH, top - height)
-        item = DropItem(kind, x, ground_y, player.facing,
-                        jump_height=max(0.0, player.y + config.WEAPON_DROP_HAND_HEIGHT - ground_y),
-                        floor=player.floor, pistol_ammo=pistol_ammo)
+        item = DropItem(kind, x, ground_y, player.facing, floor=player.floor, pistol_ammo=pistol_ammo,
+                        rifle_ammo=player.rifle_ammo if kind == "ar_rifle" else None)
+        height = item.display_height if kind in config.FIREARM_DROP_SPRITES else config.DROP_ITEM_HEIGHT
+        item.ground_y = clamp(ground_y, bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH, top - height)
+        item.jump_height = max(0.0, player.y + config.WEAPON_DROP_HAND_HEIGHT - item.ground_y)
         self.stage.drop_items.append(item)
         return item
 
@@ -153,13 +152,13 @@ class World:
             if player.weapon is not None:
                 self.drop_weapon(player.weapon)
             self.stage.drop_items.remove(item)
-            if item.kind == "pistol" and player.weapon == "pistol":
-                # Swapping two pistols also cancels the old gun's pending shot/reload.
+            if item.kind in config.FIREARM_MAGAZINE_SIZES and item.kind == player.weapon:
+                # Two guns of the same kind still have separate magazines and actions.
                 player.equip_weapon(None)
             player.equip_weapon(item.kind)
-            if item.kind == "pistol":
-                player.pistol_ammo = (config.PLAYER_PISTOL_MAGAZINE_SIZE
-                                     if item.pistol_ammo is None else item.pistol_ammo)
+            if item.kind in config.FIREARM_MAGAZINE_SIZES:
+                player.firearm_ammo = (config.FIREARM_MAGAZINE_SIZES[item.kind]
+                                       if item.firearm_ammo is None else item.firearm_ammo)
             return True
         if player.weapon is not None:
             self.drop_weapon(player.weapon)

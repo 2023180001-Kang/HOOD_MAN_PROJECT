@@ -91,7 +91,8 @@ class UI:
 
         pico2d.draw_rectangle(688, 616, config.SCREEN_WIDTH - 20, 704,
                               12, 21, 33, filled=True)
-        title = ("권총 장착 · 근접 공격" if player.weapon == "pistol" else
+        title = (f"{config.WEAPON_NAMES[player.weapon]} 장착 · 근접 공격"
+                 if player.weapon in config.FIREARM_MAGAZINE_SIZES else
                  f"{config.WEAPON_NAMES[player.weapon]} 공격 · 피해량"
                  if player.weapon in config.WEAPON_NAMES else "기본 공격 · 피해량")
         assets.font.draw(704, 686, title, (244, 204, 66))
@@ -104,7 +105,7 @@ class UI:
                              12, 21, 33, filled=True)
         assets.font.draw(704, 590, "강화 기본 공격 · 피해량", (126, 218, 255))
         strong_moves = [move for move in STRONG_MOVES.values()
-                        if player.weapon != "pistol" or move.key != "r"]
+                        if player.weapon not in config.FIREARM_MAGAZINE_SIZES or move.key != "r"]
         for index, move in enumerate(strong_moves):
             x = 704 + index % 2 * 270
             y = 565 - index // 2 * 23
@@ -114,8 +115,8 @@ class UI:
                      if player.air_kick_phase == "WAIT" else
                      "E: ←/→ 공중 방향 전환 · 최대 2회 후 복귀")
         assets.font.draw(704, 493, kick_help, (126, 218, 255))
-        if player.weapon == "pistol":
-            r_help = "R 권총 재장전 · 점프 중에도 사용 가능"
+        if player.weapon in config.FIREARM_MAGAZINE_SIZES:
+            r_help = f"R {config.WEAPON_NAMES[player.weapon]} 재장전 · 점프 중에도 사용 가능"
         elif player.raise_punch_phase == "RAISE":
             r_help = "R 슬로 모션: R 다시 눌러 공격"
         else:
@@ -184,9 +185,10 @@ class UI:
         font.draw(text_left, 555, "+  내 앞에 연습 상대 소환     Esc  메인 메뉴", body)
         weapon = config.WEAPON_NAMES.get(player.weapon, "맨손")
         font.draw(620, 671, f"공격 연습  ·  {weapon}", heading)
-        if player.weapon == "pistol":
-            basic = (f"A  사격     S  스트레이트     R  재장전     "
-                     f"탄약  {player.pistol_ammo} / {config.PLAYER_PISTOL_MAGAZINE_SIZE}")
+        if player.weapon in config.FIREARM_MAGAZINE_SIZES:
+            fire = "유지 연사" if player.weapon == "ar_rifle" else "사격"
+            basic = (f"A  {fire}     S  스트레이트     R  재장전     "
+                     f"탄약  {player.firearm_ammo} / {config.FIREARM_MAGAZINE_SIZES[player.weapon]}")
         else:
             basic = "     ".join(f"{key[-1].upper()}  {player.moves[key].name}" for key in ("combat_a", "combat_s"))
         font.draw(620, 637, basic, body)
@@ -198,7 +200,7 @@ class UI:
             kicks = "D  왼발 차기     F  오른발 차기"
         font.draw(620, 609, kicks, body)
         font.draw(620, 581, "Q  양주먹     W 유지  돌진     E 두 번  연속 발차기", body)
-        last = "T  어퍼컷" if player.weapon == "pistol" else "R 두 번  올려치기     T  어퍼컷"
+        last = "T  어퍼컷" if player.weapon in config.FIREARM_MAGAZINE_SIZES else "R 두 번  올려치기     T  어퍼컷"
         font.draw(620, 555, last, body)
 
     def draw(self, assets, world):
@@ -236,9 +238,10 @@ class UI:
         if assets.font is not None:
             assets.font.draw(x + image.w * scale + 16, y + 56,
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
-            if world.player.weapon == "pistol":
+            if world.player.weapon in config.FIREARM_MAGAZINE_SIZES:
+                gun = world.player.weapon
                 assets.font.draw(x + image.w * scale + 16, y + 8,
-                                 f"권총 {world.player.pistol_ammo} / {config.PLAYER_PISTOL_MAGAZINE_SIZE}",
+                                 f"{config.WEAPON_NAMES[gun]} {world.player.firearm_ammo} / {config.FIREARM_MAGAZINE_SIZES[gun]}",
                                  (255, 224, 110))
             if not self.details_visible:
                 return
@@ -265,6 +268,9 @@ class UI:
             if world.player.weapon == "pistol":
                 action = "재장전 중" if world.player.state == "RELOAD" else "A키 사격"
                 assets.font.draw(22, 132, f"권총 {action} · 피해 20 · 7발 후 자동 재장전",
+                                 (126, 218, 255))
+            elif world.player.weapon == "ar_rifle":
+                assets.font.draw(22, 132, "AR 소총 · A 유지 연사 · 피해 10 · R 재장전",
                                  (126, 218, 255))
             elif world.player.weapon in config.WEAPON_NAMES:
                 phase = world.player.weapon_leap_phase

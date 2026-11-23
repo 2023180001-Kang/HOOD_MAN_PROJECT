@@ -21,6 +21,11 @@ class DropItem:
     floor: int = 0
     pistol_ammo: int | None = None
     support_height: float = 0.0
+    rifle_ammo: int | None = None
+
+    @property
+    def firearm_ammo(self):
+        return self.rifle_ammo if self.kind == "ar_rifle" else self.pistol_ammo
 
     @property
     def surface_y(self):
@@ -34,21 +39,22 @@ class DropItem:
     def image_name(self):
         if self.kind == "steel_club":
             return config.STEEL_CLUB_PROJECTILE_IMAGE
-        if self.kind == "pistol":
-            return config.PISTOL_ITEM_IMAGE
+        if self.kind in config.FIREARM_DROP_SPRITES:
+            return config.FIREARM_DROP_SPRITES[self.kind][0]
         return config.DROP_ITEM_IMAGES[self.kind]
 
     @property
     def display_height(self):
         if self.kind == "steel_club":
             return config.STEEL_CLUB_REST_HEIGHT
-        if self.kind == "pistol":
-            return config.PISTOL_ITEM_CLIP[3] * config.PISTOL_DROP_SCALE
+        if self.kind in config.FIREARM_DROP_SPRITES:
+            _, clip, scale = config.FIREARM_DROP_SPRITES[self.kind]
+            return clip[3] * scale
         return config.DROP_ITEM_BODY_HEIGHTS[self.kind] * config.DROP_ITEM_SCALE
 
     @property
     def frame(self):
-        if self.kind in ("pistol", "steel_club"):
+        if self.kind in config.FIREARM_DROP_SPRITES or self.kind == "steel_club":
             return 0
         return int(self.elapsed * config.DROP_ITEM_FPS + 1e-9) % self.frame_count
 

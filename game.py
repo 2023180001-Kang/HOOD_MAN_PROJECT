@@ -74,8 +74,6 @@ class Game:
                 self._escape_held = False
                 start_requested = False
             elif event.type == SDL_WINDOWEVENT and event.window.event == SDL_WINDOWEVENT_LEAVE:
-                self.world.controls.release("shoot")
-                self.world.controls.take_press("shoot")
                 self.menu.cancel_drag()
                 self.menu.clear_hover()
             elif (event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP)
@@ -105,13 +103,6 @@ class Game:
                     self.menu.release_pointer(
                         event.button.x, config.SCREEN_HEIGHT - 1 - event.button.y,
                     )
-            elif (not self._menu_requested
-                  and event.type in (pico2d.SDL_MOUSEBUTTONDOWN, pico2d.SDL_MOUSEBUTTONUP)
-                  and event.button.button == SDL_BUTTON_LEFT):
-                if event.type == pico2d.SDL_MOUSEBUTTONDOWN:
-                    self.world.controls.press("shoot")
-                else:
-                    self.world.controls.release("shoot")
             elif not self._menu_requested and event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if key is not None:

@@ -52,6 +52,7 @@ WEAPON_MOVES = {
 }
 # F remains the right-foot kick; A/S/D are replaced by the equipped attacks.
 WEAPON_LOADOUTS = {kind: {**MOVES, **moves} for kind, moves in WEAPON_MOVES.items()}
+WEAPON_LOADOUTS["pistol"] = {key: move for key, move in MOVES.items() if key != "combat_a"}
 
 
 def moves_for_weapon(weapon):

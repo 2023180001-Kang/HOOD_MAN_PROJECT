@@ -3,8 +3,8 @@ from unittest.mock import Mock, patch
 
 import pico2d
 from sdl2 import (
-    SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_Event,
-    SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST, SDL_WINDOWEVENT_LEAVE,
+    SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_Event,
+    SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST,
 )
 
 import config
@@ -21,6 +21,7 @@ from researcher import Researcher
 from shield_soldier import ShieldSoldier
 from tests.helpers import advance, tap
 from tests.test_main_menu import mouse_event, process_menu_events
+from tests.test_menu_return import key_event
 from world import World
 
 
@@ -31,9 +32,9 @@ def armed_world():
     return world
 
 
-def click(world):
-    tap(world.controls, "shoot")
-    world.controls.release("shoot")
+def press_fire(world):
+    tap(world.controls, "combat_a")
+    world.controls.release("combat_a")
 
 
 class PistolShootingTests(unittest.TestCase):
@@ -66,11 +67,11 @@ class PistolShootingTests(unittest.TestCase):
         world.update(config.FIXED_DT)
         self.assertEqual(player.state, "IDLE")
         player.pistol_ammo = 4
-        tap(world.controls, "combat_a")
+        tap(world.controls, "combat_s")
         world.update(config.FIXED_DT)
         tap(world.controls, "combat_r")
         world.update(config.FIXED_DT)
-        self.assertEqual(player.state, "ATTACK_A")
+        self.assertEqual(player.state, "ATTACK_S")
         advance(world, 2)
         self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 4))
 
@@ -85,14 +86,14 @@ class PistolShootingTests(unittest.TestCase):
         world.controls.press("left")
         advance(world, 0.75)
         self.assertEqual((player.state, player.facing, player.pistol_ammo), ("JUMP", -1, 3))
-        click(world)
+        press_fire(world)
         advance(world, 0.15)
         self.assertEqual((player.state, player.pistol_ammo), ("SHOOT", 2))
 
-    def test_click_emits_once_at_the_first_flash_and_only_then_spends_ammo(self):
+    def test_a_emits_once_at_the_first_flash_and_only_then_spends_ammo(self):
         world = armed_world()
         player = world.player
-        click(world)
+        press_fire(world)
         advance(world, 0.1, 120)
         self.assertEqual((player.state, player.sprite_row, player.pistol_ammo), ("SHOOT", 5, 7))
         self.assertFalse(world.projectiles)
@@ -114,51 +115,53 @@ class PistolShootingTests(unittest.TestCase):
         advance(world, 0.375, 120)
         self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 6))
 
-    def test_seven_fresh_clicks_then_row_six_reloads_for_one_full_second(self):
+    def test_seven_a_presses_then_row_six_reloads_for_one_full_second(self):
         world = armed_world()
         player = world.player
         for shot in range(7):
-            click(world)
+            press_fire(world)
             advance(world, 0.5, 120)
             self.assertEqual(player.pistol_ammo, 6 - shot)
             self.assertEqual(player.state, "IDLE" if shot < 6 else "RELOAD")
         self.assertEqual((player.sprite_image, player.sprite_row, player.animation.frame),
                          (config.PLAYER_PISTOL_IMAGE, 6, 0))
         for _ in range(59):
-            click(world)  # Early clicks are consumed, never queued.
+            press_fire(world)  # Early presses are consumed, never queued.
             world.update(1 / 60)
             self.assertEqual(player.pistol_ammo, 0)
         world.update(1 / 60)
         self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 7))
         advance(world, 0.6)
         self.assertEqual(player.pistol_ammo, 7)
-        click(world)
+        press_fire(world)
         advance(world, 0.15)
         self.assertEqual(player.pistol_ammo, 6)
 
-    def test_holding_the_mouse_does_not_repeat_after_shooting_or_reloading(self):
+    def test_holding_a_does_not_repeat_after_shooting_or_reloading(self):
         world = armed_world()
-        world.controls.press("shoot")
+        world.controls.press("combat_a")
         advance(world, 3)
         self.assertEqual((world.player.state, world.player.pistol_ammo), ("IDLE", 6))
         world.player.pistol_ammo = 0
         advance(world, 2)
         self.assertEqual((world.player.state, world.player.pistol_ammo), ("IDLE", 7))
 
-    def test_clicks_in_blocked_states_are_consumed_without_a_later_shot(self):
+    def test_a_presses_in_blocked_states_are_consumed_without_a_later_shot(self):
         for state in ("HIT", "DYING", "DEAD", "RELOAD", "SHOOT", "melee", "stair"):
             with self.subTest(state=state):
                 world = armed_world()
                 player = world.player
                 if state == "melee":
-                    player.start_move(MOVES["combat_a"], 1)
+                    player.start_move(MOVES["combat_s"], 1)
                 elif state == "stair":
                     player.staircase = object()
                 else:
                     player.animation.set_state(state)
-                click(world)
+                press_fire(world)
                 player.handle_input(world.controls)
                 self.assertFalse(player.pistol_shot_pending)
+                if state == "melee":
+                    self.assertIs(player.active_move, MOVES["combat_s"])
                 self.assertFalse(world.controls.pressed)
                 player.staircase = None
                 player.cancel_combat()
@@ -169,7 +172,7 @@ class PistolShootingTests(unittest.TestCase):
 
     def test_hit_before_flash_cancels_without_spending_and_uses_row_seven(self):
         world = armed_world()
-        click(world)
+        press_fire(world)
         advance(world, 0.1)
         world.player.take_damage(20)
         self.assertEqual(world.player.sprite_row, 7)
@@ -209,7 +212,7 @@ class PistolShootingTests(unittest.TestCase):
         self.assertEqual(player.state, "HIT")
 
         world.controls.press("jump")
-        world.controls.press("shoot")
+        world.controls.press("combat_a")
         world.update(config.FIXED_DT)
         world.controls.release("jump")
         self.assertEqual(player.jump_count, 0)
@@ -251,7 +254,7 @@ class PistolShootingTests(unittest.TestCase):
         player.animation.set_state("JUMP")
         world.controls.press("right")
         world.controls.press("up")
-        click(world)
+        press_fire(world)
         position = player.x, player.ground_y
         advance(world, 0.15)
         self.assertEqual((player.x, player.ground_y), position)
@@ -295,17 +298,19 @@ class PistolShootingTests(unittest.TestCase):
 
     def test_equipment_switch_cancels_a_pending_shot_and_existing_melee_still_works(self):
         world = armed_world()
-        click(world)
+        press_fire(world)
         advance(world, 0.1)
         world.player.equip_weapon("steel_pipe")
         advance(world, 0.5)
         self.assertFalse(world.projectiles)
         self.assertEqual(world.player.pistol_ammo, 7)
-        world.player.equip_weapon("pistol")
-        tap(world.controls, "combat_a")
-        advance(world, 0.4)
-        self.assertEqual(world.player.sprite_image, config.PLAYER_PISTOL_IMAGE)
-        self.assertEqual(world.player.state, "IDLE")
+        for weapon in ("steel_pipe", None):
+            world.player.equip_weapon(weapon)
+            tap(world.controls, "combat_a")
+            world.update(config.FIXED_DT)
+            self.assertIs(world.player.active_move, world.player.moves["combat_a"])
+            self.assertEqual(world.player.pistol_ammo, 7)
+        self.assertIs(world.player.active_move, MOVES["combat_a"])
 
     def test_mid_hit_pistol_swap_preserves_the_current_recovery_speed_and_clock(self):
         for original, replacement, fps in (("steel_pipe", "pistol", 40), ("pistol", "steel_pipe", 12)):
@@ -338,7 +343,7 @@ class PistolShootingTests(unittest.TestCase):
 
     def test_stage_change_loading_and_restart_preserve_or_reset_the_right_clocks(self):
         world = armed_world()
-        click(world)
+        press_fire(world)
         advance(world, 0.2)
         bullet = world.projectiles[0]
         ammo, elapsed = world.player.pistol_ammo, world.player.animation.elapsed
@@ -351,7 +356,7 @@ class PistolShootingTests(unittest.TestCase):
         world.player.pistol_ammo = 0
         world.player.start_pistol_reload()
         world.pending_stage_index, world.stage_loading_remaining = 1, 2
-        click(world)
+        press_fire(world)
         world.update(1)
         self.assertEqual((world.player.pistol_ammo, world.player.animation.elapsed), (0, 0))
         self.assertFalse(world.controls.pressed)
@@ -366,7 +371,7 @@ class PistolShootingTests(unittest.TestCase):
         for fps in (30, 60, 120, 144):
             world = armed_world()
             for _ in range(7):
-                click(world)
+                press_fire(world)
                 advance(world, 1, fps)
             self.assertEqual((world.player.pistol_ammo, world.player.state), (0, "RELOAD"))
             advance(world, 0.5, fps)
@@ -476,7 +481,7 @@ class PistolBulletTests(unittest.TestCase):
         self.assertEqual(enemy.hp, 200)
 
 
-class PistolMouseInputTests(unittest.TestCase):
+class PistolInputTests(unittest.TestCase):
     def setUp(self):
         self.game = Game.__new__(Game)
         self.game.world, self.game.menu = armed_world(), MainMenu()
@@ -485,42 +490,43 @@ class PistolMouseInputTests(unittest.TestCase):
     def process(self, *events, menu_screen=False):
         return process_menu_events(self.game, *events, menu_screen=menu_screen)
 
-    def test_left_click_is_edge_triggered_and_right_middle_are_ignored(self):
-        for button in (SDL_BUTTON_RIGHT, SDL_BUTTON_MIDDLE):
-            self.process(mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 800, 300, button))
-            self.assertFalse(self.game.world.controls.pressed)
-        down = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 800, 300)
+    def test_gameplay_mouse_buttons_do_not_fire(self):
+        for button in (SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT):
+            self.process(mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 800, 300, button),
+                         mouse_event(pico2d.SDL_MOUSEBUTTONUP, 800, 300, button))
+        advance(self.game.world, 0.15)
+        self.assertEqual((self.game.world.player.state, self.game.world.player.pistol_ammo), ("IDLE", 7))
+        self.assertFalse(self.game.world.projectiles)
+
+    def test_a_fires_once_until_released_and_pressed_again(self):
+        down = key_event(pico2d.SDLK_a)
         self.process(down, down)
         advance(self.game.world, 2)
         self.assertEqual(self.game.world.player.pistol_ammo, 6)
-        self.process(down)
+        self.process(key_event(pico2d.SDLK_a, repeat=True))
         advance(self.game.world, 0.6)
         self.assertEqual(self.game.world.player.pistol_ammo, 6)
-        self.process(mouse_event(pico2d.SDL_MOUSEBUTTONUP, 800, 300), down)
+        self.process(key_event(pico2d.SDLK_a, down=False), down)
         advance(self.game.world, 0.15)
         self.assertEqual(self.game.world.player.pistol_ammo, 5)
 
     def test_menu_and_escape_batches_cannot_leave_a_pending_shot(self):
-        down = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 800, 300)
+        down = key_event(pico2d.SDLK_a)
         self.process(down, menu_screen=True)
         self.assertFalse(self.game.world.controls.pressed)
-        event = SDL_Event()
-        event.type, event.key.keysym.sym = pico2d.SDL_KEYDOWN, pico2d.SDLK_ESCAPE
-        self.process(down, event, down)
+        self.process(down, key_event(), down)
         self.assertTrue(self.game._menu_requested)
         self.assertFalse(self.game.world.controls.held)
         self.assertFalse(self.game.world.controls.pressed)
 
-    def test_leave_and_focus_loss_clear_pending_and_held_mouse_input(self):
-        for kind in (SDL_WINDOWEVENT_LEAVE, SDL_WINDOWEVENT_FOCUS_LOST):
-            self.process(mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 800, 300))
-            event = SDL_Event()
-            event.type, event.window.event = SDL_WINDOWEVENT, kind
-            self.process(event)
-            self.assertNotIn("shoot", self.game.world.controls.held)
-            self.assertNotIn("shoot", self.game.world.controls.pressed)
-            advance(self.game.world, 0.6)
-            self.assertEqual(self.game.world.player.pistol_ammo, 7)
+    def test_focus_loss_clears_pending_and_held_fire_key(self):
+        event = SDL_Event()
+        event.type, event.window.event = SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST
+        self.process(key_event(pico2d.SDLK_a), event)
+        self.assertNotIn("combat_a", self.game.world.controls.held)
+        self.assertNotIn("combat_a", self.game.world.controls.pressed)
+        advance(self.game.world, 0.6)
+        self.assertEqual(self.game.world.player.pistol_ammo, 7)
 
 
 if __name__ == "__main__":

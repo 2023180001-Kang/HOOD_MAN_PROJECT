@@ -22,9 +22,9 @@ from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, release, tick
 
 
-def mouse_click():
-    push_mouse(900, 360, kind=pico2d.SDL_MOUSEBUTTONDOWN)
-    push_mouse(900, 360, kind=pico2d.SDL_MOUSEBUTTONUP)
+def press_fire_key():
+    push_key(pico2d.SDLK_a)
+    push_key(pico2d.SDLK_a, down=False)
 
 
 def check_bag_equipment_and_start(game):
@@ -59,6 +59,10 @@ def check_bag_equipment_and_start(game):
     game.show_main_menu()
     assert (world.player.weapon, world.player.pistol_ammo, world.player.state) == ("pistol", 7, "IDLE")
     assert not world.controls.held and not world.controls.pressed and not world.projectiles
+    push_mouse(900, 360, kind=pico2d.SDL_MOUSEBUTTONDOWN)
+    push_mouse(900, 360, kind=pico2d.SDL_MOUSEBUTTONUP)
+    tick(game, 10)
+    assert (world.player.state, world.player.pistol_ammo) == ("IDLE", 7) and not world.projectiles
     assert all(game.assets.images[name] is image for name, image in textures.items())
     print("PASS: real bag swap -> pistol drop equips all eight IDLE preview frames; "
           "old gameplay stays frozen, Start applies pistol/7 rounds, and menu clicks never shoot.")
@@ -201,7 +205,7 @@ def check_seven_shots_reload_and_hits(game):
         # without an approaching target moving out of the reference shot lane.
         with patch.object(enemy, "update"):
             for shot in range(7):
-                mouse_click()
+                press_fire_key()
                 tick(game, 8)
                 assert (player.state, player.sprite_row, player.animation.frame) == ("SHOOT", 5, 2)
                 assert player.pistol_ammo == 6 - shot
@@ -223,7 +227,7 @@ def check_seven_shots_reload_and_hits(game):
                 if index in (0, 24, 56):
                     capture(game, f"pistol_reload_{side}_{player.animation.frame}")
                 if index % 10 == 0:
-                    mouse_click()
+                    press_fire_key()
                 tick(game)
                 if index < 59:
                     assert player.state == "RELOAD" and player.pistol_ammo == 0
@@ -231,16 +235,16 @@ def check_seven_shots_reload_and_hits(game):
             assert (player.state, player.pistol_ammo, enemy.hp) == ("IDLE", 7, 260)
             tick(game, 30)
             assert player.pistol_ammo == 7 and not world.projectiles
-    print("PASS: SDL clicks emit once at row-5 flash frame 2; seven real rounds deal 20 each "
+    print("PASS: SDL A presses emit once at row-5 flash frame 2; seven real rounds deal 20 each "
           "on both sides (axe HP400 -> 260), then all eight row-6 frames play for 1s; "
-          "early reload clicks never fire or queue a shot and completion restores seven rounds.")
+          "A presses during reload never fire or queue a shot and completion restores seven rounds.")
 
 
 def check_interrupt_restart_and_focus(game):
     world = game.world
     world.reset()
     player = world.player
-    mouse_click()
+    press_fire_key()
     tick(game, 6)
     player.take_damage(20)
     assert player.sprite_row == 7
@@ -257,13 +261,13 @@ def check_interrupt_restart_and_focus(game):
     assert player.pistol_ammo == 0
     tick(game, 12)
     assert (player.state, player.pistol_ammo) == ("IDLE", 7)
-    push_mouse(900, 360, kind=pico2d.SDL_MOUSEBUTTONDOWN)
+    push_key(pico2d.SDLK_a)
     event = SDL_Event()
     event.type, event.window.event = SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST
     push(event)
     tick(game, 60)
-    assert player.pistol_ammo == 7 and "shoot" not in world.controls.held
-    mouse_click()
+    assert player.pistol_ammo == 7 and "combat_a" not in world.controls.held
+    press_fire_key()
     tick(game, 10)
     push_key(pico2d.SDLK_F5)
     tick(game)
@@ -273,7 +277,7 @@ def check_interrupt_restart_and_focus(game):
     assert all(not stage.projectiles for stage in world.stages)
     capture(game, "pistol_restarted")
     print("PASS: flinch cancels pre-flash shots without spending ammo, interrupted reload restarts "
-          "after recovery without early refill, focus clears pending mouse input and F5 "
+          "after recovery without early refill, focus loss clears pending A input and F5 "
           "restores the selected pistol/7 rounds while clearing all rounds.")
 
 
@@ -289,19 +293,16 @@ def check_live_performance(game):
     frames = 0
     states = set()
 
-    def inject_clicks(*, menu_screen=False):
+    def inject_fire_presses(*, menu_screen=False):
         nonlocal frames
-        result = handle_events(menu_screen=menu_screen)
         states.add(player.state)
         if frames % 36 == 0:
-            world.controls.release("shoot")
-            world.controls.press("shoot")
-            world.controls.release("shoot")
+            press_fire_key()
         frames += 1
-        return result
+        return handle_events(menu_screen=menu_screen)
 
     start = perf_counter()
-    with patch.object(game, "handle_events", side_effect=inject_clicks):
+    with patch.object(game, "handle_events", side_effect=inject_fire_presses):
         assert game.run(max_frames=180) == 180
     seconds = perf_counter() - start
     assert {"SHOOT", "RELOAD"} <= states
@@ -348,7 +349,7 @@ def check_g_pistol_drop_and_pickup(game):
     assert (player.weapon, player.pistol_ammo, player.sprite_image) == (
         "pistol", 4, config.PLAYER_PISTOL_IMAGE)
     assert item not in world.stage.drop_items and not world.stage.drop_items
-    mouse_click()
+    press_fire_key()
     tick(game, 8)
     assert player.pistol_ammo == 3
     capture(game, "pistol_g_picked_up_firing")

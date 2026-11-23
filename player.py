@@ -486,7 +486,6 @@ class Player:
         """Resolve fresh actions before World samples the simulation time scale."""
         if controls.take_press("invincibility") and self.alive:
             self.invincible = not self.invincible
-        shoot_pressed = controls.take_press("shoot")
         combat_pressed = controls.take_latest_press(ALL_MOVES)
         if self.state == "HIT" and self.pistol_reload_interrupted:
             # Leave one jump press in Controls until the hit reaction finishes.
@@ -513,7 +512,7 @@ class Player:
             elif self.pistol_ammo == 0:
                 self.start_pistol_reload()
                 return
-            elif shoot_pressed:
+            elif combat_pressed == "combat_a":
                 self.start_pistol_shot(controls.direction)
                 return
         if self.rush_phase in ("WINDUP", "FLY") and "combat_w" not in controls.held:

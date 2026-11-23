@@ -224,7 +224,7 @@ class UI:
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
             if world.player.weapon == "pistol":
-                action = "재장전 중" if world.player.state == "RELOAD" else "왼쪽 클릭: 사격"
+                action = "재장전 중" if world.player.state == "RELOAD" else "A키 사격"
                 assets.font.draw(22, 132, f"권총 {action} · 피해 20 · 7발 후 자동 재장전",
                                  (126, 218, 255))
             elif world.player.weapon in config.WEAPON_NAMES:

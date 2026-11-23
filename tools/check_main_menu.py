@@ -110,12 +110,19 @@ def check_pixels_and_placeholders(game):
             assert game.world is world and world.player is player and world.elapsed == 0
             if button.action == "stage_progress":
                 progress = menu_image(game, "main_menu_stage_progress")
-                with Image.open(ROOT / config.STAGE_PROGRESS_IMAGE) as source:
-                    difference = ImageChops.difference(source.convert("RGB"), progress).getbbox()
+                with Image.open(ROOT / config.STAGE_PROGRESS_IMAGE) as source, \
+                        Image.open(ROOT / config.STAGE_LOCK_IMAGE) as lock:
+                    expected = source.convert("RGB")
+                    # Reference positions on the 1280x720 artwork, in top-left coordinates.
+                    for center_x in (129, 336, 540, 745, 950, 1157):
+                        expected.paste(lock, (center_x - lock.width // 2, 384), lock)
+                difference = ImageChops.difference(expected, progress)
                 back, = game.menu.buttons
-                bx, by, br, bb = screen_box(back)
-                assert difference and bx <= difference[0] < difference[2] <= br
-                assert by <= difference[1] < difference[3] <= bb
+                back_box = screen_box(back)
+                assert difference.crop(back_box).getbbox() is not None
+                difference.paste((0, 0, 0), back_box)
+                # SDL and Pillow can round translucent pixels one channel level apart.
+                assert all(high <= 1 for _, high in difference.getextrema())
                 push_click(back)
                 assert not game.handle_events(menu_screen=True)
             else:
@@ -134,7 +141,7 @@ def check_pixels_and_placeholders(game):
     assert config.ARCHIVED_TITLE_IMAGE not in game.assets.images
     print("PASS: original background/left half, four right-side black/gray buttons, "
           "only the hovered rectangle changes, leave/focus restore pixels, "
-          "stage progress opens its original background and returns; controls stays on the main menu.")
+          "stage progress shows all six locks beneath their labels and returns to the main menu.")
 
 
 def check_wait_start_and_restart(game):

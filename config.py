@@ -81,6 +81,10 @@ SPAWN_COUNTS = tuple(range(1, 10))
 ARCHIVED_TITLE_IMAGE = "before_sheets/HOOD_MAN_TITLE_SCREEN_1280x720.png"
 MAIN_MENU_IMAGE = "HOOD_MAN_main_menu_background_1280x720.png"
 STAGE_PROGRESS_IMAGE = "stage_progress_background_1280x720.png"
+STAGE_LOCK_IMAGE = "stage_lock.png"
+# Centers of the six panels, halfway between the labels and their bottom borders.
+STAGE_LOCK_CENTERS_X = (129, 336, 540, 745, 950, 1157)
+STAGE_LOCK_Y = SCREEN_HEIGHT - 400
 MAIN_MENU_BUTTONS = (
     ("game_start", "menu_game_start.png"),
     ("stage_progress", "menu_stage_progress.png"),

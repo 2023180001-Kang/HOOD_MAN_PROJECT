@@ -156,7 +156,7 @@ class MainMenuTests(unittest.TestCase):
                 patch("assets.pico2d.load_font", return_value=None):
             assets = Assets()
         loaded = [call.args[0] for call in load.call_args_list]
-        for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE,
+        for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE, config.STAGE_LOCK_IMAGE,
                      *(image for _, image in config.MAIN_MENU_BUTTONS)):
             self.assertIn(name, assets.images)
             self.assertEqual(loaded.count(str(config.ROOT / name)), 1)

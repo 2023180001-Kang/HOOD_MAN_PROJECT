@@ -184,6 +184,10 @@ class MainMenu:
         if self.bag_open:
             self.draw_bag_player(assets)
             self.draw_bag_items(assets)
+        elif self.screen == "stage_progress":
+            lock = assets.images[config.STAGE_LOCK_IMAGE]
+            for x in config.STAGE_LOCK_CENTERS_X:
+                lock.draw(x, config.STAGE_LOCK_Y)
         for button in self.buttons:
             image = assets.images[button.image_name]
             frame_width = image.w // 2

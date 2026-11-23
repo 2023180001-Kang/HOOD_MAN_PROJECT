@@ -456,6 +456,20 @@ class Player:
                 self.upper_landing_requested = False
                 self.falling_from_upper = False
 
+    def start_jump(self, controls):
+        if self.jump_count >= 2:
+            return
+        if self.jump_count == 0:
+            self.vy = config.JUMP_SPEED
+            self.air_kicks_used = 0
+        elif controls.running and controls.moving:
+            self.vy = config.RUN_DOUBLE_JUMP_SPEED
+        else:
+            self.vy = config.DOUBLE_JUMP_SPEED
+        self.jump_count += 1
+        self.animation.set_state("JUMP")
+        self.animation.elapsed = 0.0
+
     def update(self, dt, controls, walkable=None, *, process_input=True):
         if walkable is not None:
             self.walkable = walkable
@@ -480,6 +494,15 @@ class Player:
         jump_pressed = controls.take_press("jump")
         if self.staircase is not None or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD"):
             return
+        if self.weapon == "pistol" and combat_pressed == "combat_r":
+            combat_pressed = None
+            if (self.active_move is None and self.state in ("IDLE", "WALK", "RUN", "JUMP")
+                    and self.pistol_ammo < config.PLAYER_PISTOL_MAGAZINE_SIZE):
+                if jump_pressed:
+                    self.start_jump(controls)
+                self.pistol_reload_interrupted = False
+                self.start_pistol_reload()
+                return
         if self.weapon == "pistol" and self.active_move is None:
             if self.pistol_reload_interrupted and (controls.moving or jump_pressed or not self.grounded):
                 if self.state == "RELOAD":
@@ -496,18 +519,8 @@ class Player:
         if self.rush_phase in ("WINDUP", "FLY") and "combat_w" not in controls.held:
             self.release_rush()
         move = STRONG_MOVES.get(combat_pressed) or self.moves.get(combat_pressed)
-        if (jump_pressed and self.active_move is None and self.jump_count < 2
-                and (move is None or move.jump_attack)):
-            if self.jump_count == 0:
-                self.vy = config.JUMP_SPEED
-                self.air_kicks_used = 0
-            elif controls.running and controls.moving:
-                self.vy = config.RUN_DOUBLE_JUMP_SPEED
-            else:
-                self.vy = config.DOUBLE_JUMP_SPEED
-            self.jump_count += 1
-            self.animation.set_state("JUMP")
-            self.animation.elapsed = 0.0
+        if jump_pressed and self.active_move is None and (move is None or move.jump_attack):
+            self.start_jump(controls)
         if move is not None:
             if move == self.active_move:
                 if move.jump_attack and self.weapon_leap_phase == "AIM":
@@ -536,6 +549,9 @@ class Player:
                     self.animation.set_state("DEAD")
                     self.animation.elapsed = 8 / config.PLAYER_ANIMATIONS["DEAD"][1]
                 else:
+                    if self.pistol_ammo > 0:
+                        # An interrupted top-up leaves the remaining rounds usable.
+                        self.pistol_reload_interrupted = False
                     self.animation.set_state("IDLE")
             return
 

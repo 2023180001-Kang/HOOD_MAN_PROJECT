@@ -103,7 +103,9 @@ class UI:
         pico2d.draw_rectangle(688, 436, config.SCREEN_WIDTH - 20, 610,
                              12, 21, 33, filled=True)
         assets.font.draw(704, 590, "강화 기본 공격 · 피해량", (126, 218, 255))
-        for index, move in enumerate(STRONG_MOVES.values()):
+        strong_moves = [move for move in STRONG_MOVES.values()
+                        if player.weapon != "pistol" or move.key != "r"]
+        for index, move in enumerate(strong_moves):
             x = 704 + index % 2 * 270
             y = 565 - index // 2 * 23
             assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
@@ -112,10 +114,13 @@ class UI:
                      if player.air_kick_phase == "WAIT" else
                      "E: ←/→ 공중 방향 전환 · 최대 2회 후 복귀")
         assets.font.draw(704, 493, kick_help, (126, 218, 255))
-        punch_help = ("R 슬로 모션: R 다시 눌러 공격"
-                      if player.raise_punch_phase == "RAISE" else
-                      "R: 주변 슬로 모션 → R 재입력으로 타격")
-        assets.font.draw(704, 470, punch_help, (126, 218, 255))
+        if player.weapon == "pistol":
+            r_help = "R 권총 재장전 · 점프 중에도 사용 가능"
+        elif player.raise_punch_phase == "RAISE":
+            r_help = "R 슬로 모션: R 다시 눌러 공격"
+        else:
+            r_help = "R: 주변 슬로 모션 → R 재입력으로 타격"
+        assets.font.draw(704, 470, r_help, (126, 218, 255))
         assets.font.draw(704, 447, "W 유지: ←/→ 비행 전환 · 적 동반 / 놓으면 해제", (126, 218, 255))
 
     def draw_enemy_health(self, assets, world, camera_x, camera_y):

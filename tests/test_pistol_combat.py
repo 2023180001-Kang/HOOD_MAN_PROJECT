@@ -37,6 +37,58 @@ def click(world):
 
 
 class PistolShootingTests(unittest.TestCase):
+    def test_r_tops_up_on_the_ground_and_in_midair(self):
+        for jumping in (False, True):
+            with self.subTest(jumping=jumping):
+                world = armed_world()
+                player = world.player
+                player.pistol_ammo = 3
+                if jumping:
+                    tap(world.controls, "jump")
+                    advance(world, 0.1)
+                height = player.jump_height
+                tap(world.controls, "combat_r")
+                advance(world, 0.1)
+                self.assertEqual((player.state, player.sprite_row, world.time_scale), ("RELOAD", 6, 1))
+                if jumping:
+                    self.assertGreater(player.jump_height, height)
+                tap(world.controls, "combat_r")
+                advance(world, 0.85)
+                self.assertTrue(player.grounded)
+                self.assertEqual((player.state, player.pistol_ammo), ("RELOAD", 3))
+                advance(world, 0.05)
+                self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 7))
+
+    def test_pistol_r_never_starts_the_raise_punch_or_queues_a_reload(self):
+        world = armed_world()
+        player = world.player
+        tap(world.controls, "combat_r")
+        world.update(config.FIXED_DT)
+        self.assertEqual(player.state, "IDLE")
+        player.pistol_ammo = 4
+        tap(world.controls, "combat_a")
+        world.update(config.FIXED_DT)
+        tap(world.controls, "combat_r")
+        world.update(config.FIXED_DT)
+        self.assertEqual(player.state, "ATTACK_A")
+        advance(world, 2)
+        self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 4))
+
+    def test_hit_during_manual_reload_preserves_rounds_for_escape_and_shooting(self):
+        world = armed_world()
+        player = world.player
+        player.pistol_ammo = 3
+        tap(world.controls, "combat_r")
+        advance(world, 0.5)
+        player.take_damage(20)
+        tap(world.controls, "jump")
+        world.controls.press("left")
+        advance(world, 0.75)
+        self.assertEqual((player.state, player.facing, player.pistol_ammo), ("JUMP", -1, 3))
+        click(world)
+        advance(world, 0.15)
+        self.assertEqual((player.state, player.pistol_ammo), ("SHOOT", 2))
+
     def test_click_emits_once_at_the_first_flash_and_only_then_spends_ammo(self):
         world = armed_world()
         player = world.player

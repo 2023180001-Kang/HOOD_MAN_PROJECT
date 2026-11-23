@@ -23,6 +23,22 @@ def until(world, condition, frames=600):
 
 
 class PlatformJumpTests(ArchivedTwoFloorTests):
+    def test_midair_pistol_reload_continues_on_upper_landing(self):
+        world = World()
+        player = world.player
+        player.equip_weapon("pistol")
+        player.pistol_ammo = 2
+        double_jump(world)
+        world.controls.press("up")
+        until(world, lambda: player.vy < 0)
+        tap(world.controls, "combat_r")
+        until(world, lambda: player.floor == 1)
+        self.assertTrue(player.grounded)
+        self.assertEqual((player.state, player.pistol_ammo), ("RELOAD", 2))
+        world.controls.release("up")
+        until(world, lambda: player.state != "RELOAD")
+        self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 7))
+
     def test_double_jump_then_reverse_and_steer_up_lands_on_the_upper_floor(self):
         for running in (False, True):
             for direction in (-1, 1):

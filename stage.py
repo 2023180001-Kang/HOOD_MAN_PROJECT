@@ -237,7 +237,8 @@ class Stage:
             player.previous_jump_height = max(0.0, previous_feet - front)
             player.jump_count = player.air_kicks_used = 0
             player.upper_landing_requested = False
-            player.animation.set_state("IDLE")
+            if player.state != "RELOAD":
+                player.animation.set_state("IDLE")
 
     def update_navigation(self, dt, player, controls):
         """Route cross-floor enemies and grant stair entry in arrival order."""

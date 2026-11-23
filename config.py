@@ -125,13 +125,19 @@ BAG_ITEM_SLOT_RECTS = (
 )
 BAG_ITEM_SLOT_PADDING = 18
 PLAYER_IMAGE = "HoodMan_Sprite.png"
-PLAYER_PISTOL_IMAGE = "HOOD_MAN_pistol_matched_base_2048x2048.png"
+PLAYER_PISTOL_IMAGE = "HOOD_MAN_pistol_IDLE_matched_2048x2048.png"
 PLAYER_PISTOL_DAMAGE = 20
 PLAYER_PISTOL_MAGAZINE_SIZE = 7
 PLAYER_PISTOL_RANGE = 480.0
 PLAYER_PISTOL_SHOOT_FRAME = 2  # First muzzle flash, zero-based column of row 5.
-PLAYER_PISTOL_MUZZLE_X = 47.25  # Source muzzle (191, 135), feet y=241, scale 0.75.
-PLAYER_PISTOL_MUZZLE_HEIGHT = 79.5
+# Barrel tip in source pixels (right of cell center, above cropped feet), by frame.
+PLAYER_PISTOL_MUZZLE_OFFSETS = {
+    "IDLE": ((58, 106), (58, 104), (57, 98), (60, 103), (58, 103), (59, 104), (60, 98), (57, 104)),
+    "WALK": ((67, 105), (67, 102), (67, 106), (67, 109)) * 2,
+    "RUN": ((71, 114), (71, 109), (71, 116), (71, 102), (71, 114), (71, 109), (71, 116), (71, 101)),
+    "JUMP": ((78, 114), (73, 113), (74, 106), (75, 101), (73, 98), (75, 100), (72, 110), (68, 111)),
+    "SHOOT": ((77, 118), (76, 120), (68, 131), (72, 132), (72, 130), (75, 118), (73, 118), (71, 120)),
+}
 WEAPON_POSE_IMAGES = {
     "combat_knife": "HOOD_MAN_DAGGER_move and fight.png",
     "steel_pipe": "HOOD_MAN_STEEL_PIPE_move and fight.png",

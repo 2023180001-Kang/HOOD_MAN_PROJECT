@@ -33,7 +33,7 @@ class PistolEquipmentTests(unittest.TestCase):
     def test_original_pistol_sheet_and_all_64_clips_are_preserved(self):
         path = config.ROOT / config.PLAYER_PISTOL_IMAGE
         self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),
-                         "c812d7666b628d91a6670e4845839c548db0fecfab6d03217a9e5961d4acf9ad")
+                         "07ce9ed3d617a3bd568ece1308e1ce599bede982c750522ecd129c92b7c0d09e")
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             rows = json.load(file)[config.PLAYER_PISTOL_IMAGE]
         with Image.open(path) as image:

@@ -52,8 +52,12 @@ class PistolShootingTests(unittest.TestCase):
         bullet = world.projectiles[0]
         self.assertIsInstance(bullet, PlayerPistolBullet)
         self.assertEqual((bullet.damage, bullet.facing, bullet.floor), (20, 1, player.floor))
-        self.assertAlmostEqual(bullet.x, player.x + config.PLAYER_PISTOL_MUZZLE_X + bullet.half_width)
-        self.assertAlmostEqual(bullet.y, player.y + config.PLAYER_PISTOL_MUZZLE_HEIGHT)
+        muzzle_x, muzzle_y = player.aim_line[:2]
+        # First flash meets the barrel at (196, 110) in the cell, with feet at y=241.
+        self.assertEqual((muzzle_x, muzzle_y), (player.x + 68 * config.SPRITE_SCALE,
+                                               player.y + 131 * config.SPRITE_SCALE))
+        self.assertAlmostEqual(bullet.x, muzzle_x + bullet.half_width)
+        self.assertAlmostEqual(bullet.y, muzzle_y)
         self.assertIsNone(player.take_projectile())
         advance(world, 0.375, 120)
         self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 6))
@@ -169,9 +173,9 @@ class PistolShootingTests(unittest.TestCase):
         for facing in (-1, 1):
             for x in (68, 1280, 2492):
                 player.x, player.facing = x, facing
-                height = player.y + config.PLAYER_PISTOL_MUZZLE_HEIGHT
+                height = player.y + 106 * config.SPRITE_SCALE  # First IDLE frame.
                 self.assertEqual(player.aim_line, (
-                    x + facing * config.PLAYER_PISTOL_MUZZLE_X, height,
+                    x + facing * 58 * config.SPRITE_SCALE, height,
                     max(0, min(config.WORLD_WIDTH, x + facing * config.PLAYER_PISTOL_RANGE)), height))
         for state in ("HIT", "RELOAD", "DYING", "DEAD"):
             player.animation.set_state(state)

@@ -146,16 +146,20 @@ class Player:
             self.cancel_combat()
             self.animation.set_state("IDLE" if self.grounded else "JUMP")
 
+    def _pistol_muzzle_offset(self, frame):
+        forward, height = config.PLAYER_PISTOL_MUZZLE_OFFSETS[self.state][frame]
+        return self.facing * forward * config.SPRITE_SCALE, height * config.SPRITE_SCALE
+
     @property
     def aim_line(self):
         if (self.weapon != "pistol" or not self.alive or self.staircase is not None
                 or self.active_move is not None
-                or self.state not in ("IDLE", "WALK", "RUN", "JUMP", "SHOOT")):
+                or self.state not in config.PLAYER_PISTOL_MUZZLE_OFFSETS):
             return None
-        muzzle = self.x + self.facing * config.PLAYER_PISTOL_MUZZLE_X
-        height = self.y + config.PLAYER_PISTOL_MUZZLE_HEIGHT
+        offset_x, offset_y = self._pistol_muzzle_offset(self.animation.frame)
+        height = self.y + offset_y
         end = max(0.0, min(config.WORLD_WIDTH, self.x + self.facing * config.PLAYER_PISTOL_RANGE))
-        return muzzle, height, end, height
+        return self.x + offset_x, height, end, height
 
     def start_pistol_shot(self, direction=0):
         if (self.weapon != "pistol" or not self.alive or self.staircase is not None
@@ -193,9 +197,10 @@ class Player:
         self.animation.elapsed = max(self.animation.elapsed, flash_time + 1e-9 / fps)
         self.pistol_shot_pending = False
         self.pistol_ammo -= 1
+        offset_x, offset_y = self._pistol_muzzle_offset(config.PLAYER_PISTOL_SHOOT_FRAME)
         return PlayerPistolBullet(
-            self.x + self.facing * (config.PLAYER_PISTOL_MUZZLE_X + PlayerPistolBullet.half_width),
-            self.ground_y, self.jump_height + config.PLAYER_PISTOL_MUZZLE_HEIGHT,
+            self.x + offset_x + self.facing * PlayerPistolBullet.half_width,
+            self.ground_y, self.jump_height + offset_y,
             self.facing, self.floor)
 
     def update_pistol(self, dt):

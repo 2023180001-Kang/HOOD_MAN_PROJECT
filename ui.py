@@ -311,8 +311,7 @@ class UI:
                 enemy_name = "기본 적"
                 enemy_help = f"적 공격 피해: {config.ENEMY_DAMAGE}"
             assets.font.draw(22, 48, enemy_help, (205, 218, 231))
-            cycle_label = "M 소환 적 고정" if world.stage.index == 0 else "M 소환 적 순환"
-            assets.font.draw(740, 72, f"{cycle_label}: {source_index + 1}번 맵 · {enemy_name}",
+            assets.font.draw(740, 72, f"M 소환 적 순환: {source_index + 1}번 맵 · {enemy_name}",
                              (205, 218, 231))
             sources = "좌우/열린 문 무작위" if world.stage.doors else "좌우 무작위"
             assets.font.draw(740, 48, f"1~9: 해당 수만큼 적 소환 ({sources})", (205, 218, 231))

@@ -40,8 +40,8 @@ class SpawnEnemyCycleTests(unittest.TestCase):
             self.assertIs(stage.spawner.enemy_type, expected)
             self.assertEqual((stage.enemies, stage.spawner.spawned_count), ([], 0))
 
-    def test_every_nonfirst_map_starts_at_first_then_cycles_all_stage_entries_and_wraps(self):
-        for index in range(1, len(config.STAGE_IMAGES)):
+    def test_every_map_starts_at_first_then_cycles_all_stage_entries_and_wraps(self):
+        for index in range(len(config.STAGE_IMAGES)):
             world = World()
             world.select_stage(index)
             stage, player = world.stage, world.player
@@ -58,21 +58,20 @@ class SpawnEnemyCycleTests(unittest.TestCase):
                 self.assertIs(stage.drop_items, items)
                 self.assertEqual((stage.enemies, stage.spawner.spawned_count), ([], 0))
 
-    def test_first_map_m_is_a_noop_even_with_existing_enemies(self):
+    def test_first_alley_can_summon_each_enemy_type_alongside_existing_enemies(self):
         world = World(rng=random.Random(31))
         press(world, "spawn_2")
-        enemies = tuple(world.enemies)
-        rng = world.spawner.rng.getstate()
-        for _ in range(24):
+        expected_types = [Enemy, Enemy]
+        for expected in NATIVE_TYPES:
+            enemies = list(world.enemies)
+            rng = world.spawner.rng.getstate()
             press(world, "cycle_spawn_enemy")
-        self.assertEqual(world.stage_index, 0)
-        self.assertIsNone(world.stage.spawn_cycle_index)
-        self.assertEqual(world.stage.spawn_enemy_stage_index, 0)
-        self.assertIs(world.spawner.enemy_type, Enemy)
-        self.assertEqual(tuple(world.enemies), enemies)
-        self.assertEqual(world.spawner.spawned_count, 2)
-        self.assertEqual(world.spawner.rng.getstate(), rng)
-        self.assertTrue(all(type(enemy) is Enemy and enemy.hp == 200 for enemy in enemies))
+            self.assertEqual(world.enemies, enemies)
+            self.assertEqual(world.spawner.rng.getstate(), rng)
+            press(world, "spawn_1")
+            expected_types.append(expected)
+            self.assertEqual([type(enemy) for enemy in world.enemies], expected_types)
+            self.assertEqual(world.stage_index, 0)
 
     def test_m_hold_and_duplicate_presses_do_not_skip_entries(self):
         world = World()
@@ -120,7 +119,7 @@ class SpawnEnemyCycleTests(unittest.TestCase):
             self.assertTrue(all(type(enemy) is Enemy for enemy in world.enemies))
 
     def test_all_selected_types_spawn_on_each_current_maps_own_floor_with_unique_profiles(self):
-        for index in range(1, len(config.STAGE_IMAGES)):
+        for index in range(len(config.STAGE_IMAGES)):
             world = World(rng=random.Random(41))
             world.select_stage(index)
             stage = world.stage
@@ -199,13 +198,16 @@ class SpawnEnemyCycleTests(unittest.TestCase):
         self.assertEqual(world.stage.spawn_enemy_stage_index, 0)
         world.select_stage(0)
         press(world, "cycle_spawn_enemy")
-        self.assertIsNone(world.stage.spawn_cycle_index)
+        press(world, "cycle_spawn_enemy")
+        self.assertEqual(world.stage.spawn_cycle_index, 1)
         world.select_stage(8)
         self.assertEqual(world.stage.spawn_enemy_stage_index, 6)
         press(world, "cycle_spawn_enemy")
         self.assertEqual(world.stage.spawn_enemy_stage_index, 7)
         world.select_stage(3)
         self.assertEqual(world.stage.spawn_enemy_stage_index, 0)
+        world.select_stage(0)
+        self.assertEqual(world.stage.spawn_enemy_stage_index, 1)
 
     def test_loading_discards_m_and_does_not_cycle_either_scene_or_buffer_held_input(self):
         world = World()
@@ -228,7 +230,7 @@ class SpawnEnemyCycleTests(unittest.TestCase):
 
     def test_dead_input_is_consumed_and_f5_restores_every_maps_native_selection(self):
         world = World()
-        for index in range(1, len(NATIVE_TYPES)):
+        for index in range(len(NATIVE_TYPES)):
             world.select_stage(index)
             world.stage.cycle_spawn_enemy_type()
         world.player.take_damage(500)
@@ -308,7 +310,6 @@ class SpawnEnemyCycleTests(unittest.TestCase):
 
     def test_hud_tracks_selected_source_damage_and_m_help_and_respects_u_hiding(self):
         world = World()
-        world.select_stage(6)
         assets = SimpleNamespace(font=Mock(), images={config.HP_IMAGE: Mock(w=700, h=80)})
         ui = UI()
         expected_help = ("20", "20", "몽둥이", "몽둥이", "도끼", "도끼",

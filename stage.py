@@ -77,8 +77,6 @@ class Stage:
 
     def cycle_spawn_enemy_type(self):
         """M selects stage 1 first, then follows the full route; it never spawns."""
-        if self.index == 0:
-            return False
         self.spawn_cycle_index = (0 if self.spawn_cycle_index is None else
                                   (self.spawn_cycle_index + 1) % len(config.STAGE_IMAGES))
         self.spawner.enemy_type = enemy_type_for_stage(self.spawn_cycle_index)

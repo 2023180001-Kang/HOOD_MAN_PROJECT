@@ -54,7 +54,7 @@ def select_source(game, source):
 def check_cycle_and_hud(game):
     textures = dict(game.assets.images)
     font = game.assets.font
-    for index in range(1, len(config.STAGE_IMAGES)):
+    for index in range(len(config.STAGE_IMAGES)):
         world = fresh(game, index)
         assert world.stage.spawn_cycle_index is None and world.spawner.enemy_type is TYPES[index]
         for ordinal in range(13):
@@ -77,15 +77,17 @@ def check_cycle_and_hud(game):
     world = fresh(game, 0)
     tap(game, pico2d.SDLK_2)
     enemies = tuple(world.enemies)
-    for _ in range(15):
-        tap(game, pico2d.SDLK_m)
-    assert world.stage.spawn_cycle_index is None and world.spawner.enemy_type is Enemy
+    select_source(game, TYPES.index(ARSoldier))
     assert tuple(world.enemies) == enemies and world.spawner.spawned_count == 2
-    capture(game, "spawn_cycle_first_map_fixed")
+    tap(game, pico2d.SDLK_KP_3)
+    assert [type(enemy) for enemy in world.enemies] == [Enemy, Enemy, ARSoldier, ARSoldier, ARSoldier]
+    with patch.object(font, "draw", wraps=font.draw) as text:
+        capture(game, "spawn_cycle_first_alley_ar_soldiers")
+    assert any(call.args[2] == "M 소환 적 순환: 11번 맵 · AR 병사" for call in text.call_args_list)
     assert all(game.assets.images[name] is texture for name, texture in textures.items())
-    print("PASS: all 11 nonfirst maps use M to select stage 1, then all 12 stage entries and wrap; "
+    print("PASS: all 12 maps use M to select stage 1, then all 12 stage entries and wrap; "
           "M never spawns, duplicate native types keep separate source entries, HUD pixels update; "
-          "first-map M is fixed and textures are reused.")
+          "the first alley summons AR soldiers alongside its original thugs and reuses textures.")
 
 
 def check_repeat_and_numbers(game):

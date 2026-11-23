@@ -20,7 +20,7 @@ class Assets:
                          config.BAG_UI_IMAGE, config.BAG_BUTTON_IMAGE,
                          *(image for _, image, _ in config.BAG_ITEM_SPECS),
                          config.PLAYER_IMAGE, *config.PLAYER_EQUIPPED_SHEETS.values(), config.COMBAT_IMAGE,
-                         config.STEEL_CLUB_PROJECTILE_IMAGE,
+                         *(sprite.image for sprite in config.THROWN_WEAPON_SPRITES.values()),
                          config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
                          config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,
@@ -85,7 +85,7 @@ class Assets:
 
     def draw_projectile(self, bullet, camera_x, camera_y):
         if bullet.image_name == config.STEEL_CLUB_PROJECTILE_IMAGE:
-            self.draw_steel_club(bullet.x - camera_x, bullet.y - camera_y, bullet.facing, bullet.elapsed)
+            self.draw_thrown_weapon("steel_club", bullet.x - camera_x, bullet.y - camera_y, bullet.facing, bullet.elapsed)
             return
         image = self.images[bullet.image_name]
         tile = self.frames[bullet.image_name][0][bullet.frame]
@@ -135,18 +135,19 @@ class Assets:
             cell * scale_x * scale, cell * scale_y * scale,
         )
 
-    def draw_steel_club(self, x, y, facing, elapsed, *, grounded=False):
-        image = self.images[config.STEEL_CLUB_PROJECTILE_IMAGE]
-        angle = radians(63.4) if grounded else -tau * config.STEEL_CLUB_TURNS_PER_SECOND * elapsed
+    def draw_thrown_weapon(self, kind, x, y, facing, elapsed, *, grounded=False):
+        sprite = config.THROWN_WEAPON_SPRITES[kind]
+        image = self.images[sprite.image]
+        angle = radians(sprite.rest_angle) if grounded else -tau * config.THROWN_WEAPON_TURNS_PER_SECOND * elapsed
         image.clip_composite_draw(0, 0, image.w, image.h, facing * angle,
                                   "h" if facing < 0 else "", x, y,
-                                  image.w * config.STEEL_CLUB_DRAW_SCALE, image.h * config.STEEL_CLUB_DRAW_SCALE)
+                                  image.w * sprite.scale, image.h * sprite.scale)
 
     def draw_drop_item(self, item, camera_x, camera_y):
         x, ground_y = item.x - camera_x, item.surface_y - camera_y
-        if item.kind == "steel_club":
-            self.draw_steel_club(x, ground_y + item.jump_height + item.display_height / 2,
-                                 item.facing, item.elapsed, grounded=item.grounded)
+        if item.kind in config.THROWN_WEAPON_SPRITES:
+            self.draw_thrown_weapon(item.kind, x, ground_y + item.jump_height + item.display_height / 2,
+                                   item.facing, item.elapsed, grounded=item.grounded)
             return
         image = self.images[item.image_name]
         if item.kind in config.FIREARM_DROP_SPRITES:

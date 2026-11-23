@@ -154,8 +154,8 @@ class RemovedCounterTests(unittest.TestCase):
                    for name in (path, (config.ROOT / path).name)}
         self.assertFalse(retired & assets.images.keys())
         self.assertFalse(retired & assets.frames.keys())
-        self.assertEqual(len(assets.frames), 19)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 904)
+        self.assertEqual(len(assets.frames), 20)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 968)
 
     def test_hud_has_no_counter_keys_techniques_hold_or_followup_help_on_any_stage(self):
         game = scene()

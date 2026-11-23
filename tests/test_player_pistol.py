@@ -106,7 +106,7 @@ class PistolEquipmentTests(unittest.TestCase):
 
     def test_other_items_outside_drops_and_cancelled_pistol_drags_do_not_equip(self):
         menu = self.bag()
-        for slot in (1, 2, 4):
+        for slot in (1, 4):
             menu.press_pointer(*slot_center(slot))
             menu.release_pointer(640, 420)
             self.assertIsNone(menu.equipped_weapon)

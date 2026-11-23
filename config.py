@@ -1,6 +1,7 @@
 """Shared tuning values. Distances are world pixels; times are seconds."""
 
 from pathlib import Path
+from typing import NamedTuple
 
 
 ROOT = Path(__file__).resolve().parent
@@ -117,6 +118,7 @@ BAG_EQUIPPED_PISTOL_RECT = (640, 196, 752, 262)  # Grab the pistol/hand, not the
 BAG_EQUIPPED_RECTS = {
     "pistol": BAG_EQUIPPED_PISTOL_RECT,
     "steel_club": (642, 162, 784, 276),
+    "axe": (687, 150, 833, 292),
     "ar_rifle": (625, 195, 798, 276),
 }
 PISTOL_ITEM_IMAGE = "pistol_item_256.png"
@@ -154,16 +156,32 @@ PLAYER_IMAGE = "HoodMan_Sprite.png"
 PLAYER_PISTOL_IMAGE = "HoodMan_Pistol_MovingReload_2048x3072.png"
 PLAYER_RIFLE_IMAGE = "HoodMan_AR_2048x3072.png"
 PLAYER_STEEL_CLUB_IMAGE = "HoodMan_SteelClub_WalkRun_2048x2048.png"
+PLAYER_AXE_IMAGE = "HoodMan_Axe_2048x2048.png"
+AXE_PROJECTILE_IMAGE = "HoodMan_Axe_Projectile_256.png"
 STEEL_CLUB_PROJECTILE_IMAGE = "HoodMan_SteelClub_Projectile_256.png"
 STEEL_CLUB_THROW_DAMAGE = 40
 STEEL_CLUB_RELEASE_FRAME = 4  # Fifth cell of row six, counted from zero.
-STEEL_CLUB_TURNS_PER_SECOND = 4.0
+THROWN_WEAPON_TURNS_PER_SECOND = 4.0
 # The held club spans about 108 source pixels end to end. The loose sprite,
 # rotated into its resting pose, occupies only 93 x 25 of its transparent canvas.
 STEEL_CLUB_DRAW_SCALE = 108 * SPRITE_SCALE / 93
-STEEL_CLUB_REST_HEIGHT = 25 * STEEL_CLUB_DRAW_SCALE
+
+
+class ThrownWeaponSprite(NamedTuple):
+    image: str
+    scale: float
+    rest_angle: float  # Degrees counterclockwise when facing right.
+    rest_height: float
+
+
+THROWN_WEAPON_SPRITES = {
+    "steel_club": ThrownWeaponSprite(STEEL_CLUB_PROJECTILE_IMAGE, STEEL_CLUB_DRAW_SCALE,
+                                     63.4, 25 * STEEL_CLUB_DRAW_SCALE),
+    # Both axe images use the same source size. At 90 degrees the loose blade is 64 px tall.
+    "axe": ThrownWeaponSprite(AXE_PROJECTILE_IMAGE, SPRITE_SCALE, 90.0, 64 * SPRITE_SCALE),
+}
 PLAYER_EQUIPPED_SHEETS = {"pistol": PLAYER_PISTOL_IMAGE, "ar_rifle": PLAYER_RIFLE_IMAGE,
-                          "steel_club": PLAYER_STEEL_CLUB_IMAGE}
+                          "steel_club": PLAYER_STEEL_CLUB_IMAGE, "axe": PLAYER_AXE_IMAGE}
 PLAYER_PISTOL_DAMAGE = 20
 PLAYER_PISTOL_MAGAZINE_SIZE = 7
 PLAYER_RIFLE_DAMAGE = 10
@@ -262,7 +280,7 @@ COMBAT_MOVE_SPECS = (
     ("f", "오른발 차기", 2, 60, 130.0, 146.0, COMBAT_KICK_FPS),
 )
 WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프", "pistol": "권총",
-                "steel_club": "쇠몽둥이", "ar_rifle": "AR 소총"}
+                "steel_club": "쇠몽둥이", "axe": "도끼", "ar_rifle": "AR 소총"}
 WEAPON_HIT_IMAGES = {"combat_knife": PUNCH_KICK_HIT_IMAGE, "steel_pipe": CLUB_HIT_IMAGE}
 # The three new attacks inherit the existing A/S/D balance. Impact windows
 # follow the source strike poses; overhead/jump attacks hit on their downswing.
@@ -569,8 +587,8 @@ PLAYER_RIFLE_ANIMATIONS = {
     "WALK_RELOAD": (9, 8.0, False), "RUN_RELOAD": (10, 8.0, False),
     "HIT": (11, 12.0, False), "DYING": (12, 10.0, False), "DEAD": (12, 10.0, False),
 }
-EQUIPPED_ANIMATIONS = {"steel_club": ARMED_PLAYER_POSES, "pistol": PLAYER_PISTOL_ANIMATIONS,
-                       "ar_rifle": PLAYER_RIFLE_ANIMATIONS}
+EQUIPPED_ANIMATIONS = {"steel_club": ARMED_PLAYER_POSES, "axe": ARMED_PLAYER_POSES,
+                       "pistol": PLAYER_PISTOL_ANIMATIONS, "ar_rifle": PLAYER_RIFLE_ANIMATIONS}
 ENEMY_ANIMATIONS = {
     "IDLE": (1, 7.0, True),
     "WALK": (2, 10.0, True),

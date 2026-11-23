@@ -37,6 +37,8 @@ KEYS = {
     pico2d.SDLK_u: "toggle_details",
     pico2d.SDLK_g: "weapon_interact",
     pico2d.SDLK_m: "cycle_spawn_enemy",
+    pico2d.SDLK_PLUS: "training_target",
+    pico2d.SDLK_KP_PLUS: "training_target",
 }
 KEYS.update({getattr(pico2d, f"SDLK_{key}"): f"combat_{key}"
              for key, *_ in config.COMBAT_MOVE_SPECS})
@@ -105,6 +107,9 @@ class Game:
                     )
             elif not self._menu_requested and event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
+                if (event.key.keysym.sym == pico2d.SDLK_EQUALS
+                        and (event.key.keysym.mod & pico2d.KMOD_SHIFT or event.type == pico2d.SDL_KEYUP)):
+                    key = "training_target"
                 if key is not None:
                     if event.type == pico2d.SDL_KEYDOWN and not event.key.repeat:
                         self.world.controls.press(key)
@@ -145,7 +150,7 @@ class Game:
 
     def update(self, dt):
         # Presentation remains toggleable while gameplay is loading or dead.
-        if self.world.controls.take_press("toggle_details"):
+        if self.world.controls.take_press("toggle_details") and not self.world.training:
             self.ui.details_visible = not self.ui.details_visible
         if self.world.controls.take_press("toggle_floor_bounds"):
             self.ui.floor_bounds_visible = not self.ui.floor_bounds_visible

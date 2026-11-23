@@ -101,10 +101,9 @@ class ResearcherBullet:
             self.elapsed += travel
             if hit:
                 self.spent = True  # Also consume a bullet blocked by P invincibility.
-                previous_hp = target.hp
                 applied = target.take_damage(self.damage)
                 self.impact_target = target
-                self.impact_damage = previous_hp - target.hp
+                self.impact_damage = target.last_hit_damage if applied else 0
                 return applied
             if terminal:
                 if ground_time <= step + 1e-12:

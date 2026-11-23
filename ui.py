@@ -127,7 +127,7 @@ class UI:
         import pico2d
 
         for enemy in world.enemies:
-            if not enemy.alive:
+            if not enemy.alive or world.training:
                 continue
             tile = assets.frames[enemy.sprite_image][enemy.animation.row - 1][enemy.animation.frame]
             scale = config.SPRITE_IMAGE_SCALES.get(enemy.sprite_image, config.SPRITE_SCALE)
@@ -144,7 +144,7 @@ class UI:
                 pico2d.draw_rectangle(left, bottom, left + config.ENEMY_HP_BAR_WIDTH * ratio - 1,
                                       bottom + config.ENEMY_HP_BAR_HEIGHT - 1,
                                       215, 38, 45, filled=True)
-        if self.details_visible and assets.damage_font is not None:
+        if (world.training or self.details_visible) and assets.damage_font is not None:
             for number in world.damage_numbers:
                 text = f"-{number.damage}"
                 x = number.x - camera_x - len(text) * config.DAMAGE_NUMBER_FONT_SIZE / 4
@@ -153,7 +153,7 @@ class UI:
                 assets.damage_font.draw(x, y, text, (255, 224, 110))
 
     def draw_pickup_prompt(self, assets, world, camera_x, camera_y):
-        if not self.details_visible or assets.font is None:
+        if (not self.details_visible and not world.training) or assets.font is None:
             return
         item = world.pickup_item
         if item is None:
@@ -162,12 +162,45 @@ class UI:
         y = (item.surface_y - camera_y
              + item.display_height
              + config.WEAPON_PROMPT_GAP)
-        assets.font.draw(x + 1, y - 1, "G", (12, 15, 20))
-        assets.font.draw(x, y, "G", (255, 224, 110))
+        label = f"G  {config.WEAPON_NAMES[item.kind]}" if world.training else "G"
+        assets.font.draw(x + 1, y - 1, label, (12, 15, 20))
+        assets.font.draw(x, y, label, (255, 224, 110))
+
+    @staticmethod
+    def draw_training_help(assets, player):
+        import pico2d
+
+        if assets.font is None:
+            return
+        pico2d.draw_rectangle(30, 542, 1250, 698, 17, 22, 29, filled=True)
+        font = assets.font
+        heading, body = (255, 218, 130), (230, 234, 239)
+        font.draw(52, 671, "조작법 익히기", heading)
+        font.draw(52, 637, "방향키  이동     Shift + 방향키  달리기", body)
+        font.draw(52, 609, "Space  점프 · 두 번 눌러 이단 점프", body)
+        font.draw(52, 581, "G  가까운 무기 줍기 · 교체 · 내려놓기", body)
+        font.draw(52, 555, "+  내 앞에 연습 상대 소환     Esc  메인 메뉴", body)
+        weapon = config.WEAPON_NAMES.get(player.weapon, "맨손")
+        font.draw(620, 671, f"공격 연습  ·  {weapon}", heading)
+        if player.weapon == "pistol":
+            basic = (f"A  사격     S  스트레이트     R  재장전     "
+                     f"탄약  {player.pistol_ammo} / {config.PLAYER_PISTOL_MAGAZINE_SIZE}")
+        else:
+            basic = "     ".join(f"{key[-1].upper()}  {player.moves[key].name}" for key in ("combat_a", "combat_s"))
+        font.draw(620, 637, basic, body)
+        kicks = ("이단 점프 후 D  조준 · 다시 눌러 내려찍기     F  오른발 차기"
+                 if player.weapon in config.WEAPON_POSE_IMAGES else "D  왼발 차기     F  오른발 차기")
+        font.draw(620, 609, kicks, body)
+        font.draw(620, 581, "Q  양주먹     W 유지  돌진     E 두 번  연속 발차기", body)
+        last = "T  어퍼컷" if player.weapon == "pistol" else "R 두 번  올려치기     T  어퍼컷"
+        font.draw(620, 555, last, body)
 
     def draw(self, assets, world):
         import pico2d
 
+        if world.training:
+            self.draw_training_help(assets, world.player)
+            return
         image = assets.images[config.HP_IMAGE]
         scale = config.UI_SCALE
         x = config.UI_MARGIN

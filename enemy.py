@@ -49,6 +49,7 @@ class Enemy:
         self.run_speed = config.ENEMY_RUN_SPEEDS[0] if run_speed is None else run_speed
         self.running = False
         self.hp = self.max_hp
+        self.last_hit_damage = 0
         self.corpse_elapsed = 0.0
         self.car_hit = False
         self.rush_release_still = 0.0
@@ -129,7 +130,8 @@ class Enemy:
     def take_damage(self, damage):
         if not self.alive:
             return False
-        self.hp = max(0, self.hp - damage)
+        self.last_hit_damage = min(self.hp, damage)
+        self.hp -= self.last_hit_damage
         self.vx = 0.0
         self.ground_vy = 0.0
         self.running = False

@@ -42,13 +42,13 @@ class RushSequence:
                 contacts.append((contact, enemy))
         impacts = []
         for _, enemy in sorted(contacts, key=lambda entry: entry[0]):
-            hp = enemy.hp
             if enemy.start_rush_carry(STRONG_MOVES["combat_w"], self.direction):
-                enemy.floor = player.floor
-                enemy.walkable = self.walkable
                 player.hit_enemies.add(enemy)
-                self.captives.append(enemy)
-                impacts.append((enemy, hp - enemy.hp))
+                if enemy.state == "RUSH_CARRIED":
+                    enemy.floor = player.floor
+                    enemy.walkable = self.walkable
+                    self.captives.append(enemy)
+                impacts.append((enemy, enemy.last_hit_damage))
         if not self.sync_pair():
             player.release_rush()
             self.finish()

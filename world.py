@@ -194,7 +194,7 @@ class World:
             actor.stair_arrival = False
         self.player.stair_regrab_remaining = max(0.0, self.player.stair_regrab_remaining - dt)
         self.stage.exit_player_stairs(self.player, self.controls)
-        if self.controls.take_press("stage_exits") and self.player.alive:
+        if self.controls.take_press("stage_exits") and self.player.alive and not self.training:
             self.stage.arrows_visible = True
         if self.controls.take_press("toggle_doors"):
             self.stage.toggle_doors()
@@ -224,10 +224,12 @@ class World:
         for number in self.damage_numbers:
             number.update(dt)
         self.damage_numbers = [number for number in self.damage_numbers if not number.finished]
-        if self.controls.take_press("cycle_spawn_enemy") and self.player.alive:
+        if self.controls.take_press("training_target") and self.training and self.player.alive:
+            self.stage.summon_target(self.player)
+        if self.controls.take_press("cycle_spawn_enemy") and self.player.alive and not self.training:
             self.stage.cycle_spawn_enemy_type()
         for count in config.SPAWN_COUNTS:
-            if self.controls.take_press(f"spawn_{count}") and self.player.alive:
+            if self.controls.take_press(f"spawn_{count}") and self.player.alive and not self.training:
                 spawned = self.spawner.spawn(count, self.elapsed)
                 place_ranged_spawns(self.player, self.enemies, spawned)
                 self.enemies.extend(spawned)
@@ -278,11 +280,10 @@ class World:
             player_box = self.player.attack_box
             if player_box is not None:
                 for enemy in self.enemies:
-                    previous_hp = enemy.hp
                     transit = transit_target(enemy)
                     if self.player.try_hit(enemy):
                         self.damage_numbers.append(
-                            DamageNumber.above_body(enemy.body, previous_hp - enemy.hp,
+                            DamageNumber.above_body(enemy.body, enemy.last_hit_damage,
                                                      depth=enemy.ground_y - config.GROUND_Y))
                         contact_box = world_rect(player_box, self.player) if transit else player_box
                         contact_body = world_rect(enemy.body, enemy) if transit else enemy.body

@@ -37,6 +37,7 @@ class Player:
         self.jump_count = 0
         self.facing = 1
         self.hp = config.MAX_HP
+        self.last_hit_damage = 0
         self.invincible = False
         self.car_hit = False
         self.weapon = None
@@ -434,7 +435,8 @@ class Player:
     def take_damage(self, damage):
         if not self.alive or self.invincible:
             return False
-        self.hp = max(0, self.hp - damage)
+        self.last_hit_damage = min(self.hp, damage)
+        self.hp -= self.last_hit_damage
         if self.state == "RELOAD" and self.hp:
             self.pistol_reload_interrupted = True
         self.vx = 0.0

@@ -11,6 +11,7 @@ from projectiles import AxeProjectile
 from tests.helpers import advance, tap
 from tests.test_bag_drag import slot_center
 from tests.test_weapon_combat import equipped_world, target
+from tests.test_weapon_leap import aim
 from world import World
 
 
@@ -68,6 +69,36 @@ class PlayerAxeTests(unittest.TestCase):
         self.assertEqual(enemy.hp, hp - 60)
         self.assertEqual(world.player.weapon, "axe")
         self.assertFalse(world.projectiles)
+
+    def test_second_d_dives_with_axe_afterimages_and_hits_for_forty_on_landing(self):
+        for side in (-1, 1):
+            with self.subTest(side=side):
+                world = aim("axe")
+                player = world.player
+                advance(world, 0.6)
+                self.assertEqual((player.weapon_leap_phase, world.time_scale), ("AIM", 0.2))
+                self.assertFalse(world.afterimages)
+
+                enemy = target(world, side=side)
+                enemy.x = player.x + side * 155
+                world.controls.press("right" if side > 0 else "left")
+                tap(world.controls, "combat_d")
+                world.step(config.FIXED_DT)
+                self.assertEqual(player.weapon_leap_phase, "DIVE")
+                echo = world.afterimages[0]
+                self.assertEqual((echo.image_name, echo.row, echo.facing), (config.PLAYER_AXE_IMAGE, 5, side))
+                self.assertGreater((player.x - echo.x) * side, 0)
+                self.assertLess(player.jump_height, echo.jump_height)
+
+                for _ in range(60):
+                    if player.grounded:
+                        break
+                    self.assertEqual(enemy.hp, enemy.max_hp)
+                    world.step(config.FIXED_DT)
+                self.assertEqual(player.weapon_leap_phase, "LANDING")
+                self.assertEqual([number.damage for number in world.damage_numbers], [40])
+                advance(world, 0.6)
+                self.assertEqual((enemy.max_hp - enemy.hp, player.weapon, world.time_scale), (40, "axe", 1))
 
     def test_s_releases_one_spinning_axe_on_cell_five_in_the_original_direction(self):
         for facing in (-1, 1):

@@ -192,8 +192,8 @@ class UI:
         else:
             basic = "     ".join(f"{key[-1].upper()}  {player.moves[key].name}" for key in ("combat_a", "combat_s"))
         font.draw(620, 637, basic, body)
-        if player.weapon == "steel_club":
-            kicks = "D  왼발 차기 · 이단 점프 중 D  조준 → D  쇠몽둥이 내려찍기     F  오른발 차기"
+        if player.weapon in ("steel_club", "axe"):
+            kicks = f"D  왼발 차기 · 이단 점프 중 D  조준 → D  {weapon} 내려찍기     F  오른발 차기"
         elif player.moves["combat_d"].jump_attack:
             kicks = "이단 점프 후 D  조준 · 다시 눌러 내려찍기     F  오른발 차기"
         else:
@@ -281,7 +281,7 @@ class UI:
                 elif world.player.weapon == "steel_club":
                     help_text = "A 휘두르기 · S 던지기 · G 회수 · 이단 점프 중 D 조준 → D 내려찍기"
                 elif world.player.weapon == "axe":
-                    help_text = "A 도끼 휘두르기 · S 도끼 던지기 · G 회수"
+                    help_text = "A 도끼 휘두르기 · S 도끼 던지기 · G 회수 · 이단 점프 중 D 조준 → D 내려찍기"
                 else:
                     help_text = "무기 내려찍기: Space 두 번 → D 슬로 모션 / 방향키 조준 → D 급강하"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))

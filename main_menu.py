@@ -192,12 +192,14 @@ class MainMenu:
             for x in config.STAGE_LOCK_CENTERS_X:
                 lock.draw(x, config.STAGE_LOCK_Y)
         for button in self.buttons:
-            image = assets.images[button.image_name]
-            frame_width = image.w // 2
-            # Left: original black button. Right: original gray hover button.
-            left = frame_width if button is self.hovered_button else 0
-            image.clip_draw(left, 0, frame_width, image.h,
-                            button.x, button.y, button.width, button.height)
+            self.draw_button(assets, button)
+
+    def draw_button(self, assets, button):
+        image = assets.images[button.image_name]
+        frame_width = image.w // 2
+        left = frame_width if button is self.hovered_button else 0
+        image.clip_draw(left, 0, frame_width, image.h,
+                        button.x, button.y, button.width, button.height)
 
     def draw_bag_player(self, assets):
         animation = self.bag_player_animation

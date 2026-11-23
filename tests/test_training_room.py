@@ -2,13 +2,14 @@ import unittest
 from unittest.mock import Mock, patch
 
 import pico2d
+from sdl2 import SDL_BUTTON_RIGHT
 
 import config
 from combat import MOVES, STRONG_MOVES
 from enemy import Enemy
 from projectiles import PlayerPistolBullet, SteelClubProjectile
 from tests.helpers import advance, tap
-from tests.test_main_menu import process_menu_events
+from tests.test_main_menu import mouse_event, process_menu_events
 from tests.test_menu_return import click_event, key_event, scene
 
 
@@ -28,6 +29,24 @@ class TrainingRoomTests(unittest.TestCase):
     def press(self, key):
         tap(self.world.controls, key)
         self.world.update(config.FIXED_DT)
+
+    def test_back_arrow_requests_menu_only_on_left_click_in_training(self):
+        back = self.game.menu.bag_back_button
+        move = mouse_event(pico2d.SDL_MOUSEMOTION, back.x, back.y)
+        right_click = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, back.x, back.y, SDL_BUTTON_RIGHT)
+        outside = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, back.x + back.width, back.y)
+        process_menu_events(self.game, move, right_click, menu_screen=False)
+        self.assertIs(self.game.menu.hovered_button, back)
+        process_menu_events(self.game, outside, menu_screen=False)
+        self.assertIsNone(self.game.menu.hovered_button)
+        self.assertFalse(self.game._menu_requested)
+        self.world.controls.press("right")
+        process_menu_events(self.game, click_event(back), key_event(pico2d.SDLK_a), menu_screen=False)
+        self.assertTrue(self.game._menu_requested)
+        self.assertFalse(self.world.controls.held or self.world.controls.pressed)
+        self.launch("game_start")
+        process_menu_events(self.game, click_event(back), menu_screen=False)
+        self.assertFalse(self.game._menu_requested)
 
     def test_whole_floor_in_fixed_view_and_campaign_starts_separately(self):
         stage, player = self.world.stage, self.world.player

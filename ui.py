@@ -172,14 +172,16 @@ class UI:
 
         if assets.font is None:
             return
-        pico2d.draw_rectangle(30, 542, 1250, 698, 17, 22, 29, filled=True)
+        panel_left = config.BAG_BACK_BUTTON_LEFT + config.BAG_BACK_BUTTON_SIZE[0] + 12
+        text_left = panel_left + 22
+        pico2d.draw_rectangle(panel_left, 542, 1250, 698, 17, 22, 29, filled=True)
         font = assets.font
         heading, body = (255, 218, 130), (230, 234, 239)
-        font.draw(52, 671, "조작법 익히기", heading)
-        font.draw(52, 637, "방향키  이동     Shift + 방향키  달리기", body)
-        font.draw(52, 609, "Space  점프 · 두 번 눌러 이단 점프", body)
-        font.draw(52, 581, "G  가까운 무기 줍기 · 교체 · 내려놓기", body)
-        font.draw(52, 555, "+  내 앞에 연습 상대 소환     Esc  메인 메뉴", body)
+        font.draw(text_left, 671, "조작법 익히기", heading)
+        font.draw(text_left, 637, "방향키  이동     Shift + 방향키  달리기", body)
+        font.draw(text_left, 609, "Space  점프 · 두 번 눌러 이단 점프", body)
+        font.draw(text_left, 581, "G  가까운 무기 줍기 · 교체 · 내려놓기", body)
+        font.draw(text_left, 555, "+  내 앞에 연습 상대 소환     Esc  메인 메뉴", body)
         weapon = config.WEAPON_NAMES.get(player.weapon, "맨손")
         font.draw(620, 671, f"공격 연습  ·  {weapon}", heading)
         if player.weapon == "pistol":

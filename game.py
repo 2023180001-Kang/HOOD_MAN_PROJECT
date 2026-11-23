@@ -59,6 +59,11 @@ class Game:
         self._escape_held = False
         pico2d.SDL_SetWindowTitle(backend.window, b"HOOD_MAN_PROJECT")
 
+    def request_main_menu(self):
+        self._menu_requested = True
+        self.world.controls.held.clear()
+        self.world.controls.pressed.clear()
+
     def handle_events(self, *, menu_screen=False):
         # pico2d.get_events filters out focus events, so poll its SDL event queue
         # directly to prevent stuck keys after Alt+Tab or clicking another window.
@@ -85,9 +90,7 @@ class Game:
                 elif not event.key.repeat and not self._escape_held:
                     self._escape_held = True
                     if not menu_screen:
-                        self._menu_requested = True
-                        self.world.controls.held.clear()
-                        self.world.controls.pressed.clear()
+                        self.request_main_menu()
             elif menu_screen:
                 if event.type == pico2d.SDL_MOUSEMOTION:
                     self.menu.move_pointer(
@@ -105,6 +108,15 @@ class Game:
                     self.menu.release_pointer(
                         event.button.x, config.SCREEN_HEIGHT - 1 - event.button.y,
                     )
+            elif self.world.training and event.type in (pico2d.SDL_MOUSEMOTION, pico2d.SDL_MOUSEBUTTONDOWN):
+                pointer = event.motion if event.type == pico2d.SDL_MOUSEMOTION else event.button
+                back = self.menu.bag_back_button
+                if back.contains(pointer.x, config.SCREEN_HEIGHT - 1 - pointer.y):
+                    self.menu.hovered_button = back
+                    if event.type == pico2d.SDL_MOUSEBUTTONDOWN and event.button.button == SDL_BUTTON_LEFT:
+                        self.request_main_menu()
+                else:
+                    self.menu.clear_hover()
             elif not self._menu_requested and event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if (event.key.keysym.sym == pico2d.SDLK_EQUALS
@@ -218,6 +230,8 @@ class Game:
         self.ui.draw_enemy_health(self.assets, self.world, camera_x, camera_y)
         self.ui.draw_pickup_prompt(self.assets, self.world, camera_x, camera_y)
         self.ui.draw(self.assets, self.world)
+        if self.world.training:
+            self.menu.draw_button(self.assets, self.menu.bag_back_button)
         if present:
             pico2d.update_canvas()
 

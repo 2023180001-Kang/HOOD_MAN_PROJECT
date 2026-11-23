@@ -103,7 +103,7 @@ class Researcher(Enemy):
             self.x + self.facing * (self.muzzle_x + self.projectile_type.half_width),
             self.ground_y, self.jump_height + self.muzzle_height, self.facing, self.floor)
 
-    def pursuit_delta(self, dx, dy):
+    def pursuit_delta(self, dx, dy, player):
         return (self.facing * max(0.0, abs(dx) - self.shoot_range),
                 dy if abs(dy) > config.ATTACK_DEPTH_TOLERANCE else 0.0)
 
@@ -141,7 +141,7 @@ class Researcher(Enemy):
         if dx:
             self.facing = 1 if dx > 0 else -1
         self.vx = self.ground_vy = 0.0
-        target_x, target_y = self.pursuit_delta(dx, dy)
+        target_x, target_y = self.pursuit_delta(dx, dy, player)
         if abs(target_x) <= 1e-9 and abs(target_y) <= 1e-9:
             self.running = False
             if self.cooldown <= 0 and self.at_firing_position(dx, dy):

@@ -77,8 +77,10 @@ def _nearest_ranged_position(enemy, obstacles, origin, *, firing_at=None):
     """Find the nearest free footprint without iterative pushes or wall escape."""
     area, padding = enemy.walkable, enemy.boundary_padding
     x, y = area.project(*origin, padding)
+    if firing_at is not None:
+        fire_left, fire_right = enemy.firing_x_limits(firing_at)
     if (_ranged_position_free(x, y, obstacles) and (firing_at is None
-            or (abs(x - firing_at.x) <= enemy.shoot_range
+            or (fire_left <= x <= fire_right
                 and abs(y - firing_at.ground_y) < config.ATTACK_DEPTH_TOLERANCE))):
         return x, y
     lanes = {y, *(py for _, py in area.inset(padding))}
@@ -97,8 +99,8 @@ def _nearest_ranged_position(enemy, obstacles, origin, *, firing_at=None):
         if firing_at is not None:
             if abs(lane - py) > band:
                 continue
-            low = max(low, firing_at.x - enemy.shoot_range)
-            high = min(high, firing_at.x + enemy.shoot_range)
+            low = max(low, fire_left)
+            high = min(high, fire_right)
             if low > high:
                 continue
         intervals = sorted((ox - width, ox + width) for ox, oy, width, depth in obstacles
@@ -224,10 +226,16 @@ def _prepare_ranged_approach(player, enemies):
                for ox, oy in reserved.values()):
             _, bottom, _, top = enemy.walkable.bounds
             lane += band if top - lane >= lane - bottom else -band
-        preferred = (player.x + side * clamp(abs(enemy.x - player.x), muzzle_gap, enemy.shoot_range), lane)
+        fire_left, fire_right = enemy.firing_x_limits(player)
+        preferred_x = enemy.x
+        if not fire_left <= preferred_x <= fire_right:
+            # Aim inside the moving band so a squad can actually reach its reserved slot.
+            preferred_x += player.vx * enemy.aim_duration
+        gap = clamp(side * (preferred_x - player.x), muzzle_gap, enemy.shoot_range)
+        preferred = (player.x + side * gap, lane)
         if enemy.ranged_goal is not None:
             gx, gy = enemy.ranged_goal
-            if (abs(gx - player.x) <= enemy.shoot_range and abs(gy - player.ground_y) <= band
+            if (fire_left <= gx <= fire_right and abs(gy - player.ground_y) <= band
                     and _ranged_position_free(gx, gy, obstacles)):
                 preferred = enemy.ranged_goal
         goal = _nearest_ranged_position(enemy, obstacles, preferred, firing_at=player)
@@ -265,6 +273,10 @@ def resolve_ranged_spacing(player, enemies):
     previous = {e: (e.previous_x, e.previous_ground_y) for e in active}
     for enemy in active:
         start = previous.pop(enemy)
+        # A landing against a wall can force the body solver to move a planted shooter.
+        # Cancel before World emits a shot from a position the warning never showed.
+        if enemy.state == "ATTACK" and hypot(enemy.x - start[0], enemy.ground_y - start[1]) > 1e-8:
+            enemy.stop()
         if (enemy.x, enemy.ground_y) != start and enemy.state in ("WALK", "RUN"):
             obstacles = [(x, y, 2 * config.ENEMY_HALF_WIDTH, config.BODY_DEPTH_TOLERANCE)
                          for e, (x, y) in previous.items() if enemy.body.overlaps_vertically(e.body)]

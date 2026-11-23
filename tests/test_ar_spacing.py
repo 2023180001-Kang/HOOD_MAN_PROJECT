@@ -181,6 +181,45 @@ class ARSpacingTests(unittest.TestCase):
             self.assertEqual(enemy.state, "RUN")
             self.assertGreater((enemy.x - enemy.previous_x) * side, 0)
 
+    def test_riflemen_finish_their_warning_when_a_player_walks_away_at_the_range_boundary(self):
+        for index, side in ((10, -1), (11, 1)):
+            for count in (1, 2):
+                with self.subTest(index=index, side=side, count=count):
+                    world, enemies = crowd(count, side, index=index, distance=600)
+                    for i, enemy in enumerate(enemies):
+                        enemy.x = world.player.x + side * (600 + 200 * i)
+                        enemy.run_speed = 480
+                    world.controls.press("right" if side < 0 else "left")
+                    world.player.vx = -side * config.WALK_SPEED
+                    warnings = {}
+                    for _ in range(3 * 120):
+                        world.step(config.FIXED_DT)
+                        for enemy in enemies:
+                            if enemy.aiming:
+                                anchor = (enemy.x, enemy.ground_y, enemy.aim_line, enemy.rounds_fired)
+                                self.assertEqual(warnings.setdefault(enemy, anchor), anchor)
+                            elif enemy in warnings:
+                                self.assertGreater(enemy.rounds_fired, warnings.pop(enemy)[-1])
+                    self.assertTrue(any(enemy.rounds_fired for enemy in enemies))
+
+    def test_landing_at_a_wall_cancels_a_displaced_warning_before_firing(self):
+        world, (enemy,) = crowd(1)
+        player = world.player
+        player.x = player.boundary_padding
+        enemy.x = enemy.boundary_padding + 2
+        player.jump_height, player.vy, player.jump_count = config.ENEMY_HEIGHT + 2, -150, 1
+        world.step(config.FIXED_DT)
+        self.assertTrue(enemy.aiming)
+        enemy.aim_remaining = config.FIXED_DT
+        x = enemy.x
+        world.step(config.FIXED_DT)
+        self.assertGreater(enemy.x, x)
+        self.assertIsNone(enemy.aim_line)
+        self.assertEqual(enemy.ammo, enemy.magazine_size)
+        self.assertFalse(world.projectiles)
+        world.step(config.FIXED_DT)
+        self.assertEqual(enemy.aim_remaining, enemy.aim_duration)
+
     def test_every_summoned_rifleman_fires_when_more_arrive_than_fit_in_range(self):
         for index in (10, 11):
             world, _ = crowd(0, index=index)

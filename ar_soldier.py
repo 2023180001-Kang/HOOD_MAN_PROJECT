@@ -104,10 +104,15 @@ class ARSoldier(Researcher):
             self.show_fire_pose()
         return bullet
 
-    def pursuit_delta(self, dx, dy):
-        # Outside range, close on the player even when no squad slot exists.
-        # Once in range a solo rifleman only needs to align on the depth axis.
-        target_x = dx if abs(dx) > self.shoot_range + 1e-9 else 0.0
+    def firing_x_limits(self, player):
+        # A stationary rifleman must still be in range when the warning ends.
+        travel = player.vx * self.aim_duration
+        return (player.x - self.shoot_range + max(0.0, travel),
+                player.x + self.shoot_range + min(0.0, travel))
+
+    def pursuit_delta(self, dx, dy, player):
+        left, right = self.firing_x_limits(player)
+        target_x = 0.0 if left - 1e-9 <= self.x <= right + 1e-9 else dx
         target_y = dy if abs(dy) > config.ATTACK_DEPTH_TOLERANCE else 0.0
         if self.target_x is not None:
             target_x = self.target_x - self.x

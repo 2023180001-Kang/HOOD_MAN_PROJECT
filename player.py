@@ -70,7 +70,8 @@ class Player:
 
     @property
     def moves(self):
-        return moves_for_weapon(self.weapon)
+        double_jump = self.jump_count == 2 or self.weapon_leap_phase is not None
+        return moves_for_weapon(self.weapon, double_jump=double_jump)
 
     @property
     def time_scale(self):
@@ -538,7 +539,10 @@ class Player:
                 return
         if self.rush_phase in ("WINDUP", "FLY") and "combat_w" not in controls.held:
             self.release_rush()
-        move = STRONG_MOVES.get(combat_pressed) or self.moves.get(combat_pressed)
+        # A second Space and D may arrive together, before start_jump increments jump_count.
+        starting_second_jump = jump_pressed and self.active_move is None and self.jump_count == 1
+        moves = moves_for_weapon(self.weapon, double_jump=True) if starting_second_jump else self.moves
+        move = STRONG_MOVES.get(combat_pressed) or moves.get(combat_pressed)
         if jump_pressed and self.active_move is None and (move is None or move.jump_attack):
             self.start_jump(controls)
         if move is not None:

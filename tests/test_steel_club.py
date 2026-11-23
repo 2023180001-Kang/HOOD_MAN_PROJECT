@@ -4,12 +4,13 @@ from unittest.mock import Mock
 
 import config
 from assets import Assets
-from combat import MOVES, STEEL_CLUB_SWING, STEEL_CLUB_THROW
+from combat import MOVES, STEEL_CLUB_DIVE, STEEL_CLUB_SWING, STEEL_CLUB_THROW
 from enemy import Enemy
 from main_menu import MainMenu
 from projectiles import SteelClubProjectile
 from tests.helpers import advance, tap
 from tests.test_bag_drag import slot_center
+from tests.test_weapon_combat import double_jump, equipped_world, target
 from world import World
 
 
@@ -49,6 +50,60 @@ class SteelClubCombatTests(unittest.TestCase):
         self.player = self.world.player
         self.player.equip_weapon("steel_club")
         self.world.stage.drop_items.clear()
+
+    def test_d_kicks_before_the_second_jump_and_can_aim_on_the_second_space_press(self):
+        for jumping in (False, True):
+            world = equipped_world("steel_club")
+            if jumping:
+                tap(world.controls, "jump")
+                world.update(config.FIXED_DT)
+            tap(world.controls, "combat_d")
+            world.update(config.FIXED_DT)
+            self.assertIs(world.player.active_move, MOVES["combat_d"])
+            self.assertEqual(world.time_scale, 1)
+
+        tap(self.world.controls, "jump")
+        self.world.update(config.FIXED_DT)
+        tap(self.world.controls, "jump")
+        tap(self.world.controls, "combat_d")
+        self.world.update(config.FIXED_DT)
+        self.assertEqual((self.player.jump_count, self.player.weapon_leap_phase), (2, "AIM"))
+        self.assertIs(self.player.active_move, STEEL_CLUB_DIVE)
+        self.assertEqual(self.world.time_scale, config.WEAPON_AIM_TIME_SCALE)
+
+    def test_second_d_leaves_club_afterimages_and_hits_once_on_landing_in_either_direction(self):
+        for side in (-1, 1):
+            with self.subTest(side=side):
+                world = equipped_world("steel_club")
+                player = world.player
+                double_jump(world)
+                tap(world.controls, "combat_d")
+                advance(world, 0.6)  # Holding D keeps aiming until a fresh press.
+                self.assertEqual(player.weapon_leap_phase, "AIM")
+                self.assertFalse(world.afterimages)
+                self.assertIsNone(player.attack_box)
+                enemy = target(world, side=side)
+                enemy.x = player.x + side * 155
+                world.controls.press("right" if side == 1 else "left")
+                tap(world.controls, "combat_d")
+                world.update(config.FIXED_DT)
+                self.assertEqual((player.weapon_leap_phase, world.time_scale), ("DIVE", config.WEAPON_DIVE_TIME_SCALE))
+                for _ in range(60):
+                    if player.grounded:
+                        break
+                    self.assertIsNone(player.attack_box)
+                    self.assertEqual(enemy.hp, enemy.max_hp)
+                    world.update(config.FIXED_DT)
+                self.assertEqual(player.weapon_leap_phase, "LANDING")
+                self.assertGreaterEqual(len(world.afterimages), 2)
+                for echo in world.afterimages:
+                    self.assertEqual((echo.image_name, echo.row, echo.facing),
+                                     (config.PLAYER_STEEL_CLUB_IMAGE, STEEL_CLUB_SWING.row, side))
+                self.assertEqual([number.damage for number in world.damage_numbers], [50])
+                self.assertEqual(world.effects[-1].image_name, config.CLUB_HIT_IMAGE)
+                advance(world, 0.6)
+                self.assertEqual((enemy.hp, player.weapon, world.time_scale), (enemy.max_hp - 50, "steel_club", 1))
+                self.assertFalse(world.projectiles or world.afterimages)
 
     def test_a_uses_swing_row_and_damages_each_target_once(self):
         enemy = Enemy(self.player.x + 82, -1, ground_y=self.player.ground_y)

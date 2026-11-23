@@ -190,8 +190,12 @@ class UI:
         else:
             basic = "     ".join(f"{key[-1].upper()}  {player.moves[key].name}" for key in ("combat_a", "combat_s"))
         font.draw(620, 637, basic, body)
-        kicks = ("이단 점프 후 D  조준 · 다시 눌러 내려찍기     F  오른발 차기"
-                 if player.weapon in config.WEAPON_POSE_IMAGES else "D  왼발 차기     F  오른발 차기")
+        if player.weapon == "steel_club":
+            kicks = "D  왼발 차기 · 이단 점프 중 D  조준 → D  쇠몽둥이 내려찍기     F  오른발 차기"
+        elif player.moves["combat_d"].jump_attack:
+            kicks = "이단 점프 후 D  조준 · 다시 눌러 내려찍기     F  오른발 차기"
+        else:
+            kicks = "D  왼발 차기     F  오른발 차기"
         font.draw(620, 609, kicks, body)
         font.draw(620, 581, "Q  양주먹     W 유지  돌진     E 두 번  연속 발차기", body)
         last = "T  어퍼컷" if player.weapon == "pistol" else "R 두 번  올려치기     T  어퍼컷"
@@ -262,15 +266,14 @@ class UI:
                 action = "재장전 중" if world.player.state == "RELOAD" else "A키 사격"
                 assets.font.draw(22, 132, f"권총 {action} · 피해 20 · 7발 후 자동 재장전",
                                  (126, 218, 255))
-            elif world.player.weapon == "steel_club":
-                assets.font.draw(22, 132, "A 휘두르기 · S 던지기 · 바닥에 떨어진 쇠몽둥이 근처에서 G 회수",
-                                 (126, 218, 255))
             elif world.player.weapon in config.WEAPON_NAMES:
                 phase = world.player.weapon_leap_phase
                 if phase == "AIM":
                     help_text = "슬로 모션: 방향키로 공중 조준 / D 다시 눌러 빠르게 내려찍기"
                 elif phase in ("DIVE", "LANDING"):
                     help_text = "시간 가속: 선택한 방향으로 내려찍기!"
+                elif world.player.weapon == "steel_club":
+                    help_text = "A 휘두르기 · S 던지기 · G 회수 · 이단 점프 중 D 조준 → D 내려찍기"
                 else:
                     help_text = "무기 내려찍기: Space 두 번 → D 슬로 모션 / 방향키 조준 → D 급강하"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))

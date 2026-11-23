@@ -141,7 +141,7 @@ BAG_ITEM_SLOT_RECTS = (
 )
 BAG_ITEM_SLOT_PADDING = 18
 PLAYER_IMAGE = "HoodMan_Sprite.png"
-PLAYER_PISTOL_IMAGE = "HOOD_MAN_pistol_IDLE_matched_2048x2048.png"
+PLAYER_PISTOL_IMAGE = "HoodMan_Pistol_Gait_Headfix_2048x2560.png"
 PLAYER_STEEL_CLUB_IMAGE = "HoodMan_SteelClub_WalkRun_2048x2048.png"
 STEEL_CLUB_PROJECTILE_IMAGE = "HoodMan_SteelClub_Projectile_256.png"
 STEEL_CLUB_THROW_DAMAGE = 40
@@ -152,12 +152,14 @@ PLAYER_EQUIPPED_SHEETS = {"pistol": PLAYER_PISTOL_IMAGE, "steel_club": PLAYER_ST
 PLAYER_PISTOL_DAMAGE = 20
 PLAYER_PISTOL_MAGAZINE_SIZE = 7
 PLAYER_PISTOL_RANGE = 480.0
-PLAYER_PISTOL_SHOOT_FRAME = 2  # First muzzle flash, zero-based column of row 5.
+PLAYER_PISTOL_SHOOT_FRAME = 2  # First muzzle flash, zero-based column in each shooting row.
 # Barrel tip in source pixels (right of cell center, above cropped feet), by frame.
 PLAYER_PISTOL_MUZZLE_OFFSETS = {
     "IDLE": ((58, 106), (58, 104), (57, 98), (60, 103), (58, 103), (59, 104), (60, 98), (57, 104)),
-    "WALK": ((67, 105), (67, 102), (67, 106), (67, 109)) * 2,
-    "RUN": ((71, 114), (71, 109), (71, 116), (71, 102), (71, 114), (71, 109), (71, 116), (71, 101)),
+    "WALK": ((65, 123), (65, 121), (65, 119), (65, 119), (65, 121), (65, 119), (65, 119), (65, 119)),
+    "RUN": ((80, 120), (81, 117), (81, 115), (84, 119), (83, 122), (82, 121), (79, 116), (78, 121)),
+    "WALK_SHOOT": ((65, 123), (65, 121), (59, 127), (65, 119), (65, 121), (65, 119), (59, 126), (65, 119)),
+    "RUN_SHOOT": ((80, 120), (81, 117), (78, 121), (84, 119), (83, 122), (82, 121), (76, 121), (78, 121)),
     "JUMP": ((78, 114), (73, 113), (74, 106), (75, 101), (73, 98), (75, 100), (72, 110), (68, 111)),
     "SHOOT": ((77, 118), (76, 120), (68, 131), (72, 132), (72, 130), (75, 118), (73, 118), (71, 120)),
 }
@@ -529,6 +531,8 @@ PLAYER_PISTOL_ANIMATIONS = {
     **ARMED_PLAYER_POSES,
     "SHOOT": (5, 16.0, False),
     "RELOAD": (6, 8.0, False),
+    "WALK_SHOOT": (9, 16.0, False),
+    "RUN_SHOOT": (10, 16.0, False),
 }
 EQUIPPED_ANIMATIONS = {"steel_club": ARMED_PLAYER_POSES, "pistol": PLAYER_PISTOL_ANIMATIONS}
 ENEMY_ANIMATIONS = {

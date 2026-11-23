@@ -262,14 +262,46 @@ class PistolShootingTests(unittest.TestCase):
                     press_fire(world)
                     advance(world, 0.125, 120)
                     self.assertEqual((player.state, player.vx, player.pistol_ammo), ("SHOOT", speed, 6))
+                    self.assertEqual((player.sprite_row, player.animation.frame), (10 if running else 9, 2))
                     self.assertAlmostEqual(player.x, start_x + speed * 0.125)
                     bullet, = world.projectiles
                     muzzle_x, muzzle_y = player.aim_line[:2]
+                    forward, height = (78, 121) if running else (59, 127)
+                    self.assertAlmostEqual(muzzle_x, player.x + sign * forward * config.SPRITE_SCALE)
+                    self.assertAlmostEqual(muzzle_y, player.y + height * config.SPRITE_SCALE)
                     self.assertAlmostEqual(bullet.x, muzzle_x + sign * bullet.half_width)
                     self.assertAlmostEqual(bullet.y, muzzle_y)
-                    advance(world, 0.375, 120)
+                    advance(world, 0.25, 120)
+                    self.assertEqual((player.sprite_row, player.animation.frame), (3 if running else 2, 6))
+                    self.assertEqual(player.pistol_ammo, 6)
+                    advance(world, 0.125, 120)
                     self.assertEqual(player.state, "RUN" if running else "WALK")
                     self.assertAlmostEqual(player.x, start_x + speed * 0.5)
+
+    def test_walking_and_running_continue_through_manual_and_automatic_reload(self):
+        for running in (False, True):
+            for starting_ammo in (7, 1):
+                with self.subTest(running=running, starting_ammo=starting_ammo):
+                    world = armed_world()
+                    player = world.player
+                    player.pistol_ammo = starting_ammo
+                    world.controls.press("right")
+                    if running:
+                        world.controls.press("left_shift")
+                    advance(world, 0.3)
+                    speed = config.RUN_SPEED if running else config.WALK_SPEED
+                    press_fire(world)
+                    advance(world, 0.5)
+                    if starting_ammo > 1:
+                        tap(world.controls, "combat_r")
+                    start_x = player.x
+                    advance(world, 0.5)
+                    self.assertEqual((player.state, player.sprite_row, player.pistol_ammo),
+                                     ("RELOAD", 6, starting_ammo - 1))
+                    self.assertAlmostEqual(player.x, start_x + speed * 0.5)
+                    advance(world, 0.5)
+                    self.assertEqual((player.state, player.pistol_ammo), ("RUN" if running else "WALK", 7))
+                    self.assertAlmostEqual(player.x, start_x + speed)
 
     def test_turning_during_windup_uses_the_new_facing_and_depth_for_the_bullet(self):
         world = armed_world()

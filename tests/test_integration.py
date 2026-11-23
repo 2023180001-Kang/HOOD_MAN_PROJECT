@@ -90,7 +90,7 @@ class IntegrationTests(unittest.TestCase):
     def test_generated_clips_stay_inside_original_sprite_sheets(self):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             metadata = json.load(file)
-        row_counts = {config.PLAYER_IMAGE: 6, config.PLAYER_PISTOL_IMAGE: 8, config.PLAYER_STEEL_CLUB_IMAGE: 8,
+        row_counts = {config.PLAYER_IMAGE: 6, config.PLAYER_PISTOL_IMAGE: 10, config.PLAYER_STEEL_CLUB_IMAGE: 8,
                       config.ENEMY_IMAGE: 6, config.ENEMY02_IMAGE: 7,
                       config.AXE_ENEMY_IMAGE: 6, config.SHIELD_SOLDIER_IMAGE: 7,
                       config.RESEARCHER_IMAGE: 7, config.RESEARCHER_BULLET_IMAGE: 1,

@@ -37,6 +37,38 @@ def double_jump(world):
 
 
 class WeaponCombatTests(unittest.TestCase):
+    def test_weapon_strikes_hit_one_pixel_inside_their_forward_reach_and_miss_outside(self):
+        reaches = {
+            "combat_knife": {"a": 120, "s": 130, "d": 140},
+            "steel_pipe": {"a": 120, "s": 130, "d": 140},
+            "steel_club": {"a": 130, "d": 140},
+            "axe": {"a": 130, "d": 130},
+        }
+        for kind, attacks in reaches.items():
+            for key, reach in attacks.items():
+                for side in (-1, 1):
+                    with self.subTest(kind=kind, key=key, side=side):
+                        world = equipped_world(kind)
+                        player = world.player
+                        player.facing = side
+                        if key == "d":
+                            double_jump(world)
+                            tap(world.controls, "combat_d")
+                            world.step(config.FIXED_DT)
+                        tap(world.controls, f"combat_{key}")
+                        for _ in range(120):
+                            world.step(config.FIXED_DT)
+                            if player.attack_box is not None:
+                                break
+                        self.assertIsNotNone(player.attack_box)
+                        if key == "d":
+                            self.assertEqual(player.weapon_leap_phase, "LANDING")
+                        edge = player.x + side * (reach + config.ENEMY_HALF_WIDTH)
+                        enemy = Enemy(edge + side, -side, ground_y=player.ground_y)
+                        self.assertFalse(player.try_hit(enemy))
+                        enemy.x = edge - side
+                        self.assertTrue(player.try_hit(enemy))
+
     def test_g_pickup_remaps_asd_to_each_weapon_and_keeps_f_as_the_kick(self):
         for kind, rows in (("combat_knife", (7, 8, 9)), ("steel_pipe", (6, 7, 8))):
             for key, row, damage in zip("asd", rows, (10, 40, 50)):

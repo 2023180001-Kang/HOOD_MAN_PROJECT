@@ -283,18 +283,17 @@ COMBAT_MOVE_SPECS = (
 WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프", "pistol": "권총",
                 "steel_club": "쇠몽둥이", "axe": "도끼", "ar_rifle": "AR 소총"}
 WEAPON_HIT_IMAGES = {"combat_knife": PUNCH_KICK_HIT_IMAGE, "steel_pipe": CLUB_HIT_IMAGE}
-# The three new attacks inherit the existing A/S/D balance. Impact windows
-# follow the source strike poses; overhead/jump attacks hit on their downswing.
+# Impact windows follow the source strike poses; jump attacks hit on their downswing.
 WEAPON_MOVE_SPECS = {
     "combat_knife": (
-        ("a", "단검 찌르기", 7, 10, 95.0, 146.0, COMBAT_JAB_FPS, (3, 4)),
-        ("s", "단검 베기", 8, 40, 105.0, 146.0, COMBAT_STRAIGHT_FPS, (3, 4)),
-        ("d", "도약 내려찌르기", 9, 50, 115.0, 146.0, COMBAT_KICK_FPS, (5, 6)),
+        ("a", "단검 찌르기", 7, 10, 120.0, 146.0, COMBAT_JAB_FPS, (3, 4)),
+        ("s", "단검 베기", 8, 40, 130.0, 146.0, COMBAT_STRAIGHT_FPS, (3, 4)),
+        ("d", "도약 내려찌르기", 9, 50, 140.0, 146.0, COMBAT_KICK_FPS, (5, 6)),
     ),
     "steel_pipe": (
-        ("a", "쇠파이프 찌르기", 6, 10, 95.0, 146.0, COMBAT_JAB_FPS, (3, 4)),
-        ("s", "쇠파이프 휘두르기", 7, 40, 105.0, 146.0, COMBAT_STRAIGHT_FPS, (4, 5)),
-        ("d", "도약 내려치기", 8, 50, 115.0, 146.0, COMBAT_KICK_FPS, (5, 6)),
+        ("a", "쇠파이프 찌르기", 6, 10, 120.0, 146.0, COMBAT_JAB_FPS, (3, 4)),
+        ("s", "쇠파이프 휘두르기", 7, 40, 130.0, 146.0, COMBAT_STRAIGHT_FPS, (4, 5)),
+        ("d", "도약 내려치기", 8, 50, 140.0, 146.0, COMBAT_KICK_FPS, (5, 6)),
     ),
 }
 # Retired H/J/K/L art is preserved but never loaded by normal gameplay.

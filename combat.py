@@ -54,18 +54,18 @@ WEAPON_MOVES = {
 WEAPON_LOADOUTS = {kind: {**MOVES, **moves} for kind, moves in WEAPON_MOVES.items()}
 WEAPON_LOADOUTS["pistol"] = {key: move for key, move in MOVES.items() if key != "combat_a"}
 WEAPON_LOADOUTS["ar_rifle"] = WEAPON_LOADOUTS["pistol"]
-STEEL_CLUB_SWING = Move("a", "쇠몽둥이 휘두르기", 5, 40, 105.0, 146.0, 16.0,
+STEEL_CLUB_SWING = Move("a", "쇠몽둥이 휘두르기", 5, 40, 130.0, 146.0, 16.0,
                        image_name=config.PLAYER_STEEL_CLUB_IMAGE, active_frames=(4, 5),
                        hit_image=config.CLUB_HIT_IMAGE)
 STEEL_CLUB_THROW = Move("s", "쇠몽둥이 던지기", 6, config.STEEL_CLUB_THROW_DAMAGE, 0, 0, 16.0,
                        image_name=config.PLAYER_STEEL_CLUB_IMAGE, active_frames=())
 WEAPON_LOADOUTS["steel_club"] = {**MOVES, "combat_a": STEEL_CLUB_SWING, "combat_s": STEEL_CLUB_THROW}
-STEEL_CLUB_DIVE = replace(MOVES["combat_d"], name="쇠몽둥이 내려찍기",
+STEEL_CLUB_DIVE = replace(MOVES["combat_d"], name="쇠몽둥이 내려찍기", reach=140.0,
                           image_name=STEEL_CLUB_SWING.image_name, row=STEEL_CLUB_SWING.row,
                           active_frames=STEEL_CLUB_SWING.active_frames,
                           hit_image=STEEL_CLUB_SWING.hit_image, jump_attack=True)
 
-AXE_SWING = Move("a", "도끼 휘두르기", 5, 60, 105.0, 146.0, 16.0,
+AXE_SWING = Move("a", "도끼 휘두르기", 5, 60, 130.0, 146.0, 16.0,
                  image_name=config.PLAYER_AXE_IMAGE, active_frames=(4, 5), hit_image=config.CLUB_HIT_IMAGE)
 AXE_THROW = Move("s", "도끼 던지기", 6, config.AXE_THROW_DAMAGE, 0, 0, 16.0,
                  image_name=config.PLAYER_AXE_IMAGE, active_frames=())

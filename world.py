@@ -8,7 +8,7 @@ from collision import resolve_bodies, same_floor, transit_target, world_rect
 from controls import Controls
 from drop_items import DropItem
 from effects import DamageNumber, HitEffect, SpriteAfterimage
-from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
+from enemy_spacing import place_ranged_spawns, prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
 from player import Player
 from projectiles import PlayerPistolBullet
@@ -220,7 +220,9 @@ class World:
             self.stage.cycle_spawn_enemy_type()
         for count in config.SPAWN_COUNTS:
             if self.controls.take_press(f"spawn_{count}") and self.player.alive:
-                self.enemies.extend(self.spawner.spawn(count, self.elapsed))
+                spawned = self.spawner.spawn(count, self.elapsed)
+                place_ranged_spawns(self.player, self.enemies, spawned)
+                self.enemies.extend(spawned)
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         stair_moved = self.stage.update_navigation(dt, self.player, self.controls)

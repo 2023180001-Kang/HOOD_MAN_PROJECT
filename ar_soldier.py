@@ -27,6 +27,8 @@ class ARSoldier(Researcher):
         self.fire_remaining = 0.0
         self.burst_shots = 0
         self.rounds_fired = 0
+        self.ranged_goal = None
+        self.has_firing_slot = True
         self.aim_cancel_remaining = 0.0
         self._last_player_ground_y = None
 
@@ -108,10 +110,16 @@ class ARSoldier(Researcher):
         target_x = dx if abs(dx) > self.shoot_range + 1e-9 else 0.0
         target_y = dy if abs(dy) > config.ATTACK_DEPTH_TOLERANCE else 0.0
         if self.target_x is not None:
-            target_x = self.facing * max(0.0, (self.target_x - self.x) * self.facing)
+            target_x = self.target_x - self.x
         if self.target_ground_y is not None:
             target_y = self.target_ground_y - self.ground_y
         return target_x, target_y
+
+    def at_firing_position(self, dx, dy):
+        return (super().at_firing_position(dx, dy) and self.has_firing_slot
+                and (self.ranged_goal is None or
+                 (abs(self.ranged_goal[0] - self.x) <= 1e-8
+                  and abs(self.ranged_goal[1] - self.ground_y) <= 1e-8)))
 
     def _update_ai(self, dt, player):
         player_changing_depth = (

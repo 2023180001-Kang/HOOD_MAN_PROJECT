@@ -107,6 +107,9 @@ class Researcher(Enemy):
         return (self.facing * max(0.0, abs(dx) - self.shoot_range),
                 dy if abs(dy) > config.ATTACK_DEPTH_TOLERANCE else 0.0)
 
+    def at_firing_position(self, dx, dy):
+        return abs(dx) <= self.shoot_range + 1e-9 and abs(dy) <= config.ATTACK_DEPTH_TOLERANCE
+
     def _update_ai(self, dt, player):
         if (not self.alive or not player.alive or self.knockback_started
                 or self.falling_from_upper or self.navigation_target is not None
@@ -141,7 +144,7 @@ class Researcher(Enemy):
         target_x, target_y = self.pursuit_delta(dx, dy)
         if abs(target_x) <= 1e-9 and abs(target_y) <= 1e-9:
             self.running = False
-            if self.cooldown <= 0:
+            if self.cooldown <= 0 and self.at_firing_position(dx, dy):
                 self.start_attack()
                 return  # Start a full warning; do not spend time before it is visible.
             else:
@@ -158,6 +161,8 @@ class Researcher(Enemy):
         if distance:
             travel = min(distance, speed * dt)
             self.vx, self.ground_vy = target_x / distance * speed, target_y / distance * speed
+            if self.vx:
+                self.facing = 1 if self.vx > 0 else -1
             self.x += target_x / distance * travel
             self.ground_y += target_y / distance * travel
         self.animation.set_state("RUN" if self.running else "WALK")

@@ -341,14 +341,17 @@ def check_ar_spacing(game):
             release(game, pico2d.SDLK_9)
             assert len(world.enemies) == (wave + 1) * 9
             for frame in range(360):
+                before = [(e.x, e.ground_y) for e in world.enemies]
                 tick(game)
-                for enemy in world.enemies:
+                for enemy, (x, y) in zip(world.enemies, before):
+                    assert hypot(enemy.x - x, enemy.ground_y - y) <= enemy.run_speed / 60 + 1e-8
                     assert world.stage.walkable.contains(enemy.x, enemy.ground_y, enemy.boundary_padding)
                     assert not bodies_overlap(enemy, world.player)
                 for first, second in combinations(world.enemies, 2):
                     assert not bodies_overlap(first, second)
-                    assert (abs(first.x - second.x) >= ranged_half_width(first) + ranged_half_width(second) - 1e-8
-                            or abs(first.ground_y - second.ground_y) >= config.AR_SOLDIER_SPACING_DEPTH - 1e-8)
+                    if all(e.state in ("ATTACK", "RELOAD") for e in (first, second)):
+                        assert (abs(first.x - second.x) >= ranged_half_width(first) + ranged_half_width(second) - 1e-8
+                                or abs(first.ground_y - second.ground_y) >= config.AR_SOLDIER_SPACING_DEPTH - 1e-8)
                 seen_reload |= any(enemy.state == "RELOAD" for enemy in world.enemies)
                 if frame in (0, 179, 359):
                     capture(game, f"ar_spacing_{index}_{len(world.enemies)}_{frame}")
@@ -378,7 +381,12 @@ def main():
         game.world = World(rng=random.Random(42))
         game.world.select_stage(10)
         game.world.player.invincible = True
-        game.world.enemies.extend(game.world.spawner.spawn(18, 0))
+        push_key(pico2d.SDLK_9)
+        tick(game)
+        release(game, pico2d.SDLK_9)
+        push_key(pico2d.SDLK_9)
+        tick(game)
+        release(game, pico2d.SDLK_9)
         start = perf_counter()
         frames = game.run(max_frames=180)
         seconds = perf_counter() - start

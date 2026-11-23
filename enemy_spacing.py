@@ -48,46 +48,6 @@ def ranged_half_width(enemy):
     return max(config.ENEMY_HALF_WIDTH, abs(left), abs(right)) + config.ENEMY_SPACING_MARGIN / 2
 
 
-def _prepare_ranged_approach(player, enemies):
-    """Give approaching riflemen staggered destinations inside their actual firing band."""
-    groups = {-1: [], 1: []}
-    for enemy in enemies:
-        if (enemy.uses_ranged_spacing and enemy.alive and same_floor(enemy, player)
-                and enemy.navigation_target is None and not enemy.falling_from_upper
-                and enemy.state in ("IDLE", "WALK", "RUN", "ATTACK", "RELOAD")):
-            groups[1 if enemy.x >= player.x else -1].append(enemy)
-    for side, group in groups.items():
-        if len(group) < 2:
-            continue
-        group.sort(key=lambda e: abs(e.x - player.x))
-        lanes = []
-        for index, enemy in enumerate(group):
-            if enemy.state in ("ATTACK", "RELOAD"):
-                lanes.append(enemy.ground_y)
-                continue
-            # Let the leading arrivals close in, leaving the outer columns in
-            # range for the rest. Never back away just to occupy a column.
-            width = 2 * ranged_half_width(enemy)
-            inner_columns = int((enemy.shoot_range - enemy.muzzle_x
-                                 - enemy.projectile_type.half_width) / width)
-            behind = max(0, min(len(group) - 1, inner_columns) - index)
-            distance = enemy.shoot_range - behind * width
-            enemy.target_x = player.x + side * distance
-            _, bottom, _, top = enemy.walkable.bounds
-            # Keep planned lanes just inside the hit band at fractional player coordinates.
-            band = config.ATTACK_DEPTH_TOLERANCE - config.ENEMY_SPACING_TOLERANCE
-            low = max(bottom, player.ground_y - band)
-            high = min(top, player.ground_y + band)
-            preferred = clamp(enemy.ground_y, low, high)
-            gap = config.BODY_DEPTH_TOLERANCE
-            options = [preferred, low, high, *(y + offset for y in lanes for offset in (-gap, gap))]
-            lane = min((y for y in options if low <= y <= high
-                        and all(abs(y - other) >= gap - 1e-9 for other in lanes)),
-                       key=lambda y: abs(y - preferred), default=preferred)
-            enemy.target_ground_y = lane
-            lanes.append(lane)
-
-
 def _ranged_position_free(x, y, obstacles):
     return all(abs(x - ox) >= width - 1e-9 or abs(y - oy) >= depth - 1e-9
                for ox, oy, width, depth in obstacles)
@@ -108,24 +68,26 @@ def _ranged_obstacles(enemy, peers, player=None, positions=None):
     return obstacles
 
 
-def _nearest_ranged_position(enemy, obstacles, *, firing_at=None):
+def _foot_obstacles(obstacles, margin=0.0):
+    return [(x, y, min(width, 2 * config.ENEMY_HALF_WIDTH), config.BODY_DEPTH_TOLERANCE + margin)
+            for x, y, width, _ in obstacles]
+
+
+def _nearest_ranged_position(enemy, obstacles, origin, *, firing_at=None):
     """Find the nearest free footprint without iterative pushes or wall escape."""
-    x, y = enemy.x, enemy.ground_y
-    if firing_at is None and _ranged_position_free(x, y, obstacles):
-        return x, y
     area, padding = enemy.walkable, enemy.boundary_padding
-    lanes = {y, enemy.previous_ground_y, *(py for _, py in area.inset(padding))}
+    x, y = area.project(*origin, padding)
+    if (_ranged_position_free(x, y, obstacles) and (firing_at is None
+            or (abs(x - firing_at.x) <= enemy.shoot_range
+                and abs(y - firing_at.ground_y) < config.ATTACK_DEPTH_TOLERANCE))):
+        return x, y
+    lanes = {y, *(py for _, py in area.inset(padding))}
     for _, oy, _, depth in obstacles:
         lanes.update((oy - depth, oy + depth))
     if firing_at is not None:
         py = firing_at.ground_y
-        # Reflow at most around the neighbouring rifleman. An opening on
-        # the far side of the screen is not a local spacing correction.
-        reach = 4 * ranged_half_width(enemy)
         band = config.ATTACK_DEPTH_TOLERANCE - config.ENEMY_SPACING_TOLERANCE
         lanes.update((py, py - band, py + band))
-        if enemy.target_ground_y is not None:
-            lanes.add(enemy.target_ground_y)
     candidates = []
     for lane in sorted(lanes):
         limits = area.x_limits(lane, padding)
@@ -135,8 +97,8 @@ def _nearest_ranged_position(enemy, obstacles, *, firing_at=None):
         if firing_at is not None:
             if abs(lane - py) > band:
                 continue
-            low = max(low, firing_at.x - enemy.shoot_range, x - reach)
-            high = min(high, firing_at.x + enemy.shoot_range, x + reach)
+            low = max(low, firing_at.x - enemy.shoot_range)
+            high = min(high, firing_at.x + enemy.shoot_range)
             if low > high:
                 continue
         intervals = sorted((ox - width, ox + width) for ox, oy, width, depth in obstacles
@@ -165,135 +127,159 @@ def _nearest_ranged_position(enemy, obstacles, *, firing_at=None):
     return x, y
 
 
-def _place_ranged_actor(enemy, position):
-    x, y = position
-    moved_x, moved_y = abs(x - enemy.x) > 1e-9, abs(y - enemy.ground_y) > 1e-9
-    if not (moved_x or moved_y):
-        return
-    enemy.x, enemy.ground_y = x, y
-    if moved_x:
-        enemy.vx = 0.0
-    if moved_y:
-        enemy.ground_vy = 0.0
-    if enemy.state == "ATTACK":
-        # Only a displaced shooter needs a fresh warning; unchanged neighbours
-        # keep their clocks and already-fired rounds.
-        enemy.stop()
-    elif (enemy.state in ("WALK", "RUN")
-          and hypot(x - enemy.previous_x, y - enemy.previous_ground_y) <= 1e-9):
-        enemy.animation.set_state("IDLE")
-
-
-def _reflow_ranged_peer(enemy, placed, player):
-    """Open a second full-height row only when lateral space has run out."""
-    # Prefer relocating the last arrival over an established front-line shooter.
-    for other in reversed(placed):
-        if not same_floor(enemy, other) or not enemy.body.overlaps_vertically(other.body):
+def place_ranged_spawns(player, existing, spawned):
+    """Choose initial feet positions once, before a new rifleman takes its first step."""
+    placed = [e for e in existing if e.uses_ranged_spacing and e.alive
+              and e.staircase is None and not e.falling_from_upper and e.state != "RUSH_CARRIED"]
+    for enemy in spawned:
+        if not enemy.uses_ranged_spacing:
             continue
-        area = other.walkable
-        _, bottom, _, top = area.bounds
-        for lane in sorted((bottom, top), key=lambda y: abs(y - other.ground_y)):
-            position = area.project(other.x, lane, other.boundary_padding)
-            if not _ranged_position_free(*position, _ranged_obstacles(other, placed, player)):
-                continue
-            obstacles = _ranged_obstacles(enemy, placed, player, {other: position})
-            destination = _nearest_ranged_position(enemy, obstacles)
-            if destination is not None:
-                _place_ranged_actor(other, position)
-                return destination
-    return None
-
-
-def _distance_to_firing_band(enemy, player):
-    return hypot(max(0.0, abs(enemy.x - player.x) - enemy.shoot_range),
-                 max(0.0, abs(enemy.ground_y - player.ground_y) - config.ATTACK_DEPTH_TOLERANCE))
-
-
-def _unblock_ranged_pursuit(player, stalled, active):
-    """Recover when a reserved footprint blocks an axis of the approach."""
-    has_shooter = any(e.state in ("ATTACK", "RELOAD") and same_floor(e, player) for e in active)
-    exchanged = set()
-    # A full firing band can fit fewer actors than a summon wave. Give those
-    # still waiting the first openings, including positions vacated on reload.
-    for enemy in sorted(stalled, key=lambda e: e.rounds_fired):
-        if (enemy in exchanged or not same_floor(enemy, player) or enemy.navigation_target is not None
-                or enemy.jump_height or enemy.knockback_started):
-            continue
-        gap = _distance_to_firing_band(enemy, player)
-        if gap == 0:
-            if enemy.cooldown <= 0:
-                enemy.start_attack()
-            continue
-        if not has_shooter:
-            continue
-        obstacles = _ranged_obstacles(enemy, active)
-        # Keep the muzzle outside the player even when the feet are on
-        # adjacent depth lanes. Only seek destinations the rifle can use.
-        obstacles.append((player.x, player.ground_y, enemy.muzzle_x + enemy.projectile_type.half_width,
-                          config.ATTACK_DEPTH_TOLERANCE + 1))
-        position = _nearest_ranged_position(enemy, obstacles, firing_at=player)
+        start = enemy.x, enemy.ground_y
+        obstacles = _ranged_obstacles(enemy, placed, player)
+        position = _nearest_ranged_position(enemy, obstacles, start)
         if position is None:
-            # Advance the queue one neighbour at a time. A previously active
-            # rifleman can yield during reload or while waiting farther back.
-            reach = 4 * ranged_half_width(enemy)
-            relieved = min((e for e in active if e not in exchanged and same_floor(e, enemy)
-                            and not e.jump_height and not e.knockback_started and e.navigation_target is None
-                            and e.state in ("IDLE", "RUN", "WALK", "RELOAD")
-                            and e.rounds_fired > enemy.rounds_fired and abs(e.x - enemy.x) <= reach + 1e-9
-                            and _distance_to_firing_band(e, player) < gap - 1e-9),
-                           key=lambda e: hypot(e.x - enemy.x, e.ground_y - enemy.ground_y), default=None)
-            if relieved is None:
-                continue
-            # These two identical footprints have already passed spacing.
-            # Exchanging positions leaves each actor's magazine and clocks intact.
-            position = relieved.x, relieved.ground_y
-            _place_ranged_actor(relieved, (enemy.x, enemy.ground_y))
-            exchanged.update((relieved, enemy))
-        _place_ranged_actor(enemy, position)
-        enemy.facing = 1 if player.x > enemy.x else -1
+            # A full sprite row may not fit at the entrance. Use clear feet
+            # for this arrival and leave the existing actors where they are.
+            position = _nearest_ranged_position(enemy, _foot_obstacles(obstacles), start)
+        if position is not None and position != start:
+            enemy.x, enemy.ground_y = position
+            enemy.previous_x, enemy.previous_ground_y = position
+        placed.append(enemy)
+
+
+def _clear_route(enemy, goal, obstacles):
+    """Find a walkable first waypoint around the rectangles, using either axis for a detour."""
+    x, y = enemy.x, enemy.ground_y
+    gx, gy = goal
+    if not (_ranged_position_free(x, y, obstacles) and _ranged_position_free(gx, gy, obstacles)):
+        return None
+
+    def clear(ax, ay, bx, by):
+        # For axis-aligned detours this is the exact swept foot rectangle.
+        return all(max(ax, bx) <= ox - w + 1e-8 or min(ax, bx) >= ox + w - 1e-8
+                   or max(ay, by) <= oy - d + 1e-8 or min(ay, by) >= oy + d - 1e-8
+                   for ox, oy, w, d in obstacles)
+
+    if clear(x, y, gx, gy):
+        return goal
+    # A corridor may run above/below a rifleman, or left/right around a
+    # vertical queue. Choose the shortest clear route on this floor.
+    routes = []
+    lanes = {y, gy, *(oy + offset for _, oy, _, d in obstacles for offset in (-d, d))}
+    columns = {x, gx, *(ox + offset for ox, _, w, _ in obstacles for offset in (-w, w))}
+    for lane in lanes:
+        if clear(x, y, x, lane) and clear(x, lane, gx, lane) and clear(gx, lane, gx, gy):
+            routes.append(((x, lane), (gx, lane)))
+    for col in columns:
+        if clear(x, y, col, y) and clear(col, y, col, gy) and clear(col, gy, gx, gy):
+            routes.append(((col, y), (col, gy)))
+    candidates = []
+    for first, second in routes:
+        if not all(enemy.walkable.contains(*p, enemy.boundary_padding) for p in (first, second)):
+            continue
+        length = hypot(first[0] - x, first[1] - y) + hypot(second[0] - first[0], second[1] - first[1])
+        length += hypot(gx - second[0], gy - second[1])
+        waypoint = next((p for p in (first, second, goal) if hypot(p[0] - x, p[1] - y) > 1e-8), goal)
+        candidates.append((length, waypoint))
+    return min(candidates)[1] if candidates else None
+
+
+def _approach_waypoint(enemy, goal, peers, player):
+    if goal == (enemy.x, enemy.ground_y):
+        return goal
+    obstacles = _ranged_obstacles(enemy, peers, player)
+    waypoint = _clear_route(enemy, goal, obstacles)
+    if waypoint is not None:
+        return waypoint
+    # A narrow floor may not fit a whole sprite above or below the front
+    # shooter. Pass on a separate foot lane and spread out again at the goal.
+    bodies = _foot_obstacles(obstacles, config.ENEMY_SPACING_MARGIN)
+    return _clear_route(enemy, goal, bodies) or goal
+
+
+def _prepare_ranged_approach(player, enemies):
+    peers = [e for e in enemies if e.uses_ranged_spacing and e.alive and same_floor(e, player)
+             and not e.falling_from_upper and e.state != "RUSH_CARRIED"]
+    moving = [e for e in peers if e.state in ("IDLE", "WALK", "RUN")
+              and e.navigation_target is None and not e.knockback_started]
+    if len(peers) < 2:
+        for enemy in moving:
+            enemy.ranged_goal = None
+            enemy.has_firing_slot = True
+        return
+    reserved = {e: (e.x, e.ground_y) for e in peers if e not in moving}
+    # After a reload, a soldier with more shots can give up its slot to a
+    # waiting peer. Only the destinations change; both actors travel normally.
+    moving.sort(key=lambda e: (e.rounds_fired, e.ranged_goal is None, abs(e.x - player.x)))
+    band = config.ATTACK_DEPTH_TOLERANCE - config.ENEMY_SPACING_TOLERANCE
+    for enemy in moving:
+        obstacles = _ranged_obstacles(enemy, reserved, positions=reserved)
+        muzzle_gap = enemy.muzzle_x + enemy.projectile_type.half_width
+        obstacles.append((player.x, player.ground_y, muzzle_gap, band + 2))
+        side = 1 if enemy.x >= player.x else -1
+        # Preserve a valid approach on successive ticks. Pick a different
+        # firing lane when another rifle already covers the player's depth.
+        lane = player.ground_y
+        if any((ox - player.x) * side > 0 and abs(oy - lane) < config.BODY_DEPTH_TOLERANCE
+               for ox, oy in reserved.values()):
+            _, bottom, _, top = enemy.walkable.bounds
+            lane += band if top - lane >= lane - bottom else -band
+        preferred = (player.x + side * clamp(abs(enemy.x - player.x), muzzle_gap, enemy.shoot_range), lane)
+        if enemy.ranged_goal is not None:
+            gx, gy = enemy.ranged_goal
+            if (abs(gx - player.x) <= enemy.shoot_range and abs(gy - player.ground_y) <= band
+                    and _ranged_position_free(gx, gy, obstacles)):
+                preferred = enemy.ranged_goal
+        goal = _nearest_ranged_position(enemy, obstacles, preferred, firing_at=player)
+        enemy.has_firing_slot = goal is not None
+        if goal is None:
+            # Reserve a waiting footprint outside the firing band without
+            # occupying a destination another rifleman is still approaching.
+            origin = (player.x + side * (enemy.shoot_range + 2 * ranged_half_width(enemy)), enemy.ground_y)
+            goal = _nearest_ranged_position(enemy, obstacles, origin)
+            if goal is None:
+                goal = _nearest_ranged_position(enemy, _foot_obstacles(obstacles), origin)
+        if goal is None:
+            goal = enemy.x, enemy.ground_y
+        reserved[enemy] = enemy.ranged_goal = goal
+        enemy.target_x, enemy.target_ground_y = _approach_waypoint(enemy, goal, peers, player)
+
+
+def _allows_step(start, position, obstacles):
+    # Hit reactions may already have put two feet inside each other. Allow a
+    # step that reduces that overlap, without pushing either actor elsewhere.
+    x, y = position
+    for ox, oy, width, depth in obstacles:
+        clearance = max(abs(x - ox) / width, abs(y - oy) / depth)
+        if clearance < 1 - 1e-9:
+            before = max(abs(start[0] - ox) / width, abs(start[1] - oy) / depth)
+            if clearance <= before:
+                return False
+    return True
 
 
 def resolve_ranged_spacing(player, enemies):
-    """Reserve AR footprints, keeping stationary shooters ahead of incoming peers."""
-    active = [enemy for enemy in enemies
-              if enemy.uses_ranged_spacing and enemy.alive
-              and enemy.staircase is None and not enemy.falling_from_upper
-              and enemy.state != "RUSH_CARRIED"]
-    if len(active) < 2 or not player.alive:
-        return
-    # Stable snapshot ordering: a moving rifleman yields to an established aim,
-    # burst/reload or flinch, instead of dragging its neighbour's firing lane.
-    active.sort(key=lambda enemy: (
-        hypot(enemy.x - enemy.previous_x, enemy.ground_y - enemy.previous_ground_y) > 1e-9,
-        enemy.state not in ("ATTACK", "RELOAD", "HIT"),
-        enemy.spawned_at, enemy.previous_x, enemy.previous_ground_y))
-    placed = []
-    stalled = []
-    for index, enemy in enumerate(active):
-        obstacles = _ranged_obstacles(enemy, placed, player)
-        # A valid previous footprint is a reservation too. Otherwise two moving
-        # rows can push one another across the map every tick instead of yielding.
-        future = [other for other in active[index + 1:]
-                  if (abs(enemy.previous_x - other.previous_x)
-                      >= ranged_half_width(enemy) + ranged_half_width(other) - 1e-9
-                      or abs(enemy.previous_ground_y - other.previous_ground_y)
-                      >= max(enemy.peer_spacing_depth, other.peer_spacing_depth) - 1e-9)]
-        previous = {other: (other.previous_x, other.previous_ground_y) for other in future}
-        reserved = _ranged_obstacles(enemy, future, positions=previous)
-        position = _nearest_ranged_position(enemy, obstacles + reserved)
-        if position is None:
-            position = _nearest_ranged_position(enemy, obstacles)
-        if position is None:
-            position = _reflow_ranged_peer(enemy, placed, player)
-        if position is not None:
-            blocked_x = abs(enemy.vx) > 1e-9 and abs(position[0] - enemy.previous_x) < 1e-9
-            blocked_y = abs(enemy.ground_vy) > 1e-9 and abs(position[1] - enemy.previous_ground_y) < 1e-9
-            if enemy.state in ("WALK", "RUN") and (blocked_x or blocked_y):
-                stalled.append(enemy)
-            _place_ranged_actor(enemy, position)
-        placed.append(enemy)
-    if stalled:
-        _unblock_ranged_pursuit(player, stalled, active)
+    """Yield a contested step without pushing another actor or adding movement."""
+    active = [e for e in enemies if e.uses_ranged_spacing and e.alive and same_floor(e, player)
+              and not e.falling_from_upper and e.state != "RUSH_CARRIED"]
+    previous = {e: (e.previous_x, e.previous_ground_y) for e in active}
+    for enemy in active:
+        start = previous.pop(enemy)
+        if (enemy.x, enemy.ground_y) != start and enemy.state in ("WALK", "RUN"):
+            obstacles = [(x, y, 2 * config.ENEMY_HALF_WIDTH, config.BODY_DEPTH_TOLERANCE)
+                         for e, (x, y) in previous.items() if enemy.body.overlaps_vertically(e.body)]
+            obstacles.append((player.x, player.ground_y, config.ENEMY_HALF_WIDTH + config.PLAYER_HALF_WIDTH,
+                              config.BODY_DEPTH_TOLERANCE))
+            if not _ranged_position_free(enemy.x, enemy.ground_y, obstacles):
+                options = ((enemy.x, enemy.ground_y), (enemy.x, start[1]), (start[0], enemy.ground_y))
+                enemy.x, enemy.ground_y = next((p for p in options if _allows_step(start, p, obstacles)), start)
+                if enemy.x == start[0]:
+                    enemy.vx = 0.0
+                if enemy.ground_y == start[1]:
+                    enemy.ground_vy = 0.0
+                if not (enemy.vx or enemy.ground_vy):
+                    enemy.animation.set_state("IDLE")
+        previous[enemy] = enemy.x, enemy.ground_y
 
 
 def prepare_enemy_spacing(player, enemies, walkable=None):

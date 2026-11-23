@@ -8,7 +8,7 @@ import config
 from ar_soldier import ARSoldier
 from collision import Rect, bodies_overlap
 from enemy import Enemy
-from enemy_spacing import ranged_half_width, resolve_ranged_spacing
+from enemy_spacing import place_ranged_spawns, ranged_half_width, resolve_ranged_spacing
 from researcher import Researcher
 from tests.helpers import advance, tap
 from walkable import WalkableArea
@@ -24,12 +24,13 @@ def crowd(count=9, side=1, *, index=10, distance=500, depth=None):
                          run_speed=config.ENEMY_RUN_SPEEDS[i % 4]) for i in range(count)]
     for enemy in enemies:
         enemy.walkable = world.stage.walkable
+    place_ranged_spawns(world.player, [], enemies)
     world.enemies = enemies
     return world, enemies
 
 
 class ARSpacingTests(unittest.TestCase):
-    def assert_separated(self, world, enemies=None):
+    def assert_separated(self, world, enemies=None, *, at_spawn=False):
         enemies = world.enemies if enemies is None else enemies
         active = [enemy for enemy in enemies if enemy.alive and enemy.state != "RUSH_CARRIED"]
         for enemy in active:
@@ -38,11 +39,11 @@ class ARSpacingTests(unittest.TestCase):
         for first, second in combinations(active, 2):
             if first.floor != second.floor or not first.body.overlaps_vertically(second.body):
                 continue
-            self.assertTrue(
-                abs(first.x - second.x) >= ranged_half_width(first) + ranged_half_width(second) - 1e-8
-                or abs(first.ground_y - second.ground_y) >= config.AR_SOLDIER_SPACING_DEPTH - 1e-8,
-                ((first.x, first.ground_y), (second.x, second.ground_y)))
             self.assertFalse(bodies_overlap(first, second))
+            if at_spawn or all(e.state in ("ATTACK", "RELOAD") for e in (first, second)):
+                self.assertTrue(
+                    abs(first.x - second.x) >= ranged_half_width(first) + ranged_half_width(second) - 1e-8
+                    or abs(first.ground_y - second.ground_y) >= config.AR_SOLDIER_SPACING_DEPTH - 1e-8)
 
     def test_identical_positions_are_separated_on_the_first_step_in_both_bosses_and_facings(self):
         for index in (10, 11):
@@ -50,7 +51,7 @@ class ARSpacingTests(unittest.TestCase):
                 for count in (2, 5, 9):
                     with self.subTest(index=index, side=side, count=count):
                         world, enemies = crowd(count, side, index=index)
-                        self.assertTrue(bodies_overlap(enemies[0], enemies[1]))
+                        self.assert_separated(world, at_spawn=True)
                         world.step(config.FIXED_DT)
                         self.assert_separated(world)
                         self.assertTrue(all(enemy.ammo == 20 for enemy in enemies))
@@ -60,12 +61,19 @@ class ARSpacingTests(unittest.TestCase):
             world, _ = crowd(0, index=index)
             seen_fire, seen_reload = set(), set()
             for wave in range(2):
+                established = {e: (e.x, e.ground_y) for e in world.enemies}
                 tap(world.controls, "spawn_9")
                 world.step(config.FIXED_DT)
+                for e, (x, y) in established.items():
+                    self.assertLessEqual(hypot(e.x - x, e.ground_y - y), e.run_speed * config.FIXED_DT + 1e-8)
                 self.assertEqual(len(world.enemies), (wave + 1) * 9)
                 for _ in range(6 * 120):
+                    before = [(e.x, e.ground_y) for e in world.enemies]
                     world.step(config.FIXED_DT)
                     self.assert_separated(world)
+                    for e, (x, y) in zip(world.enemies, before):
+                        speed = e.run_speed if e.running else config.ENEMY_SPEED
+                        self.assertLessEqual(hypot(e.x - x, e.ground_y - y), speed * config.FIXED_DT + 1e-8)
                     seen_fire.update(enemy for enemy in world.enemies if enemy.ammo < 20)
                     seen_reload.update(enemy for enemy in world.enemies if enemy.state == "RELOAD")
             self.assertTrue(seen_fire)
@@ -86,21 +94,25 @@ class ARSpacingTests(unittest.TestCase):
                     self.assertEqual(enemy.facing, -side)
         self.assertEqual(sides, {-1, 1})
 
-    def test_visible_sprite_bounds_do_not_overlap_in_nine_and_eighteen_enemy_encounters(self):
+    def test_stationary_firing_sprites_remain_separate_in_nine_and_eighteen_enemy_encounters(self):
         with (config.ROOT / "assets/frames.json").open(encoding="utf-8") as file:
             rows = json.load(file)[config.AR_SOLDIER_IMAGE]
         for index in (10, 11):
             for count in (9, 18):
                 world, _ = crowd(0, index=index)
                 world.enemies = world.spawner.spawn(count, 0)
+                place_ranged_spawns(world.player, [], world.enemies)
                 advance(world, 6)
                 rectangles = []
                 for enemy in world.enemies:
+                    if enemy.state not in ("ATTACK", "RELOAD"):
+                        continue
                     tile = rows[enemy.animation.row - 1][enemy.animation.frame]
                     width, height = (size * config.SPRITE_SCALE for size in tile["clip"][2:])
                     center = enemy.x + enemy.facing * tile["offset_x"] * config.SPRITE_SCALE
                     rectangles.append(Rect(center - width / 2, enemy.y,
                                            center + width / 2, enemy.y + height))
+                self.assertGreaterEqual(len(rectangles), 2)
                 for first, second in combinations(rectangles, 2):
                     self.assertFalse(first.overlaps(second), (index, count, first, second))
 
@@ -142,7 +154,7 @@ class ARSpacingTests(unittest.TestCase):
                     rear = ARSoldier(world.player.x + side * rear_gap, -side, ground_y=front.ground_y)
                     world.enemies.append(rear)
                     start = rear.x, rear.ground_y
-                    for _ in range(2 * 120):
+                    for _ in range(4 * 120):
                         world.step(config.FIXED_DT)
                         self.assert_separated(world)
                         if rear.ammo < rear.magazine_size:
@@ -150,7 +162,7 @@ class ARSpacingTests(unittest.TestCase):
                     self.assertLess(rear.ammo, rear.magazine_size)
                     self.assertNotEqual((rear.x, rear.ground_y), start)
                     self.assertEqual((front.x, front.ground_y), anchor)
-                    self.assertEqual(front.state, "ATTACK")
+                    self.assertIn(front.state, ("ATTACK", "RELOAD"))
                     self.assertTrue(any(bullet.ground_y == rear.ground_y for bullet in world.projectiles))
 
     def test_a_solo_edge_spawn_pursues_immediately_and_reacquires_a_distant_player(self):
@@ -182,23 +194,24 @@ class ARSpacingTests(unittest.TestCase):
                     break
             self.assertEqual(len(fired), 9)
 
-    def test_a_displaced_warning_is_cancelled_without_a_shot_and_gets_a_full_new_warning(self):
-        world, enemies = crowd(2, distance=300)
-        for enemy in enemies:
-            enemy.start_attack()
-            enemy.update(enemy.aim_duration - config.FIXED_DT, world.player)
-        world.step(config.FIXED_DT)
-        self.assert_separated(world)
-        displaced = next(enemy for enemy in enemies if enemy.state != "ATTACK")
-        self.assertEqual(displaced.ammo, 20)
-        self.assertIsNone(displaced.take_projectile())
-        for _ in range(240):
+    def test_already_overlapping_riflemen_walk_or_run_apart_and_both_fire(self):
+        world, enemies = crowd(2, distance=750)
+        front, rear = enemies
+        rear.x, rear.ground_y = front.x, front.ground_y
+        self.assertTrue(bodies_overlap(front, rear))
+        for _ in range(4 * 120):
+            before = [(e.x, e.ground_y) for e in enemies]
             world.step(config.FIXED_DT)
-            if displaced.aiming:
-                self.assertEqual(displaced.aim_remaining, displaced.aim_duration)
+            for e, (x, y) in zip(enemies, before):
+                step = hypot(e.x - x, e.ground_y - y)
+                if step > 1e-8:
+                    self.assertIn(e.state, ("WALK", "RUN"))
+                    speed = e.run_speed if e.state == "RUN" else config.ENEMY_SPEED
+                    self.assertLessEqual(step, speed * config.FIXED_DT + 1e-8)
+            if all(e.ammo < e.magazine_size for e in enemies):
                 break
-        else:
-            self.fail("A separated rifleman never resumed aiming")
+        self.assertTrue(all(e.ammo < e.magazine_size for e in enemies))
+        self.assert_separated(world)
 
     def test_map_corners_and_player_movement_never_pack_riflemen_outside_the_floor(self):
         for index in (10, 11):
@@ -212,6 +225,7 @@ class ARSpacingTests(unittest.TestCase):
                         for enemy in enemies:
                             enemy.x = world.player.x + (-150 if right else 150)
                             enemy.ground_y = world.player.ground_y
+                        place_ranged_spawns(world.player, [], enemies)
                         for key in (("right" if right else "left"), ("up" if top else "down")):
                             world.controls.press(key)
                         for _ in range(120):
@@ -288,6 +302,17 @@ class ARSpacingTests(unittest.TestCase):
                 self.assertAlmostEqual(hypot(enemy.x - before[0], enemy.ground_y - before[1]),
                                        expected * config.FIXED_DT)
 
+    def test_pursuit_changes_gait_and_actual_step_length_as_the_player_changes_distance(self):
+        world, (enemy,) = crowd(1, distance=0)
+        for gap, gait in ((800, "RUN"), (270, "RUN"), (140, "WALK"), (270, "WALK"), (800, "RUN")):
+            world.player.x = enemy.x - gap
+            world.player.ground_y = enemy.ground_y + (70 if enemy.ground_y < 140 else -70)
+            x, y = enemy.x, enemy.ground_y
+            world.step(config.FIXED_DT)
+            self.assertEqual(enemy.state, gait)
+            speed = enemy.run_speed if gait == "RUN" else config.ENEMY_SPEED
+            self.assertAlmostEqual(hypot(enemy.x - x, enemy.ground_y - y), speed * config.FIXED_DT)
+
     def test_m_selected_ar_crowds_on_another_map_use_its_floor_and_do_not_overlap(self):
         world, _ = crowd(0, index=6)
         for _ in range(11):
@@ -323,7 +348,7 @@ class ARSpacingTests(unittest.TestCase):
         for enemy in enemies:
             enemy.walkable = area
             enemy.x, enemy.ground_y = 1400, 100
-        resolve_ranged_spacing(world.player, enemies)
+        place_ranged_spawns(world.player, [], enemies)
         self.assert_separated(world)
 
     def test_moving_crowds_are_identical_at_all_render_frame_rates(self):

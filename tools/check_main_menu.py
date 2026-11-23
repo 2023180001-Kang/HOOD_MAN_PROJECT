@@ -108,7 +108,18 @@ def check_pixels_and_placeholders(game):
             push_click(button)
             assert not game.handle_events(menu_screen=True)
             assert game.world is world and world.player is player and world.elapsed == 0
-            assert ImageChops.difference(hovered, menu_image(game)).getbbox() is None
+            if button.action == "stage_progress":
+                progress = menu_image(game, "main_menu_stage_progress")
+                with Image.open(ROOT / config.STAGE_PROGRESS_IMAGE) as source:
+                    difference = ImageChops.difference(source.convert("RGB"), progress).getbbox()
+                back, = game.menu.buttons
+                bx, by, br, bb = screen_box(back)
+                assert difference and bx <= difference[0] < difference[2] <= br
+                assert by <= difference[1] < difference[3] <= bb
+                push_click(back)
+                assert not game.handle_events(menu_screen=True)
+            else:
+                assert ImageChops.difference(hovered, menu_image(game)).getbbox() is None
         push_mouse(10, 10)
         assert not game.handle_events(menu_screen=True)
         assert ImageChops.difference(normal, menu_image(game)).getbbox() is None
@@ -123,7 +134,7 @@ def check_pixels_and_placeholders(game):
     assert config.ARCHIVED_TITLE_IMAGE not in game.assets.images
     print("PASS: original background/left half, four right-side black/gray buttons, "
           "only the hovered rectangle changes, leave/focus restore pixels, "
-          "stage/control placeholder clicks have no action; archived title is not loaded.")
+          "stage progress opens its original background and returns; controls stays on the main menu.")
 
 
 def check_wait_start_and_restart(game):
@@ -149,8 +160,8 @@ def check_wait_start_and_restart(game):
                 push_key(key)
                 push_key(key, repeat=True)
                 push_key(key, down=False)
-            for button in game.menu.buttons[1:]:
-                if button.action in ("stage_progress", "controls"):
+            for button in game.menu.buttons:
+                if button.action == "controls":
                     push_click(button)
             for mouse_button in (SDL_BUTTON_RIGHT, SDL_BUTTON_MIDDLE):
                 push_click(game.menu.buttons[0], mouse_button)

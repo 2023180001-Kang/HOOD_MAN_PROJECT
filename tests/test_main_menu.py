@@ -101,12 +101,15 @@ class MainMenuTests(unittest.TestCase):
             for item in self.menu.buttons:
                 self.assertEqual(self.assets.images[item.image_name].clip_draw.call_args.args[0], 0)
 
-    def test_only_game_start_requests_play_and_backpack_opens_its_screen(self):
+    def test_only_game_start_requests_play_and_submenus_have_a_back_button(self):
         for button in self.menu.buttons:
             self.assertEqual(self.menu.click(button.x, button.y), button.action == "game_start")
-            if button.action == "backpack":
-                self.assertTrue(self.menu.bag_open)
+            if button.action in ("backpack", "stage_progress"):
+                self.assertEqual(self.menu.screen, button.action)
                 self.assertIsNone(self.menu.hovered_button)
+                back, = self.menu.buttons
+                self.assertFalse(self.menu.click(back.x, back.y))
+                self.assertEqual(self.menu.screen, "main")
             else:
                 self.assertIs(self.menu.hovered_button, button)
         self.assertFalse(self.menu.click(10, 10))
@@ -153,7 +156,8 @@ class MainMenuTests(unittest.TestCase):
                 patch("assets.pico2d.load_font", return_value=None):
             assets = Assets()
         loaded = [call.args[0] for call in load.call_args_list]
-        for name in (config.MAIN_MENU_IMAGE, *(image for _, image in config.MAIN_MENU_BUTTONS)):
+        for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE,
+                     *(image for _, image in config.MAIN_MENU_BUTTONS)):
             self.assertIn(name, assets.images)
             self.assertEqual(loaded.count(str(config.ROOT / name)), 1)
         self.assertNotIn(config.ARCHIVED_TITLE_IMAGE, assets.images)
@@ -179,8 +183,20 @@ class MainMenuFlowTests(unittest.TestCase):
             self.assertIs(self.game.menu.hovered_button, button)
             self.assertEqual(self.process(mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, button.x, button.y)),
                              button.action == "game_start")
+            if self.game.menu.screen != "main":
+                back, = self.game.menu.buttons
+                self.assertFalse(self.process(mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, back.x, back.y)))
         self.process(mouse_event(pico2d.SDL_MOUSEMOTION, 0, 0))
         self.assertIsNone(self.game.menu.hovered_button)
+
+    def test_opening_progress_cancels_pending_start_and_hides_main_buttons(self):
+        start, progress, _, _ = self.game.menu.main_buttons
+        start_click = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, start.x, start.y)
+        progress_click = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, progress.x, progress.y)
+        self.assertFalse(self.process(start_click, progress_click, start_click))
+        self.assertEqual(self.game.menu.screen, "stage_progress")
+        back, = self.game.menu.buttons
+        self.assertTrue(self.process(mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, back.x, back.y), start_click))
 
     def test_right_middle_release_and_outside_clicks_cannot_start(self):
         button = self.game.menu.buttons[0]

@@ -1,9 +1,16 @@
-"""Screen-fixed menu/bag navigation, item dragging and buttons, without SDL."""
+"""Screen-fixed menu navigation, item dragging and buttons, without SDL."""
 
 from dataclasses import dataclass
 
 import config
 from animation import Animation
+
+
+MENU_BACKGROUNDS = {
+    "main": config.MAIN_MENU_IMAGE,
+    "stage_progress": config.STAGE_PROGRESS_IMAGE,
+    "backpack": config.BAG_UI_IMAGE,
+}
 
 
 @dataclass(frozen=True)
@@ -38,7 +45,7 @@ class MainMenu:
             config.SCREEN_HEIGHT - config.BAG_BACK_BUTTON_TOP - height / 2,
             width, height,
         )
-        self.bag_open = False
+        self.screen = "main"
         self.bag_items = list(config.BAG_ITEM_SPECS)
         self.equipped_weapon = None
         self.cancel_drag()
@@ -46,11 +53,15 @@ class MainMenu:
         self.hovered_button = None
 
     @property
+    def bag_open(self):
+        return self.screen == "backpack"
+
+    @property
     def buttons(self):
-        return (self.bag_back_button,) if self.bag_open else self.main_buttons
+        return self.main_buttons if self.screen == "main" else (self.bag_back_button,)
 
     def show_main(self):
-        self.bag_open = False
+        self.screen = "main"
         self.cancel_drag()
         self.clear_hover()
 
@@ -154,17 +165,18 @@ class MainMenu:
         action = self.hovered_button.action
         if action == "game_start":
             return True
-        if action == "backpack":
-            self.bag_open = True
+        if action in ("backpack", "stage_progress"):
+            self.screen = action
             self.cancel_drag()
-            self.bag_player_animation.elapsed = 0.0
+            if self.bag_open:
+                self.bag_player_animation.elapsed = 0.0
             self.clear_hover()
         elif action == "back":
             self.show_main()
         return False
 
     def draw(self, assets):
-        background = config.BAG_UI_IMAGE if self.bag_open else config.MAIN_MENU_IMAGE
+        background = MENU_BACKGROUNDS[self.screen]
         assets.images[background].draw(
             config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2,
             config.SCREEN_WIDTH, config.SCREEN_HEIGHT,

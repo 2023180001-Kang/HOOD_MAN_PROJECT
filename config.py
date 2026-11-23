@@ -80,6 +80,7 @@ SPAWN_COUNTS = tuple(range(1, 10))
 
 ARCHIVED_TITLE_IMAGE = "before_sheets/HOOD_MAN_TITLE_SCREEN_1280x720.png"
 MAIN_MENU_IMAGE = "HOOD_MAN_main_menu_background_1280x720.png"
+STAGE_PROGRESS_IMAGE = "stage_progress_background_1280x720.png"
 MAIN_MENU_BUTTONS = (
     ("game_start", "menu_game_start.png"),
     ("stage_progress", "menu_stage_progress.png"),

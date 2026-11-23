@@ -94,11 +94,11 @@ class Game:
                         event.motion.x, config.SCREEN_HEIGHT - 1 - event.motion.y,
                     )
                 elif event.type == pico2d.SDL_MOUSEBUTTONDOWN and event.button.button == SDL_BUTTON_LEFT:
-                    was_bag_open = self.menu.bag_open
+                    previous_screen = self.menu.screen
                     start_requested |= self.menu.press_pointer(
                         event.button.x, config.SCREEN_HEIGHT - 1 - event.button.y,
                     )
-                    if self.menu.bag_open != was_bag_open:
+                    if self.menu.screen != previous_screen:
                         # Navigation cancels an earlier start click in this batch.
                         start_requested = False
                 elif event.type == pico2d.SDL_MOUSEBUTTONUP and event.button.button == SDL_BUTTON_LEFT:

@@ -91,13 +91,13 @@ class MenuReturnEventTests(unittest.TestCase):
         self.process(key_event())
         self.assertTrue(self.game._menu_requested)
 
-    def test_escape_has_no_navigation_or_start_action_in_menu_or_bag(self):
-        for bag_open in (False, True):
-            self.game.menu.bag_open = bag_open
+    def test_escape_has_no_navigation_or_start_action_on_menu_screens(self):
+        for screen in ("main", "backpack", "stage_progress"):
+            self.game.menu.screen = screen
             self.assertFalse(self.process(key_event(), key_event(repeat=True),
                                           key_event(down=False), menu_screen=True))
             self.assertFalse(self.game._menu_requested)
-            self.assertEqual(self.game.menu.bag_open, bag_open)
+            self.assertEqual(self.game.menu.screen, screen)
             self.assertFalse(self.game.world.controls.held)
             self.assertFalse(self.game.world.controls.pressed)
 

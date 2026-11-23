@@ -117,10 +117,17 @@ BAG_EQUIPPED_PISTOL_RECT = (640, 196, 752, 262)  # Grab the pistol/hand, not the
 BAG_EQUIPPED_RECTS = {
     "pistol": BAG_EQUIPPED_PISTOL_RECT,
     "steel_club": (642, 162, 784, 276),
+    "ar_rifle": (625, 195, 798, 276),
 }
 PISTOL_ITEM_IMAGE = "pistol_item_256.png"
 PISTOL_ITEM_CLIP = (22, 49, 212, 158)
 PISTOL_DROP_SCALE = 0.18  # Also fits City 1's narrow 32px weapon-placement pavement.
+RIFLE_ITEM_IMAGE = "ar_rifle_item_256.png"
+RIFLE_ITEM_CLIP = (15, 86, 226, 84)
+FIREARM_DROP_SPRITES = {
+    "pistol": (PISTOL_ITEM_IMAGE, PISTOL_ITEM_CLIP, PISTOL_DROP_SCALE),
+    "ar_rifle": (RIFLE_ITEM_IMAGE, RIFLE_ITEM_CLIP, 0.30),
+}
 # Item order and visible source clips (pico2d bottom-left coordinates).
 # Alpha > 8 ignores almost-invisible stray pixels in the club/axe originals.
 BAG_ITEM_SPECS = (
@@ -129,7 +136,7 @@ BAG_ITEM_SPECS = (
     ("axe", "axe_weapon.png", (393, 273, 496, 730)),
     ("pistol", PISTOL_ITEM_IMAGE, PISTOL_ITEM_CLIP),
     ("shield_item", "HOOD_MAN_shield_item_256x256.png", (62, 16, 132, 224)),
-    ("ar_rifle", "ar_rifle_item_256.png", (15, 86, 226, 84)),
+    ("ar_rifle", RIFLE_ITEM_IMAGE, RIFLE_ITEM_CLIP),
 )
 # Screen-space slot frames after fitting the new 1672x941 background to 1280x720.
 BAG_ITEM_SLOT_RECTS = (
@@ -143,15 +150,27 @@ BAG_ITEM_SLOT_RECTS = (
 BAG_ITEM_SLOT_PADDING = 18
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 PLAYER_PISTOL_IMAGE = "HoodMan_Pistol_MovingReload_2048x3072.png"
+PLAYER_RIFLE_IMAGE = "HoodMan_AR_2048x3072.png"
 PLAYER_STEEL_CLUB_IMAGE = "HoodMan_SteelClub_WalkRun_2048x2048.png"
 STEEL_CLUB_PROJECTILE_IMAGE = "HoodMan_SteelClub_Projectile_256.png"
 STEEL_CLUB_THROW_DAMAGE = 40
 STEEL_CLUB_RELEASE_FRAME = 4  # Fifth cell of row six, counted from zero.
 STEEL_CLUB_TURNS_PER_SECOND = 4.0
 STEEL_CLUB_REST_HEIGHT = 16.0
-PLAYER_EQUIPPED_SHEETS = {"pistol": PLAYER_PISTOL_IMAGE, "steel_club": PLAYER_STEEL_CLUB_IMAGE}
+PLAYER_EQUIPPED_SHEETS = {"pistol": PLAYER_PISTOL_IMAGE, "ar_rifle": PLAYER_RIFLE_IMAGE,
+                          "steel_club": PLAYER_STEEL_CLUB_IMAGE}
 PLAYER_PISTOL_DAMAGE = 20
 PLAYER_PISTOL_MAGAZINE_SIZE = 7
+PLAYER_RIFLE_DAMAGE = 10
+PLAYER_RIFLE_MAGAZINE_SIZE = 20
+PLAYER_RIFLE_FIRE_INTERVAL = 0.1
+FIREARM_MAGAZINE_SIZES = {"pistol": PLAYER_PISTOL_MAGAZINE_SIZE, "ar_rifle": PLAYER_RIFLE_MAGAZINE_SIZE}
+# Muzzle positions in source pixels relative to the feet, on flash columns 2 and 5.
+PLAYER_RIFLE_FLASH_OFFSETS = {
+    "SHOOT": ((83, 126), (84, 125)),
+    "WALK_SHOOT": ((83, 135), (85, 132)),
+    "RUN_SHOOT": ((86, 132), (88, 133)),
+}
 PLAYER_PISTOL_RANGE = 480.0
 PLAYER_PISTOL_SHOOT_FRAME = 2  # First muzzle flash, zero-based column in each shooting row.
 # Barrel tip in source pixels (right of cell center, above cropped feet), by frame.
@@ -238,7 +257,7 @@ COMBAT_MOVE_SPECS = (
     ("f", "오른발 차기", 2, 60, 130.0, 146.0, COMBAT_KICK_FPS),
 )
 WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프", "pistol": "권총",
-                "steel_club": "쇠몽둥이"}
+                "steel_club": "쇠몽둥이", "ar_rifle": "AR 소총"}
 WEAPON_HIT_IMAGES = {"combat_knife": PUNCH_KICK_HIT_IMAGE, "steel_pipe": CLUB_HIT_IMAGE}
 # The three new attacks inherit the existing A/S/D balance. Impact windows
 # follow the source strike poses; overhead/jump attacks hit on their downswing.
@@ -537,7 +556,16 @@ PLAYER_PISTOL_ANIMATIONS = {
     "WALK_RELOAD": (11, 8.0, False),
     "RUN_RELOAD": (12, 8.0, False),
 }
-EQUIPPED_ANIMATIONS = {"steel_club": ARMED_PLAYER_POSES, "pistol": PLAYER_PISTOL_ANIMATIONS}
+PLAYER_RIFLE_ANIMATIONS = {
+    **PLAYER_ANIMATIONS,
+    "SHOOT": (5, 30.0, False),
+    "RELOAD": (6, 8.0, False),
+    "WALK_SHOOT": (7, 30.0, False), "RUN_SHOOT": (8, 30.0, False),
+    "WALK_RELOAD": (9, 8.0, False), "RUN_RELOAD": (10, 8.0, False),
+    "HIT": (11, 12.0, False), "DYING": (12, 10.0, False), "DEAD": (12, 10.0, False),
+}
+EQUIPPED_ANIMATIONS = {"steel_club": ARMED_PLAYER_POSES, "pistol": PLAYER_PISTOL_ANIMATIONS,
+                       "ar_rifle": PLAYER_RIFLE_ANIMATIONS}
 ENEMY_ANIMATIONS = {
     "IDLE": (1, 7.0, True),
     "WALK": (2, 10.0, True),

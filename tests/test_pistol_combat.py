@@ -144,6 +144,54 @@ class PistolShootingTests(unittest.TestCase):
         advance(world, 0.2)
         self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 7))
 
+    def test_jump_tapped_during_reload_hit_escapes_once_after_recovery(self):
+        world = armed_world()
+        player = world.player
+        player.pistol_ammo = 0
+        advance(world, 0.4)
+        enemy = Enemy(player.x + 80, facing=-1, ground_y=player.ground_y)
+        world.enemies.append(enemy)
+        enemy.start_attack()
+        enemy.animation.elapsed = min(enemy.attack_active_frames) / enemy.animation.definitions["ATTACK"][1]
+        world.update(config.FIXED_DT)
+        self.assertEqual(player.state, "HIT")
+
+        world.controls.press("jump")
+        world.controls.press("shoot")
+        world.update(config.FIXED_DT)
+        world.controls.release("jump")
+        self.assertEqual(player.jump_count, 0)
+        advance(world, 0.7)
+        self.assertEqual((player.state, player.jump_count, player.pistol_ammo), ("JUMP", 1, 0))
+        self.assertGreater(player.jump_height, 0)
+        self.assertFalse(world.projectiles)
+        world.controls.press("left")
+        advance(world, 0.1)
+        self.assertEqual(player.facing, -1)
+        self.assertLess(player.x, config.START_X)
+
+    def test_can_turn_and_run_out_of_restarted_reload_then_refill_after_stopping(self):
+        world = armed_world()
+        player = world.player
+        player.pistol_ammo = 0
+        advance(world, 0.5)
+        player.take_damage(20)
+        advance(world, 0.9)
+        self.assertEqual(player.state, "RELOAD")
+
+        world.controls.press("left")
+        world.controls.press("left_shift")
+        world.update(config.FIXED_DT)
+        self.assertEqual((player.state, player.facing, player.pistol_ammo), ("RUN", -1, 0))
+        self.assertLess(player.x, config.START_X)
+        advance(world, 1.2)
+        self.assertEqual((player.state, player.pistol_ammo), ("RUN", 0))
+        world.controls.release("left")
+        advance(world, 0.95)
+        self.assertEqual((player.state, player.pistol_ammo), ("RELOAD", 0))
+        advance(world, 0.05)
+        self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 7))
+
     def test_shoot_and_reload_stop_ground_motion_but_keep_airborne_gravity(self):
         world = armed_world()
         player = world.player

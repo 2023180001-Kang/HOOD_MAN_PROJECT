@@ -42,6 +42,7 @@ class Player:
         self.weapon = None
         self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
         self.pistol_shot_pending = False
+        self.pistol_reload_interrupted = False
         self.active_move = None
         self.weapon_leap_phase = None
         self.weapon_leap_direction = (1.0, 0.0)
@@ -134,6 +135,7 @@ class Player:
         if weapon == self.weapon:
             return
         self.weapon = weapon
+        self.pistol_reload_interrupted = False
         hit_fps = self.animation.definitions["HIT"][1]
         poses = config.PLAYER_PISTOL_ANIMATIONS if weapon == "pistol" else config.PLAYER_ANIMATIONS
         self.animation.definitions.update(poses)
@@ -214,6 +216,7 @@ class Player:
         else:
             if self.state == "RELOAD":
                 self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
+                self.pistol_reload_interrupted = False
             self.pistol_shot_pending = False
             self.animation.set_state("IDLE" if self.grounded else "JUMP")
 
@@ -415,6 +418,8 @@ class Player:
         if not self.alive or self.invincible:
             return False
         self.hp = max(0, self.hp - damage)
+        if self.state == "RELOAD" and self.hp:
+            self.pistol_reload_interrupted = True
         self.vx = 0.0
         self.ground_vy = 0.0
         self.cancel_combat()
@@ -467,18 +472,25 @@ class Player:
         """Resolve fresh actions before World samples the simulation time scale."""
         if controls.take_press("invincibility") and self.alive:
             self.invincible = not self.invincible
-        jump_pressed = controls.take_press("jump")
         shoot_pressed = controls.take_press("shoot")
         combat_pressed = controls.take_latest_press(ALL_MOVES)
+        if self.state == "HIT" and self.pistol_reload_interrupted:
+            # Leave one jump press in Controls until the hit reaction finishes.
+            return
+        jump_pressed = controls.take_press("jump")
         if self.staircase is not None or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD"):
             return
-        if self.weapon == "pistol":
-            if self.state in ("SHOOT", "RELOAD"):
+        if self.weapon == "pistol" and self.active_move is None:
+            if self.pistol_reload_interrupted and (controls.moving or jump_pressed or not self.grounded):
+                if self.state == "RELOAD":
+                    self.animation.set_state("IDLE" if self.grounded else "JUMP")
+                combat_pressed = None  # Only movement and jumping can interrupt the reload.
+            elif self.state in ("SHOOT", "RELOAD"):
                 return
-            if self.pistol_ammo == 0 and self.active_move is None:
+            elif self.pistol_ammo == 0:
                 self.start_pistol_reload()
                 return
-            if shoot_pressed and self.active_move is None:
+            elif shoot_pressed:
                 self.start_pistol_shot(controls.direction)
                 return
         if self.rush_phase in ("WINDUP", "FLY") and "combat_w" not in controls.held:

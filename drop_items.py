@@ -19,6 +19,7 @@ class DropItem:
     jump_height: float = 0.0
     vy: float = 0.0
     floor: int = 0
+    pistol_ammo: int | None = None
 
     @property
     def grounded(self):
@@ -26,10 +27,20 @@ class DropItem:
 
     @property
     def image_name(self):
+        if self.kind == "pistol":
+            return config.PISTOL_ITEM_IMAGE
         return config.DROP_ITEM_IMAGES[self.kind]
 
     @property
+    def display_height(self):
+        if self.kind == "pistol":
+            return config.PISTOL_ITEM_CLIP[3] * config.PISTOL_DROP_SCALE
+        return config.DROP_ITEM_BODY_HEIGHTS[self.kind] * config.DROP_ITEM_SCALE
+
+    @property
     def frame(self):
+        if self.kind == "pistol":
+            return 0  # The shared pistol icon is a single image, not an eight-cell sheet.
         return int(self.elapsed * config.DROP_ITEM_FPS + 1e-9) % self.frame_count
 
     def update(self, dt):

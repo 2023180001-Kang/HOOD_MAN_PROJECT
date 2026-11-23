@@ -124,11 +124,13 @@ class World:
                      + config.STAGE_ARROW_SWAY_AMPLITUDE + config.DROP_ITEM_EXIT_GAP)
         x = clamp(x, max(left, exit_edge) + config.DROP_ITEM_HALF_WIDTH,
                   min(right, config.WORLD_WIDTH - exit_edge) - config.DROP_ITEM_HALF_WIDTH)
-        ground_y = clamp(ground_y, bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH,
-                         top - config.DROP_ITEM_HEIGHT)
+        height = (config.PISTOL_ITEM_CLIP[3] * config.PISTOL_DROP_SCALE
+                  if kind == "pistol" else config.DROP_ITEM_HEIGHT)
+        ground_y = clamp(ground_y, bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH, top - height)
         item = DropItem(kind, x, ground_y, player.facing,
                         jump_height=max(0.0, player.y + config.WEAPON_DROP_HAND_HEIGHT - ground_y),
-                        floor=player.floor)
+                        floor=player.floor,
+                        pistol_ammo=player.pistol_ammo if kind == "pistol" else None)
         self.stage.drop_items.append(item)
         return item
 
@@ -138,14 +140,19 @@ class World:
             return False
         item = self.pickup_item
         if item is not None:
-            if player.weapon in config.DROP_ITEM_IMAGES:
+            if player.weapon is not None:
                 self.drop_weapon(player.weapon)
             self.stage.drop_items.remove(item)
+            if item.kind == "pistol" and player.weapon == "pistol":
+                # Swapping two pistols also cancels the old gun's pending shot/reload.
+                player.equip_weapon(None)
             player.equip_weapon(item.kind)
+            if item.kind == "pistol":
+                player.pistol_ammo = (config.PLAYER_PISTOL_MAGAZINE_SIZE
+                                     if item.pistol_ammo is None else item.pistol_ammo)
             return True
         if player.weapon is not None:
-            if player.weapon in config.DROP_ITEM_IMAGES:
-                self.drop_weapon(player.weapon)
+            self.drop_weapon(player.weapon)
             player.equip_weapon(None)
             return True
         return False

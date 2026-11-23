@@ -100,13 +100,17 @@ BAG_PLAYER_X = SCREEN_WIDTH / 2
 BAG_PLAYER_FEET_Y = 320
 BAG_PLAYER_SCALE = 1.7
 BAG_PLAYER_RECT = (528, 24, 752, 410)  # Screen top-left coordinates, including the pistol IDLE.
+BAG_EQUIPPED_PISTOL_RECT = (640, 196, 752, 262)  # Grab the pistol/hand, not the entire character.
+PISTOL_ITEM_IMAGE = "pistol_item_256.png"
+PISTOL_ITEM_CLIP = (22, 49, 212, 158)
+PISTOL_DROP_SCALE = 0.18  # Also fits City 1's narrow 32px weapon-placement pavement.
 # Item order and visible source clips (pico2d bottom-left coordinates).
 # Alpha > 8 ignores almost-invisible stray pixels in the club/axe originals.
 BAG_ITEM_SPECS = (
     ("steel_club", "steel_club.png", (501, 87, 1174, 530)),
     ("dual_black_batons", "dual_black_batons_pico2d.png", (27, 67, 458, 379)),
     ("axe", "axe_weapon.png", (393, 273, 496, 730)),
-    ("pistol", "pistol_item_256.png", (22, 49, 212, 158)),
+    ("pistol", PISTOL_ITEM_IMAGE, PISTOL_ITEM_CLIP),
     ("shield_item", "HOOD_MAN_shield_item_256x256.png", (62, 16, 132, 224)),
     ("ar_rifle", "ar_rifle_item_256.png", (15, 86, 226, 84)),
 )

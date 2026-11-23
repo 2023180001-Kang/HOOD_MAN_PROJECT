@@ -91,6 +91,74 @@ def check_source_rows(game):
           "0.75 scale, mirrored offsets and fixed physical feet.")
 
 
+def check_bag_pistol_return(game):
+    menu, world = game.menu, game.world
+    player = world.player
+    before = world.elapsed, player.hp, player.weapon, player.pistol_ammo
+    push_click(menu.main_buttons[-1])
+    assert not game.handle_events(menu_screen=True) and menu.bag_open
+    left, top, right, bottom = config.BAG_EQUIPPED_PISTOL_RECT
+    gun = (left + right) / 2, config.SCREEN_HEIGHT - (top + bottom) / 2
+    original = menu.bag_items[:]
+    push_mouse(*gun, kind=pico2d.SDL_MOUSEBUTTONDOWN)
+    push_mouse(900, 350)
+    assert not game.handle_events(menu_screen=True) and menu.dragged_from_player
+    with patch.object(game.assets, "draw_sprite", wraps=game.assets.draw_sprite) as draw, \
+            patch.object(game.assets.images[config.PISTOL_ITEM_IMAGE], "clip_draw",
+                         wraps=game.assets.images[config.PISTOL_ITEM_IMAGE].clip_draw) as icon:
+        menu_image(game, "pistol_bag_return_dragging")
+    assert draw.call_args.args[0] == config.PLAYER_IMAGE
+    icon.assert_called_once()
+    push_mouse(10, 10, kind=pico2d.SDL_MOUSEBUTTONUP)
+    assert not game.handle_events(menu_screen=True)
+    assert menu.equipped_weapon == "pistol" and menu.bag_items == original
+
+    for target in range(6):
+        push_mouse(*gun, kind=pico2d.SDL_MOUSEBUTTONDOWN)
+        push_mouse(*menu.bag_slot_center(target))
+        push_mouse(*menu.bag_slot_center(target), kind=pico2d.SDL_MOUSEBUTTONUP)
+        assert not game.handle_events(menu_screen=True)
+        assert menu.equipped_weapon is None and menu.bag_items[target][0] == "pistol"
+        assert sorted(menu.bag_items) == sorted(config.BAG_ITEM_SPECS)
+        with patch.object(game.assets, "draw_sprite", wraps=game.assets.draw_sprite) as draw:
+            menu_image(game, "pistol_bag_returned" if target == 0 else None)
+        assert draw.call_args.args[0] == config.PLAYER_IMAGE
+        push_mouse(*menu.bag_slot_center(target), kind=pico2d.SDL_MOUSEBUTTONDOWN)
+        push_mouse(640, 420, kind=pico2d.SDL_MOUSEBUTTONUP)
+        assert not game.handle_events(menu_screen=True) and menu.equipped_weapon == "pistol"
+    assert before == (world.elapsed, player.hp, player.weapon, player.pistol_ammo)
+
+    # Unequip again, and verify that Start/F5 use the NEW unarmed selection.
+    push_mouse(*gun, kind=pico2d.SDL_MOUSEBUTTONDOWN)
+    push_mouse(*menu.bag_slot_center(0), kind=pico2d.SDL_MOUSEBUTTONUP)
+    assert not game.handle_events(menu_screen=True) and menu.equipped_weapon is None
+    push_click(menu.bag_back_button)
+    assert not game.handle_events(menu_screen=True)
+    push_click(menu.main_buttons[0])
+    game.show_main_menu()
+    assert world.player.weapon is None and world.starting_weapon is None
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    release(game, pico2d.SDLK_F5)
+    assert world.player.weapon is None
+    capture(game, "pistol_bag_return_unarmed_start")
+
+    # Re-equip through the same public UI for the remaining shooting checks.
+    push_click(menu.main_buttons[-1])
+    assert not game.handle_events(menu_screen=True)
+    slot = next(index for index, item in enumerate(menu.bag_items) if item[0] == "pistol")
+    push_mouse(*menu.bag_slot_center(slot), kind=pico2d.SDL_MOUSEBUTTONDOWN)
+    push_mouse(640, 420, kind=pico2d.SDL_MOUSEBUTTONUP)
+    push_click(menu.bag_back_button)
+    assert not game.handle_events(menu_screen=True)
+    push_click(menu.main_buttons[0])
+    game.show_main_menu()
+    assert (world.player.weapon, world.player.pistol_ammo) == ("pistol", 7)
+    print("PASS: real equipped-pistol drag shows one held icon and an unarmed preview; "
+          "all six slots unequip/swap without duplication, outside drops restore equipment, "
+          "old world stays frozen and unarmed Start/F5 follows the updated bag selection.")
+
+
 def check_aim_and_ammo_pixels(game):
     world = game.world
     player = world.player
@@ -242,6 +310,80 @@ def check_live_performance(game):
           f"180 frames / {seconds:.3f}s = {180 / seconds:.2f} FPS.")
 
 
+def check_g_pistol_drop_and_pickup(game):
+    world = game.world
+    world.reset()
+    player = world.player
+    world.stage.drop_items.clear()
+    player.pistol_ammo = 4
+    textures = dict(game.assets.images)
+    push_key(pico2d.SDLK_g)
+    tick(game)
+    release(game, pico2d.SDLK_g)
+    assert player.weapon is None and len(world.stage.drop_items) == 1
+    item = world.stage.drop_items[0]
+    assert (item.kind, item.pistol_ammo, item.frame) == ("pistol", 4, 0)
+    assert not item.grounded and world.pickup_item is None
+    capture(game, "pistol_g_falling")
+    tick(game, 30)
+    assert item.grounded and world.pickup_item is item
+    # Leave a little room to see the floor icon rather than hiding it under the feet.
+    player.x = player.previous_x = item.x - 60
+    world.update_camera(0)
+    with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as font:
+        normal = capture(game, "pistol_g_ground").convert("RGB")
+    assert any(call.args[2] == "G" for call in font.call_args_list)
+    with patch.object(game.assets.images[config.PISTOL_ITEM_IMAGE], "clip_composite_draw"):
+        without = render_image(game).convert("RGB")
+    bounds = ImageChops.difference(normal, without).getbbox()
+    assert bounds is not None, "The dropped pistol must be visible, not an empty sprite-strip cell"
+    assert bounds[2] - bounds[0] <= 39 and bounds[3] - bounds[1] <= 30
+    crop = normal.crop(bounds).tobytes()
+    tick(game, 30)
+    assert render_image(game).convert("RGB").crop(bounds).tobytes() == crop
+
+    push_key(pico2d.SDLK_g)
+    tick(game)
+    release(game, pico2d.SDLK_g)
+    assert (player.weapon, player.pistol_ammo, player.sprite_image) == (
+        "pistol", 4, config.PLAYER_PISTOL_IMAGE)
+    assert item not in world.stage.drop_items and not world.stage.drop_items
+    mouse_click()
+    tick(game, 8)
+    assert player.pistol_ammo == 3
+    capture(game, "pistol_g_picked_up_firing")
+    tick(game, 30)
+
+    # Empty magazines cannot be refilled by dropping and immediately re-equipping.
+    player.pistol_ammo = 0
+    player.start_pistol_reload()
+    tick(game, 10)
+    push_key(pico2d.SDLK_g)
+    tick(game)
+    release(game, pico2d.SDLK_g)
+    item = world.stage.drop_items[0]
+    assert player.weapon is None and item.pistol_ammo == 0
+    tick(game, 30)
+    push_key(pico2d.SDLK_g)
+    tick(game)
+    release(game, pico2d.SDLK_g)
+    assert (player.state, player.pistol_ammo) == ("RELOAD", 0)
+    tick(game, 58)
+    assert player.pistol_ammo == 0
+    tick(game)
+    assert (player.state, player.pistol_ammo) == ("IDLE", 7)
+    push_key(pico2d.SDLK_F5)
+    tick(game)
+    release(game, pico2d.SDLK_F5)
+    assert all(len(stage.drop_items) == 15 and
+               all(drop.kind in ("combat_knife", "steel_pipe") for drop in stage.drop_items)
+               for stage in world.stages)
+    assert all(game.assets.images[name] is image for name, image in textures.items())
+    print("PASS: real G drops a falling collectible pistol, a static complete icon/G prompt "
+          "appears after landing, and a fresh G re-equips with the SAME ammo and can fire; "
+          "empty guns keep zero/restart full reload, F5 clears drops, initial 15 melee items/textures stay unchanged.")
+
+
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()
@@ -250,10 +392,12 @@ def main():
         game = Game()
         game.handle_events(menu_screen=True)
         check_bag_equipment_and_start(game)
+        check_bag_pistol_return(game)
         check_source_rows(game)
         check_aim_and_ammo_pixels(game)
         check_seven_shots_reload_and_hits(game)
         check_interrupt_restart_and_focus(game)
+        check_g_pistol_drop_and_pickup(game)
         check_live_performance(game)
     finally:
         if game is not None:

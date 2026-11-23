@@ -138,21 +138,23 @@ class PistolEquipmentTests(unittest.TestCase):
         self.assertFalse(game.world.controls.held)
         self.assertFalse(game.world.controls.pressed)
 
-    def test_restart_restores_selected_loadout_and_g_never_drops_an_unknown_item(self):
+    def test_restart_restores_selected_loadout_and_g_drops_a_collectible_pistol(self):
         world = World()
         world.starting_weapon = "pistol"
         world.reset()
         world.stage.drop_items.clear()
         self.assertTrue(world.interact_weapon())
         self.assertIsNone(world.player.weapon)
-        self.assertFalse(world.stage.drop_items)
+        self.assertEqual([item.kind for item in world.stage.drop_items], ["pistol"])
+        self.assertEqual(world.stage.drop_items[0].pistol_ammo, 7)
         world.reset()
         self.assertEqual(world.player.weapon, "pistol")
         item = world.stage.drop_items[0]
         world.player.x, world.player.ground_y = item.x, item.ground_y
         self.assertTrue(world.interact_weapon())
         self.assertEqual(world.player.weapon, item.kind)
-        self.assertEqual(len(world.stage.drop_items), 14)
+        self.assertEqual(len(world.stage.drop_items), 15)
+        self.assertEqual(world.stage.drop_items[-1].kind, "pistol")
         world.reset()
         self.assertEqual(world.player.weapon, "pistol")
         self.assertEqual(len(world.stage.drop_items), 15)

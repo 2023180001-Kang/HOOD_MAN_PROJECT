@@ -155,7 +155,7 @@ class UI:
             return
         x = item.x - camera_x - 5
         y = (item.ground_y - camera_y
-             + config.DROP_ITEM_BODY_HEIGHTS[item.kind] * config.DROP_ITEM_SCALE
+             + item.display_height
              + config.WEAPON_PROMPT_GAP)
         assets.font.draw(x + 1, y - 1, "G", (12, 15, 20))
         assets.font.draw(x, y, "G", (255, 224, 110))

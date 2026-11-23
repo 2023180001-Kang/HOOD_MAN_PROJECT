@@ -67,10 +67,17 @@ class MainMenu:
         if self.dragged_slot is not None:
             return False
         slot = self.bag_slot_at(x, y)
-        if slot is None:
+        if (self.bag_open and self.equipped_weapon == "pistol"
+                and self.bag_equipped_pistol_contains(x, y)):
+            slot = next(index for index, item in enumerate(self.bag_items) if item[0] == "pistol")
+            self.dragged_from_player = True
+            left, top, right, bottom = config.BAG_EQUIPPED_PISTOL_RECT
+            center_x, center_y = (left + right) / 2, config.SCREEN_HEIGHT - (top + bottom) / 2
+        elif slot is None:
             return self.click(x, y)
+        else:
+            center_x, center_y = self.bag_slot_center(slot)
         self.dragged_slot = slot
-        center_x, center_y = self.bag_slot_center(slot)
         # Keep the grabbed point under the mouse instead of snapping to center.
         self.drag_offset = (center_x - x, center_y - y)
         self.move_pointer(x, y)
@@ -80,7 +87,15 @@ class MainMenu:
         if self.dragged_slot is None:
             return
         target = self.bag_slot_at(x, y)
-        if self.bag_items[self.dragged_slot][0] == "pistol" and self.bag_player_contains(x, y):
+        if self.dragged_from_player:
+            if target is not None:
+                source = self.dragged_slot
+                self.bag_items[source], self.bag_items[target] = (
+                    self.bag_items[target], self.bag_items[source],
+                )
+                self.equipped_weapon = None
+                self.bag_player_animation.elapsed = 0.0
+        elif self.bag_items[self.dragged_slot][0] == "pistol" and self.bag_player_contains(x, y):
             self.equipped_weapon = "pistol"
             self.bag_player_animation.elapsed = 0.0
         elif target is not None:
@@ -94,6 +109,7 @@ class MainMenu:
     def cancel_drag(self):
         # The layout is committed only on a valid drop, so cancellation is lossless.
         self.dragged_slot = None
+        self.dragged_from_player = False
         self.drag_position = None
         self.drag_offset = (0.0, 0.0)
 
@@ -108,6 +124,12 @@ class MainMenu:
     @staticmethod
     def bag_player_contains(x, y):
         left, top, right, bottom = config.BAG_PLAYER_RECT
+        return (left <= x < right
+                and config.SCREEN_HEIGHT - bottom <= y < config.SCREEN_HEIGHT - top)
+
+    @staticmethod
+    def bag_equipped_pistol_contains(x, y):
+        left, top, right, bottom = config.BAG_EQUIPPED_PISTOL_RECT
         return (left <= x < right
                 and config.SCREEN_HEIGHT - bottom <= y < config.SCREEN_HEIGHT - top)
 
@@ -160,7 +182,9 @@ class MainMenu:
 
     def draw_bag_player(self, assets):
         animation = self.bag_player_animation
-        image = config.PLAYER_PISTOL_IMAGE if self.equipped_weapon == "pistol" else config.PLAYER_IMAGE
+        image = (config.PLAYER_PISTOL_IMAGE
+                 if self.equipped_weapon == "pistol" and not self.dragged_from_player
+                 else config.PLAYER_IMAGE)
         assets.draw_sprite(image, animation.row, animation.frame,
                            config.BAG_PLAYER_X, config.BAG_PLAYER_FEET_Y,
                            scale=config.BAG_PLAYER_SCALE)

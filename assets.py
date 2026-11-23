@@ -131,6 +131,16 @@ class Assets:
 
     def draw_drop_item(self, item, camera_x, camera_y):
         image = self.images[item.image_name]
+        if item.kind == "pistol":
+            left, bottom, width, height = config.PISTOL_ITEM_CLIP
+            scale = config.PISTOL_DROP_SCALE
+            image.clip_composite_draw(
+                left, bottom, width, height, 0, "h" if item.facing < 0 else "",
+                item.x - camera_x,
+                item.ground_y - camera_y + item.jump_height + item.display_height / 2,
+                width * scale, height * scale,
+            )
+            return
         width = image.w // config.DROP_ITEM_FRAMES
         left = item.frame * width
         scale = config.DROP_ITEM_SCALE

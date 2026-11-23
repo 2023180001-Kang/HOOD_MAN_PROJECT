@@ -30,19 +30,19 @@ class PistolEquipmentTests(unittest.TestCase):
         menu.press_pointer(*slot_center(slot))
         menu.release_pointer(config.BAG_PLAYER_X, config.BAG_PLAYER_FEET_Y + 100)
 
-    def test_previous_sheet_is_archived_and_all_80_new_clips_match_the_source(self):
+    def test_previous_sheet_is_archived_and_all_96_new_clips_match_the_source(self):
         path = config.ROOT / config.PLAYER_PISTOL_IMAGE
-        archived = config.ROOT / "before_sheets" / "HOOD_MAN_pistol_IDLE_matched_2048x2048.png"
+        archived = config.ROOT / "before_sheets" / "HoodMan_Pistol_Gait_Headfix_2048x2560.png"
         self.assertFalse((config.ROOT / archived.name).exists())
         self.assertEqual(hashlib.sha256(archived.read_bytes()).hexdigest(),
-                         "07ce9ed3d617a3bd568ece1308e1ce599bede982c750522ecd129c92b7c0d09e")
-        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),
                          "f5fdf89acb334e49b5f75718a9132a1e80746a07dae79dd205dbd8bc179a93c4")
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),
+                         "5a7272340a7799db39dc00d50658313f22cfa9d5b3944a8360a94f49344a0c9b")
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             rows = json.load(file)[config.PLAYER_PISTOL_IMAGE]
         with Image.open(path) as image:
-            self.assertEqual((image.size, image.mode), ((2048, 2560), "RGBA"))
-            self.assertEqual(len(rows), 10)
+            self.assertEqual((image.size, image.mode), ((2048, 3072), "RGBA"))
+            self.assertEqual(len(rows), 12)
             for row, frames in enumerate(rows):
                 self.assertEqual(len(frames), 8)
                 for col, tile in enumerate(frames):

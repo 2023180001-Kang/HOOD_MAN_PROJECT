@@ -73,7 +73,8 @@ def check_source_rows(game):
     texture = game.assets.images[config.PLAYER_PISTOL_IMAGE]
     for facing in (-1, 1):
         player.facing = facing
-        for state in ("IDLE", "WALK", "RUN", "JUMP", "SHOOT", "RELOAD", "HIT", "DYING", "WALK_SHOOT", "RUN_SHOOT"):
+        for state in ("IDLE", "WALK", "RUN", "JUMP", "SHOOT", "RELOAD", "HIT", "DYING",
+                      "WALK_SHOOT", "RUN_SHOOT", "WALK_RELOAD", "RUN_RELOAD"):
             player.animation.set_state(state)
             row, fps, _ = config.PLAYER_PISTOL_ANIMATIONS[state]
             for frame in range(8):
@@ -91,7 +92,7 @@ def check_source_rows(game):
                     width * scale, height * scale,  # No jump offset added twice.
                 )
     game.world.reset()
-    print("PASS: all 80 source clips in both directions use the new sheet, correct rows, "
+    print("PASS: all 96 source clips in both directions use the new sheet, correct rows, "
           "0.75 scale, mirrored offsets and fixed physical feet.")
 
 

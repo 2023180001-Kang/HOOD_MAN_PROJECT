@@ -297,11 +297,30 @@ class PistolShootingTests(unittest.TestCase):
                     start_x = player.x
                     advance(world, 0.5)
                     self.assertEqual((player.state, player.sprite_row, player.pistol_ammo),
-                                     ("RELOAD", 6, starting_ammo - 1))
+                                     ("RELOAD", 12 if running else 11, starting_ammo - 1))
                     self.assertAlmostEqual(player.x, start_x + speed * 0.5)
                     advance(world, 0.5)
                     self.assertEqual((player.state, player.pistol_ammo), ("RUN" if running else "WALK", 7))
                     self.assertAlmostEqual(player.x, start_x + speed)
+
+    def test_reload_switches_rows_without_restarting_as_gait_changes(self):
+        world = armed_world()
+        player = world.player
+        player.pistol_ammo = 4
+        tap(world.controls, "combat_r")
+        advance(world, 0.2)
+        self.assertEqual((player.sprite_row, player.animation.frame), (6, 1))
+        world.controls.press("left")
+        advance(world, 0.2)
+        self.assertEqual((player.sprite_row, player.animation.frame, player.facing), (11, 3, -1))
+        world.controls.press("left_shift")
+        advance(world, 0.2)
+        self.assertEqual((player.sprite_row, player.animation.frame), (12, 4))
+        world.controls.release("left")
+        advance(world, 0.2)
+        self.assertEqual((player.sprite_row, player.animation.frame, player.pistol_ammo), (6, 6, 4))
+        advance(world, 0.2)
+        self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 7))
 
     def test_turning_during_windup_uses_the_new_facing_and_depth_for_the_bullet(self):
         world = armed_world()

@@ -43,7 +43,7 @@ class Player:
         self.weapon = None
         self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
         self.pistol_shot_pending = False
-        self.pistol_shot_gait = "IDLE"
+        self.pistol_gait = "IDLE"
         self.pistol_reload_interrupted = False
         self.active_move = None
         self.weapon_leap_phase = None
@@ -112,7 +112,7 @@ class Player:
     def sprite_row(self):
         if self.active_move is not None:
             return self.active_move.row
-        if self.state == "SHOOT":
+        if self.state in ("SHOOT", "RELOAD"):
             pose = self._pistol_pose_for_frame(self.animation.frame)
             return config.PLAYER_PISTOL_ANIMATIONS[pose][0]
         if self.sprite_image in config.WEAPON_POSE_IMAGES.values():
@@ -155,12 +155,12 @@ class Player:
             self.animation.set_state("IDLE" if self.grounded else "JUMP")
 
     def _pistol_pose_for_frame(self, frame):
-        if self.state == "SHOOT" and self.pistol_shot_gait in ("WALK", "RUN"):
-            # The gait sheets flash again in column seven. Use the matching
+        if self.state in ("SHOOT", "RELOAD") and self.pistol_gait in ("WALK", "RUN"):
+            # The moving shots flash again in column seven. Use the matching
             # non-firing stride there because one A press fires one round.
-            if frame == 6:
-                return self.pistol_shot_gait
-            return self.pistol_shot_gait + "_SHOOT"
+            if self.state == "SHOOT" and frame == 6:
+                return self.pistol_gait
+            return f"{self.pistol_gait}_{self.state}"
         return self.state
 
     def _pistol_muzzle_offset(self, frame):
@@ -191,12 +191,14 @@ class Player:
         if direction:
             self.facing = direction
         self.cancel_combat()
-        self.pistol_shot_gait = self.state if self.grounded else "JUMP"
+        self.pistol_gait = self.state if self.grounded else "JUMP"
         self.pistol_shot_pending = True
         self.animation.set_state("SHOOT")
         return True
 
     def start_pistol_reload(self):
+        if self.state in ("IDLE", "WALK", "RUN", "JUMP"):
+            self.pistol_gait = self.state
         self.cancel_combat()
         self.animation.set_state("RELOAD")
         self.animation.elapsed = 0.0
@@ -238,11 +240,10 @@ class Player:
         if self.grounded:
             speed = config.RUN_SPEED if controls.running else config.WALK_SPEED
             self.move_on_ground(dt, controls, speed)
-            if self.state == "SHOOT":
-                self.pistol_shot_gait = self.movement_state(controls)
         else:
             self.vx = self.ground_vy = 0.0
         self.update_vertical(dt)
+        self.pistol_gait = self.movement_state(controls)
         self.animation.update(dt)
         if self.animation.elapsed + 1e-9 < 8 / self.animation.definitions[self.state][1]:
             return
@@ -253,7 +254,7 @@ class Player:
                 self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
                 self.pistol_reload_interrupted = False
             self.pistol_shot_pending = False
-            self.animation.set_state(self.movement_state(controls))
+            self.animation.set_state(self.pistol_gait)
 
     def start_move(self, move, direction):
         if move.jump_attack and (self.grounded or self.jump_count != 2):

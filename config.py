@@ -141,7 +141,7 @@ BAG_ITEM_SLOT_RECTS = (
 )
 BAG_ITEM_SLOT_PADDING = 18
 PLAYER_IMAGE = "HoodMan_Sprite.png"
-PLAYER_PISTOL_IMAGE = "HoodMan_Pistol_Gait_Headfix_2048x2560.png"
+PLAYER_PISTOL_IMAGE = "HoodMan_Pistol_MovingReload_2048x3072.png"
 PLAYER_STEEL_CLUB_IMAGE = "HoodMan_SteelClub_WalkRun_2048x2048.png"
 STEEL_CLUB_PROJECTILE_IMAGE = "HoodMan_SteelClub_Projectile_256.png"
 STEEL_CLUB_THROW_DAMAGE = 40
@@ -533,6 +533,8 @@ PLAYER_PISTOL_ANIMATIONS = {
     "RELOAD": (6, 8.0, False),
     "WALK_SHOOT": (9, 16.0, False),
     "RUN_SHOOT": (10, 16.0, False),
+    "WALK_RELOAD": (11, 8.0, False),
+    "RUN_RELOAD": (12, 8.0, False),
 }
 EQUIPPED_ANIMATIONS = {"steel_club": ARMED_PLAYER_POSES, "pistol": PLAYER_PISTOL_ANIMATIONS}
 ENEMY_ANIMATIONS = {

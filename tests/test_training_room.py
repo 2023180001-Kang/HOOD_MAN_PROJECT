@@ -85,7 +85,48 @@ class TrainingRoomTests(unittest.TestCase):
             self.press("weapon_interact")
             self.assertEqual(self.world.player.weapon, item.kind)
             self.assertNotIn(item, self.world.stage.drop_items)
-        self.assertTrue(all(item.support_height == 0 for item in self.world.stage.drop_items))
+        self.assertEqual({item.kind: (item.x, item.surface_y) for item in self.world.stage.drop_items},
+                         {item.kind: (item.x, item.surface_y) for item in items[:-1]})
+
+    def test_g_returns_each_weapon_to_its_display_slot_and_can_pick_it_up_again(self):
+        player = self.world.player
+        for item in list(self.world.stage.drop_items):
+            with self.subTest(kind=item.kind):
+                player.x, player.ground_y = item.x + config.WEAPON_PICKUP_RANGE, item.ground_y - 10
+                self.press("weapon_interact")
+                self.assertEqual(player.weapon, item.kind)
+                if item.kind == "pistol":
+                    self.press("combat_a")
+                    advance(self.world, 0.5)
+                self.press("weapon_interact")
+                self.assertIsNone(player.weapon)
+                returned = self.world.pickup_item
+                self.assertIsNotNone(returned)
+                self.assertEqual((returned.kind, returned.x, returned.ground_y, returned.surface_y),
+                                 (item.kind, item.x, item.ground_y, item.surface_y))
+                self.press("weapon_interact")
+                self.assertEqual(player.weapon, item.kind)
+                if item.kind == "pistol":
+                    self.assertEqual(player.pistol_ammo, config.PLAYER_PISTOL_MAGAZINE_SIZE - 1)
+                self.press("weapon_interact")
+                self.assertEqual(len(self.world.stage.drop_items), 4)
+
+    def test_g_away_from_the_table_still_drops_the_weapon_onto_the_floor(self):
+        for x, y in ((200, 135), (1120, config.TRAINING_TABLE_APPROACH_Y)):
+            with self.subTest(x=x, y=y):
+                self.press("restart")
+                player = self.world.player
+                item = self.world.stage.drop_items[0]
+                player.x, player.ground_y = item.x, item.ground_y
+                self.press("weapon_interact")
+                player.x, player.ground_y = x, y
+                self.press("weapon_interact")
+                dropped, = [drop for drop in self.world.stage.drop_items if drop.kind == item.kind]
+                self.assertIsNone(player.weapon)
+                self.assertEqual((dropped.x, dropped.support_height), (x, 0))
+                self.assertFalse(dropped.grounded)
+                advance(self.world, 1)
+                self.assertTrue(dropped.grounded)
 
     def test_main_keyboard_and_keypad_plus_summon_one_nearby_thug(self):
         player = self.world.player

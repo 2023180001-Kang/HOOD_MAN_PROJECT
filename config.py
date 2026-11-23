@@ -94,6 +94,7 @@ MAIN_MENU_BUTTONS = (
 TRAINING_ROOM_IMAGE = "training_room_1280x720_v2.png"
 # Source y=420 is the wall/floor seam; the tabletop spans source y=322..344.
 TRAINING_FLOOR = (0, 0, 1280, 300)
+TRAINING_TABLE_X_BOUNDS = (90, 972)
 TRAINING_TABLE_ITEMS = (("steel_pipe", 200), ("combat_knife", 420),
                         ("steel_club", 640), ("pistol", 860))
 TRAINING_TABLE_APPROACH_Y = 280

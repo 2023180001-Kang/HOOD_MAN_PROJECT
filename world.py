@@ -124,6 +124,9 @@ class World:
 
     def drop_weapon(self, kind):
         player = self.player
+        pistol_ammo = player.pistol_ammo if kind == "pistol" else None
+        if self.training and self.stage.can_return_to_table(player, kind):
+            return self.stage.place_on_table(kind, pistol_ammo)
         area = (self.stage.drop_spawn_area if player.floor == 0 else self.stage.area_for(player))
         x, ground_y = area.project(player.x, player.ground_y, config.DROP_ITEM_HALF_WIDTH)
         left, bottom, right, top = area.bounds
@@ -137,8 +140,7 @@ class World:
         ground_y = clamp(ground_y, bottom + config.DROP_ITEM_SHADOW_HALF_DEPTH, top - height)
         item = DropItem(kind, x, ground_y, player.facing,
                         jump_height=max(0.0, player.y + config.WEAPON_DROP_HAND_HEIGHT - ground_y),
-                        floor=player.floor,
-                        pistol_ammo=player.pistol_ammo if kind == "pistol" else None)
+                        floor=player.floor, pistol_ammo=pistol_ammo)
         self.stage.drop_items.append(item)
         return item
 

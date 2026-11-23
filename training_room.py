@@ -36,12 +36,24 @@ class TrainingRoom(Stage):
     width = config.SCREEN_WIDTH
     camera_y_bounds = (0, 0)
     arrow_sides = ()
+    table_slots = dict(config.TRAINING_TABLE_ITEMS)
 
     def __init__(self):
+        super().__init__(walkable=WalkableArea.rectangle(*config.TRAINING_FLOOR), drop_items=[])
+        for kind in self.table_slots:
+            self.place_on_table(kind)
+
+    def can_return_to_table(self, player, kind):
+        left, right = config.TRAINING_TABLE_X_BOUNDS
+        return (kind in self.table_slots and player.grounded and left <= player.x <= right
+                and abs(player.ground_y - config.TRAINING_TABLE_APPROACH_Y) <= config.WEAPON_PICKUP_DEPTH)
+
+    def place_on_table(self, kind, pistol_ammo=None):
         approach = config.TRAINING_TABLE_APPROACH_Y
-        items = [DropItem(kind, x, approach, support_height=config.TRAINING_TABLE_SURFACE_Y - approach)
-                 for kind, x in config.TRAINING_TABLE_ITEMS]
-        super().__init__(walkable=WalkableArea.rectangle(*config.TRAINING_FLOOR), drop_items=items)
+        item = DropItem(kind, self.table_slots[kind], approach, pistol_ammo=pistol_ammo,
+                        support_height=config.TRAINING_TABLE_SURFACE_Y - approach)
+        self.drop_items.append(item)
+        return item
 
     def summon_target(self, player):
         # Leave room for a jab, including when the player faces the nearest wall.

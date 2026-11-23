@@ -174,7 +174,6 @@ class Player:
         if direction:
             self.facing = direction
         self.cancel_combat()
-        self.vx = self.ground_vy = 0.0
         self.pistol_shot_pending = True
         self.animation.set_state("SHOOT")
         return True
@@ -205,8 +204,12 @@ class Player:
             self.ground_y, self.jump_height + offset_y,
             self.facing, self.floor)
 
-    def update_pistol(self, dt):
-        self.vx = self.ground_vy = 0.0
+    def update_pistol(self, dt, controls):
+        if self.state == "SHOOT" and self.grounded:
+            speed = config.RUN_SPEED if controls.running else config.WALK_SPEED
+            self.move_on_ground(dt, controls, speed)
+        else:
+            self.vx = self.ground_vy = 0.0
         self.update_vertical(dt)
         self.animation.update(dt)
         if self.animation.elapsed + 1e-9 < 8 / self.animation.definitions[self.state][1]:
@@ -218,7 +221,7 @@ class Player:
                 self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
                 self.pistol_reload_interrupted = False
             self.pistol_shot_pending = False
-            self.animation.set_state("IDLE" if self.grounded else "JUMP")
+            self.animation.set_state(self.movement_state(controls))
 
     def start_move(self, move, direction):
         if move.jump_attack and (self.grounded or self.jump_count != 2):
@@ -555,7 +558,7 @@ class Player:
             return
 
         if self.state in ("SHOOT", "RELOAD"):
-            self.update_pistol(dt)
+            self.update_pistol(dt, controls)
             return
 
         if self.active_move is not None:
@@ -584,13 +587,15 @@ class Player:
         self.move_on_ground(dt, controls, speed)
         self.update_vertical(dt)
 
-        state = "IDLE"
-        if hypot(self.vx, self.ground_vy) > 0.1:
-            state = "RUN" if controls.running else "WALK"
-        if not self.grounded:
-            state = "JUMP"
-        self.animation.set_state(state)
+        self.animation.set_state(self.movement_state(controls))
         self.animation.update(dt)
+
+    def movement_state(self, controls):
+        if not self.grounded:
+            return "JUMP"
+        if hypot(self.vx, self.ground_vy) > 0.1:
+            return "RUN" if controls.running else "WALK"
+        return "IDLE"
 
     def move_on_ground(self, dt, controls, speed, *, turn=True):
         move_x, move_y = controls.movement

@@ -247,10 +247,52 @@ class PistolShootingTests(unittest.TestCase):
         advance(world, 0.05)
         self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 7))
 
-    def test_shoot_and_reload_stop_ground_motion_but_keep_airborne_gravity(self):
+    def test_walking_and_running_continue_through_the_entire_shot(self):
+        for direction, sign in (("left", -1), ("right", 1)):
+            for running in (False, True):
+                with self.subTest(direction=direction, running=running):
+                    world = armed_world()
+                    player = world.player
+                    world.controls.press(direction)
+                    if running:
+                        world.controls.press("left_shift")
+                    advance(world, 0.4)
+                    speed = sign * (config.RUN_SPEED if running else config.WALK_SPEED)
+                    start_x = player.x
+                    press_fire(world)
+                    advance(world, 0.125, 120)
+                    self.assertEqual((player.state, player.vx, player.pistol_ammo), ("SHOOT", speed, 6))
+                    self.assertAlmostEqual(player.x, start_x + speed * 0.125)
+                    bullet, = world.projectiles
+                    muzzle_x, muzzle_y = player.aim_line[:2]
+                    self.assertAlmostEqual(bullet.x, muzzle_x + sign * bullet.half_width)
+                    self.assertAlmostEqual(bullet.y, muzzle_y)
+                    advance(world, 0.375, 120)
+                    self.assertEqual(player.state, "RUN" if running else "WALK")
+                    self.assertAlmostEqual(player.x, start_x + speed * 0.5)
+
+    def test_turning_during_windup_uses_the_new_facing_and_depth_for_the_bullet(self):
         world = armed_world()
         player = world.player
-        player.jump_height, player.vy, player.jump_count = 200, -20, 1
+        world.controls.press("right")
+        advance(world, 0.2)
+        press_fire(world)
+        advance(world, 0.05, 120)
+        initial_depth = player.ground_y
+        world.controls.release("right")
+        world.controls.press("left")
+        world.controls.press("up")
+        advance(world, 0.075, 120)
+        bullet, = world.projectiles
+        self.assertLess(player.vx, 0)
+        self.assertGreater(player.ground_y, initial_depth)
+        self.assertEqual((bullet.facing, bullet.ground_y), (-1, player.ground_y))
+        self.assertAlmostEqual(bullet.x, player.aim_line[0] - bullet.half_width)
+
+    def test_airborne_shooting_and_reloading_preserve_gravity(self):
+        world = armed_world()
+        player = world.player
+        player.jump_height, player.vy, player.jump_count = 350, -20, 1
         player.animation.set_state("JUMP")
         world.controls.press("right")
         world.controls.press("up")
@@ -258,7 +300,7 @@ class PistolShootingTests(unittest.TestCase):
         position = player.x, player.ground_y
         advance(world, 0.15)
         self.assertEqual((player.x, player.ground_y), position)
-        self.assertLess(player.jump_height, 200)
+        self.assertLess(player.jump_height, 350)
         self.assertLess(player.vy, -20)
         tap(world.controls, "jump")
         world.update(config.FIXED_DT)

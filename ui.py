@@ -91,7 +91,8 @@ class UI:
 
         pico2d.draw_rectangle(688, 616, config.SCREEN_WIDTH - 20, 704,
                               12, 21, 33, filled=True)
-        title = (f"{config.WEAPON_NAMES[player.weapon]} 공격 · 피해량"
+        title = ("권총 장착 · 근접 공격" if player.weapon == "pistol" else
+                 f"{config.WEAPON_NAMES[player.weapon]} 공격 · 피해량"
                  if player.weapon in config.WEAPON_NAMES else "기본 공격 · 피해량")
         assets.font.draw(704, 686, title, (244, 204, 66))
         for index, move in enumerate(player.moves.values()):
@@ -191,6 +192,10 @@ class UI:
         if assets.font is not None:
             assets.font.draw(x + image.w * scale + 16, y + 56,
                              f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
+            if world.player.weapon == "pistol":
+                assets.font.draw(x + image.w * scale + 16, y + 8,
+                                 f"권총 {world.player.pistol_ammo} / {config.PLAYER_PISTOL_MAGAZINE_SIZE}",
+                                 (255, 224, 110))
             if not self.details_visible:
                 return
             # Help is screen-fixed UI, independent of the world camera.
@@ -213,7 +218,11 @@ class UI:
                                  (180, 255, 150))
             if world.player.invincible:
                 assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
-            if world.player.weapon in config.WEAPON_NAMES:
+            if world.player.weapon == "pistol":
+                action = "재장전 중" if world.player.state == "RELOAD" else "왼쪽 클릭: 사격"
+                assets.font.draw(22, 132, f"권총 {action} · 피해 20 · 7발 후 자동 재장전",
+                                 (126, 218, 255))
+            elif world.player.weapon in config.WEAPON_NAMES:
                 phase = world.player.weapon_leap_phase
                 if phase == "AIM":
                     help_text = "슬로 모션: 방향키로 공중 조준 / D 다시 눌러 빠르게 내려찍기"

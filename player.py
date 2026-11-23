@@ -7,6 +7,7 @@ from animation import Animation
 from collision import Rect, attack_hits_body
 from combat import ALL_MOVES, STRONG_MOVES, moves_for_weapon
 from physics import approach_vector
+from projectiles import PlayerPistolBullet
 from traffic import start_car_hit, update_car_hit
 from walkable import default_area
 
@@ -39,6 +40,8 @@ class Player:
         self.invincible = False
         self.car_hit = False
         self.weapon = None
+        self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
+        self.pistol_shot_pending = False
         self.active_move = None
         self.weapon_leap_phase = None
         self.weapon_leap_direction = (1.0, 0.0)
@@ -110,6 +113,7 @@ class Player:
         return self.animation.row
 
     def cancel_combat(self):
+        self.pistol_shot_pending = False
         self.active_move = None
         self.hit_enemies.clear()
         self.weapon_leap_phase = None
@@ -130,11 +134,82 @@ class Player:
         if weapon == self.weapon:
             return
         self.weapon = weapon
-        self.animation.definitions.update(
-            config.PLAYER_PISTOL_ANIMATIONS if weapon == "pistol" else config.PLAYER_ANIMATIONS)
-        if self.active_move is not None:
+        hit_fps = self.animation.definitions["HIT"][1]
+        poses = config.PLAYER_PISTOL_ANIMATIONS if weapon == "pistol" else config.PLAYER_ANIMATIONS
+        self.animation.definitions.update(poses)
+        if self.state == "HIT":
+            # A mid-flinch G swap changes the sheet/row, not the chosen recovery speed.
+            row, _, loop = poses["HIT"]
+            self.animation.definitions["HIT"] = (row, hit_fps, loop)
+        if self.active_move is not None or self.state in ("SHOOT", "RELOAD"):
             # Dropping/swapping a weapon cannot leave its old strike pending.
             self.cancel_combat()
+            self.animation.set_state("IDLE" if self.grounded else "JUMP")
+
+    @property
+    def aim_line(self):
+        if (self.weapon != "pistol" or not self.alive or self.staircase is not None
+                or self.active_move is not None
+                or self.state not in ("IDLE", "WALK", "RUN", "JUMP", "SHOOT")):
+            return None
+        muzzle = self.x + self.facing * config.PLAYER_PISTOL_MUZZLE_X
+        height = self.y + config.PLAYER_PISTOL_MUZZLE_HEIGHT
+        end = max(0.0, min(config.WORLD_WIDTH, self.x + self.facing * config.PLAYER_PISTOL_RANGE))
+        return muzzle, height, end, height
+
+    def start_pistol_shot(self, direction=0):
+        if (self.weapon != "pistol" or not self.alive or self.staircase is not None
+                or self.active_move is not None
+                or self.state not in ("IDLE", "WALK", "RUN", "JUMP")):
+            return False
+        if self.pistol_ammo <= 0:
+            self.start_pistol_reload()
+            return False
+        if direction:
+            self.facing = direction
+        self.cancel_combat()
+        self.vx = self.ground_vy = 0.0
+        self.pistol_shot_pending = True
+        self.animation.set_state("SHOOT")
+        return True
+
+    def start_pistol_reload(self):
+        self.cancel_combat()
+        self.vx = self.ground_vy = 0.0
+        self.animation.set_state("RELOAD")
+        self.animation.elapsed = 0.0
+
+    def take_projectile(self):
+        if (not self.alive or self.weapon != "pistol" or self.state != "SHOOT"
+                or self.staircase is not None
+                or not self.pistol_shot_pending or self.pistol_ammo <= 0
+                or self.animation.finished):
+            return None
+        fps = self.animation.definitions["SHOOT"][1]
+        flash_time = config.PLAYER_PISTOL_SHOOT_FRAME / fps
+        if self.animation.elapsed + 1e-9 < flash_time:
+            return None
+        # Keep the emitted round and the first visible muzzle flash in one frame.
+        self.animation.elapsed = max(self.animation.elapsed, flash_time + 1e-9 / fps)
+        self.pistol_shot_pending = False
+        self.pistol_ammo -= 1
+        return PlayerPistolBullet(
+            self.x + self.facing * (config.PLAYER_PISTOL_MUZZLE_X + PlayerPistolBullet.half_width),
+            self.ground_y, self.jump_height + config.PLAYER_PISTOL_MUZZLE_HEIGHT,
+            self.facing, self.floor)
+
+    def update_pistol(self, dt):
+        self.vx = self.ground_vy = 0.0
+        self.update_vertical(dt)
+        self.animation.update(dt)
+        if self.animation.elapsed + 1e-9 < 8 / self.animation.definitions[self.state][1]:
+            return
+        if self.state == "SHOOT" and self.pistol_ammo == 0:
+            self.start_pistol_reload()
+        else:
+            if self.state == "RELOAD":
+                self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
+            self.pistol_shot_pending = False
             self.animation.set_state("IDLE" if self.grounded else "JUMP")
 
     def start_move(self, move, direction):
@@ -388,9 +463,19 @@ class Player:
         if controls.take_press("invincibility") and self.alive:
             self.invincible = not self.invincible
         jump_pressed = controls.take_press("jump")
+        shoot_pressed = controls.take_press("shoot")
         combat_pressed = controls.take_latest_press(ALL_MOVES)
         if self.staircase is not None or self.state in ("CAR_HIT", "HIT", "DYING", "DEAD"):
             return
+        if self.weapon == "pistol":
+            if self.state in ("SHOOT", "RELOAD"):
+                return
+            if self.pistol_ammo == 0 and self.active_move is None:
+                self.start_pistol_reload()
+                return
+            if shoot_pressed and self.active_move is None:
+                self.start_pistol_shot(controls.direction)
+                return
         if self.rush_phase in ("WINDUP", "FLY") and "combat_w" not in controls.held:
             self.release_rush()
         move = STRONG_MOVES.get(combat_pressed) or self.moves.get(combat_pressed)
@@ -435,6 +520,10 @@ class Player:
                     self.animation.elapsed = 8 / config.PLAYER_ANIMATIONS["DEAD"][1]
                 else:
                     self.animation.set_state("IDLE")
+            return
+
+        if self.state in ("SHOOT", "RELOAD"):
+            self.update_pistol(dt)
             return
 
         if self.active_move is not None:

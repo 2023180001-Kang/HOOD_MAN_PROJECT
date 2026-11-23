@@ -11,6 +11,7 @@ from effects import DamageNumber, HitEffect, SpriteAfterimage
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
 from player import Player
+from projectiles import PlayerPistolBullet
 from rush import RushSequence
 from stage import Stage
 
@@ -299,9 +300,15 @@ class World:
         # Existing rounds survive their shooter's death. New shots are emitted
         # only after the player's strikes have had a chance to interrupt them.
         for bullet in self.projectiles:
-            if bullet.update(dt, self.player):
+            targets = self.enemies if isinstance(bullet, PlayerPistolBullet) else self.player
+            if bullet.update(dt, targets):
                 self.projectile_impact(bullet)
         if self.player.alive:
+            bullet = self.player.take_projectile()
+            if bullet is not None:
+                self.projectiles.append(bullet)
+                if bullet.update(0, self.enemies):
+                    self.projectile_impact(bullet)
             for enemy in self.enemies:
                 bullet = enemy.take_projectile()
                 if bullet is None:
@@ -316,7 +323,13 @@ class World:
     def projectile_impact(self, bullet):
         self.effects.append(HitEffect(bullet.impact_x, bullet.y, bullet.facing,
                                       image_name=config.CLUB_HIT_IMAGE))
-        self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
+        if isinstance(bullet, PlayerPistolBullet):
+            enemy = bullet.impact_target
+            self.damage_numbers.append(DamageNumber.above_body(
+                enemy.body, bullet.impact_damage, depth=enemy.ground_y - config.GROUND_Y))
+            self.camera.shake()
+        else:
+            self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
 
     def update_afterimages(self, dt):
         for afterimage in self.afterimages:
@@ -365,7 +378,7 @@ class World:
         player = self.player
         if (self.stage_loading or player.floor != 0 or player.staircase is not None
                 or not player.alive or player.active_move is not None
-                or player.state in ("HIT", "DYING", "DEAD")):
+                or player.state in ("SHOOT", "RELOAD", "HIT", "DYING", "DEAD")):
             return False
         for side in self.stage.arrow_sides:
             destination = self.stage.destination(side)

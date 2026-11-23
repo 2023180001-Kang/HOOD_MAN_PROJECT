@@ -1,6 +1,6 @@
 """Ranged rounds with continuous collision and per-weapon flight/render profiles."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import sqrt
 
 import config
@@ -16,6 +16,8 @@ class ResearcherBullet:
     floor: int = 0
     elapsed: float = 0.0
     spent: bool = False
+    impact_target: object = field(default=None, init=False, repr=False)
+    impact_damage: int = field(default=0, init=False)
 
     image_name = config.RESEARCHER_BULLET_IMAGE
     damage = config.RESEARCHER_DAMAGE
@@ -86,7 +88,7 @@ class ResearcherBullet:
             edge_time = edge_gap / self.speed
             step = min(step, edge_time)
             terminal = min(ground_time, edge_time, range_time) <= step + 1e-12
-            contact = self._contact_time(player, step, offset, dt, gravity)
+            contact, target = self._first_contact(player, step, offset, dt, gravity)
             # Ground/world contact wins a simultaneous tie. Never hit after landing.
             hit = contact is not None and (not terminal or contact < step - 1e-12)
             travel = contact if hit else step
@@ -95,7 +97,11 @@ class ResearcherBullet:
             self.elapsed += travel
             if hit:
                 self.spent = True  # Also consume a bullet blocked by P invincibility.
-                return player.take_damage(self.damage)
+                previous_hp = target.hp
+                applied = target.take_damage(self.damage)
+                self.impact_target = target
+                self.impact_damage = previous_hp - target.hp
+                return applied
             if terminal:
                 if ground_time <= step + 1e-12:
                     self.height = self.half_height
@@ -104,6 +110,9 @@ class ResearcherBullet:
             offset += step
             if offset >= dt:
                 return False
+
+    def _first_contact(self, target, duration, offset, tick_duration, gravity):
+        return self._contact_time(target, duration, offset, tick_duration, gravity), target
 
     def _contact_time(self, player, duration, offset, tick_duration, gravity):
         if not player.alive or not same_floor(self, player):
@@ -160,6 +169,20 @@ class ResearcherBullet:
                 if low - 1e-9 <= value <= high + 1e-9:
                     return time
         return None
+
+
+class PlayerPistolBullet(ResearcherBullet):
+    """Same pistol flight profile, but hit only the first living enemy in the path."""
+
+    damage = config.PLAYER_PISTOL_DAMAGE
+
+    def _first_contact(self, enemies, duration, offset, tick_duration, gravity):
+        first, target = None, None
+        for enemy in enemies:
+            contact = self._contact_time(enemy, duration, offset, tick_duration, gravity)
+            if contact is not None and (first is None or contact < first):
+                first, target = contact, enemy
+        return first, target
 
 
 class RifleBullet(ResearcherBullet):

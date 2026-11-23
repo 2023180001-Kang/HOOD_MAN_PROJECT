@@ -122,6 +122,12 @@ BAG_ITEM_SLOT_RECTS = (
 BAG_ITEM_SLOT_PADDING = 18
 PLAYER_IMAGE = "HoodMan_Sprite.png"
 PLAYER_PISTOL_IMAGE = "HOOD_MAN_pistol_matched_base_2048x2048.png"
+PLAYER_PISTOL_DAMAGE = 20
+PLAYER_PISTOL_MAGAZINE_SIZE = 7
+PLAYER_PISTOL_RANGE = 480.0
+PLAYER_PISTOL_SHOOT_FRAME = 2  # First muzzle flash, zero-based column of row 5.
+PLAYER_PISTOL_MUZZLE_X = 47.25  # Source muzzle (191, 135), feet y=241, scale 0.75.
+PLAYER_PISTOL_MUZZLE_HEIGHT = 79.5
 WEAPON_POSE_IMAGES = {
     "combat_knife": "HOOD_MAN_DAGGER_move and fight.png",
     "steel_pipe": "HOOD_MAN_STEEL_PIPE_move and fight.png",
@@ -195,7 +201,7 @@ COMBAT_MOVE_SPECS = (
     ("d", "왼발 차기", 1, 50, 115.0, 146.0, COMBAT_KICK_FPS),
     ("f", "오른발 차기", 2, 60, 130.0, 146.0, COMBAT_KICK_FPS),
 )
-WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프"}
+WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프", "pistol": "권총"}
 WEAPON_HIT_IMAGES = {"combat_knife": PUNCH_KICK_HIT_IMAGE, "steel_pipe": CLUB_HIT_IMAGE}
 # The three new attacks inherit the existing A/S/D balance. Impact windows
 # follow the source strike poses; overhead/jump attacks hit on their downswing.

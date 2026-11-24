@@ -66,7 +66,7 @@ class RemovedCounterTests(unittest.TestCase):
         self.assertFalse(game.world.enemies)
 
     def test_hjkl_do_not_block_enemy_attacks_or_grant_protection(self):
-        for enemy_type, damage, frame in ((Enemy, 20, 4), (Enemy02, 30, 3), (AxeEnemy, 60, 4)):
+        for enemy_type, damage, frame in ((Enemy, 20, 4), (Enemy02, 30, 3), (AxeEnemy, 40, 4)):
             for side in (-1, 1):
                 for key in "hjkl":
                     game = scene()

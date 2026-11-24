@@ -105,13 +105,13 @@ class AxeEnemyTests(unittest.TestCase):
             fresh = world.enemies[-1]
             self.assertIs(type(fresh), AxeEnemy)
             self.assertEqual((fresh.hp, fresh.attack_damage, fresh.sprite_image),
-                             (400, 60, config.AXE_ENEMY_IMAGE))
+                             (400, 40, config.AXE_ENEMY_IMAGE))
             self.assertIs(fresh.walkable, world.stage.walkable)
             self.assertIs(world.enemies[0], original)
             self.assertEqual(original.hp, 360)
             world.stage.cycle_spawn_enemy_type()
 
-    def test_axe_swing_deals_sixty_once_only_on_active_frames_in_both_directions(self):
+    def test_axe_swing_deals_forty_once_only_on_active_frames_in_both_directions(self):
         for side in (-1, 1):
             player = Player()
             enemy = AxeEnemy(player.x + side * 80, -side, attack_speed=1.3)
@@ -119,11 +119,11 @@ class AxeEnemyTests(unittest.TestCase):
             for frame in range(8):
                 enemy.animation.elapsed = (frame + 0.05) / enemy.attack_fps
                 self.assertEqual(enemy.try_hit(player), frame == 4)
-                self.assertEqual(player.hp, 500 if frame < 4 else 440)
+                self.assertEqual(player.hp, 500 if frame < 4 else 460)
             enemy.start_attack()
             enemy.animation.elapsed = 4.05 / enemy.attack_fps
             self.assertTrue(enemy.try_hit(player))
-            self.assertEqual(player.hp, 380)
+            self.assertEqual(player.hp, 420)
 
     def test_axe_swing_preserves_range_direction_depth_height_and_invincibility(self):
         for situation in ("far", "behind", "deep", "above", "invincible", "depth_edge"):
@@ -144,7 +144,7 @@ class AxeEnemyTests(unittest.TestCase):
             else:
                 player.ground_y += 32
             self.assertEqual(enemy.try_hit(player), situation == "depth_edge")
-            self.assertEqual(player.hp, 440 if situation == "depth_edge" else 500)
+            self.assertEqual(player.hp, 460 if situation == "depth_edge" else 500)
             self.assertEqual(enemy.has_hit, situation in ("invincible", "depth_edge"))
 
     def test_simultaneous_axe_attacks_apply_independent_damage_and_existing_effects(self):
@@ -157,13 +157,13 @@ class AxeEnemyTests(unittest.TestCase):
             enemy.start_attack()
             enemy.animation.elapsed = 4.05 / enemy.attack_fps
         world.step(config.FIXED_DT)
-        self.assertEqual(world.player.hp, 380)
+        self.assertEqual(world.player.hp, 420)
         self.assertTrue(first.has_hit and second.has_hit)
         self.assertEqual([effect.image_name for effect in world.effects],
                          [config.CLUB_HIT_IMAGE] * 2)
         self.assertGreater(world.camera.shake_remaining, 0)
         advance(world, 0.1)
-        self.assertEqual(world.player.hp, 380)
+        self.assertEqual(world.player.hp, 420)
 
     def test_basic_and_weapon_hits_show_actual_damage_numbers_and_matching_effects(self):
         for weapon in (None, *config.WEAPON_POSE_IMAGES):
@@ -310,7 +310,7 @@ class AxeEnemyTests(unittest.TestCase):
             with patch("pico2d.draw_rectangle"):
                 UI().draw(assets, world)
             labels = [call.args[2] for call in assets.font.draw.call_args_list]
-            self.assertTrue(any("도끼" in text and "60" in text for text in labels))
+            self.assertIn("적 공격: 도끼 40", labels)
             self.assertTrue(any(f"{index + 1}번 맵" in text and "도끼 적" in text for text in labels))
 
     def test_sheet_metadata_has_six_rows_with_exact_clips_flips_feet_and_no_stun_mapping(self):
@@ -387,7 +387,7 @@ class AxeEnemyTests(unittest.TestCase):
         world.update(config.FIXED_DT)
         fresh = world.enemies[0]
         self.assertIsNot(fresh, enemy)
-        self.assertEqual((fresh.hp, fresh.max_hp, fresh.attack_damage), (400, 400, 60))
+        self.assertEqual((fresh.hp, fresh.max_hp, fresh.attack_damage), (400, 400, 40))
 
     def test_natural_axe_pursuit_and_attacks_are_identical_across_render_rates(self):
         outcomes = []

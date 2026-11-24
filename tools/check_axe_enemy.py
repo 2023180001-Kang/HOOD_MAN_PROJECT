@@ -135,7 +135,7 @@ def check_summons(game):
                 tick(game)
                 assert len(world.enemies) == world.spawner.spawned_count == count
                 assert all(type(enemy) is AxeEnemy and enemy.hp == enemy.max_hp == 400
-                           and enemy.attack_damage == 60 and enemy.sprite_image == config.AXE_ENEMY_IMAGE
+                           and enemy.attack_damage == 40 and enemy.sprite_image == config.AXE_ENEMY_IMAGE
                            for enemy in world.enemies)
                 assert all(world.stage.walkable.contains(enemy.x, enemy.ground_y,
                                                          enemy.boundary_padding)
@@ -152,7 +152,7 @@ def check_summons(game):
         for label, camera_x in (("left", 0), ("right", config.WORLD_WIDTH - config.SCREEN_WIDTH)):
             game.world.camera.x = camera_x
             capture(game, f"axe_spawn_{index}_{label}")
-    print("PASS: both factory exteriors/all 36 SDL digit/keypad cases summon the new HP-400/damage-60 "
+    print("PASS: both factory exteriors/all 36 SDL digit/keypad cases summon the new HP-400/damage-40 "
           "axe enemy; repeat latch, fresh input, bounds and texture reuse.")
 
 
@@ -273,13 +273,13 @@ def check_axe_attack(game):
                 tick(game)
                 if enemy.has_hit:
                     break
-            assert world.player.hp == 440 and enemy.has_hit
+            assert world.player.hp == 460 and enemy.has_hit
             assert len(world.effects) == 1 and world.effects[0].image_name == config.CLUB_HIT_IMAGE
             assert world.camera.shake_remaining > 0
             capture(game, f"axe_attack_{index}_{side}")
             tick(game, 6)
-            assert world.player.hp == 440
-    print("PASS: both maps/facings deal axe damage 60 once, with existing club impact and hit shake.")
+            assert world.player.hp == 460
+    print("PASS: both maps/facings deal axe damage 40 once, with existing club impact and hit shake.")
 
 
 def check_strong_reactions(game):
@@ -351,7 +351,7 @@ def check_two_exterior_lifecycle(game):
         tick(game)
         release(game, pico2d.SDLK_1)
         assert len(world.enemies) == 1 and type(world.enemies[0]) is AxeEnemy
-        assert (world.enemies[0].hp, world.enemies[0].attack_damage) == (400, 60)
+        assert (world.enemies[0].hp, world.enemies[0].attack_damage) == (400, 40)
         world.camera.x = 0 if world.enemies[0].x < config.START_X else config.WORLD_WIDTH - config.SCREEN_WIDTH
         capture(game, f"axe_replacement_native_map_{index}")
     print("PASS: second exterior preserves its axe actor/HP across visits; SDL F5 restores "

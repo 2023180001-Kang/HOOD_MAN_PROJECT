@@ -94,7 +94,7 @@ class FactoryStageTests(unittest.TestCase):
         world.controls.press("spawn_9")
         world.step(config.FIXED_DT)
         self.assertEqual(len(world.enemies), 9)
-        self.assertTrue(all(type(enemy) is AxeEnemy and enemy.hp == 400 and enemy.attack_damage == 60
+        self.assertTrue(all(type(enemy) is AxeEnemy and enemy.hp == 400 and enemy.attack_damage == 40
                             and stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                             for enemy in world.enemies))
         first, items = world.enemies[0], stage.drop_items

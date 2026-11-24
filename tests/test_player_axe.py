@@ -131,7 +131,7 @@ class PlayerAxeTests(unittest.TestCase):
                 assets.images = {config.AXE_PROJECTILE_IMAGE: texture}
                 assets.draw_projectile(axe, 0, 0)
                 args = texture.clip_composite_draw.call_args.args
-                self.assertAlmostEqual(args[4], -facing * tau * 4 * axe.elapsed)
+                self.assertAlmostEqual(args[4], -facing * tau * 8 * axe.elapsed)
                 self.assertEqual(args[5], "h" if facing < 0 else "")
                 self.assertEqual(args[-2:], (256 * config.SPRITE_SCALE, 256 * config.SPRITE_SCALE))
 
@@ -145,7 +145,7 @@ class PlayerAxeTests(unittest.TestCase):
         self.assertEqual(world.player.weapon, "axe")
         self.assertFalse(world.projectiles or world.stage.drop_items)
 
-    def test_first_enemy_takes_seventy_and_landed_axe_can_be_recovered_and_thrown_again(self):
+    def test_throw_deals_sixty_to_each_enemy_then_lands_and_can_be_thrown_again(self):
         world = equipped_world("axe")
         player = world.player
         enemies = [Enemy(player.x + dx, -1, ground_y=player.ground_y) for dx in (240, 150)]
@@ -154,18 +154,20 @@ class PlayerAxeTests(unittest.TestCase):
         player.animation.elapsed = 4 / AXE_THROW.fps
         world.update_projectiles(0)
         world.update_projectiles(0.4)
-        self.assertEqual([e.max_hp - e.hp for e in enemies], [0, 70])
-        self.assertEqual([n.damage for n in world.damage_numbers], [70])
-        self.assertFalse(world.projectiles)
-        item, = world.stage.drop_items
-        self.assertEqual((item.kind, item.grounded), ("axe", False))
+        self.assertEqual([e.max_hp - e.hp for e in enemies], [60, 60])
+        self.assertEqual([n.damage for n in world.damage_numbers], [60, 60])
+        axe, = world.projectiles
+        self.assertGreater(axe.x, max(enemy.x for enemy in enemies))
+        self.assertFalse(world.stage.drop_items)
         world.enemies.clear()
-        player.x, player.ground_y = item.x, item.ground_y
+        player.x = axe.x
         tap(world.controls, "weapon_interact")
         world.update(config.FIXED_DT)
         self.assertIsNone(player.weapon)
-        advance(world, 0.75)
-        self.assertTrue(item.grounded)
+        advance(world, 1)
+        item, = world.stage.drop_items
+        self.assertEqual((item.kind, item.grounded), ("axe", True))
+        player.x = item.x
         tap(world.controls, "weapon_interact")
         world.update(config.FIXED_DT)
         self.assertEqual(player.sprite_image, config.PLAYER_AXE_IMAGE)
@@ -174,13 +176,13 @@ class PlayerAxeTests(unittest.TestCase):
         advance(world, 0.25)
         self.assertEqual(len(world.projectiles), 1)
 
-    def test_missed_throw_begins_falling_after_360_pixels_and_lands_in_its_lane(self):
+    def test_missed_throw_begins_falling_after_720_pixels_and_lands_in_its_lane(self):
         world = equipped_world("axe")
         player = world.player
         axe = AxeProjectile(player.x, player.ground_y, 95, 1, player.floor)
         world.projectiles.append(axe)
         world.update_projectiles(axe.straight_duration)
-        self.assertAlmostEqual(axe.x, player.x + 360)
+        self.assertAlmostEqual(axe.x, player.x + 720)
         self.assertEqual(axe.height, 95)
         world.update_projectiles(0.1)
         self.assertLess(axe.height, 95)

@@ -331,22 +331,19 @@ class World:
         # only after the player's strikes have had a chance to interrupt them.
         for bullet in self.projectiles:
             targets = self.enemies if isinstance(bullet, PlayerProjectile) else self.player
-            if bullet.update(dt, targets):
-                self.projectile_impact(bullet)
+            bullet.update(dt, targets, on_impact=self.projectile_impact)
         if self.player.alive:
             bullet = self.player.take_projectile()
             if bullet is not None:
                 bullet.world_width = self.stage.width
                 self.projectiles.append(bullet)
-                if bullet.update(0, self.enemies):
-                    self.projectile_impact(bullet)
+                bullet.update(0, self.enemies, on_impact=self.projectile_impact)
             for enemy in self.enemies:
                 bullet = enemy.take_projectile()
                 if bullet is None:
                     continue
                 self.projectiles.append(bullet)
-                if bullet.update(0, self.player):
-                    self.projectile_impact(bullet)
+                bullet.update(0, self.player, on_impact=self.projectile_impact)
                 if not self.player.alive:
                     break
         for bullet in self.projectiles:
@@ -357,14 +354,14 @@ class World:
                 item = DropItem(bullet.weapon_kind, x, ground_y, bullet.facing,
                                 elapsed=bullet.elapsed, floor=bullet.floor)
                 if bullet.height > bullet.half_height:
-                    # On impact the weapon stops travelling forward and falls from the contact point.
+                    # At the map edge the weapon finishes falling in place.
                     item.jump_height = bullet.height - item.display_height / 2
                     item.vy = bullet.vy
                 self.stage.drop_items.append(item)
         self.projectiles[:] = [bullet for bullet in self.projectiles if not bullet.finished]
 
-    def projectile_impact(self, bullet):
-        self.effects.append(HitEffect(bullet.impact_x, bullet.y, bullet.facing,
+    def projectile_impact(self, bullet, x, y):
+        self.effects.append(HitEffect(x, y, bullet.facing,
                                       image_name=config.CLUB_HIT_IMAGE))
         if isinstance(bullet, PlayerProjectile):
             enemy = bullet.impact_target

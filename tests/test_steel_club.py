@@ -148,7 +148,7 @@ class SteelClubCombatTests(unittest.TestCase):
                 tap(self.world.controls, "combat_s")
                 self.world.update(config.FIXED_DT)
                 self.assertIs(self.player.active_move, MOVES["combat_s"])
-                advance(self.world, 0.75)
+                advance(self.world, 1.1)
                 self.assertFalse(self.world.projectiles)
 
     def test_interrupted_windup_keeps_the_club_and_never_emits_a_projectile(self):
@@ -160,7 +160,7 @@ class SteelClubCombatTests(unittest.TestCase):
         self.assertEqual(self.player.weapon, "steel_club")
         self.assertFalse(self.world.projectiles or self.world.stage.drop_items)
 
-    def test_impact_damages_only_first_enemy_and_g_recovers_only_after_landing(self):
+    def test_throw_pierces_both_enemies_on_its_floor_and_g_recovers_after_landing(self):
         x, y = self.player.x, self.player.ground_y
         enemies = [Enemy(x + offset, -1, ground_y=y) for offset in (300, 250, 160)]
         enemies[2].floor = 1
@@ -169,17 +169,20 @@ class SteelClubCombatTests(unittest.TestCase):
         self.player.animation.elapsed = 4 / STEEL_CLUB_THROW.fps
         self.world.update_projectiles(0)
         self.world.update_projectiles(0.4)
-        self.assertEqual([enemy.hp for enemy in enemies],
-                         [config.ENEMY_MAX_HP, config.ENEMY_MAX_HP - 40, config.ENEMY_MAX_HP])
-        self.assertFalse(self.world.projectiles)
-        drop, = self.world.stage.drop_items
-        self.assertFalse(drop.grounded)
+        self.assertEqual([enemy.max_hp - enemy.hp for enemy in enemies], [50, 50, 0])
+        self.assertEqual([number.damage for number in self.world.damage_numbers], [50, 50])
+        club, = self.world.projectiles
+        self.assertGreater(club.x, max(enemy.x for enemy in enemies))
+        self.assertFalse(self.world.stage.drop_items)
         self.world.enemies = []
-        self.player.x, self.player.ground_y = drop.x, drop.ground_y
+        self.player.x = club.x
         tap(self.world.controls, "weapon_interact")
         self.world.update(config.FIXED_DT)
         self.assertIsNone(self.player.weapon)
-        advance(self.world, 0.75)
+        advance(self.world, 1)
+        drop, = self.world.stage.drop_items
+        self.assertTrue(drop.grounded)
+        self.player.x = drop.x
         self.assertIs(self.world.pickup_item, drop)
         tap(self.world.controls, "weapon_interact")
         self.world.update(config.FIXED_DT)
@@ -190,13 +193,13 @@ class SteelClubCombatTests(unittest.TestCase):
         advance(self.world, 0.25)
         self.assertEqual(len(self.world.projectiles), 1)
 
-    def test_missed_throw_falls_after_360_pixels_and_stays_reachable_in_its_city_lane(self):
+    def test_missed_throw_falls_after_720_pixels_and_stays_reachable_in_its_city_lane(self):
         self.world.select_stage(2)
         self.world.stage.drop_items.clear()
-        club = SteelClubProjectile(900, 0, 80, -1)
+        club = SteelClubProjectile(1400, 0, 80, -1)
         self.world.projectiles.append(club)
         self.world.update_projectiles(club.straight_duration)
-        self.assertAlmostEqual(club.x, 540)
+        self.assertAlmostEqual(club.x, 680)
         self.assertEqual(club.height, 80)
         self.world.update_projectiles(0.1)
         self.assertLess(club.height, 80)
@@ -223,7 +226,7 @@ class SteelClubCombatTests(unittest.TestCase):
             assets.draw_projectile(club, 20, 5)
             args = texture.clip_composite_draw.call_args.args
             self.assertEqual(args[:4], (0, 0, 256, 256))
-            self.assertAlmostEqual(args[4], -facing * tau / 4)
+            self.assertAlmostEqual(args[4], -facing * tau / 2)
             self.assertEqual(args[5:8], ("h" if facing < 0 else "", club.x - 20, club.y - 5))
             self.world.projectiles.append(club)
             club.spent = True

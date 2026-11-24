@@ -168,7 +168,7 @@ class TrainingRoomTests(unittest.TestCase):
             self.assertEqual(self.world.damage_numbers[-1].damage, move.damage)
             self.assertEqual((target.state, target.sprite_image), ("HIT", config.ENEMY_IMAGE))
             advance(self.world, 0.8)
-        for projectile, damage in ((PlayerPistolBullet, 20), (SteelClubProjectile, 40)):
+        for projectile, damage in ((PlayerPistolBullet, 20), (SteelClubProjectile, 50)):
             bullet = projectile(target.x, target.ground_y, 60, 1)
             self.world.projectiles.append(bullet)
             self.world.update_projectiles(0)

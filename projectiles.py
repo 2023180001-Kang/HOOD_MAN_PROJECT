@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from math import sqrt
+from operator import itemgetter
 
 import config
 from collision import same_floor
@@ -32,6 +33,7 @@ class ResearcherBullet:
     anchor_y = config.RESEARCHER_BULLET_ANCHOR_Y
     range_limited = False
     world_width = config.WORLD_WIDTH
+    hit_targets = None  # Piercing projectiles keep a set for the lifetime of the throw.
 
     @property
     def y(self):
@@ -68,11 +70,12 @@ class ResearcherBullet:
                 or self.x < left or self.x > right
                 or (self.range_limited and self.elapsed + 1e-12 >= self.straight_duration))
 
-    def update(self, dt, player):
+    def update(self, dt, targets, *, on_impact=None):
         if self.finished:
             return False
         dt = max(0.0, dt)
         offset = 0.0
+        dealt_damage = False
         while True:
             gravity = self.gravity if self.falling else 0.0
             vy = self.vy
@@ -93,33 +96,50 @@ class ResearcherBullet:
             edge_time = edge_gap / self.speed
             step = min(step, edge_time)
             terminal = min(ground_time, edge_time, range_time) <= step + 1e-12
-            contact, target = self._first_contact(player, step, offset, dt, gravity)
-            # Ground/world contact wins a simultaneous tie. Never hit after landing.
-            hit = contact is not None and (not terminal or contact < step - 1e-12)
-            travel = contact if hit else step
+            travel = step
+            for contact, target in self._contacts(targets, step, offset, dt, gravity):
+                # Ground/world contact wins a simultaneous tie.
+                if terminal and contact >= step - 1e-12:
+                    break
+                if self._apply_hit(target):
+                    dealt_damage = True
+                    if on_impact is not None:
+                        x = self.impact_x + self.facing * self.speed * contact
+                        y = self.y + vy * contact - gravity * contact * contact / 2
+                        on_impact(self, x, y)
+                if self.spent:
+                    travel = contact
+                    break
             self.x += self.facing * self.speed * travel
             self.height += vy * travel - gravity * travel * travel / 2
             self.elapsed += travel
-            if hit:
-                self.spent = True
-                if self.shooter is None:
-                    applied = target.take_damage(self.damage)
-                else:
-                    applied = target.take_damage(self.damage, attacker=self.shooter)
-                self.impact_target = target
-                self.impact_damage = target.last_hit_damage if applied else 0
-                return applied
+            if self.spent:
+                return dealt_damage
             if terminal:
                 if ground_time <= step + 1e-12:
                     self.height = self.half_height
                 self.spent = True
-                return False
+                return dealt_damage
             offset += step
             if offset >= dt:
-                return False
+                return dealt_damage
 
-    def _first_contact(self, target, duration, offset, tick_duration, gravity):
-        return self._contact_time(target, duration, offset, tick_duration, gravity), target
+    def _apply_hit(self, target):
+        if self.hit_targets is None:
+            self.spent = True
+        else:
+            self.hit_targets.add(target)
+        if self.shooter is None:
+            applied = target.take_damage(self.damage)
+        else:
+            applied = target.take_damage(self.damage, attacker=self.shooter)
+        self.impact_target = target
+        self.impact_damage = target.last_hit_damage if applied else 0
+        return applied
+
+    def _contacts(self, target, duration, offset, tick_duration, gravity):
+        contact = self._contact_time(target, duration, offset, tick_duration, gravity)
+        return () if contact is None else ((contact, target),)
 
     def _contact_time(self, player, duration, offset, tick_duration, gravity):
         if not player.alive or not same_floor(self, player):
@@ -179,26 +199,32 @@ class ResearcherBullet:
 
 
 class PlayerProjectile(ResearcherBullet):
-    """Player projectiles hit the first living enemy along the swept path."""
+    """Resolve eligible enemy contacts in flight order, including coincident hits."""
 
-    def _first_contact(self, enemies, duration, offset, tick_duration, gravity):
-        first, target = None, None
+    def _contacts(self, enemies, duration, offset, tick_duration, gravity):
+        contacts = []
         for enemy in enemies:
+            if self.hit_targets is not None and enemy in self.hit_targets:
+                continue
             contact = self._contact_time(enemy, duration, offset, tick_duration, gravity)
-            if contact is not None and (first is None or contact < first):
-                first, target = contact, enemy
-        return first, target
+            if contact is not None:
+                contacts.append((contact, enemy))
+        contacts.sort(key=itemgetter(0))
+        return contacts
 
 
 class PlayerPistolBullet(PlayerProjectile):
     damage = config.PLAYER_PISTOL_DAMAGE
 
 
+@dataclass
 class ThrownWeaponProjectile(PlayerProjectile):
     """A spinning weapon that drops in its own lane when flight ends."""
 
+    hit_targets: set = field(default_factory=set, init=False, repr=False, compare=False)
+
     speed = 840.0
-    straight_range = 360.0
+    straight_range = 720.0
     gravity = 1200.0
     half_width = half_height = 20.0
 

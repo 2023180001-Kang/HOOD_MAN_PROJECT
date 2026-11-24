@@ -369,8 +369,8 @@ ENEMY02_STAGE_IMAGES = CITY_STAGE_IMAGES
 ENEMY02_BOUNDARY_PADDING = 128.0  # Living attack/effect envelope reaches 126.75px.
 # Attack name: (one-based source row, damage for the whole motion, active frames).
 ENEMY02_ATTACKS = {
-    "clubs": (4, 60, (3, 4, 5)),
-    "slam": (5, 80, (5, 6)),
+    "clubs": (4, 30, (3, 4, 5)),
+    "slam": (5, 50, (5, 6)),
 }
 ENEMY02_LEAP_MIN_DISTANCE = 320.0
 ENEMY02_LEAP_MAX_DISTANCE = 640.0

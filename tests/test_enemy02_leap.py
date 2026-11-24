@@ -136,11 +136,11 @@ class Enemy02LeapTests(unittest.TestCase):
                 enemy.update(config.FIXED_DT, player)
                 if enemy.try_hit(player):
                     break
-            self.assertEqual(player.hp, 420)
+            self.assertEqual(player.hp, 450)
             for _ in range(10):
                 enemy.update(config.FIXED_DT, player)
                 self.assertFalse(enemy.try_hit(player))
-            self.assertEqual(player.hp, 420)
+            self.assertEqual(player.hp, 450)
 
     def test_takeoff_targets_latest_player_position_but_air_does_not_home(self):
         player = Player()
@@ -199,7 +199,7 @@ class Enemy02LeapTests(unittest.TestCase):
                 with self.subTest(stage=index, side=side):
                     world, enemy = midair_encounter(index, side)
                     world.step(config.FIXED_DT)
-                    self.assertEqual(world.player.hp, 440)
+                    self.assertEqual(world.player.hp, 470)
                     self.assertEqual((enemy.attack_kind, enemy.animation.row), ("clubs", 4))
                     self.assertTrue(enemy.air_contact_attack and enemy.has_hit)
                     self.assertFalse(enemy.air_contact_pending)
@@ -209,7 +209,7 @@ class Enemy02LeapTests(unittest.TestCase):
                     self.assertEqual(len(world.effects), 1)
                     self.assertEqual(world.effects[0].image_name, config.CLUB_HIT_IMAGE)
                     advance(world, 0.7)
-                    self.assertEqual(world.player.hp, 440)  # No extra 80 on landing.
+                    self.assertEqual(world.player.hp, 470)  # No extra hit on landing.
                     self.assertEqual(enemy.jump_height, 0)
 
     def test_midair_normal_hit_respects_invincibility_and_player_attack_priority(self):
@@ -260,7 +260,7 @@ class Enemy02LeapTests(unittest.TestCase):
         self.assertFalse(bodies_overlap(player, enemy))
         self.assertLess(enemy.x, player.x)
         self.assertTrue(enemy.try_hit(player))
-        self.assertEqual(player.hp, 440)
+        self.assertEqual(player.hp, 470)
         self.assertFalse(enemy.try_hit(player))
         enemy.previous_x, enemy.x = player.x, player.x + 400
         enemy.previous_jump_height, enemy.jump_height = 500, 200
@@ -282,7 +282,7 @@ class Enemy02LeapTests(unittest.TestCase):
                         world.update(1 / fps)
                         if enemy.air_contact_attack:
                             self.assertFalse(bodies_overlap(world.player, enemy))
-                    self.assertEqual(world.player.hp, 440)
+                    self.assertEqual(world.player.hp, 470)
                     outcomes.append((world.player.x, world.player.jump_height, world.player.state,
                                      enemy.x, enemy.jump_height, enemy.state, enemy.attack_kind,
                                      enemy.has_hit, enemy.leap_phase))

@@ -65,7 +65,7 @@ def check_ignored_keys_and_hud(game):
 
 
 def check_no_melee_or_bullet_protection(game):
-    for index, damage in ((0, 20), (2, 60), (4, 60)):
+    for index, damage in ((0, 20), (2, 30), (4, 60)):
         for side in (-1, 1):
             for key in "hjkl":
                 world, enemy = encounter(game, index, side)
@@ -101,7 +101,7 @@ def check_no_melee_or_bullet_protection(game):
             if key == "h":
                 capture(game, f"removed_counters_bullet_{index}")
     print("PASS: H/J/K/L cannot interrupt or protect against both-side thug/city/axe attacks "
-          "(20/60/60) or either factory researcher's bullet (30/HIT/impact); no hidden 80 damage.")
+          "(20/30/60) or either factory researcher's bullet (30/HIT/impact); no hidden 80 damage.")
 
 
 def check_a_and_existing_actions(game):

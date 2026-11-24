@@ -80,7 +80,7 @@ def check_player_attacks(game):
 
 def check_club_attacks(game):
     for side in (-1, 1):
-        for kind, hp in (("old_club", 480), ("clubs", 440), ("slam", 420)):
+        for kind, hp in (("old_club", 480), ("clubs", 470), ("slam", 450)):
             if kind == "old_club":
                 game.world = World()
                 world = game.world

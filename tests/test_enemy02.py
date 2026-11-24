@@ -76,7 +76,7 @@ class Enemy02Tests(unittest.TestCase):
                                 for stage in world.stages))
 
     def test_ai_selects_close_clubs_or_medium_range_leap_and_commits_until_recovery(self):
-        for kind, gap, row, damage in (("clubs", 80, 4, 60), ("slam", 400, 5, 80)):
+        for kind, gap, row, damage in (("clubs", 80, 4, 30), ("slam", 400, 5, 50)):
             player = Player()
             rng = Mock(wraps=random.Random(9))
             enemy = Enemy02(player.x + gap, -1, rng=rng)
@@ -93,7 +93,7 @@ class Enemy02Tests(unittest.TestCase):
             self.assertEqual((enemy.state, enemy.jump_height), ("IDLE", 0))
             self.assertEqual(rng.choice.call_count, 0)
 
-    def test_dual_club_motion_deals_sixty_once_across_both_swings(self):
+    def test_dual_club_motion_deals_thirty_once_across_both_swings(self):
         for side in (-1, 1):
             player, enemy = at_frame("clubs", 2, side=side)
             self.assertIsNone(enemy.attack_box)
@@ -101,13 +101,13 @@ class Enemy02Tests(unittest.TestCase):
             for frame in (3, 4, 5, 6, 7):
                 enemy.animation.elapsed = (frame + 0.05) / enemy.attack_fps
                 self.assertEqual(enemy.try_hit(player), frame == 3)
-                self.assertEqual(player.hp, 440)
+                self.assertEqual(player.hp, 470)
             enemy.start_attack()
             enemy.animation.elapsed = 4.05 / enemy.attack_fps
             self.assertTrue(enemy.try_hit(player))
-            self.assertEqual(player.hp, 380)
+            self.assertEqual(player.hp, 440)
 
-    def test_flight_height_and_landing_frames_gate_eighty_damage(self):
+    def test_flight_height_and_landing_frames_gate_fifty_damage(self):
         for frame in range(8):
             with self.subTest(frame=frame):
                 player, enemy = at_frame("slam", frame)
@@ -118,12 +118,12 @@ class Enemy02Tests(unittest.TestCase):
                 self.assertEqual(enemy.y, enemy.ground_y + enemy.jump_height)
                 self.assertEqual(enemy.body.bottom, config.GROUND_Y + enemy.jump_height)
                 self.assertEqual(enemy.try_hit(player), frame in (5, 6))
-                self.assertEqual(player.hp, 420 if frame in (5, 6) else 500)
+                self.assertEqual(player.hp, 450 if frame in (5, 6) else 500)
         player, enemy = at_frame("slam", 5)
         self.assertTrue(enemy.try_hit(player))
         enemy.animation.elapsed = 6.05 / enemy.attack_fps
         self.assertFalse(enemy.try_hit(player))
-        self.assertEqual(player.hp, 420)
+        self.assertEqual(player.hp, 450)
 
     def test_both_attacks_keep_direction_depth_and_airborne_dodge_checks(self):
         for kind, frame in (("clubs", 3), ("slam", 5)):
@@ -149,11 +149,11 @@ class Enemy02Tests(unittest.TestCase):
                                   3 if index % 2 == 0 else 5,
                                   side=-1 if index < 2 else 1)[1] for index in range(4)]
         world.step(config.FIXED_DT)
-        self.assertEqual(world.player.hp, 220)  # 500 - 60 - 80 - 60 - 80.
+        self.assertEqual(world.player.hp, 340)  # 500 - 30 - 50 - 30 - 50.
         self.assertTrue(all(enemy.has_hit for enemy in world.enemies))
         self.assertEqual(len(world.effects), 4)
         advance(world, 0.1)
-        self.assertEqual(world.player.hp, 220)
+        self.assertEqual(world.player.hp, 340)
 
     def test_interruptions_end_damage_and_fall_instead_of_leaving_a_floating_enemy(self):
         for interruption in ("hit", "death", "knockback", "player_death", "car"):

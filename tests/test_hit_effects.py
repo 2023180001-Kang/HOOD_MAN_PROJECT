@@ -148,7 +148,7 @@ class HitEffectTests(unittest.TestCase):
 
     def test_new_enemy_club_swings_and_leap_landings_use_the_club_sheet(self):
         for side in (-1, 1):
-            for kind, frame, hp in (("clubs", 2, 440), ("slam", 4, 420)):
+            for kind, frame, hp in (("clubs", 2, 470), ("slam", 4, 450)):
                 with self.subTest(side=side, kind=kind):
                     world = World()
                     world.stage_index = 3

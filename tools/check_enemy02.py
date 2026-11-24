@@ -82,10 +82,10 @@ def check_city_summons(game):
                 world.camera.x = camera_x
                 with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as draw:
                     capture(game, f"enemy02_city_{number - 2}_{side}")
-                assert any("몽둥이 60 / 착지 80" in call.args[2] for call in draw.call_args_list)
+                assert any("몽둥이 30 / 착지 50" in call.args[2] for call in draw.call_args_list)
         assert all(game.assets.images[name] is image for name, image in textures.items())
     print("PASS: SDL 4 summons city enemy02, dock axes, interior researchers, lab shields and thugs elsewhere; "
-          "spawn floors/texture reuse and the real 60/80 HUD text verified.")
+          "spawn floors/texture reuse and the real 30/50 HUD text verified.")
 
 
 def check_attack_rendering(game):
@@ -155,10 +155,10 @@ def check_tracking_leap(game):
             tick(game)
             if enemy.has_hit:
                 break
-        assert world.player.hp == 420 and enemy.has_hit
+        assert world.player.hp == 450 and enemy.has_hit
         capture(game, f"enemy02_leap_{side}_impact")
         tick(game, 6)
-        assert world.player.hp == 420
+        assert world.player.hp == 450
     world, enemy = encounter(game, "slam", side=-1)
     while not enemy.leaping:
         tick(game)
@@ -175,7 +175,7 @@ def check_tracking_leap(game):
     capture(game, "enemy02_leap_dodged")
     print(f"PASS: normal SDL player double-jump peak {reference_peak:.3f}px; enemy leap peaks "
            f"{peaks[0]:.3f}/{peaks[1]:.3f}px; both directions target the player's takeoff "
-           "position, stop at an occupied body edge and deal 80 after landing; "
+           "position, stop at an occupied body edge and deal 50 after landing; "
            "SDL running evades the committed landing point.")
 
 
@@ -195,14 +195,14 @@ def check_midair_collisions(game):
                     break
             assert enemy.air_contact_attack and enemy.has_hit
             assert enemy.jump_height > 0 and world.player.jump_height > 0
-            assert world.player.hp == 440
+            assert world.player.hp == 470
             assert (enemy.attack_kind, enemy.animation.row) == ("clubs", 4)
             assert not bodies_overlap(world.player, enemy)
             assert len(world.effects) == 1
             capture(game, f"enemy02_air_contact_city_{index - 1}_{side}")
             release(game, pico2d.SDLK_SPACE)
             tick(game, 42)
-            assert world.player.hp == 440 and enemy.jump_height == 0
+            assert world.player.hp == 470 and enemy.jump_height == 0
     for action in ("invincible", "player_jab"):
         world, enemy = encounter(game, "slam", side=-1)
         while not enemy.leaping:
@@ -228,13 +228,13 @@ def check_midair_collisions(game):
             assert len(world.effects) == 1
         capture(game, f"enemy02_air_contact_{action}")
     print("PASS: real SDL jumps meet enemy leaps on both city maps/directions, block body "
-          "pass-through and trigger one row-4 normal hit (60), with no later landing 80; "
+          "pass-through and trigger one row-4 normal hit (30), with no later landing 50; "
           "P immunity and airborne player-jab priority also verified.")
 
 
 def check_damage(game):
     for side in (-1, 1):
-        for kind, before_active, damage in (("clubs", 2, 60), ("slam", 4, 80)):
+        for kind, before_active, damage in (("clubs", 2, 30), ("slam", 4, 50)):
             world, enemy = encounter(game, kind, side)
             set_frame(world, enemy, before_active)
             assert enemy.attack_box is None and world.player.hp == 500
@@ -254,7 +254,7 @@ def check_damage(game):
     tick(game)
     release(game, pico2d.SDLK_p)
     assert enemy.has_hit and world.player.hp == 500 and not world.effects
-    print("PASS: both directions deal clubs=60 / landed slam=80 once per whole motion, "
+    print("PASS: both directions deal clubs=30 / landed slam=50 once per whole motion, "
           "with real hit effects/HP/shake; SDL P consumes a swing without damage/effects.")
 
 

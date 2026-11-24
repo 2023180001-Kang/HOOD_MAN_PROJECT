@@ -131,7 +131,7 @@ class Enemy02(Enemy):
             self.animation.elapsed = min(self.attack_active_frames) / self.attack_fps
             return True
         # An occupied landing point stops horizontal/depth travel at the body
-        # edge. Keep descending and use the original 80-damage landing motion.
+        # edge. Keep descending and use the landing attack.
         self.leap_blocked = True
         return False
 

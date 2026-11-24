@@ -64,7 +64,7 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertFalse(stage.arrow_sides or stage.enemies)
         self.press("restart")
         self.assertTrue(self.world.training)
-        self.assertEqual(len(self.world.stage.drop_items), 5)
+        self.assertEqual(len(self.world.stage.drop_items), 6)
         process_menu_events(self.game, key_event(), menu_screen=False)
         self.assertTrue(self.game._menu_requested)
         self.launch("game_start")
@@ -76,7 +76,7 @@ class TrainingRoomTests(unittest.TestCase):
     def test_table_items_are_visible_at_table_height_and_reachable_from_the_floor(self):
         items = list(self.world.stage.drop_items)
         self.assertCountEqual([i.kind for i in items],
-                              ["steel_pipe", "combat_knife", "steel_club", "pistol", "ar_rifle"])
+                              ["steel_pipe", "combat_knife", "steel_club", "axe", "pistol", "ar_rifle"])
         for item in items:
             self.assertTrue(item.grounded)
             self.assertLess(376, item.surface_y)
@@ -112,10 +112,11 @@ class TrainingRoomTests(unittest.TestCase):
                 if item.kind in config.FIREARM_MAGAZINE_SIZES:
                     self.assertEqual(player.firearm_ammo, config.FIREARM_MAGAZINE_SIZES[item.kind] - 1)
                 self.press("weapon_interact")
-                self.assertEqual(len(self.world.stage.drop_items), 5)
+                self.assertEqual(len(self.world.stage.drop_items), 6)
 
     def test_g_away_from_the_table_still_drops_the_weapon_onto_the_floor(self):
-        for kind, x, y in (("steel_pipe", 200, 135), ("ar_rifle", 1120, config.TRAINING_TABLE_APPROACH_Y)):
+        for kind, x, y in (("steel_pipe", 200, 135), ("axe", 606, 135),
+                           ("ar_rifle", 1120, config.TRAINING_TABLE_APPROACH_Y)):
             with self.subTest(kind=kind, x=x, y=y):
                 self.press("restart")
                 player = self.world.player

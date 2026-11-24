@@ -64,7 +64,7 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertFalse(stage.arrow_sides or stage.enemies)
         self.press("restart")
         self.assertTrue(self.world.training)
-        self.assertEqual(len(self.world.stage.drop_items), 4)
+        self.assertEqual(len(self.world.stage.drop_items), 5)
         process_menu_events(self.game, key_event(), menu_screen=False)
         self.assertTrue(self.game._menu_requested)
         self.launch("game_start")
@@ -73,9 +73,10 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertEqual(self.world.stage.image_name, config.STAGE_IMAGE)
         self.assertEqual(len(self.world.stages), len(config.STAGE_IMAGES))
 
-    def test_four_table_items_are_visible_at_table_height_and_reachable_from_the_floor(self):
+    def test_table_items_are_visible_at_table_height_and_reachable_from_the_floor(self):
         items = list(self.world.stage.drop_items)
-        self.assertCountEqual([i.kind for i in items], ["steel_pipe", "combat_knife", "steel_club", "pistol"])
+        self.assertCountEqual([i.kind for i in items],
+                              ["steel_pipe", "combat_knife", "steel_club", "pistol", "ar_rifle"])
         for item in items:
             self.assertTrue(item.grounded)
             self.assertLess(376, item.surface_y)
@@ -95,8 +96,10 @@ class TrainingRoomTests(unittest.TestCase):
                 player.x, player.ground_y = item.x + config.WEAPON_PICKUP_RANGE, item.ground_y - 10
                 self.press("weapon_interact")
                 self.assertEqual(player.weapon, item.kind)
-                if item.kind == "pistol":
+                if item.kind in config.FIREARM_MAGAZINE_SIZES:
+                    self.assertEqual(player.firearm_ammo, config.FIREARM_MAGAZINE_SIZES[item.kind])
                     self.press("combat_a")
+                    self.world.controls.release("combat_a")
                     advance(self.world, 0.5)
                 self.press("weapon_interact")
                 self.assertIsNone(player.weapon)
@@ -106,17 +109,17 @@ class TrainingRoomTests(unittest.TestCase):
                                  (item.kind, item.x, item.ground_y, item.surface_y))
                 self.press("weapon_interact")
                 self.assertEqual(player.weapon, item.kind)
-                if item.kind == "pistol":
-                    self.assertEqual(player.pistol_ammo, config.PLAYER_PISTOL_MAGAZINE_SIZE - 1)
+                if item.kind in config.FIREARM_MAGAZINE_SIZES:
+                    self.assertEqual(player.firearm_ammo, config.FIREARM_MAGAZINE_SIZES[item.kind] - 1)
                 self.press("weapon_interact")
-                self.assertEqual(len(self.world.stage.drop_items), 4)
+                self.assertEqual(len(self.world.stage.drop_items), 5)
 
     def test_g_away_from_the_table_still_drops_the_weapon_onto_the_floor(self):
-        for x, y in ((200, 135), (1120, config.TRAINING_TABLE_APPROACH_Y)):
-            with self.subTest(x=x, y=y):
+        for kind, x, y in (("steel_pipe", 200, 135), ("ar_rifle", 1120, config.TRAINING_TABLE_APPROACH_Y)):
+            with self.subTest(kind=kind, x=x, y=y):
                 self.press("restart")
                 player = self.world.player
-                item = self.world.stage.drop_items[0]
+                item = next(drop for drop in self.world.stage.drop_items if drop.kind == kind)
                 player.x, player.ground_y = item.x, item.ground_y
                 self.press("weapon_interact")
                 player.x, player.ground_y = x, y
@@ -127,6 +130,8 @@ class TrainingRoomTests(unittest.TestCase):
                 self.assertFalse(dropped.grounded)
                 advance(self.world, 1)
                 self.assertTrue(dropped.grounded)
+                self.press("weapon_interact")
+                self.assertEqual(player.weapon, kind)
 
     def test_main_keyboard_and_keypad_plus_summon_one_nearby_thug(self):
         player = self.world.player

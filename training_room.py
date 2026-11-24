@@ -48,9 +48,9 @@ class TrainingRoom(Stage):
         return (kind in self.table_slots and player.grounded and left <= player.x <= right
                 and abs(player.ground_y - config.TRAINING_TABLE_APPROACH_Y) <= config.WEAPON_PICKUP_DEPTH)
 
-    def place_on_table(self, kind, pistol_ammo=None):
+    def place_on_table(self, kind, pistol_ammo=None, rifle_ammo=None):
         approach = config.TRAINING_TABLE_APPROACH_Y
-        item = DropItem(kind, self.table_slots[kind], approach, pistol_ammo=pistol_ammo,
+        item = DropItem(kind, self.table_slots[kind], approach, pistol_ammo=pistol_ammo, rifle_ammo=rifle_ammo,
                         support_height=config.TRAINING_TABLE_SURFACE_Y - approach)
         self.drop_items.append(item)
         return item

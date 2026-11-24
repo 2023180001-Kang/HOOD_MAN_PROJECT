@@ -125,8 +125,9 @@ class World:
     def drop_weapon(self, kind):
         player = self.player
         pistol_ammo = player.pistol_ammo if kind == "pistol" else None
+        rifle_ammo = player.rifle_ammo if kind == "ar_rifle" else None
         if self.training and self.stage.can_return_to_table(player, kind):
-            return self.stage.place_on_table(kind, pistol_ammo)
+            return self.stage.place_on_table(kind, pistol_ammo=pistol_ammo, rifle_ammo=rifle_ammo)
         area = (self.stage.drop_spawn_area if player.floor == 0 else self.stage.area_for(player))
         left, bottom, right, top = area.bounds
         half_width, height = config.DROP_ITEM_HALF_WIDTH, config.DROP_ITEM_HEIGHT
@@ -145,7 +146,7 @@ class World:
             x = clamp(x, max(left, exit_edge) + half_width,
                       min(right, self.stage.width - exit_edge) - half_width)
         item = DropItem(kind, x, ground_y, player.facing, floor=player.floor, pistol_ammo=pistol_ammo,
-                        rifle_ammo=player.rifle_ammo if kind == "ar_rifle" else None)
+                        rifle_ammo=rifle_ammo)
         # A tall rifle may overhang the narrow city sidewalk. Its base stays on it.
         item.ground_y = clamp(ground_y, bottom, max(bottom, top - height))
         item.jump_height = max(0.0, player.y + config.WEAPON_DROP_HAND_HEIGHT - item.ground_y)

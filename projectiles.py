@@ -240,6 +240,15 @@ class SteelClubProjectile(ThrownWeaponProjectile):
     release_offset = (76, 103)
 
 
+class DualBatonProjectile(ThrownWeaponProjectile):
+    weapon_kind = "dual_black_batons"
+    image_name = config.DUAL_BATON_PROJECTILE_IMAGE
+    damage = config.DUAL_BATONS_THROW_DAMAGE
+    release_offset = (54, 87)  # Center of the two batons leaving the hands in cell five.
+    half_width = 60 * config.SPRITE_SCALE
+    half_height = config.THROWN_WEAPON_SPRITES[weapon_kind].rest_height / 2
+
+
 class AxeProjectile(ThrownWeaponProjectile):
     weapon_kind = "axe"
     image_name = config.AXE_PROJECTILE_IMAGE

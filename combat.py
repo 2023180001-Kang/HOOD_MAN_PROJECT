@@ -118,6 +118,11 @@ AXE_THROW = Move("s", "도끼 던지기", 6, config.AXE_THROW_DAMAGE, 0, 0, 16.0
                  image_name=config.PLAYER_AXE_IMAGE, active_frames=())
 WEAPON_LOADOUTS["axe"] = {**MOVES, "combat_a": AXE_SWING, "combat_s": AXE_THROW}
 AXE_DIVE = replace(AXE_SWING, key="d", name="도끼 내려찍기", damage=40, jump_attack=True)
+DUAL_BATONS_SWING = replace(STEEL_CLUB_SWING, name="쌍몽둥이 휘두르기", damage=50,
+                            image_name=config.PLAYER_DUAL_BATONS_IMAGE, active_frames=(2, 3, 5, 6))
+DUAL_BATONS_THROW = replace(STEEL_CLUB_THROW, name="쌍몽둥이 던지기", damage=config.DUAL_BATONS_THROW_DAMAGE,
+                            image_name=config.PLAYER_DUAL_BATONS_IMAGE)
+WEAPON_LOADOUTS["dual_black_batons"] = {**MOVES, "combat_a": DUAL_BATONS_SWING, "combat_s": DUAL_BATONS_THROW}
 DOUBLE_JUMP_LOADOUTS = {
     "steel_club": {**WEAPON_LOADOUTS["steel_club"], "combat_d": STEEL_CLUB_DIVE},
     "axe": {**WEAPON_LOADOUTS["axe"], "combat_d": AXE_DIVE},

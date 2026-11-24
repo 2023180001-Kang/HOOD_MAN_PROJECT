@@ -5,14 +5,17 @@ from math import hypot
 import config
 from animation import Animation
 from collision import Rect, attack_hits_body
-from combat import ALL_MOVES, AXE_THROW, STEEL_CLUB_THROW, STRONG_MOVES, CrowdEscape, moves_for_weapon
+from combat import (ALL_MOVES, AXE_THROW, DUAL_BATONS_THROW, STEEL_CLUB_THROW, STRONG_MOVES,
+                    CrowdEscape, moves_for_weapon)
 from physics import approach_vector
-from projectiles import AxeProjectile, PlayerPistolBullet, PlayerRifleBullet, SteelClubProjectile
+from projectiles import (AxeProjectile, DualBatonProjectile, PlayerPistolBullet, PlayerRifleBullet,
+                         SteelClubProjectile)
 from traffic import start_car_hit, update_car_hit
 from walkable import default_area
 
 
-THROW_PROJECTILES = {STEEL_CLUB_THROW: SteelClubProjectile, AXE_THROW: AxeProjectile}
+THROW_PROJECTILES = {STEEL_CLUB_THROW: SteelClubProjectile, AXE_THROW: AxeProjectile,
+                     DUAL_BATONS_THROW: DualBatonProjectile}
 
 
 class Player:

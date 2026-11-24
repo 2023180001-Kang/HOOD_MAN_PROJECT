@@ -106,10 +106,9 @@ class PistolEquipmentTests(unittest.TestCase):
 
     def test_other_items_outside_drops_and_cancelled_pistol_drags_do_not_equip(self):
         menu = self.bag()
-        for slot in (1, 4):
-            menu.press_pointer(*slot_center(slot))
-            menu.release_pointer(640, 420)
-            self.assertIsNone(menu.equipped_weapon)
+        menu.press_pointer(*slot_center(4))  # The shield is still a bag-only item.
+        menu.release_pointer(640, 420)
+        self.assertIsNone(menu.equipped_weapon)
         for point in ((0, 0), (640, 300), (800, 420)):
             menu.press_pointer(*slot_center(3))
             menu.release_pointer(*point)

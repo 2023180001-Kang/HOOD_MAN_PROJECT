@@ -104,11 +104,8 @@ class PistolEquipmentTests(unittest.TestCase):
         self.assertEqual(menu.bag_items[0][0], "pistol")
         self.assertEqual(menu.bag_player_animation.frame, 0)
 
-    def test_other_items_outside_drops_and_cancelled_pistol_drags_do_not_equip(self):
+    def test_outside_drops_and_cancelled_pistol_drags_do_not_equip(self):
         menu = self.bag()
-        menu.press_pointer(*slot_center(4))  # The shield is still a bag-only item.
-        menu.release_pointer(640, 420)
-        self.assertIsNone(menu.equipped_weapon)
         for point in ((0, 0), (640, 300), (800, 420)):
             menu.press_pointer(*slot_center(3))
             menu.release_pointer(*point)

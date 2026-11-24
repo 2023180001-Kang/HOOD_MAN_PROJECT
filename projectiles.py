@@ -224,6 +224,7 @@ class ThrownWeaponProjectile(PlayerProjectile):
     hit_targets: set = field(default_factory=set, init=False, repr=False, compare=False)
 
     speed = 840.0
+    release_frame = config.THROWN_WEAPON_RELEASE_FRAME
     straight_range = 720.0
     gravity = 1200.0
     half_width = half_height = 20.0
@@ -246,6 +247,16 @@ class DualBatonProjectile(ThrownWeaponProjectile):
     damage = config.DUAL_BATONS_THROW_DAMAGE
     release_offset = (54, 87)  # Center of the two batons leaving the hands in cell five.
     half_width = 60 * config.SPRITE_SCALE
+    half_height = config.THROWN_WEAPON_SPRITES[weapon_kind].rest_height / 2
+
+
+class ShieldProjectile(ThrownWeaponProjectile):
+    weapon_kind = "shield_item"
+    image_name = config.SHIELD_PROJECTILE_IMAGE
+    damage = config.SHIELD_THROW_DAMAGE
+    release_frame = 5  # First empty-handed cell in row seven.
+    release_offset = (90, 112)
+    half_width = 65 * config.SPRITE_SCALE
     half_height = config.THROWN_WEAPON_SPRITES[weapon_kind].rest_height / 2
 
 

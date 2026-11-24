@@ -105,6 +105,8 @@ class UI:
         labels = [f"{move.key.upper()} {move.name} ({move.damage})" for move in player.moves.values()]
         if player.weapon in config.FIREARM_MAGAZINE_SIZES:
             labels[:2] = firearm_controls(player)
+        elif player.weapon == "shield_item":
+            labels.insert(1, "S 유지  방어 (피해 절반)")
         for index, label in enumerate(labels):
             x = 704 + index % 2 * 270
             y = 659 - index // 2 * 24
@@ -197,11 +199,15 @@ class UI:
             fire, turn = firearm_controls(player)
             basic = (f"{fire}     {turn}     R  재장전     "
                      f"탄약  {player.firearm_ammo} / {config.FIREARM_MAGAZINE_SIZES[player.weapon]}")
+        elif player.weapon == "shield_item":
+            basic = "A  방패 밀치기 (20)     S 유지  방어 (피해 절반)"
         else:
             basic = "     ".join(f"{key[-1].upper()}  {player.moves[key].name}" for key in ("combat_a", "combat_s"))
         font.draw(620, 637, basic, body)
         if player.weapon in ("steel_club", "axe"):
             kicks = f"D  왼발 차기 · 이단 점프 중 D  조준 → D  {weapon} 내려찍기     F  오른발 차기"
+        elif player.weapon == "shield_item":
+            kicks = "D  방패 관통 투척 (50)     F  오른발 차기"
         elif player.moves["combat_d"].jump_attack:
             kicks = "이단 점프 후 D  조준 · 다시 눌러 내려찍기     F  오른발 차기"
         else:
@@ -245,7 +251,7 @@ class UI:
                     )
         if assets.font is not None:
             assets.font.draw(x + image.w * scale + 16, y + 56,
-                             f"{world.player.hp} / {config.MAX_HP}", (218, 228, 240))
+                             f"{world.player.hp:g} / {config.MAX_HP}", (218, 228, 240))
             if world.player.weapon in config.FIREARM_MAGAZINE_SIZES:
                 gun = world.player.weapon
                 assets.font.draw(x + image.w * scale + 16, y + 8,
@@ -296,6 +302,8 @@ class UI:
                     help_text = "A 도끼 휘두르기 · S 도끼 던지기 · G 회수 · 이단 점프 중 D 조준 → D 내려찍기"
                 elif world.player.weapon == "dual_black_batons":
                     help_text = "A 쌍몽둥이 휘두르기 · S 관통 투척 · G 줍기 / 내려놓기"
+                elif world.player.weapon == "shield_item":
+                    help_text = "A 방패 밀치기 · S 유지 방어 · D 관통 투척 · G 줍기 / 내려놓기"
                 else:
                     help_text = "무기 내려찍기: Space 두 번 → D 슬로 모션 / 방향키 조준 → D 급강하"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))

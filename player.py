@@ -5,17 +5,17 @@ from math import hypot
 import config
 from animation import Animation
 from collision import Rect, attack_hits_body
-from combat import (ALL_MOVES, AXE_THROW, DUAL_BATONS_THROW, STEEL_CLUB_THROW, STRONG_MOVES,
+from combat import (ALL_MOVES, AXE_THROW, DUAL_BATONS_THROW, SHIELD_THROW, STEEL_CLUB_THROW, STRONG_MOVES,
                     CrowdEscape, moves_for_weapon)
 from physics import approach_vector
 from projectiles import (AxeProjectile, DualBatonProjectile, PlayerPistolBullet, PlayerRifleBullet,
-                         SteelClubProjectile)
+                         ShieldProjectile, SteelClubProjectile)
 from traffic import start_car_hit, update_car_hit
 from walkable import default_area
 
 
 THROW_PROJECTILES = {STEEL_CLUB_THROW: SteelClubProjectile, AXE_THROW: AxeProjectile,
-                     DUAL_BATONS_THROW: DualBatonProjectile}
+                     DUAL_BATONS_THROW: DualBatonProjectile, SHIELD_THROW: ShieldProjectile}
 
 
 class Player:
@@ -183,7 +183,7 @@ class Player:
             # A mid-flinch G swap changes the sheet/row, not the chosen recovery speed.
             row, _, loop = poses["HIT"]
             self.animation.definitions["HIT"] = (row, hit_fps, loop)
-        if self.active_move is not None or self.state in ("SHOOT", "RELOAD"):
+        if self.active_move is not None or self.state in ("SHOOT", "RELOAD", "GUARD"):
             # Dropping/swapping a weapon cannot leave its old strike pending.
             self.cancel_combat()
             self.animation.set_state("IDLE" if self.grounded else "JUMP")
@@ -259,7 +259,7 @@ class Player:
                 self.ground_y, self.jump_height + height * config.SPRITE_SCALE, self.facing, self.floor)
         projectile_type = THROW_PROJECTILES.get(self.active_move)
         if projectile_type is not None and self.weapon == projectile_type.weapon_kind:
-            release_time = config.THROWN_WEAPON_RELEASE_FRAME / self.active_move.fps
+            release_time = projectile_type.release_frame / self.active_move.fps
             if self.animation.elapsed + 1e-9 < release_time:
                 return None
             self.animation.elapsed = max(self.animation.elapsed, release_time)
@@ -510,10 +510,13 @@ class Player:
     def take_damage(self, damage, *, attacker=None):
         if not self.alive or self.invincible or self.crowd_escape.active:
             return False
-        self.last_hit_damage = min(self.hp, damage)
+        guarding = self.state == "GUARD"
+        self.last_hit_damage = min(self.hp, damage * 0.5 if guarding else damage)
         self.hp -= self.last_hit_damage
         if attacker is not None and self.hp and self.last_hit_damage > 0:
             self.crowd_escape.record_hit(attacker)
+        if guarding and self.hp:
+            return True
         if self.weapon == "pistol" and self.state == "RELOAD" and self.hp:
             self.pistol_reload_interrupted = True
         self.vx = 0.0
@@ -607,6 +610,13 @@ class Player:
             return
         if self.active_move in THROW_PROJECTILES:
             return
+        if self.weapon == "shield_item" and self.active_move is None:
+            if "combat_s" in controls.held and not escape.active:
+                self.vx = self.ground_vy = 0.0
+                self.animation.set_state("GUARD")
+                return
+            if self.state == "GUARD":
+                self.animation.set_state("IDLE" if self.grounded else "JUMP")
         if self.weapon in config.FIREARM_MAGAZINE_SIZES and combat_pressed == "combat_r":
             combat_pressed = None
             can_reload = self.state in ("IDLE", "WALK", "RUN", "JUMP") or (
@@ -682,6 +692,12 @@ class Player:
                         # An interrupted top-up leaves the remaining rounds usable.
                         self.pistol_reload_interrupted = False
                     self.animation.set_state("IDLE")
+            return
+
+        if self.state == "GUARD":
+            self.update_vertical(dt)
+            hold_time = config.SHIELD_GUARD_HOLD_FRAME / self.animation.definitions["GUARD"][1]
+            self.animation.elapsed = min(self.animation.elapsed + dt, hold_time)
             return
 
         if self.state in ("SHOOT", "RELOAD"):

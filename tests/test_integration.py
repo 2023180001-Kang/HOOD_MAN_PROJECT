@@ -92,7 +92,7 @@ class IntegrationTests(unittest.TestCase):
             metadata = json.load(file)
         row_counts = {config.PLAYER_IMAGE: 6, config.PLAYER_PISTOL_IMAGE: 12, config.PLAYER_STEEL_CLUB_IMAGE: 8,
                       config.PLAYER_AXE_IMAGE: 8, config.PLAYER_DUAL_BATONS_IMAGE: 8, config.PLAYER_RIFLE_IMAGE: 12,
-                      config.ENEMY_IMAGE: 6, config.ENEMY02_IMAGE: 7,
+                      config.PLAYER_SHIELD_IMAGE: 9, config.ENEMY_IMAGE: 6, config.ENEMY02_IMAGE: 7,
                       config.AXE_ENEMY_IMAGE: 6, config.SHIELD_SOLDIER_IMAGE: 7,
                       config.RESEARCHER_IMAGE: 7, config.RESEARCHER_BULLET_IMAGE: 1,
                       config.AR_SOLDIER_IMAGE: 7, config.RIFLE_BULLET_IMAGE: 1,

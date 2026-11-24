@@ -19,6 +19,7 @@ SHEETS = {
     config.PLAYER_RIFLE_IMAGE: 12,
     config.PLAYER_STEEL_CLUB_IMAGE: 8,
     config.PLAYER_DUAL_BATONS_IMAGE: 8,
+    config.PLAYER_SHIELD_IMAGE: 9,
     config.PLAYER_AXE_IMAGE: 8,
     config.ENEMY_IMAGE: 6,
     config.AXE_ENEMY_IMAGE: 6,

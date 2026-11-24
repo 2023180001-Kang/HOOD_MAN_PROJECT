@@ -12,6 +12,12 @@ ENEMY_BOUNDS_COLOR = (255, 185, 70)
 STAIR_BOUNDS_COLOR = (180, 255, 150)
 
 
+def firearm_controls(player):
+    fire = "A 유지 연사" if player.weapon == "ar_rifle" else "A 사격"
+    turn = "S 방향 고정 해제" if player.firearm_facing_locked else "S 방향 고정"
+    return fire, turn
+
+
 class UI:
     def __init__(self):
         self.details_visible = True
@@ -91,16 +97,18 @@ class UI:
 
         pico2d.draw_rectangle(688, 616, config.SCREEN_WIDTH - 20, 704,
                               12, 21, 33, filled=True)
-        title = (f"{config.WEAPON_NAMES[player.weapon]} 장착 · 근접 공격"
+        title = (f"{config.WEAPON_NAMES[player.weapon]} 장착 · 조작"
                  if player.weapon in config.FIREARM_MAGAZINE_SIZES else
                  f"{config.WEAPON_NAMES[player.weapon]} 공격 · 피해량"
                  if player.weapon in config.WEAPON_NAMES else "기본 공격 · 피해량")
         assets.font.draw(704, 686, title, (244, 204, 66))
-        for index, move in enumerate(player.moves.values()):
+        labels = [f"{move.key.upper()} {move.name} ({move.damage})" for move in player.moves.values()]
+        if player.weapon in config.FIREARM_MAGAZINE_SIZES:
+            labels[:2] = firearm_controls(player)
+        for index, label in enumerate(labels):
             x = 704 + index % 2 * 270
             y = 659 - index // 2 * 24
-            assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
-                             (218, 228, 240))
+            assets.font.draw(x, y, label, (218, 228, 240))
         pico2d.draw_rectangle(688, 436, config.SCREEN_WIDTH - 20, 610,
                              12, 21, 33, filled=True)
         assets.font.draw(704, 590, "강화 기본 공격 · 피해량", (126, 218, 255))
@@ -186,8 +194,8 @@ class UI:
         weapon = config.WEAPON_NAMES.get(player.weapon, "맨손")
         font.draw(620, 671, f"공격 연습  ·  {weapon}", heading)
         if player.weapon in config.FIREARM_MAGAZINE_SIZES:
-            fire = "유지 연사" if player.weapon == "ar_rifle" else "사격"
-            basic = (f"A  {fire}     S  스트레이트     R  재장전     "
+            fire, turn = firearm_controls(player)
+            basic = (f"{fire}     {turn}     R  재장전     "
                      f"탄약  {player.firearm_ammo} / {config.FIREARM_MAGAZINE_SIZES[player.weapon]}")
         else:
             basic = "     ".join(f"{key[-1].upper()}  {player.moves[key].name}" for key in ("combat_a", "combat_s"))

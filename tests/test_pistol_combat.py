@@ -67,11 +67,11 @@ class PistolShootingTests(unittest.TestCase):
         world.update(config.FIXED_DT)
         self.assertEqual(player.state, "IDLE")
         player.pistol_ammo = 4
-        tap(world.controls, "combat_s")
+        tap(world.controls, "combat_f")
         world.update(config.FIXED_DT)
         tap(world.controls, "combat_r")
         world.update(config.FIXED_DT)
-        self.assertEqual(player.state, "ATTACK_S")
+        self.assertEqual(player.state, "ATTACK_F")
         advance(world, 2)
         self.assertEqual((player.state, player.pistol_ammo), ("IDLE", 4))
 
@@ -152,7 +152,7 @@ class PistolShootingTests(unittest.TestCase):
                 world = armed_world()
                 player = world.player
                 if state == "melee":
-                    player.start_move(MOVES["combat_s"], 1)
+                    player.start_move(MOVES["combat_f"], 1)
                 elif state == "stair":
                     player.staircase = object()
                 else:
@@ -161,7 +161,7 @@ class PistolShootingTests(unittest.TestCase):
                 player.handle_input(world.controls)
                 self.assertFalse(player.pistol_shot_pending)
                 if state == "melee":
-                    self.assertIs(player.active_move, MOVES["combat_s"])
+                    self.assertIs(player.active_move, MOVES["combat_f"])
                 self.assertFalse(world.controls.pressed)
                 player.staircase = None
                 player.cancel_combat()

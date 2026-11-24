@@ -38,7 +38,8 @@ class Player:
         self.vx = 0.0
         self.vy = 0.0
         self.jump_count = 0
-        self.facing = 1
+        self._facing = 1
+        self.firearm_facing_locked = False
         self.hp = config.MAX_HP
         self.last_hit_damage = 0
         self.invincible = False
@@ -75,6 +76,15 @@ class Player:
     @property
     def alive(self):
         return self.hp > 0
+
+    @property
+    def facing(self):
+        return self._facing
+
+    @facing.setter
+    def facing(self, direction):
+        if not self.firearm_facing_locked:
+            self._facing = direction
 
     @property
     def moves(self):
@@ -160,6 +170,7 @@ class Player:
         if weapon == self.weapon:
             return
         self.weapon = weapon
+        self.firearm_facing_locked = False
         self.rifle_cooldown = 0.0
         self.pistol_reload_interrupted = False
         hit_fps = self.animation.definitions["HIT"][1]
@@ -523,6 +534,7 @@ class Player:
             return False
         self.cancel_combat()
         self.invincible = False
+        self.firearm_facing_locked = False
         start_car_hit(self, direction)
         return True
 
@@ -571,6 +583,10 @@ class Player:
         """Resolve fresh actions before World samples the simulation time scale."""
         if controls.take_press("invincibility") and self.alive:
             self.invincible = not self.invincible
+        if self.weapon in config.FIREARM_MAGAZINE_SIZES:
+            toggles = controls.take_presses(("combat_s",))
+            if self.alive and len(toggles) % 2:
+                self.firearm_facing_locked = not self.firearm_facing_locked
         presses = controls.take_presses(ALL_MOVES)
         escape = self.crowd_escape
         if self.alive and any(escape.press(key) for key in presses):

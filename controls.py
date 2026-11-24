@@ -2,8 +2,6 @@
 
 from math import hypot
 
-import config
-
 
 class Controls:
     def __init__(self):
@@ -12,8 +10,8 @@ class Controls:
 
     def press(self, key):
         if key not in self.held:
-            # D/F needs every fresh edge in a batch. Other actions keep the latest.
-            if key not in config.CROWD_ESCAPE_KEYS and key in self.pressed:
+            # Combat needs ordered edges for combos and toggles within one SDL batch.
+            if not key.startswith("combat_") and key in self.pressed:
                 self.pressed.remove(key)
             self.pressed.append(key)
         self.held.add(key)

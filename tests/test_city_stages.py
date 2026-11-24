@@ -231,7 +231,7 @@ class CityStageTests(unittest.TestCase):
             self.assertEqual(stage.enemies[0].animation.elapsed, 0)
             self.assertEqual(stage.effects[0].elapsed, 0)
         self.assertEqual(source.damage_numbers[0].elapsed, 0)
-        self.assertEqual(world.controls.pressed, {})
+        self.assertFalse(world.controls.pressed)
         world.update(0.1)
         self.assertFalse(world.stage_loading)
         self.assertEqual(world.stage_index, 2)

@@ -16,6 +16,7 @@ class ResearcherBullet:
     floor: int = 0
     elapsed: float = 0.0
     spent: bool = False
+    shooter: object = field(default=None, kw_only=True, repr=False, compare=False)
     impact_target: object = field(default=None, init=False, repr=False)
     impact_damage: int = field(default=0, init=False)
 
@@ -100,8 +101,11 @@ class ResearcherBullet:
             self.height += vy * travel - gravity * travel * travel / 2
             self.elapsed += travel
             if hit:
-                self.spent = True  # Also consume a bullet blocked by P invincibility.
-                applied = target.take_damage(self.damage)
+                self.spent = True
+                if self.shooter is None:
+                    applied = target.take_damage(self.damage)
+                else:
+                    applied = target.take_damage(self.damage, attacker=self.shooter)
                 self.impact_target = target
                 self.impact_damage = target.last_hit_damage if applied else 0
                 return applied

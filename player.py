@@ -5,7 +5,7 @@ from math import hypot
 import config
 from animation import Animation
 from collision import Rect, attack_hits_body
-from combat import ALL_MOVES, AXE_THROW, STEEL_CLUB_THROW, STRONG_MOVES, moves_for_weapon
+from combat import ALL_MOVES, AXE_THROW, STEEL_CLUB_THROW, STRONG_MOVES, CrowdEscape, moves_for_weapon
 from physics import approach_vector
 from projectiles import AxeProjectile, PlayerPistolBullet, PlayerRifleBullet, SteelClubProjectile
 from traffic import start_car_hit, update_car_hit
@@ -42,6 +42,7 @@ class Player:
         self.hp = config.MAX_HP
         self.last_hit_damage = 0
         self.invincible = False
+        self.crowd_escape = CrowdEscape()
         self.car_hit = False
         self.weapon = None
         self.pistol_ammo = config.PLAYER_PISTOL_MAGAZINE_SIZE
@@ -492,11 +493,13 @@ class Player:
             return enemy.take_strong_hit(self.active_move, self.facing)
         return enemy.take_damage(self.active_move.damage)
 
-    def take_damage(self, damage):
-        if not self.alive or self.invincible:
+    def take_damage(self, damage, *, attacker=None):
+        if not self.alive or self.invincible or self.crowd_escape.active:
             return False
         self.last_hit_damage = min(self.hp, damage)
         self.hp -= self.last_hit_damage
+        if attacker is not None and self.hp and self.last_hit_damage > 0:
+            self.crowd_escape.record_hit(attacker)
         if self.weapon == "pistol" and self.state == "RELOAD" and self.hp:
             self.pistol_reload_interrupted = True
         self.vx = 0.0
@@ -559,6 +562,7 @@ class Player:
         self.previous_ground_y = self.ground_y
         self.previous_jump_height = self.jump_height
         if process_input:
+            self.crowd_escape.advance(dt)
             self.handle_input(controls)
         self._update(dt, controls)
         self.walkable.constrain(self, config.PLAYER_HALF_WIDTH)
@@ -567,7 +571,15 @@ class Player:
         """Resolve fresh actions before World samples the simulation time scale."""
         if controls.take_press("invincibility") and self.alive:
             self.invincible = not self.invincible
-        combat_pressed = controls.take_latest_press(ALL_MOVES)
+        presses = controls.take_presses(ALL_MOVES)
+        escape = self.crowd_escape
+        if self.alive and any(escape.press(key) for key in presses):
+            self.finish_move()
+            if self.pistol_ammo:
+                self.pistol_reload_interrupted = False
+        if escape.active:
+            presses = [key for key in presses if key not in config.CROWD_ESCAPE_KEYS]
+        combat_pressed = presses[-1] if presses else None
         if self.state == "HIT" and self.pistol_reload_interrupted:
             # Leave one jump press in Controls until the hit reaction finishes.
             return

@@ -101,7 +101,7 @@ class Researcher(Enemy):
         self.ammo -= 1
         return self.projectile_type(
             self.x + self.facing * (self.muzzle_x + self.projectile_type.half_width),
-            self.ground_y, self.jump_height + self.muzzle_height, self.facing, self.floor)
+            self.ground_y, self.jump_height + self.muzzle_height, self.facing, self.floor, shooter=self)
 
     def pursuit_delta(self, dx, dy, player):
         return (self.facing * max(0.0, abs(dx) - self.shoot_range),

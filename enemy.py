@@ -295,7 +295,7 @@ class Enemy:
                 and box.overlaps(player.body)):
             # Per-enemy swing consumption prevents repeated active-frame damage.
             self.has_hit = True
-            return player.take_damage(self.attack_damage)
+            return player.take_damage(self.attack_damage, attacker=self)
         return False
 
     def take_projectile(self):

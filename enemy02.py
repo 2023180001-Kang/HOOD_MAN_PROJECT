@@ -197,7 +197,7 @@ class Enemy02(Enemy):
             # Preserve that hit even if separation or fast motion ends overlap.
             self.air_contact_pending = False
             self.has_hit = True
-            return player.take_damage(self.attack_damage)
+            return player.take_damage(self.attack_damage, attacker=self)
         return super().try_hit(player)
 
     def _fall(self, dt):

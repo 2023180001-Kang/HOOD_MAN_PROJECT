@@ -217,6 +217,7 @@ class World:
             self.elapsed += dt
             return
         previous_jump_count = self.player.jump_count
+        self.player.crowd_escape.advance(dt)
         self.player.handle_input(self.controls)
         if previous_jump_count == 1 and self.player.jump_count == 2:
             self.stage.prepare_player_double_jump(self.player)
@@ -469,6 +470,7 @@ class World:
         self.stage_index = destination
         player = self.player
         player.floor = 0
+        player.crowd_escape.clear_encounter()
         player.stair_arrival = False
         player.stair_regrab_remaining = 0.0
         player.upper_landing_requested = False

@@ -1,8 +1,55 @@
 """Basic, strong and equipped attacks, hit reactions and shared effect choices."""
 
+from collections import deque
 from dataclasses import dataclass, replace
 
 import config
+
+
+class CrowdEscape:
+    """Track distinct attackers and alternating key presses on the input clock."""
+
+    def __init__(self):
+        self.now = 0.0
+        self.immune_until = 0.0
+        self.last_hits = {}
+        self.presses = deque(maxlen=config.CROWD_ESCAPE_PRESSES)
+
+    @property
+    def active(self):
+        return self.immune_until - self.now > 1e-9
+
+    @property
+    def ready(self):
+        return len(self.last_hits) >= config.CROWD_ESCAPE_ATTACKERS
+
+    def clear_encounter(self):
+        self.last_hits.clear()
+        self.presses.clear()
+
+    def advance(self, dt):
+        self.now += dt
+        if self.last_hits:
+            cutoff = self.now - config.CROWD_ESCAPE_HIT_WINDOW - 1e-9
+            self.last_hits = {enemy: time for enemy, time in self.last_hits.items() if time >= cutoff}
+            if not self.ready:
+                self.presses.clear()
+
+    def record_hit(self, attacker):
+        self.last_hits[attacker] = self.now
+
+    def press(self, key):
+        if not self.ready or key not in config.CROWD_ESCAPE_KEYS:
+            return False
+        if self.presses and self.presses[-1][0] == key:
+            self.presses.clear()
+        self.presses.append((key, self.now))
+        if (len(self.presses) < config.CROWD_ESCAPE_PRESSES
+                or self.now - self.presses[0][1] > config.CROWD_ESCAPE_INPUT_WINDOW + 1e-9):
+            return False
+        self.immune_until = self.now + config.CROWD_ESCAPE_DURATION
+        self.clear_encounter()
+        return True
 
 
 @dataclass(frozen=True)

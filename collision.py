@@ -99,7 +99,7 @@ def body_contact_time(first, second, *, allow_transit=False):
 
 def resolve_bodies(player, enemies, walkable=None):
     """Constrain player motion, then let enemies yield; bounded, non-iterative."""
-    if player.staircase is not None:
+    if player.staircase is not None or player.crowd_escape.active:
         return
     enemies = [enemy for enemy in enemies if same_floor(player, enemy)]
     walkable = player.walkable if walkable is None else walkable

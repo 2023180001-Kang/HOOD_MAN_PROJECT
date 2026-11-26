@@ -1,5 +1,6 @@
 import unittest
-from unittest.mock import Mock, patch
+from math import cos, radians, sin
+from unittest.mock import Mock, call, patch
 
 import config
 from main_menu import MainMenu
@@ -85,55 +86,57 @@ class PlayerSwordTests(unittest.TestCase):
             self.assertEqual(player.facing, facing)
             self.assertEqual((player.x, player.ground_y), position)
 
-    @patch("projectiles.choice")
-    def test_parried_rounds_enlarge_at_contact_then_bounce_and_fall(self, choose):
+    @patch("projectiles.uniform")
+    def test_parried_volley_spreads_immediately_while_enlarging_then_falls(self, roll_angle):
+        angles = [radians(degrees) for degrees in (-72, -20, 8, 43, 76)]
         for kind in (ResearcherBullet, RifleBullet):
-            for facing, pick in ((-1, min), (-1, max), (1, min), (1, max)):
-                choose.reset_mock()
-                choose.side_effect = pick
+            for facing in (-1, 1):
+                roll_angle.reset_mock()
+                roll_angle.side_effect = angles
                 world = equipped_world("sword")
                 player = world.player
                 player.invincible = False
-                floor_y = player.ground_y
-                shot = kind(player.x - facing * 100, floor_y, 80, facing)
-                self.assertEqual(shot.display_scale, shot.scale)
-                world.projectiles.append(shot)
                 world.controls.press("combat_s")
-                for _ in range(60):
-                    world.step(config.FIXED_DT)
-                    if shot.deflected:
-                        break
-                self.assertTrue(shot.deflected)
-                self.assertEqual((shot.facing, player.hp), (-facing, player.max_hp))
-                x, height, vy = shot.x, shot.height, shot.vy
-                peak_scale = shot.scale * 2.5
-                self.assertEqual(shot.display_scale, peak_scale)
-                world.controls.release("combat_s")
-                advance(world, 0.05)
-                self.assertEqual((shot.x, shot.height, shot.display_scale), (x, height, peak_scale))
-                advance(world, 0.1)
-                self.assertGreater((shot.x - x) * -facing, 0)
-                if pick is max:
-                    self.assertGreater(shot.height, height)
-                else:
-                    self.assertLess(shot.height, height)
-                self.assertLess(shot.vy, vy)
-                self.assertTrue(shot.scale < shot.display_scale < peak_scale)
-                self.assertFalse(world.effects or world.damage_numbers)
-                next_shot = kind(player.x, floor_y, 80, facing)
-                world.projectiles.append(next_shot)
                 world.step(config.FIXED_DT)
+                contact_x = (player.body.left - kind.half_width if facing == 1
+                             else player.body.right + kind.half_width)
+                shots = [kind(contact_x, player.ground_y, 80, facing) for _ in angles]
+                world.projectiles.extend(shots)
+                dt = config.FIXED_DT
+                world.step(dt)
+                for shot, angle in zip(shots, angles):
+                    self.assertEqual(shot.facing, -facing)
+                    self.assertAlmostEqual(shot.x, contact_x - facing * kind.ricochet_speed * cos(angle) * dt)
+                    self.assertAlmostEqual(shot.height, 80 + kind.ricochet_speed * sin(angle) * dt
+                                           - kind.gravity * dt**2 / 2)
+                    self.assertGreater(shot.display_scale, kind.scale)
+                self.assertEqual(player.hp, player.max_hp)
+                first_scale = shots[0].display_scale
+                world.controls.release("combat_s")
+                advance(world, 2 / 60)
+                near_peak_scale = shots[0].display_scale
+                self.assertGreater(near_peak_scale, first_scale)
+                self.assertAlmostEqual(near_peak_scale / kind.scale, 2.5, delta=0.05)
+                advance(world, 0.05)
+                for shot in shots:
+                    self.assertTrue(kind.scale < shot.display_scale < near_peak_scale)
+                self.assertFalse(world.effects or world.damage_numbers)
+                next_shot = kind(player.x, player.ground_y, 80, facing)
+                world.projectiles.append(next_shot)
+                world.step(dt)
                 self.assertFalse(next_shot.deflected)
                 self.assertEqual(player.hp, player.max_hp - next_shot.damage)
-                advance(world, 1)
-                self.assertEqual(shot.display_scale, shot.scale)
-                self.assertLess(shot.vy, 0)
-                self.assertEqual(shot.height, shot.half_height)
+                advance(world, 1.5)
+                for shot in shots:
+                    self.assertLess(shot.vy, 0)
+                    self.assertEqual(shot.height, shot.half_height)
+                self.assertEqual(shots[-1].display_scale, kind.scale)
                 self.assertFalse(world.projectiles)
-                choose.assert_called_once_with(shot.ricochet_vertical_speeds)
+                self.assertEqual(roll_angle.call_args_list,
+                                 [call(-kind.ricochet_max_angle, kind.ricochet_max_angle)] * len(shots))
 
-    @patch("projectiles.choice", side_effect=max)
-    def test_airborne_parry_falls_to_the_same_landing_point_across_update_sizes(self, _choose):
+    @patch("projectiles.uniform", return_value=radians(64))
+    def test_airborne_parry_falls_to_the_same_landing_point_across_update_sizes(self, _roll_angle):
         world = equipped_world("sword")
         player = world.player
         world.controls.press("combat_s")

@@ -78,9 +78,6 @@ class TrainingTarget:
     def take_strong_hit(self, move, direction):
         return self.take_damage(move.damage)
 
-    def start_rush_carry(self, move, direction):
-        return self.take_damage(move.damage)
-
     def _update_ai(self, dt, player):
         dx = player.x - self.x
         nearby = (abs(dx) < self.practice_reach

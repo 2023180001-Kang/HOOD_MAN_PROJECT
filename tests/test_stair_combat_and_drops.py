@@ -2,10 +2,9 @@ import random
 import unittest
 
 import config
-from collision import body_contact_time, same_floor, world_rect
+from collision import same_floor, world_rect
 from combat import MOVES, STRONG_MOVES
 from enemy import Enemy
-from rush import RushSequence
 from tests.helpers import ArchivedTwoFloorTests, advance
 from tests.test_two_floors import place
 from world import World
@@ -156,7 +155,7 @@ class StairCombatTests(ArchivedTwoFloorTests):
         enemy = on_stairs(world)
         before = enemy.y
         self.assertTrue(attack(world, enemy, "combat_q"))
-        self.assertEqual((enemy.hp, enemy.state), (150, "STRONG_HIT"))
+        self.assertEqual((enemy.hp, enemy.state), (165, "STRONG_HIT"))
         self.assertIsNone(enemy.staircase)
         self.assertTrue(enemy.falling_from_upper)
         self.assertEqual(enemy.y, before)
@@ -177,24 +176,6 @@ class StairCombatTests(ArchivedTwoFloorTests):
         self.assertIsNone(enemy.staircase)
         advance(world, 5)
         self.assertNotIn(enemy, world.enemies)
-
-    def test_rush_contact_can_capture_a_stair_enemy_without_cross_floor_projection(self):
-        world = World()
-        enemy = on_stairs(world, progress=220)
-        place(world, world.player, 0, enemy.x - 40, 136)
-        player = world.player
-        player.jump_height = player.previous_jump_height = enemy.y - player.ground_y
-        player.start_move(STRONG_MOVES["combat_w"], 1)
-        player.rush_phase = "FLY"
-        self.assertIsNone(body_contact_time(player, enemy))
-        self.assertIsNotNone(body_contact_time(player, enemy, allow_transit=True))
-        rush = RushSequence(player, world.stage.walkable)
-        self.assertEqual(len(rush.update([enemy])), 1)
-        self.assertIsNone(enemy.staircase)
-        self.assertFalse(enemy.falling_from_upper)
-        self.assertEqual(enemy.state, "RUSH_CARRIED")
-        self.assertEqual(enemy.floor, player.floor)
-        self.assertEqual(enemy.jump_height, player.jump_height)
 
     def test_falling_enemies_can_be_hit_from_the_upper_floor_at_matching_visible_height(self):
         world = World()

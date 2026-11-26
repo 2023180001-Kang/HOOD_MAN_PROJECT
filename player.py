@@ -5,7 +5,7 @@ from math import hypot
 import config
 from animation import Animation
 from collision import Rect, attack_hits_body
-from combat import (ALL_MOVES, AXE_THROW, DUAL_BATONS_THROW, KNIFE_THROW, PIPE_THROW, SHIELD_THROW,
+from combat import (ALL_MOVES, COMBAT_INPUTS, AXE_THROW, DUAL_BATONS_THROW, KNIFE_THROW, PIPE_THROW, SHIELD_THROW,
                     STEEL_CLUB_THROW, STRONG_MOVES, CrowdEscape, moves_for_weapon)
 from physics import approach_vector
 from projectiles import (AxeProjectile, DualBatonProjectile, KnifeProjectile, PlayerPistolBullet, PlayerRifleBullet,
@@ -66,8 +66,6 @@ class Player:
         self.air_kick_strike_frame = config.AIR_KICK_STRIKE_FRAMES[0]
         self.air_kick_count = 0
         self.air_kicks_used = 0
-        self.raise_punch_phase = None
-        self.rush_phase = None
         self.hit_enemies = set()
         definitions = dict(config.PLAYER_ANIMATIONS)
         definitions.update({move.state: (move.row, move.fps, False)
@@ -111,8 +109,6 @@ class Player:
     def time_scale(self):
         if self.alive and self.active_move is not None and self.air_kick_phase == "WAIT":
             return config.AIR_KICK_TIME_SCALE
-        if self.alive and self.active_move is not None and self.raise_punch_phase == "RAISE":
-            return config.R_RAISE_TIME_SCALE
         if self.alive and self.active_move is not None and self.active_move.jump_attack:
             if self.weapon_leap_phase == "AIM":
                 return config.WEAPON_AIM_TIME_SCALE
@@ -163,8 +159,6 @@ class Player:
         self.air_kick_phase = None
         self.air_kick_strike_frame = config.AIR_KICK_STRIKE_FRAMES[0]
         self.air_kick_count = 0
-        self.raise_punch_phase = None
-        self.rush_phase = None
 
     def finish_move(self):
         self.cancel_combat()
@@ -318,7 +312,7 @@ class Player:
     def start_move(self, move, direction):
         if move.jump_attack and (self.grounded or self.jump_count != 2):
             return
-        if move is STRONG_MOVES["combat_e"]:
+        if move is STRONG_MOVES["combat_w"]:
             if not self.grounded and self.air_kicks_used >= config.AIR_KICK_MAX_COUNT:
                 return
             if self.grounded:
@@ -333,14 +327,10 @@ class Player:
         self.animation.definitions[move.state] = (move.row, move.fps, False)
         self.animation.set_state(move.state)
         self.animation.elapsed = 0.0
-        if move is STRONG_MOVES["combat_e"]:
+        if move is STRONG_MOVES["combat_w"]:
             self.air_kick_phase = "KICK"
             self.air_kick_count = 1
             self.air_kicks_used += 1
-        elif move is STRONG_MOVES["combat_r"]:
-            self.raise_punch_phase = "RAISE"
-        elif move is STRONG_MOVES["combat_w"]:
-            self.rush_phase = "WINDUP"
         if move.jump_attack:
             self.weapon_leap_phase = "AIM"
             self.weapon_leap_direction = (float(self.facing), 0.0)
@@ -379,54 +369,8 @@ class Player:
                 self.finish_move()
                 return
         if self.air_kick_phase == "WAIT":
-            # Retract the leg between fresh E presses; this pose never attacks.
+            # Retract the leg between fresh W presses; this pose never attacks.
             self.animation.elapsed = config.AIR_KICK_HOLD_FRAME / self.active_move.fps
-
-    def update_raise_punch(self, dt):
-        self.vx = self.ground_vy = 0.0
-        self.update_vertical(dt)
-        if self.raise_punch_phase == "RAISE":
-            self.animation.update(dt)
-            self.animation.elapsed = min(self.animation.elapsed,
-                                         (config.R_READY_FRAME + 0.05) / self.active_move.fps)
-        else:
-            self.animation.update(dt)
-            if self.animation.finished:
-                self.finish_move()
-
-    def release_rush(self):
-        self.vx = self.ground_vy = 0.0
-        if self.rush_phase == "WINDUP":
-            self.finish_move()
-        elif self.rush_phase == "FLY":
-            self.rush_phase = "RECOVERY"
-            self.vy = 0.0
-            self.animation.elapsed = 6 / self.active_move.fps
-
-    def update_rush(self, dt, controls):
-        move = self.active_move
-        if self.rush_phase in ("WINDUP", "FLY") and controls.direction:
-            self.facing = controls.direction
-        if self.rush_phase == "WINDUP":
-            self.update_vertical(dt)
-            self.animation.update(dt)
-            if self.animation.elapsed + 1e-9 >= 3 / move.fps:
-                self.rush_phase = "FLY"
-                self.jump_height = max(self.jump_height, config.RUSH_HEIGHT)
-                self.vy = 0.0
-                self.jump_count = max(1, self.jump_count)
-                self.animation.elapsed = (config.RUSH_PLAYER_HOLD_FRAME + 0.05) / move.fps
-        elif self.rush_phase == "FLY":
-            # Held W only steers left/right; up/down never changes floor depth.
-            self.vx, self.ground_vy = self.facing * config.RUSH_SPEED, 0.0
-            self.x += self.vx * dt
-            self.animation.elapsed = (config.RUSH_PLAYER_HOLD_FRAME + 0.05) / move.fps
-        else:
-            self.vx = self.ground_vy = 0.0
-            self.update_vertical(dt)
-            self.animation.update(dt)
-            if self.animation.finished:
-                self.finish_move()
 
     def start_weapon_dive(self, controls):
         direction = controls.movement if controls.moving else self.weapon_leap_direction
@@ -489,8 +433,6 @@ class Player:
                 or self.animation.frame not in move.active_frames):
             return None
         if move.jump_attack and (self.weapon_leap_phase != "LANDING" or not self.grounded):
-            return None
-        if self.rush_phase is not None or self.raise_punch_phase == "RAISE":
             return None
         if self.air_kick_phase is not None and (
                 self.air_kick_phase != "KICK" or self.animation.frame != self.air_kick_strike_frame):
@@ -604,7 +546,9 @@ class Player:
             self.finish_move()
             if self.pistol_ammo:
                 self.pistol_reload_interrupted = False
-        combat_pressed = controls.take_latest_press(ALL_MOVES)
+        if self.weapon not in config.FIREARM_MAGAZINE_SIZES:
+            controls.take_press("combat_r")
+        combat_pressed = controls.take_latest_press(COMBAT_INPUTS)
         if self.state == "HIT" and self.pistol_reload_interrupted:
             # Leave one jump press in Controls until the hit reaction finishes.
             return
@@ -664,8 +608,6 @@ class Player:
             elif combat_pressed == "combat_a":
                 self.start_pistol_shot(controls.direction)
                 return
-        if self.rush_phase in ("WINDUP", "FLY") and "combat_w" not in controls.held:
-            self.release_rush()
         # A second Space and D may arrive together, before start_jump increments jump_count.
         starting_second_jump = jump_pressed and self.active_move is None and self.jump_count == 1
         moves = moves_for_weapon(self.weapon, double_jump=True) if starting_second_jump else self.moves
@@ -678,9 +620,6 @@ class Player:
                     self.start_weapon_dive(controls)
                 elif self.air_kick_phase == "WAIT":
                     self.resume_air_kick()
-                elif self.raise_punch_phase == "RAISE":
-                    self.raise_punch_phase = "STRIKE"
-                    self.animation.elapsed = config.R_READY_FRAME / move.fps
             else:
                 self.start_move(move, controls.direction)
 
@@ -729,12 +668,6 @@ class Player:
         if self.active_move is not None:
             if self.air_kick_phase is not None:
                 self.update_air_kick(dt, controls)
-                return
-            if self.raise_punch_phase is not None:
-                self.update_raise_punch(dt)
-                return
-            if self.rush_phase is not None:
-                self.update_rush(dt, controls)
                 return
             if self.active_move.jump_attack:
                 self.update_weapon_leap(dt, controls)

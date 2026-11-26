@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 
 import config
+from combat import STRONG_MOVES
 from walkable import default_area
 
 
@@ -37,6 +38,13 @@ def advance(world, seconds, fps=60):
 def tap(controls, key):
     controls.release(key)
     controls.press(key)
+
+
+def enter_kick_wait(world):
+    """Start the real W follow-up wait without advancing unrelated encounter clocks."""
+    move = STRONG_MOVES["combat_w"]
+    world.player.start_move(move, world.player.facing)
+    world.player.update_air_kick((move.active_frames[0] + 1) / move.fps, world.controls)
 
 
 def clear_encounters(world):

@@ -15,6 +15,7 @@ import pico2d
 
 import config
 from combat import STRONG_MOVES
+from tests.helpers import enter_kick_wait
 from game import Game
 from shield_soldier import ShieldSoldier
 from tools.check_damage_numbers import capture_number
@@ -171,10 +172,7 @@ def press_attack(game, key, enemy):
     keycode = getattr(pico2d, f"SDLK_{key}")
     before = enemy.hp
     push_key(keycode)
-    for frame in range(180):
-        if key == "r" and frame == 12:
-            release(game, keycode)
-            push_key(keycode)
+    for _ in range(180):
         tick(game)
         assert enemy.sprite_image == config.SHIELD_SOLDIER_IMAGE
         if enemy.hp != before:
@@ -219,12 +217,10 @@ def check_strong_and_dives(game):
         for move in STRONG_MOVES.values():
             world, enemy = encounter(game, guarded=guarded)
             press_attack(game, move.key, enemy)
-            damage = 25 if guarded else 50
+            damage = move.damage * 0.5 if guarded else move.damage
             assert enemy.hp == 400 - damage and enemy.animation.row == 6
             assert [value.damage for value in world.damage_numbers] == [damage]
             assert not enemy.guarding
-            if move.key == "w":
-                assert enemy.state == "RUSH_CARRIED"
             capture(game, f"shield_strong_{move.key}_{'guard' if guarded else 'full'}")
             tick(game, 120)
             assert enemy.sprite_image == config.SHIELD_SOLDIER_IMAGE
@@ -242,7 +238,7 @@ def check_strong_and_dives(game):
             assert [effect.image_name for effect in world.effects] == [config.WEAPON_HIT_IMAGES[weapon]]
             assert world.camera.shake_strength == 16
             capture_number(game, f"shield_dive_{weapon}_{'guard' if guarded else 'full'}")
-    print("PASS: SDL QWERT/W carry use half/full 25/50 once then own row-6 reactions; "
+    print("PASS: SDL Q/W/E deal half/full damage once then own row-6 reactions; "
           "both weapon D landings respect guard and preserve the 16px impact shake.")
 
 
@@ -294,7 +290,8 @@ def check_death_and_pause(game):
     assert not world.enemies
 
     world, enemy = encounter(game, guarded=True)
-    tap(game, pico2d.SDLK_r)
+    enter_kick_wait(world)
+    tick(game)
     assert world.time_scale == 0.2
     assert abs(enemy.animation.elapsed - 1 / 60 * 0.2) < 1e-9
     capture(game, "shield_guard_slow")

@@ -14,7 +14,7 @@ def main():
         "HoodMan_StreetThug_FINAL_2048x1536.png",
         "HOOD_MAN_enemy02.png",
         "HoodMan_BasicAttack_4Moves_8Frames_2048x1024.png",
-        "HoodMan_StrongAttacks_Uppercut_IDLE_FINAL_2048x1280.png",
+        "HoodMan_StrongAttacks_Rows_1_3_5_2048x768.png",
         "HoodMan_Enemy_StrongHit_2048x1280.png",
         "HoodMan_CombatKnife_changed_version_8x8.png",
         "HoodMan_CompactPipe_8x9_2048x2304.png",

@@ -14,7 +14,7 @@ from game import KEYS
 from researcher import Researcher
 from shield_soldier import ShieldSoldier
 from stage import enemy_type_for_stage
-from tests.helpers import advance, tap
+from tests.helpers import advance, enter_kick_wait, tap
 from ui import ENEMY_BOUNDS_COLOR, UI
 from world import World
 
@@ -251,7 +251,7 @@ class SpawnEnemyCycleTests(unittest.TestCase):
     def test_m_does_not_cancel_player_attacks_and_still_selects_during_slow_motion(self):
         world = World()
         world.select_stage(6)
-        press(world, "combat_r")
+        enter_kick_wait(world)
         move = world.player.active_move
         self.assertEqual(world.time_scale, 0.2)
         press(world, "cycle_spawn_enemy")

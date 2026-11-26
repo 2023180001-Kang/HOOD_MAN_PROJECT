@@ -4,6 +4,7 @@ import config
 from ar_soldier import ARSoldier
 from enemy import Enemy
 from researcher import Researcher
+from tests.helpers import enter_kick_wait
 from tests.test_combat import attacking_enemy
 from world import World
 
@@ -195,7 +196,8 @@ class CrowdEscapeTests(unittest.TestCase):
         tap_keys(world, *LEFT_FIRST)
         self.assertTrue(player.crowd_escape.active)
         world.controls.press("invincibility")
-        tap_keys(world, "combat_r")
+        enter_kick_wait(world)
+        tick(world)
         self.assertLess(world.time_scale, 1.0)
         tick(world, 119)
         self.assertFalse(player.crowd_escape.active)

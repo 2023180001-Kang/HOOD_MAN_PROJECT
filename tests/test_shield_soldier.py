@@ -12,7 +12,7 @@ from assets import Assets
 from combat import STRONG_MOVES
 from player import Player
 from shield_soldier import ShieldSoldier
-from tests.helpers import advance, tap
+from tests.helpers import advance, enter_kick_wait, tap
 from tests.test_strong_attacks import strike
 from ui import UI
 from world import World
@@ -190,20 +190,17 @@ class ShieldSoldierTests(unittest.TestCase):
                             advance(world, 0.03)
                             self.assertEqual(enemy.hp, 400 - damage)
 
-    def test_all_strong_attacks_and_w_carry_halve_guard_damage_and_keep_own_hit_row(self):
+    def test_all_strong_attacks_halve_guard_damage_and_keep_own_hit_row(self):
         for guarded in (False, True):
             for action in STRONG_MOVES:
                 for side in (-1, 1):
                     world, enemy = encounter(side, guarded=guarded)
                     strike(world, enemy, action)
-                    damage = 25 if guarded else 50
+                    damage = STRONG_MOVES[action].damage * (0.5 if guarded else 1)
                     self.assertEqual(enemy.hp, 400 - damage)
                     self.assertEqual([number.damage for number in world.damage_numbers], [damage])
                     self.assertEqual((enemy.sprite_image, enemy.animation.row), (config.SHIELD_SOLDIER_IMAGE, 6))
                     self.assertFalse(enemy.guarding)
-                    if action == "combat_w":
-                        self.assertEqual(enemy.state, "RUSH_CARRIED")
-                        world.controls.release(action)
                     advance(world, 1.5)
                     self.assertEqual(enemy.sprite_image, config.SHIELD_SOLDIER_IMAGE)
 
@@ -278,7 +275,7 @@ class ShieldSoldierTests(unittest.TestCase):
     def test_lethal_guard_and_strong_hits_use_own_death_fade_and_never_drop_a_club(self):
         for strong in (False, True):
             world, enemy = encounter(guarded=True)
-            enemy.hp = 20
+            enemy.hp = 15
             if strong:
                 enemy.take_strong_hit(STRONG_MOVES["combat_q"], 1)
             else:
@@ -327,7 +324,7 @@ class ShieldSoldierTests(unittest.TestCase):
 
     def test_guard_and_action_clocks_use_the_common_slow_motion_scale(self):
         world, enemy = encounter(guarded=True)
-        tap(world.controls, "combat_r")
+        enter_kick_wait(world)
         world.step(config.FIXED_DT)
         self.assertEqual(world.time_scale, 0.2)
         self.assertAlmostEqual(enemy.animation.elapsed, config.FIXED_DT * 0.2)

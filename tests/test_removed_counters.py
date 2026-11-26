@@ -16,7 +16,7 @@ from enemy02 import Enemy02
 from game import Game, KEYS
 from player import Player
 from researcher import Researcher
-from tests.helpers import advance
+from tests.helpers import advance, enter_kick_wait
 from ui import UI
 from world import World
 
@@ -103,13 +103,13 @@ class RemovedCounterTests(unittest.TestCase):
 
     def test_hjkl_do_not_cancel_or_replace_strong_attack_slow_motion(self):
         game = scene()
-        send_keys(game, "r")
+        enter_kick_wait(game.world)
         game.world.step(config.FIXED_DT)
         for key in "hjkl":
             send_keys(game, key)
             game.world.step(config.FIXED_DT)
-            self.assertEqual(game.world.player.raise_punch_phase, "RAISE")
-            self.assertEqual(game.world.time_scale, config.R_RAISE_TIME_SCALE)
+            self.assertEqual(game.world.player.air_kick_phase, "WAIT")
+            self.assertEqual(game.world.time_scale, config.AIR_KICK_TIME_SCALE)
         self.assertFalse(game.world.controls.pressed)
 
     def test_hjkl_during_loading_death_and_restart_never_buffer_a_later_action(self):
@@ -156,7 +156,7 @@ class RemovedCounterTests(unittest.TestCase):
         self.assertFalse(retired & assets.images.keys())
         self.assertFalse(retired & assets.frames.keys())
         self.assertEqual(len(assets.frames), 26)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1344)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1328)
 
     def test_hud_has_no_counter_keys_techniques_hold_or_followup_help_on_any_stage(self):
         game = scene()

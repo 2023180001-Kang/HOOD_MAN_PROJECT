@@ -383,36 +383,30 @@ class AxeEnemyTests(unittest.TestCase):
                 self.assertEqual((enemy.sprite_image, enemy.animation.row),
                                  (config.AXE_ENEMY_IMAGE, 5))
 
-    def test_all_strong_hits_and_w_carry_keep_axe_art_and_never_use_stun(self):
+    def test_all_strong_hits_keep_axe_art_and_never_use_stun(self):
         for action, move in STRONG_MOVES.items():
             for side in (-1, 1):
                 with self.subTest(action=action, side=side):
                     world, enemy = encounter(side)
                     strike(world, enemy, action)
-                    self.assertEqual(enemy.hp, 350)
+                    self.assertEqual(enemy.hp, 400 - move.damage)
                     self.assertEqual((enemy.sprite_image, enemy.animation.row),
                                      (config.AXE_ENEMY_IMAGE, 5))
-                    self.assertEqual([number.damage for number in world.damage_numbers], [50])
-                    if move.key == "w":
-                        world.controls.release(action)
-                        world.step(config.FIXED_DT)
-                        self.assertEqual(enemy.state, "RUSH_RELEASED")
+                    self.assertEqual([number.damage for number in world.damage_numbers], [move.damage])
                     for _ in range(360):
                         self.assertNotEqual(enemy.animation.row, 7)
                         self.assertEqual(enemy.sprite_image, config.AXE_ENEMY_IMAGE)
                         if enemy.state == "IDLE":
                             break
                         world.step(config.FIXED_DT)
-                    self.assertEqual((enemy.hp, enemy.state), (350, "IDLE"))
+                    self.assertEqual((enemy.hp, enemy.state), (400 - move.damage, "IDLE"))
 
     def test_lethal_strong_reactions_finish_with_the_axe_death_row_not_stun(self):
         for action in STRONG_MOVES:
-            world, enemy = encounter(hp=30)
+            world, enemy = encounter(hp=20)
             strike(world, enemy, action)
             self.assertEqual(enemy.hp, 0)
-            self.assertEqual([number.damage for number in world.damage_numbers], [30])
-            if action == "combat_w":
-                world.controls.release(action)
+            self.assertEqual([number.damage for number in world.damage_numbers], [20])
             for _ in range(900):
                 self.assertEqual(enemy.sprite_image, config.AXE_ENEMY_IMAGE)
                 self.assertLess(enemy.animation.row, 7)
@@ -538,7 +532,7 @@ class AxeEnemyTests(unittest.TestCase):
             self.assertIn(name, assets.images)
             self.assertEqual(SHEETS[name], 7)
         self.assertEqual(len(assets.frames), 26)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1344)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1328)
 
     def test_revisiting_pauses_axe_hp_animation_and_effects_and_f5_restores_fresh_summons(self):
         world, enemy = encounter()

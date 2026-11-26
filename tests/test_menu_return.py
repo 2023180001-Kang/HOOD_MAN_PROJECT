@@ -111,13 +111,13 @@ class MenuReturnEventTests(unittest.TestCase):
         self.assertTrue(self.game._menu_requested)
 
     def test_escape_is_available_during_attack_death_and_stage_loading(self):
-        for state in ("IDLE", "ATTACK_A", "ATTACK_R", "DYING", "DEAD", "loading"):
+        for state in ("IDLE", "ATTACK_A", "ATTACK_W", "DYING", "DEAD", "loading"):
             self.game = scene()
             if state == "loading":
                 self.game.world.pending_stage_index = 2
                 self.game.world.stage_loading_remaining = 1.5
             elif state.startswith("ATTACK_"):
-                moves = STRONG_MOVES if state == "ATTACK_R" else MOVES
+                moves = STRONG_MOVES if state == "ATTACK_W" else MOVES
                 self.game.world.player.start_move(moves[f"combat_{state[-1].lower()}"], 1)
             elif state in ("DYING", "DEAD"):
                 self.game.world.player.take_damage(config.MAX_HP)

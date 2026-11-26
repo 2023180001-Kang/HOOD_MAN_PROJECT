@@ -57,7 +57,7 @@ def check_stair_hits(game):
         if enemy.hp < 185:
             break
     release(game, pico2d.SDLK_q)
-    assert enemy.hp == 135 and enemy.state == "STRONG_HIT"
+    assert enemy.hp == 150 and enemy.state == "STRONG_HIT"
     assert enemy.falling_from_upper and enemy.staircase is None
     assert enemy not in stair.occupants
     capture(game, "stair_combat_strong_knockoff")

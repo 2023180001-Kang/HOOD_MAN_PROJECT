@@ -6,7 +6,6 @@ import config
 from collision import bodies_overlap, body_contact_time, resolve_bodies, same_floor
 from combat import MOVES, STRONG_MOVES
 from enemy import Enemy
-from rush import RushSequence
 from spawn_manager import SpawnManager
 from tests.helpers import ArchivedTwoFloorTests, advance, tap
 from ui import STAIR_BOUNDS_COLOR, UI
@@ -345,26 +344,6 @@ class StairAndFloorTests(ArchivedTwoFloorTests):
                               for e in world.spawner.spawn(40, 0)])
         self.assertEqual(snapshots[0], snapshots[1])
 
-    def test_upstairs_rush_carries_only_upstairs_enemies_without_projecting_either_actor_down(self):
-        world = World()
-        world.player.invincible = True
-        place(world, world.player, 1, 1000, 476)
-        upstairs = Enemy(1200, -1, ground_y=476)
-        place(world, upstairs, 1, 1200, 476)
-        downstairs = Enemy(1200, -1, ground_y=100)
-        world.enemies = [upstairs, downstairs]
-        world.controls.press("combat_w")
-        advance(world, 0.7)
-        self.assertIsNotNone(world.rush)
-        self.assertIn(upstairs, world.rush.captives)
-        self.assertNotIn(downstairs, world.rush.captives)
-        self.assertEqual((world.player.floor, upstairs.floor, downstairs.floor), (1, 1, 0))
-        self.assertEqual((world.player.ground_y, upstairs.ground_y), (476, 476))
-        world.controls.release("combat_w")
-        advance(world, 2)
-        self.assert_on_floor_or_stairs(world, world.player)
-        self.assert_on_floor_or_stairs(world, upstairs)
-
     def test_removed_or_dead_occupants_release_the_lock_and_waiting_enemies_continue(self):
         for removed in (False, True):
             with self.subTest(removed=removed):
@@ -468,18 +447,6 @@ class StairAndFloorTests(ArchivedTwoFloorTests):
         enemy.floor = 0
         self.assertTrue(player.try_hit(enemy))
 
-    def test_ground_floor_rush_never_captures_upstairs_enemies(self):
-        world = World()
-        player = world.player
-        player.start_move(STRONG_MOVES["combat_w"], 1)
-        player.rush_phase = "FLY"
-        enemy = Enemy(player.x + 10, -1, ground_y=player.ground_y)
-        enemy.floor = 1
-        rush = RushSequence(player, world.stage.walkable)
-        self.assertEqual(rush.update([enemy]), [])
-        self.assertEqual(rush.captives, [])
-        self.assertEqual(enemy.hp, 200)
-
     def test_upstairs_body_resolution_never_projects_ground_floor_enemies_upstairs(self):
         world = World()
         place(world, world.player, 1, 1000, 476)
@@ -506,7 +473,7 @@ class StairAndFloorTests(ArchivedTwoFloorTests):
         world.player.start_move(MOVES["combat_a"], 1)
         world.player.animation.elapsed = 3 / MOVES["combat_a"].fps
         self.assertTrue(world.player.try_hit(enemy))
-        self.assertEqual(enemy.hp, 140)
+        self.assertEqual(enemy.hp, 155)
         self.assertEqual(world.player.floor, 1)
         self.assertEqual(enemy.floor, 1)
         self.assert_on_floor_or_stairs(world, enemy)

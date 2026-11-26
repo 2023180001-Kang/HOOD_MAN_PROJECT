@@ -52,7 +52,7 @@ class Enemy02(Enemy):
 
     @property
     def blocks_movement(self):
-        return self.alive and self.state != "RUSH_CARRIED"
+        return self.alive
 
     @property
     def attack_box(self):
@@ -217,9 +217,6 @@ class Enemy02(Enemy):
         if self.falling_from_upper:
             super()._update_ai(dt, player)
             return
-        if self.state in ("RUSH_CARRIED", "RUSH_RELEASED"):
-            super()._update_ai(dt, player)
-            return
         if self.alive and player.alive and not self.car_hit:
             self.leap_cooldown = max(0.0, self.leap_cooldown - dt)
         if self.leap_phase is not None:
@@ -237,13 +234,12 @@ class Enemy02(Enemy):
             self.cooldown = max(0.0, self.cooldown - dt)
             self.animation.set_state("IDLE")
             self.animation.update(dt)
-            if not self.rush_falling:
-                self._fall(dt)
+            self._fall(dt)
             return
         super()._update_ai(dt, player)
         if self.state != "ATTACK":
             self.air_contact_attack = self.air_contact_pending = False
-        if not self.car_hit and not self.rush_falling:
+        if not self.car_hit:
             self._fall(dt)
 
     def take_damage(self, damage):
@@ -255,7 +251,7 @@ class Enemy02(Enemy):
     def take_strong_hit(self, move, direction):
         if not super().take_strong_hit(move, direction):
             return False
-        # Strong hits and rush carry/release must use this enemy's own hit art.
+        # Strong hits must use this enemy's own hit art.
         row = self.animations["HIT"][0]
         self.animation.definitions["STRONG_HIT"] = (row, config.STRONG_HIT_FPS, False)
         return True

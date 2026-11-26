@@ -266,10 +266,7 @@ def press_attack(game, key, enemy):
     keycode = getattr(pico2d, f"SDLK_{key}")
     before = enemy.hp
     push_key(keycode)
-    for frame in range(180):
-        if key == "r" and frame == 12:
-            release(game, keycode)
-            push_key(keycode)
+    for _ in range(180):
         tick(game)
         assert enemy.sprite_image == config.AXE_ENEMY_IMAGE and enemy.animation.row < 7
         if enemy.hp != before:
@@ -339,9 +336,9 @@ def check_strong_reactions(game):
     for move in STRONG_MOVES.values():
         world, enemy = encounter(game)
         press_attack(game, move.key, enemy)
-        assert enemy.hp == 350 and enemy.animation.row == 5
+        assert enemy.hp == enemy.max_hp - move.damage and enemy.animation.row == 5
         capture(game, f"axe_strong_{move.key}")
-    print("PASS: real SDL QWERT keep axe identity, 50 single damage, own recovery rows and no row-7 stun.")
+    print("PASS: real SDL Q/W/E keep axe identity, single hits, own recovery rows and no row-7 stun.")
 
 
 def check_combat_and_restart(game):

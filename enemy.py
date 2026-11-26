@@ -52,8 +52,6 @@ class Enemy:
         self.last_hit_damage = 0
         self.corpse_elapsed = 0.0
         self.car_hit = False
-        self.rush_release_still = 0.0
-        self.rush_falling = False
         self.attack_speed = attack_speed
         self.attack_interval = config.ENEMY_ATTACK_INTERVAL / attack_speed
         definitions = dict(self.animations)
@@ -81,7 +79,7 @@ class Enemy:
 
     @property
     def blocks_movement(self):
-        return self.alive and not self.leaping and self.state != "RUSH_CARRIED"
+        return self.alive and not self.leaping
 
     @property
     def opacity(self):
@@ -101,7 +99,7 @@ class Enemy:
     def sprite_image(self):
         if self.car_hit:
             return config.ENEMY_CAR_HIT_IMAGE
-        if self.state in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED"):
+        if self.state == "STRONG_HIT":
             return config.STRONG_HIT_IMAGE
         return self.image_name
 
@@ -148,8 +146,7 @@ class Enemy:
         if self.staircase is not None:
             self.begin_floor_fall(self.staircase.lower_area)
         self.facing = -direction
-        self.vx = direction * move.knockback_speed
-        self.ground_vy = 0.0
+        self.vx = self.ground_vy = 0.0
         self.formation_slot = None
         self.target_x = self.target_ground_y = None
         self.cooldown = self.attack_interval
@@ -168,49 +165,6 @@ class Enemy:
         if self.animation.finished:
             self.vx = self.ground_vy = 0.0
             self.animation.set_state("IDLE" if self.alive else "DYING")
-
-    def start_rush_carry(self, move, direction):
-        if not self.take_strong_hit(move, direction):
-            return False
-        self.vx = self.ground_vy = self.vy = 0.0
-        self.falling_from_upper = False
-        self.descent_route = None
-        self.rush_falling = True
-        self.animation.definitions["RUSH_CARRIED"] = (self.animation.row, config.STRONG_HIT_FPS, False)
-        self.animation.set_state("RUSH_CARRIED")
-        self.animation.elapsed = config.RUSH_ENEMY_HOLD_FRAME / config.STRONG_HIT_FPS
-        return True
-
-    def release_rush(self, direction):
-        if self.state != "RUSH_CARRIED":
-            return
-        row = self.animation.row
-        self.animation.definitions["RUSH_RELEASED"] = (row, config.STRONG_HIT_FPS, False)
-        self.animation.set_state("RUSH_RELEASED")
-        self.animation.elapsed = 5 / config.STRONG_HIT_FPS
-        self.vx, self.ground_vy, self.vy = direction * config.RUSH_RELEASE_SPEED, 0.0, 0.0
-        self.rush_release_still = 0.0
-
-    def update_rush_release(self, dt):
-        self.x += self.vx * dt
-        self.walkable.constrain(self, config.ENEMY_HALF_WIDTH)
-        self.vx, self.ground_vy = approach_vector(self.vx, self.ground_vy, 0.0, 0.0,
-                                                 config.RUSH_RELEASE_FRICTION * dt)
-        self.fall_from_rush(dt)
-        self.animation.update(dt)
-        if self.vx == self.ground_vy == 0 and self.jump_height == 0 and self.animation.finished:
-            self.rush_release_still += dt
-            if self.rush_release_still + 1e-9 >= config.RUSH_RELEASE_SETTLE:
-                self.cooldown = self.attack_interval
-                self.animation.set_state("IDLE" if self.alive else "DYING")
-
-    def fall_from_rush(self, dt):
-        if self.jump_height > 0:
-            self.vy -= config.GRAVITY * dt
-            self.jump_height = max(0.0, self.jump_height + self.vy * dt)
-        if self.jump_height == 0:
-            self.vy = 0.0
-            self.rush_falling = False
 
     def begin_floor_fall(self, lower_area, *, ground_y=None):
         feet = self.y
@@ -247,7 +201,6 @@ class Enemy:
     def hit_by_car(self, direction):
         if not self.alive:
             return False
-        self.rush_falling = False
         self.running = self.knockback_started = False
         self.has_hit = True
         self.cooldown = 0.0
@@ -354,20 +307,12 @@ class Enemy:
         self.previous_jump_height = self.jump_height
         if self.falling_from_upper:
             self.update_floor_fall(dt)
-        if (self.rush_falling and self.state not in ("RUSH_CARRIED", "RUSH_RELEASED")
-                and not self.car_hit):
-            self.fall_from_rush(dt)
         self._update_ai(dt, player)
         self.walkable.constrain(self, config.ENEMY_HALF_WIDTH)
 
     def _update_ai(self, dt, player):
         if self.state == "CAR_HIT":
             update_car_hit(self, dt)
-            return
-        if self.state == "RUSH_CARRIED":
-            return  # World rush synchronization owns this fixed flying pose.
-        if self.state == "RUSH_RELEASED":
-            self.update_rush_release(dt)
             return
         if self.state == "STRONG_HIT":
             self.update_strong_hit(dt)

@@ -37,6 +37,7 @@ KEYS = {
     pico2d.SDLK_F4: "toggle_floor_bounds",
     pico2d.SDLK_u: "toggle_details",
     pico2d.SDLK_g: "weapon_interact",
+    pico2d.SDLK_r: "combat_r",
     pico2d.SDLK_m: "cycle_spawn_enemy",
     pico2d.SDLK_c: "sword_spawn",
     pico2d.SDLK_v: "sniper_spawn",

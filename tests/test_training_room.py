@@ -269,7 +269,7 @@ class TrainingRoomTests(unittest.TestCase):
         self.press("training_target")
         target, = self.world.enemies
         position = target.x, target.y
-        for move in [MOVES["combat_f"]] * 5 + [STRONG_MOVES["combat_t"]]:
+        for move in [MOVES["combat_f"]] * 5 + [STRONG_MOVES["combat_e"]]:
             self.world.player.start_move(move, 1)
             self.world.player.animation.elapsed = min(move.active_frames) / move.fps
             self.world.update(config.FIXED_DT)
@@ -293,7 +293,7 @@ class TrainingRoomTests(unittest.TestCase):
         advance(self.world, 0.4)
         self.assertEqual([n.damage for n in self.world.damage_numbers], [STRONG_MOVES["combat_w"].damage])
         advance(self.world, 0.8)
-        self.assertFalse(self.world.rush.captives)
+        self.assertEqual(self.world.player.air_kick_phase, "WAIT")
         self.assertEqual((target.x, target.y, target.jump_height), (*position, 0))
 
     def test_training_guide_hp_and_damage_stay_visible_with_campaign_details_hidden(self):

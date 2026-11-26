@@ -31,7 +31,7 @@ SHEETS = {
     config.ENEMY02_IMAGE: 7,
     config.SWORD_ENEMY_IMAGE: 7,
     config.COMBAT_IMAGE: 4,
-    config.STRONG_ATTACK_IMAGE: 5,
+    config.STRONG_ATTACK_IMAGE: 3,
     config.STRONG_HIT_IMAGE: 5,
     # Keep legacy vehicle clips reproducible without preloading their textures.
     **dict.fromkeys(config.ARCHIVED_CAR_HIT_IMAGES, 1),

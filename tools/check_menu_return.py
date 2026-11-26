@@ -13,7 +13,8 @@ sys.path.insert(0, str(ROOT))
 import pico2d
 
 import config
-from combat import MOVES, STRONG_MOVES
+from combat import MOVES
+from tests.helpers import enter_kick_wait
 from game import Game
 import main as entrypoint
 from tools.check_main_menu import menu_image, push_click, push_mouse, push_quit
@@ -54,8 +55,8 @@ def check_return_states(game):
         elif scenario == "attack":
             player.start_move(MOVES["combat_a"], 1)
         elif scenario == "slow":
-            player.start_move(STRONG_MOVES["combat_r"], 1)
-            assert world.time_scale == config.R_RAISE_TIME_SCALE
+            enter_kick_wait(world)
+            assert world.time_scale == config.AIR_KICK_TIME_SCALE
         elif scenario in ("dying", "dead"):
             player.take_damage(500)
             if scenario == "dead":

@@ -18,6 +18,7 @@ import config
 from game import Game
 from projectiles import ResearcherBullet
 from researcher import Researcher
+from tests.helpers import enter_kick_wait
 from tools.check_damage_numbers import capture_number
 from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, release, tick
@@ -189,16 +190,15 @@ def check_aim_interruptions_and_pause(game):
                                             for stage in world.stages)
 
         world, enemy = encounter(game, index=index, invincible=True)
-        push_key(pico2d.SDLK_r)
+        enter_kick_wait(world)
         tick(game, 120)
-        release(game, pico2d.SDLK_r)
         assert world.time_scale == 0.2 and enemy.aiming and enemy.ammo == 7
         check_warning_pixels(game)
         capture(game, f"researcher_aim_{index}_slow_warning")
         wait(game, lambda: enemy.ammo == 6)
         assert enemy.aim_line is None
     print("PASS: real SDL S cancels the warning/shot without spending ammo; stage inactivity "
-          "and loading freeze it, loading hides it, F5 clears it, and R slow motion scales "
+          "and loading freeze it, loading hides it, F5 clears it, and W slow motion scales "
           "the half-second warning in both interiors.")
 
 
@@ -486,9 +486,8 @@ def check_ballistic_hits_and_pause(game):
         straight = config.RESEARCHER_BULLET_STRAIGHT_RANGE / config.RESEARCHER_BULLET_SPEED
         bullet = ResearcherBullet(900, world.stage.walkable.bounds[3], 78.75, 1, elapsed=straight + 0.1)
         world.projectiles.append(bullet)
-        push_key(pico2d.SDLK_r)
+        enter_kick_wait(world)
         tick(game, 6)
-        release(game, pico2d.SDLK_r)
         assert world.time_scale == 0.2
         assert abs(bullet.elapsed - straight - 0.12) < 1e-8
         assert abs(bullet.height - (83.25 - config.RESEARCHER_BULLET_GRAVITY * 0.12 ** 2 / 2)) < 1e-8

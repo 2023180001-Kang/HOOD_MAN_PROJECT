@@ -9,7 +9,7 @@ from tests.test_strong_attacks import encounter
 
 
 def kick(world, enemy=None):
-    tap(world.controls, "combat_e")
+    tap(world.controls, "combat_w")
     hits = []
     for _ in range(120):
         hp = enemy.hp if enemy is not None else 0
@@ -18,28 +18,28 @@ def kick(world, enemy=None):
             hits.append((world.player.animation.frame, hp - enemy.hp))
         if world.player.air_kick_phase in ("WAIT", "RECOVERY"):
             return hits
-    raise AssertionError("E did not finish one kick")
+    raise AssertionError("W did not finish one kick")
 
 
 class AirKickChainTests(unittest.TestCase):
-    def test_first_kick_then_slow_wait_never_attacks_again_without_a_fresh_e(self):
+    def test_first_kick_then_slow_wait_never_attacks_again_without_a_fresh_w(self):
         world, enemy = encounter()
-        self.assertEqual(kick(world, enemy), [(3, 50)])
+        self.assertEqual(kick(world, enemy), [(3, 45)])
         player = world.player
         self.assertEqual((player.animation.frame, world.time_scale), (4, 0.2))
         elapsed = world.elapsed
         advance(world, 3)
         self.assertAlmostEqual(world.elapsed - elapsed, 0.6)
-        self.assertEqual((player.air_kick_phase, player.animation.frame, enemy.hp), ("WAIT", 4, 150))
+        self.assertEqual((player.air_kick_phase, player.animation.frame, enemy.hp), ("WAIT", 4, 155))
         self.assertIsNone(player.attack_box)
 
-    def test_two_kicks_deal_fifty_each_then_automatically_restore_the_loadout(self):
+    def test_two_kicks_deal_forty_five_each_then_automatically_restore_the_loadout(self):
         for weapon in (None, *config.WEAPON_POSE_IMAGES):
             for enemy_type in (Enemy, Enemy02):
                 for side in (-1, 1):
                     world, enemy = encounter(enemy_type, side, weapon)
-                    for frame, hp in ((3, 150), (5, 100)):
-                        self.assertEqual(kick(world, enemy), [(frame, 50)])
+                    for frame, hp in ((3, 155), (5, 110)):
+                        self.assertEqual(kick(world, enemy), [(frame, 45)])
                         image, row = ((config.ENEMY02_IMAGE, 6) if enemy_type is Enemy02
                                       else (config.STRONG_HIT_IMAGE, 4))
                         self.assertEqual((enemy.hp, enemy.sprite_image, enemy.animation.row),
@@ -49,24 +49,24 @@ class AirKickChainTests(unittest.TestCase):
                     advance(world, 0.2)
                     self.assertEqual(world.time_scale, 1)
                     self.assertIsNone(world.player.air_kick_phase)
-                    self.assertEqual(enemy.hp, 100)
+                    self.assertEqual(enemy.hp, 110)
                     self.assertEqual(world.player.sprite_image,
                                      config.WEAPON_POSE_IMAGES.get(weapon, config.PLAYER_IMAGE))
 
     def test_held_keys_and_early_represses_do_not_restart_or_buffer_a_kick(self):
         world, enemy = encounter()
-        tap(world.controls, "combat_e")
+        tap(world.controls, "combat_w")
         advance(world, 0.05)
         elapsed = world.player.animation.elapsed
-        tap(world.controls, "combat_e")
+        tap(world.controls, "combat_w")
         world.step(config.FIXED_DT)
         self.assertAlmostEqual(world.player.animation.elapsed, elapsed + config.FIXED_DT)
         advance(world, 1)
-        self.assertEqual((world.player.air_kick_phase, enemy.hp), ("WAIT", 150))
-        world.controls.press("combat_e")
+        self.assertEqual((world.player.air_kick_phase, enemy.hp), ("WAIT", 155))
+        world.controls.press("combat_w")
         advance(world, 1)
-        self.assertEqual((world.player.air_kick_phase, enemy.hp), ("WAIT", 150))
-        self.assertEqual(kick(world, enemy), [(5, 50)])
+        self.assertEqual((world.player.air_kick_phase, enemy.hp), ("WAIT", 155))
+        self.assertEqual(kick(world, enemy), [(5, 45)])
 
     def test_wait_scales_enemy_motion_and_airborne_gravity_but_not_input_response(self):
         for enemy_type in (Enemy, Enemy02):
@@ -85,7 +85,7 @@ class AirKickChainTests(unittest.TestCase):
             self.assertAlmostEqual(player.jump_height, reference.jump_height)
             self.assertAlmostEqual(player.vy, reference.vy)
             self.assertEqual(player.animation.frame, config.AIR_KICK_HOLD_FRAME)
-            tap(world.controls, "combat_e")
+            tap(world.controls, "combat_w")
             elapsed = world.elapsed
             world.step(config.FIXED_DT)
             self.assertEqual((player.air_kick_phase, world.time_scale), ("KICK", 1))
@@ -99,11 +99,11 @@ class AirKickChainTests(unittest.TestCase):
         second.cooldown = 100
         world.enemies.append(second)
         advance(world, 1)
-        self.assertEqual((first.hp, second.hp), (150, 200))
+        self.assertEqual((first.hp, second.hp), (155, 200))
         kick(world, first)
-        self.assertEqual((first.hp, second.hp), (100, 150))
+        self.assertEqual((first.hp, second.hp), (110, 155))
         advance(world, 0.5)
-        self.assertEqual((first.hp, second.hp), (100, 150))
+        self.assertEqual((first.hp, second.hp), (110, 155))
 
     def test_interruptions_loading_and_restart_clear_or_pause_the_wait(self):
         for cause in ("hit", "death", "car", "drop", "swap", "attack", "restart"):
@@ -131,7 +131,7 @@ class AirKickChainTests(unittest.TestCase):
         kick(world, enemy)
         before = (world.player.animation.elapsed, world.elapsed, enemy.animation.elapsed)
         world.pending_stage_index, world.stage_loading_remaining = 1, 2
-        tap(world.controls, "combat_e")
+        tap(world.controls, "combat_w")
         world.update(0.5)
         self.assertEqual((world.player.animation.elapsed, world.elapsed, enemy.animation.elapsed), before)
         self.assertFalse(world.controls.pressed)
@@ -145,7 +145,7 @@ class AirKickChainTests(unittest.TestCase):
         for fps in (30, 60, 120, 144):
             world, enemy = encounter(Enemy02)
             snapshots = []
-            for action in ("combat_e", "combat_e", None, "combat_r", "combat_r"):
+            for action in ("combat_w", "combat_w", None, "combat_e", None):
                 if action is not None:
                     tap(world.controls, action)
                 advance(world, 0.5, fps)
@@ -153,7 +153,7 @@ class AirKickChainTests(unittest.TestCase):
                 snapshots.append((player.state, player.air_kick_phase, player.air_kick_strike_frame,
                                   player.animation.elapsed, world.time_scale, world.elapsed,
                                   enemy.hp, enemy.state, enemy.animation.elapsed))
-            self.assertEqual([snapshot[6] for snapshot in snapshots], [150, 100, 100, 100, 50])
+            self.assertEqual([snapshot[6] for snapshot in snapshots], [155, 110, 110, 85, 85])
             results.append(snapshots)
         self.assertTrue(all(result == results[0] for result in results))
 
@@ -165,20 +165,20 @@ class AirKickChainTests(unittest.TestCase):
             left.cooldown = 100
             world.enemies.append(left)
             if early:
-                tap(world.controls, "combat_e")
+                tap(world.controls, "combat_w")
                 advance(world, 0.05)
                 world.controls.press("left")
                 advance(world, 0.5)
-                self.assertEqual((left.hp, right.hp), (150, 200))
+                self.assertEqual((left.hp, right.hp), (155, 200))
             else:
                 kick(world, right)
                 world.controls.press("left")
                 world.step(config.FIXED_DT)
                 self.assertEqual(world.player.facing, -1)
                 kick(world, left)
-                self.assertEqual((left.hp, right.hp), (150, 150))
+                self.assertEqual((left.hp, right.hp), (155, 155))
 
-    def test_cancelling_and_restarting_e_cannot_bypass_two_kicks_per_airtime(self):
+    def test_cancelling_and_restarting_w_cannot_bypass_two_kicks_per_airtime(self):
         for cancel in (False, True):
             world, _ = encounter()
             world.enemies.clear()
@@ -192,14 +192,14 @@ class AirKickChainTests(unittest.TestCase):
                 world.step(config.FIXED_DT)
             self.assertFalse(world.player.grounded)
             self.assertEqual(world.player.air_kicks_used, 2)
-            tap(world.controls, "combat_e")
+            tap(world.controls, "combat_w")
             world.step(config.FIXED_DT)
             self.assertIsNone(world.player.active_move)
             self.assertEqual(world.player.state, "JUMP")
             advance(world, 1)
             self.assertTrue(world.player.grounded)
             self.assertEqual(world.player.air_kicks_used, 0)
-            tap(world.controls, "combat_e")
+            tap(world.controls, "combat_w")
             world.step(config.FIXED_DT)
             self.assertEqual(world.player.air_kick_phase, "KICK")
 
@@ -213,7 +213,7 @@ class AirKickChainTests(unittest.TestCase):
         tap(world.controls, "jump")
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.air_kicks_used, 0)
-        tap(world.controls, "combat_e")
+        tap(world.controls, "combat_w")
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.air_kick_phase, "KICK")
 

@@ -37,7 +37,7 @@ def check_ignored_keys_and_hud(game):
     assert not retired & game.assets.images.keys()
     assert not retired & game.assets.frames.keys()
     assert len(game.assets.frames) == 26
-    assert sum(len(row) for rows in game.assets.frames.values() for row in rows) == 1344
+    assert sum(len(row) for rows in game.assets.frames.values() for row in rows) == 1328
     for index in range(len(config.STAGE_IMAGES)):
         game.world = World(item_rng=random.Random(23))
         game.world.select_stage(index)
@@ -123,21 +123,21 @@ def check_a_and_existing_actions(game):
             release(game, getattr(pico2d, f"SDLK_{key}"))
     game.world = World()
     world = game.world
-    push_key(pico2d.SDLK_r)
-    tick(game)
-    release(game, pico2d.SDLK_r)
+    push_key(pico2d.SDLK_w)
+    tick(game, 20)
+    release(game, pico2d.SDLK_w)
     for key in "hjkl":
         push_key(getattr(pico2d, f"SDLK_{key}"))
         tick(game)
         release(game, getattr(pico2d, f"SDLK_{key}"))
-        assert world.player.raise_punch_phase == "RAISE" and world.time_scale == 0.2
+        assert world.player.air_kick_phase == "WAIT" and world.time_scale == 0.2
     push_key(pico2d.SDLK_F5)
     tick(game)
     release(game, pico2d.SDLK_F5)
     assert world.player.hp == 500 and world.player.active_move is None and world.time_scale == 1
     assert not world.controls.held and not world.controls.pressed
     print("PASS: A remains a normal 10-damage strike for all equipment, H/J/K/L cannot cancel "
-          "R slow preparation, and F5 resets without any grip/follow-up state.")
+          "W follow-up wait, and F5 resets without any grip/follow-up state.")
 
 
 def main():

@@ -113,7 +113,7 @@ class Researcher(Enemy):
     def _update_ai(self, dt, player):
         if (not self.alive or not player.alive or self.knockback_started
                 or self.falling_from_upper or self.navigation_target is not None
-                or self.state in ("HIT", "CAR_HIT", "STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")):
+                or self.state in ("HIT", "CAR_HIT", "STRONG_HIT")):
             self.aim_remaining = 0.0
             super()._update_ai(dt, player)
             return

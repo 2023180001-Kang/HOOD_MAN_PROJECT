@@ -17,7 +17,7 @@ from game import Game
 from player import Player
 from projectiles import ResearcherBullet, RifleBullet
 from researcher import Researcher
-from tests.helpers import advance, tap
+from tests.helpers import advance, enter_kick_wait, tap
 from tests.test_strong_attacks import strike
 from ui import UI
 from world import World
@@ -298,7 +298,7 @@ class ARSoldierTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         world.player.ground_y += 1
         world.step(config.FIXED_DT)
-        tap(world.controls, "combat_r")
+        enter_kick_wait(world)
         for _ in range(299):
             world.step(config.FIXED_DT)
             self.assertTrue(enemy.aiming)
@@ -491,11 +491,11 @@ class ARSoldierTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         self.assertEqual(enemy.ammo, 18)
 
-    def test_automatic_fire_interval_uses_the_same_r_slow_motion_clock(self):
+    def test_automatic_fire_interval_uses_the_same_slow_motion_clock(self):
         world, enemy = encounter()
         advance(world, enemy.aim_duration)
         world.step(config.FIXED_DT)
-        tap(world.controls, "combat_r")
+        enter_kick_wait(world)
         for _ in range(59):
             world.step(config.FIXED_DT)
             self.assertEqual(enemy.ammo, 19)
@@ -527,9 +527,9 @@ class ARSoldierTests(unittest.TestCase):
         enemy.update(1 - config.FIXED_DT, world.player)
         self.assertEqual(enemy.ammo, 20)
 
-    def test_hit_strong_carry_knockback_stop_and_death_cancel_warnings_and_active_bursts(self):
+    def test_hit_strong_knockback_stop_and_death_cancel_warnings_and_active_bursts(self):
         for phase in ("warning", "cancel_delay", "firing"):
-            for cause in ("hit", "strong", "carry", "knockback", "stop", "lethal", "car"):
+            for cause in ("hit", "strong", "knockback", "stop", "lethal", "car"):
                 with self.subTest(cause=cause, phase=phase):
                     world, enemy = encounter()
                     enemy.start_attack()
@@ -545,8 +545,6 @@ class ARSoldierTests(unittest.TestCase):
                         enemy.take_damage(10)
                     elif cause == "strong":
                         enemy.take_strong_hit(STRONG_MOVES["combat_q"], 1)
-                    elif cause == "carry":
-                        enemy.start_rush_carry(STRONG_MOVES["combat_w"], 1)
                     elif cause == "knockback":
                         enemy.knockback(world.player.x)
                     elif cause == "stop":
@@ -563,8 +561,8 @@ class ARSoldierTests(unittest.TestCase):
     def test_warning_and_reload_use_game_time_and_pause_off_scene_during_loading(self):
         world, enemy = encounter()
         enemy.start_attack()
-        tap(world.controls, "combat_r")
-        for _ in range(round(enemy.aim_duration / (config.FIXED_DT * config.R_RAISE_TIME_SCALE)) - 1):
+        enter_kick_wait(world)
+        for _ in range(round(enemy.aim_duration / (config.FIXED_DT * config.AIR_KICK_TIME_SCALE)) - 1):
             world.step(config.FIXED_DT)
             self.assertTrue(enemy.aiming)
             self.assertEqual(enemy.ammo, 20)
@@ -615,10 +613,10 @@ class ARSoldierTests(unittest.TestCase):
                 self.assertEqual(enemy.sprite_image, config.AR_SOLDIER_IMAGE)
                 self.assertEqual([number.damage for number in world.damage_numbers], [move.damage])
                 self.assertEqual(world.effects[-1].image_name, move.hit_image)
-        for key in "qwert":
+        for key in "qwe":
             world, enemy = encounter(gap=80)
             strike(world, enemy, f"combat_{key}")
-            self.assertEqual((enemy.hp, enemy.animation.row), (250, 5))
+            self.assertEqual((enemy.hp, enemy.animation.row), (enemy.max_hp - STRONG_MOVES[f"combat_{key}"].damage, 5))
             self.assertEqual(enemy.sprite_image, config.AR_SOLDIER_IMAGE)
 
     def test_small_red_hp_bar_uses_300_max_hp_and_remains_when_u_hides_help(self):
@@ -704,7 +702,7 @@ class ARSoldierTests(unittest.TestCase):
                 self.assertNotIn(name, assets.frames)
         self.assertIn(config.RIFLE_BULLET_IMAGE, assets.images)
         self.assertEqual(len(assets.frames), 26)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1344)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1328)
 
     def test_reload_fixed_sheet_and_both_archived_originals_keep_their_supplied_bytes(self):
         self.assertEqual(config.AR_SOLDIER_IMAGE, "AR_soldier_pico2d_reload_fixed_2048x1792.png")

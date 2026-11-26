@@ -10,7 +10,7 @@ from assets import Assets
 from combat import STRONG_MOVES
 from game import Game
 from researcher import Researcher
-from tests.helpers import advance, tap
+from tests.helpers import advance, enter_kick_wait, tap
 from world import World
 
 
@@ -94,7 +94,7 @@ class ResearcherAimTests(unittest.TestCase):
             self.assertEqual((shots, warnings, enemy.ammo), (8, 8, 6))
 
     def test_each_interruption_cancels_the_warning_without_firing_or_spending_ammo(self):
-        for action in ("hit", "lethal", "strong", "carry", "knockback", "stop", "car", "reload"):
+        for action in ("hit", "lethal", "strong", "knockback", "stop", "car", "reload"):
             with self.subTest(action=action):
                 world, enemy = encounter()
                 enemy.start_attack()
@@ -103,8 +103,6 @@ class ResearcherAimTests(unittest.TestCase):
                     enemy.take_damage(10 if action == "hit" else enemy.hp)
                 elif action == "strong":
                     enemy.take_strong_hit(STRONG_MOVES["combat_q"], 1)
-                elif action == "carry":
-                    enemy.start_rush_carry(STRONG_MOVES["combat_w"], 1)
                 elif action == "knockback":
                     enemy.knockback(world.player.x)
                 elif action == "stop":
@@ -137,7 +135,7 @@ class ResearcherAimTests(unittest.TestCase):
     def test_warning_uses_the_common_slow_motion_clock_instead_of_attack_speed(self):
         world, enemy = encounter(speed=1.4)
         enemy.start_attack()
-        tap(world.controls, "combat_r")
+        enter_kick_wait(world)
         for _ in range(299):
             world.step(config.FIXED_DT)
             self.assertTrue(enemy.aiming)

@@ -98,7 +98,7 @@ class IntegrationTests(unittest.TestCase):
                       config.RESEARCHER_IMAGE: 7, config.RESEARCHER_BULLET_IMAGE: 1,
                       config.AR_SOLDIER_IMAGE: 7, config.RIFLE_BULLET_IMAGE: 1, config.SNIPER_IMAGE: 7,
                       config.COMBAT_IMAGE: 4,
-                      config.STRONG_ATTACK_IMAGE: 5, config.STRONG_HIT_IMAGE: 5,
+                      config.STRONG_ATTACK_IMAGE: 3, config.STRONG_HIT_IMAGE: 5,
                       config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1,
                       **{name: config.WEAPON_SHEET_ROWS[kind]
                          for kind, name in config.WEAPON_POSE_IMAGES.items()}}
@@ -160,16 +160,16 @@ class IntegrationTests(unittest.TestCase):
 
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             metadata = json.load(file)
-        for name in (config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE):
+        for name, height in ((config.STRONG_ATTACK_IMAGE, 768), (config.STRONG_HIT_IMAGE, 1280)):
             with Image.open(config.ROOT / name) as image:
-                self.assertEqual((image.size, image.mode), ((2048, 1280), "RGBA"))
+                self.assertEqual((image.size, image.mode), ((2048, height), "RGBA"))
                 for row_index, row in enumerate(metadata[name]):
                     feet = [image.crop((col * 256, row_index * 256,
                                         (col + 1) * 256, (row_index + 1) * 256)).getbbox()[3]
                             for col in range(8)]
                     self.assertEqual([tile["offset_y"] for tile in row],
                                      [max(feet) - foot for foot in feet])
-            self.assertTrue(any(tile["offset_y"] > 20 for row in metadata[name] for tile in row))
+            self.assertTrue(any(tile["offset_y"] >= 20 for row in metadata[name] for tile in row))
 
 
 if __name__ == "__main__":

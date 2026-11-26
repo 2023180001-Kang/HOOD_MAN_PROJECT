@@ -67,11 +67,11 @@ class RemovedEnemyDeathDropTests(unittest.TestCase):
                 self.assertFalse(enemy.alive)
                 self.assertEqual(world.stage.drop_items, [])
 
-    def test_each_strong_attack_including_lethal_rush_does_not_add_items(self):
-        for key in "qwert":
+    def test_each_strong_attack_does_not_add_items(self):
+        for key in "qwe":
             with self.subTest(key=key):
                 world, enemy = encounter()
-                enemy.hp = 50
+                enemy.hp = 20
                 strike(world, enemy, f"combat_{key}")
                 self.assertFalse(enemy.alive)
                 self.assertEqual(world.stage.drop_items, [])

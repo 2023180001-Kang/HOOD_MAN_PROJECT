@@ -32,7 +32,7 @@ def crowd(count=9, side=1, *, index=10, distance=500, depth=None):
 class ARSpacingTests(unittest.TestCase):
     def assert_separated(self, world, enemies=None, *, at_spawn=False):
         enemies = world.enemies if enemies is None else enemies
-        active = [enemy for enemy in enemies if enemy.alive and enemy.state != "RUSH_CARRIED"]
+        active = [enemy for enemy in enemies if enemy.alive]
         for enemy in active:
             self.assertTrue(enemy.walkable.contains(enemy.x, enemy.ground_y, enemy.boundary_padding))
             self.assertFalse(bodies_overlap(enemy, world.player))
@@ -292,19 +292,16 @@ class ARSpacingTests(unittest.TestCase):
             for enemy, position in before.items():
                 self.assertEqual((enemy.x, enemy.ground_y), position)
 
-    def test_dead_carried_other_floor_and_other_enemy_types_are_not_pushed(self):
+    def test_dead_other_floor_and_other_enemy_types_are_not_pushed(self):
         world, enemies = crowd(1, distance=300)
         anchor = enemies[0]
         excluded = []
-        for kind in ("dead", "carried", "floor", "thug", "researcher"):
+        for kind in ("dead", "floor", "thug", "researcher"):
             cls = Enemy if kind == "thug" else Researcher if kind == "researcher" else ARSoldier
             enemy = cls(anchor.x, ground_y=anchor.ground_y)
             enemy.walkable = world.stage.walkable
             if kind == "dead":
                 enemy.take_damage(enemy.hp)
-            elif kind == "carried":
-                enemy.animation.definitions["RUSH_CARRIED"] = enemy.animations["HIT"]
-                enemy.animation.set_state("RUSH_CARRIED")
             elif kind == "floor":
                 enemy.floor = 1
             excluded.append(enemy)

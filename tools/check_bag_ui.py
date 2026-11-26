@@ -158,7 +158,7 @@ def check_idle_preview(game):
     player = world.player
     player.hp = 200
     player.equip_weapon("steel_pipe")
-    player.start_move(STRONG_MOVES["combat_r"], 1)
+    player.start_move(STRONG_MOVES["combat_q"], 1)
     before = (player.hp, player.state, player.weapon, player.animation.elapsed,
               world.elapsed, world.time_scale)
     push_click(menu.main_buttons[-1])

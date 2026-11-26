@@ -12,7 +12,6 @@ from enemy_spacing import place_ranged_spawns, prepare_enemy_spacing, resolve_en
 from physics import clamp
 from player import Player
 from projectiles import EnemyAxeProjectile, PlayerProjectile, ThrownWeaponProjectile
-from rush import RushSequence
 from stage import Stage
 from sword_enemy import SwordEnemy
 from sniper import Sniper
@@ -37,15 +36,12 @@ class World:
         self.reset()
 
     def reset(self):
-        if getattr(self, "rush", None) is not None:
-            self.rush.finish()
         for stage in getattr(self, "stages", ()):
             for stair in stage.stairs:
                 for actor in tuple(stair.occupants):
                     stair.release(actor)
                 stair.queue.clear()
         self.controls.reset_for_restart()
-        self.rush = None
         if self.training:
             room = TrainingRoom(enemy_starting_hp=self.enemy_starting_hp)
             self.stages = [room]
@@ -239,7 +235,6 @@ class World:
         self.player.handle_input(self.controls)
         if previous_jump_count == 1 and self.player.jump_count == 2:
             self.stage.prepare_player_double_jump(self.player)
-        self.cancel_invalid_rush()
         # Input stays on the real fixed-step clock, so D can enter/leave slow
         # motion immediately. Every gameplay clock advances by the same dt.
         dt *= self.time_scale
@@ -275,9 +270,6 @@ class World:
             self.player.update(dt, self.controls, self.stage.area_for(self.player), process_input=False)
             self.stage.try_player_stair_catch(self.player)
             self.stage.resolve_player_platforms(self.player, self.controls)
-        self.cancel_invalid_rush()
-        if self.player.rush_phase == "FLY" and self.rush is None:
-            self.rush = RushSequence(self.player, self.stage.area_for(self.player))
         self.handle_death()
         for item in self.stage.drop_items[:]:
             owner = item.axe_owner
@@ -292,30 +284,12 @@ class World:
             if enemy not in stair_moved:
                 enemy.update(dt, self.player, self.stage.area_for(enemy))
                 self.stage.resolve_enemy_drop(enemy, self.player)
-        traffic_updated = self.rush is not None
-        if traffic_updated:
-            # Move existing captives before swept car checks, but let fatal
-            # traffic cancel the flight before applying any new W contact hit.
-            if not self.rush.sync_pair():
-                self.player.release_rush()
-            self.update_traffic(dt)
-            self.handle_death()
-            self.cancel_invalid_rush()
-        if self.rush is not None:
-            for enemy, damage in self.rush.update(self.enemies):
-                self.damage_numbers.append(DamageNumber.above_body(
-                    enemy.body, damage, depth=enemy.ground_y - config.GROUND_Y))
-                self.effects.append(HitEffect(enemy.x, enemy.y + config.ENEMY_HEIGHT * 0.6,
-                                              self.player.facing,
-                                              image_name=config.PUNCH_KICK_HIT_IMAGE))
-                self.camera.shake()
         self.enemies[:] = [enemy for enemy in self.enemies if not enemy.faded_out]
         if self.player.alive:
             area = self.stage.area_for(self.player)
             resolve_bodies(self.player, self.enemies, area)
             resolve_enemy_spacing(self.player, self.enemies, dt, area)
-        if not traffic_updated:
-            self.update_traffic(dt)
+        self.update_traffic(dt)
         self.handle_death()
         if self.player.alive:
             player_box = self.player.attack_box
@@ -349,7 +323,6 @@ class World:
                         break
         self.update_projectiles(dt)
         self.handle_death()
-        self.cancel_invalid_rush()
         self.stage.constrain_actor(self.player)
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
@@ -417,13 +390,6 @@ class World:
             self.afterimages.append(SpriteAfterimage.from_player(self.player))
             self._dive_afterimage_remaining += config.WEAPON_DIVE_AFTERIMAGE_INTERVAL
 
-    def cancel_invalid_rush(self):
-        if self.rush is not None:
-            self.rush.prune(self.enemies)
-            if not self.rush.valid:
-                self.rush.finish()
-                self.rush = None
-
     def update_traffic(self, dt):
         if self.stage.traffic is None:
             return
@@ -486,11 +452,6 @@ class World:
         return True
 
     def _enter_stage(self, destination, *, entry_x=None):
-        if self.rush is not None:
-            self.rush.finish()
-            self.rush = None
-        if self.player.rush_phase is not None:
-            self.player.finish_move()
         # Keep the same player, physics, held input and animation clock, and
         # enter far enough inside the next scene to avoid an immediate return.
         side = 1 if destination > self.stage_index else -1

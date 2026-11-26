@@ -132,7 +132,7 @@ def _nearest_ranged_position(enemy, obstacles, origin, *, firing_at=None):
 def place_ranged_spawns(player, existing, spawned):
     """Choose initial feet positions once, before a new rifleman takes its first step."""
     placed = [e for e in existing if e.uses_ranged_spacing and e.alive
-              and e.staircase is None and not e.falling_from_upper and e.state != "RUSH_CARRIED"]
+              and e.staircase is None and not e.falling_from_upper]
     for enemy in spawned:
         if not enemy.uses_ranged_spacing:
             continue
@@ -202,7 +202,7 @@ def _approach_waypoint(enemy, goal, peers, player):
 
 def _prepare_ranged_approach(player, enemies):
     peers = [e for e in enemies if e.uses_ranged_spacing and e.alive and same_floor(e, player)
-             and not e.falling_from_upper and e.state != "RUSH_CARRIED"]
+             and not e.falling_from_upper]
     moving = [e for e in peers if e.state in ("IDLE", "WALK", "RUN")
               and e.navigation_target is None and not e.knockback_started]
     if len(peers) < 2:
@@ -270,7 +270,7 @@ def _allows_step(start, position, obstacles):
 def resolve_ranged_spacing(player, enemies):
     """Yield a contested step without pushing another actor or adding movement."""
     active = [e for e in enemies if e.uses_ranged_spacing and e.alive and same_floor(e, player)
-              and not e.falling_from_upper and e.state != "RUSH_CARRIED"]
+              and not e.falling_from_upper]
     previous = {e: (e.previous_x, e.previous_ground_y) for e in active}
     for enemy in active:
         start = previous.pop(enemy)
@@ -306,7 +306,7 @@ def prepare_enemy_spacing(player, enemies, walkable=None):
                 or enemy.navigation_target is not None or enemy.falling_from_upper
                 or not player.alive or not enemy.alive or enemy.knockback_started
                 or enemy.leaping
-                or enemy.state in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")):
+                or enemy.state == "STRONG_HIT"):
             enemy.formation_slot = None
             continue
         difference = enemy.x - player.x
@@ -389,7 +389,7 @@ def resolve_enemy_spacing(player, enemies, dt, walkable=None):
               and enemy.navigation_target is None and not enemy.falling_from_upper
               and player.alive and enemy.alive and not enemy.knockback_started
               and not enemy.leaping
-              and enemy.state not in ("STRONG_HIT", "RUSH_CARRIED", "RUSH_RELEASED")]
+              and enemy.state != "STRONG_HIT"]
     left, right, _ = encounter_envelope(enemies)
     width = right - left + config.ENEMY_SPACING_MARGIN
     crowded = set()

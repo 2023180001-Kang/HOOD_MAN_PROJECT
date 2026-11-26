@@ -15,7 +15,7 @@ from player import Player
 from projectiles import ResearcherBullet
 from researcher import Researcher
 from shield_soldier import ShieldSoldier
-from tests.helpers import advance, tap
+from tests.helpers import advance, enter_kick_wait, tap
 from tests.test_strong_attacks import strike
 from ui import UI
 from world import World
@@ -315,16 +315,13 @@ class ResearcherTests(unittest.TestCase):
         first.update(0.5, player)
         self.assertEqual((first.ammo, second.ammo), (7, 6))
 
-    def test_strong_attacks_and_rush_keep_researcher_identity_and_ammo(self):
+    def test_strong_attacks_keep_researcher_identity_and_ammo(self):
         for action in STRONG_MOVES:
             world, enemy = encounter(gap=80, invincible=True)
             enemy.cooldown = 100
             strike(world, enemy, action)
-            self.assertEqual((enemy.hp, enemy.animation.row, enemy.ammo), (150, 6, 7))
+            self.assertEqual((enemy.hp, enemy.animation.row, enemy.ammo), (enemy.max_hp - STRONG_MOVES[action].damage, 6, 7))
             self.assertEqual(enemy.sprite_image, config.RESEARCHER_IMAGE)
-            if action == "combat_w":
-                world.controls.release(action)
-                world.step(config.FIXED_DT)
             until(world, lambda: enemy.state == "IDLE")
             self.assertEqual(enemy.sprite_image, config.RESEARCHER_IMAGE)
 
@@ -389,9 +386,9 @@ class ResearcherTests(unittest.TestCase):
         bullet = bullet_at(world.player, x=world.player.x - 400, height=500)
         world.projectiles.append(bullet)
         start = bullet.x
-        tap(world.controls, "combat_r")
+        enter_kick_wait(world)
         world.step(config.FIXED_DT)
-        dt = config.FIXED_DT * config.R_RAISE_TIME_SCALE
+        dt = config.FIXED_DT * config.AIR_KICK_TIME_SCALE
         self.assertAlmostEqual(bullet.x - start, config.RESEARCHER_BULLET_SPEED * dt)
         self.assertAlmostEqual(bullet.elapsed, dt)
         self.assertAlmostEqual(enemy.animation.elapsed, dt)

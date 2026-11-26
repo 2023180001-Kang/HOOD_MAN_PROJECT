@@ -66,7 +66,6 @@ class Move:
     hit_image: str = config.PUNCH_KICK_HIT_IMAGE
     jump_attack: bool = False
     enemy_hit_row: int | None = None
-    knockback_speed: float = 0.0
 
     @property
     def state(self):
@@ -78,14 +77,14 @@ MOVES = {
     for key, name, row, damage, reach, height, fps in config.COMBAT_MOVE_SPECS
 }
 STRONG_MOVES = {
-    f"combat_{key}": Move(key, name, row, config.STRONG_ATTACK_DAMAGE, reach, height,
+    f"combat_{key}": Move(key, name, row, damage, reach, height,
                            config.STRONG_ATTACK_FPS, image_name=config.STRONG_ATTACK_IMAGE,
-                           active_frames=active_frames, enemy_hit_row=enemy_row,
-                           knockback_speed=knockback_speed)
-    for key, name, row, enemy_row, reach, height, active_frames, knockback_speed
+                           active_frames=active_frames, enemy_hit_row=enemy_row)
+    for key, name, row, damage, enemy_row, reach, height, active_frames
     in config.STRONG_MOVE_SPECS
 }
 ALL_MOVES = {**MOVES, **STRONG_MOVES}
+COMBAT_INPUTS = ALL_MOVES.keys() | {"combat_r"}
 WEAPON_MOVES = {
     kind: {
         f"combat_{key}": Move(key, name, row, damage, reach, height, fps,

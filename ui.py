@@ -124,25 +124,18 @@ class UI:
         pico2d.draw_rectangle(688, 436, config.SCREEN_WIDTH - 20, 610,
                              12, 21, 33, filled=True)
         assets.font.draw(704, 590, "강화 기본 공격 · 피해량", (126, 218, 255))
-        strong_moves = [move for move in STRONG_MOVES.values()
-                        if player.weapon not in config.FIREARM_MAGAZINE_SIZES or move.key != "r"]
-        for index, move in enumerate(strong_moves):
+        for index, move in enumerate(STRONG_MOVES.values()):
             x = 704 + index % 2 * 270
             y = 565 - index // 2 * 23
             assets.font.draw(x, y, f"{move.key.upper()} {move.name} ({move.damage})",
                              (218, 228, 240))
-        kick_help = ("슬로 대기 중: ←/→ 전환 · E 두 번째 발차기 (1/2)"
+        kick_help = ("슬로 대기 중: ←/→ 전환 · W 두 번째 발차기 (1/2)"
                      if player.air_kick_phase == "WAIT" else
-                     "E: ←/→ 공중 방향 전환 · 최대 2회 후 복귀")
+                     "W: ←/→ 공중 방향 전환 · 최대 2회 후 복귀")
         assets.font.draw(704, 493, kick_help, (126, 218, 255))
         if player.weapon in config.FIREARM_MAGAZINE_SIZES:
-            r_help = f"R {config.WEAPON_NAMES[player.weapon]} 재장전 · 점프 중에도 사용 가능"
-        elif player.raise_punch_phase == "RAISE":
-            r_help = "R 슬로 모션: R 다시 눌러 공격"
-        else:
-            r_help = "R: 주변 슬로 모션 → R 재입력으로 타격"
-        assets.font.draw(704, 470, r_help, (126, 218, 255))
-        assets.font.draw(704, 447, "W 유지: ←/→ 비행 전환 · 적 동반 / 놓으면 해제", (126, 218, 255))
+            assets.font.draw(704, 470, f"R {config.WEAPON_NAMES[player.weapon]} 재장전 · 점프 중에도 사용 가능",
+                             (126, 218, 255))
 
     def draw_enemy_health(self, assets, world, camera_x, camera_y):
         import pico2d
@@ -222,9 +215,8 @@ class UI:
             labels["combat_s"] = "S 유지  총알·투척 도끼 튕기기"
         for i, key in enumerate(("combat_a", "combat_s", "combat_d", "combat_f")):
             font.draw(text_left + (i % 2) * 280, 637 - (i // 2) * 28, labels[key], body)
-        strong = "Q 양주먹 · W 유지 돌진 · E 두 번 발차기 · "
-        strong += "T 어퍼컷" if firearm else "R 두 번 올려치기 · T 어퍼컷"
-        font.draw(text_left, 581, f"{strong}  (각 {config.STRONG_ATTACK_DAMAGE})", body)
+        strong = " · ".join(f"{move.key.upper()} {move.name} {move.damage}" for move in STRONG_MOVES.values())
+        font.draw(text_left, 581, strong, body)
         dive = moves_for_weapon(player.weapon, double_jump=True)["combat_d"]
         if dive.jump_attack:
             font.draw(text_left, 555, f"이단 점프 후 D 조준 → D 내려찍기  {dive.damage}", body)

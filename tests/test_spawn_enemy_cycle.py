@@ -326,10 +326,13 @@ class SpawnEnemyCycleTests(unittest.TestCase):
                                 for label in labels))
             self.assertTrue(any("1~9" in label for label in labels))
         ui.details_visible = False
-        assets.font.reset_mock()
-        with patch("pico2d.draw_rectangle"):
-            ui.draw(assets, world)
-        self.assertEqual([call.args[2] for call in assets.font.draw.call_args_list], ["500 / 500"])
+        for invincible, label in ((False, "P 무적 OFF"), (True, "P 무적 ON")):
+            world.player.invincible = invincible
+            assets.font.reset_mock()
+            with patch("pico2d.draw_rectangle"):
+                ui.draw(assets, world)
+            self.assertEqual([call.args[2] for call in assets.font.draw.call_args_list],
+                             ["500 / 500", label])
 
 
 if __name__ == "__main__":

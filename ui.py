@@ -161,7 +161,7 @@ class UI:
                 pico2d.draw_rectangle(left, bottom, left + config.ENEMY_HP_BAR_WIDTH * ratio - 1,
                                       bottom + config.ENEMY_HP_BAR_HEIGHT - 1,
                                       215, 38, 45, filled=True)
-        if (world.training or self.details_visible) and assets.damage_font is not None:
+        if assets.damage_font is not None:
             for number in world.damage_numbers:
                 text = f"-{number.damage:g}"
                 x = number.x - camera_x - len(text) * config.DAMAGE_NUMBER_FONT_SIZE / 4
@@ -171,7 +171,7 @@ class UI:
                 assets.damage_font.draw(x, y, text, color)
 
     def draw_pickup_prompt(self, assets, world, camera_x, camera_y):
-        if (not self.details_visible and not world.training) or assets.font is None:
+        if assets.font is None:
             return
         item = world.pickup_item
         if item is None:
@@ -306,13 +306,22 @@ class UI:
                         *config.HP_DAMAGE_COLOR, filled=True,
                     )
         if assets.font is not None:
-            assets.font.draw(x + image.w * scale + 16, y + 56,
+            status_x = x + image.w * scale + 16
+            assets.font.draw(status_x, y + 56,
                              f"{world.player.hp:g} / {world.player.max_hp}", (218, 228, 240))
+            mode = "ON" if world.player.invincible else "OFF"
+            color = (126, 238, 164) if world.player.invincible else (218, 228, 240)
+            assets.font.draw(status_x, y + 32, f"P 무적 {mode}", color)
             if world.player.weapon in config.FIREARM_MAGAZINE_SIZES:
                 gun = world.player.weapon
-                assets.font.draw(x + image.w * scale + 16, y + 8,
+                assets.font.draw(status_x, y + 8,
                                  f"{config.WEAPON_NAMES[gun]} {world.player.firearm_ammo} / {config.FIREARM_MAGAZINE_SIZES[gun]}",
                                  (255, 224, 110))
+            if world.player.alive and not world.player.invincible:
+                if world.player.crowd_escape.active:
+                    assets.font.draw(250, y - 22, "탈출 무적", (126, 238, 164))
+                elif self.details_visible and world.player.crowd_escape.ready:
+                    assets.font.draw(250, y - 22, "좌우 방향키 번갈아 연타", (255, 224, 110))
             if not self.details_visible:
                 return
             # Help is screen-fixed UI, independent of the world camera.
@@ -333,12 +342,6 @@ class UI:
                                  (180, 255, 150))
                 assets.font.draw(22, y - 118, "점프로 계단 진입 · Space/←/→: 이탈 · 이단 점프 후 ↑: 2층 착지",
                                  (180, 255, 150))
-            if world.player.invincible:
-                assets.font.draw(x + image.w * scale + 16, y + 32, "무적 ON", (126, 238, 164))
-            elif world.player.alive and world.player.crowd_escape.active:
-                assets.font.draw(x + image.w * scale + 16, y + 32, "탈출 무적", (126, 238, 164))
-            elif world.player.alive and world.player.crowd_escape.ready:
-                assets.font.draw(x + image.w * scale + 16, y + 32, "좌우 방향키 번갈아 연타", (255, 224, 110))
             if world.player.weapon == "pistol":
                 action = "재장전 중" if world.player.state == "RELOAD" else "A키 사격"
                 assets.font.draw(22, 132, f"권총 {action} · 피해 20 · 7발 후 자동 재장전",
@@ -396,7 +399,6 @@ class UI:
             assets.font.draw(22, 25,
                              "← → ↑ ↓ 이동   Shift 달리기   Space 이단 점프   G 획득/버리기   F5 재시작",
                              (205, 218, 231))
-            mode = "ON" if world.player.invincible else "OFF"
             assets.font.draw(740, 25, f"N 이동 화살표   P 무적: {mode}   U 설명 숨김/표시",
                              (205, 218, 231))
             if world.stage.traffic is not None:

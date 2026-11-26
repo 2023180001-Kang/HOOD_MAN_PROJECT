@@ -172,11 +172,17 @@ def check_air_drop_and_lifetime(game):
         capture(game, f"weapon_{kind}_discard_landed")
         tap(game, pico2d.SDLK_u)
         with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
-            capture(game, f"weapon_{kind}_hidden_prompt")
-        assert [call.args[2] for call in text.call_args_list] == ["500 / 500"]
-        tap(game, pico2d.SDLK_u)
+            capture(game, f"weapon_{kind}_prompt_with_help_hidden")
+        assert [call.args[2] for call in text.call_args_list] == ["G", "G", "500 / 500", "P 무적 OFF"]
+        original_x = world.player.x
+        world.player.x = item.x + config.WEAPON_PICKUP_RANGE + 1
+        with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
+            render_image(game)
+        assert all(call.args[2] != "G" for call in text.call_args_list)
+        world.player.x = original_x
         tap(game, pico2d.SDLK_g)
         assert world.player.weapon == kind
+        tap(game, pico2d.SDLK_u)
         world.select_stage(1)
         assert world.player.weapon == kind
         world.stage.arrows_visible = True
@@ -205,7 +211,7 @@ def check_air_drop_and_lifetime(game):
     image = capture(game, "weapon_city_discard_keeps_sidewalk")
     check_city_sidewalk_pixels(game, image, baseline)
     print("PASS: SDL Space + G releases both weapons in midair, gravity lands them without "
-          "automatic reacquisition; U hides/restores the prompt, equipped travel/loading "
+          "automatic reacquisition; the nearby pickup hint works with help hidden, equipped travel/loading "
           "persists, loading G is consumed, F5 clears equipment/falling drops with texture "
           "reuse, and city road discards still land on the sidewalk.")
 

@@ -746,6 +746,7 @@ def check_hud_toggle(game):
     world = game.world
     assert game.ui.details_visible
     world.player.invincible = True
+    world.stage.drop_items.clear()
     enemy = Enemy(world.player.x + 200, -1)
     enemy.cooldown = 100
     world.enemies = [enemy]
@@ -757,8 +758,8 @@ def check_hud_toggle(game):
     with (patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text,
           patch.object(game.assets.damage_font, "draw", wraps=game.assets.damage_font.draw) as damage):
         hidden = capture(game, "hud_details_hidden")
-    assert [call.args[2] for call in text.call_args_list] == ["500 / 500"]
-    assert not damage.called
+    assert [call.args[2] for call in text.call_args_list] == ["500 / 500", "P 무적 ON"]
+    assert [call.args[2] for call in damage.call_args_list] == ["-10", "-10"]
     with patch.object(game.ui, "draw_enemy_health"):
         without_enemy_health = render_image(game)
     bar_bounds = ImageChops.difference(hidden.convert("RGB"),
@@ -785,7 +786,7 @@ def check_hud_toggle(game):
     world.player.hp = 250
     with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
         half_hp = capture(game, "hud_hidden_hp_250")
-    assert [call.args[2] for call in text.call_args_list] == ["250 / 500"]
+    assert [call.args[2] for call in text.call_args_list] == ["250 / 500", "P 무적 ON"]
     blue = sum(half_hp.getpixel((x, 68))[2] > half_hp.getpixel((x, 68))[0] + 30
                for x in range(125, 518))
     assert abs(blue - 392.25 / 2) <= 2
@@ -802,14 +803,17 @@ def check_hud_toggle(game):
     assert not game.ui.details_visible
     game.update(config.STAGE_LOADING_DURATION)
     assert world.stage_index == 2 and not world.stage_loading and not game.ui.details_visible
+    world.stage.drop_items.clear()
+    push_key(pico2d.SDLK_p)
+    tick(game)
+    release(game, pico2d.SDLK_p)
     with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
         capture(game, "hud_hidden_city")
-    assert [call.args[2] for call in text.call_args_list] == ["250 / 500"]
-    world.player.invincible = False
+    assert [call.args[2] for call in text.call_args_list] == ["250 / 500", "P 무적 OFF"]
     world.player.take_damage(500)
     with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
         capture(game, "hud_hidden_death")
-    assert [call.args[2] for call in text.call_args_list] == ["0 / 500"]
+    assert [call.args[2] for call in text.call_args_list] == ["0 / 500", "P 무적 OFF"]
     u()
     u(False)
     with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
@@ -841,7 +845,7 @@ def check_hud_toggle(game):
     game.update(0)
     assert game.ui.details_visible
     print("PASS: SDL U toggles supplemental HUD off/on once per fresh press; "
-          "player HP image/current value and enemy HP bars remain, exact pixels restore, HP still updates; "
+          "player HP, P mode, enemy HP bars and damage stay visible, exact pixels restore; "
           "stage/loading/death/F5 preserve the setting, focus loss/menu input stay clean.")
 
 

@@ -322,7 +322,7 @@ def check_magazines_and_hits(game):
                     reload_frames.clear()
                     capture(game, f"researcher_refilled_{index}_{side}_{reloads}")
                 if world.player.hp < previous_hp:
-                    assert previous_hp - world.player.hp == 30 and world.player.state == "HIT"
+                    assert previous_hp - world.player.hp == 30 and world.player.state == "IDLE"
                     assert world.effects[-1].image_name == config.CLUB_HIT_IMAGE
                     assert world.camera.shake_remaining > 0
                     impacts += 1
@@ -340,7 +340,7 @@ def check_magazines_and_hits(game):
             assert warning_count == 14
     print("PASS: both maps x both directions naturally fire exactly 7, play every row-5 reload "
           "frame with zero ammo, refill 7, and repeat; every shot has a half-second warning, "
-          "and 14 real hits deal 420 total with HIT/effects.")
+          "and 14 real hits deal 420 total with impact effects while the player stays idle.")
 
 
 def check_dodges_and_invincibility(game):
@@ -476,7 +476,7 @@ def check_ballistic_hits_and_pause(game):
                 assert player.hp == (500 if invincible else 470)
                 assert len(world.effects) == (0 if invincible else 1)
                 if not invincible:
-                    assert player.state == "HIT" and world.effects[0].image_name == config.CLUB_HIT_IMAGE
+                    assert player.state == "IDLE" and world.effects[0].image_name == config.CLUB_HIT_IMAGE
                     assert abs(world.effects[0].y - bullet.y) < 1e-8
                     assert world.camera.shake_remaining > 0
                 capture(game, f"researcher_fall_hit_{index}_{facing}_{invincible}")
@@ -509,7 +509,7 @@ def check_ballistic_hits_and_pause(game):
         tick(game)
         release(game, pico2d.SDLK_F5)
         assert world.stage_index == 0 and all(not stage.projectiles for stage in world.stages)
-    print("PASS: curved rounds in both interiors/directions deal 30/HIT/existing impact once "
+    print("PASS: curved rounds in both interiors/directions deal 30 with one impact effect "
           "at the real height; SDL P consumes them harmlessly. Actual SDL R scales the fall, "
           "inactive/loading frames freeze height/velocity/time, loading hides it, and F5 clears it.")
 

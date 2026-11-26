@@ -129,13 +129,13 @@ class ResearcherBullet:
             self.spent = True
         else:
             self.hit_targets.add(target)
-        if self.shooter is None:
-            applied = target.take_damage(self.damage)
-        else:
-            applied = target.take_damage(self.damage, attacker=self.shooter)
+        applied = self._deal_damage(target)
         self.impact_target = target
         self.impact_damage = target.last_hit_damage if applied else 0
         return applied
+
+    def _deal_damage(self, player):
+        return player.take_damage(self.damage, attacker=self.shooter, stagger=False)
 
     def _contacts(self, target, duration, offset, tick_duration, gravity):
         contact = self._contact_time(target, duration, offset, tick_duration, gravity)
@@ -200,6 +200,9 @@ class ResearcherBullet:
 
 class PlayerProjectile(ResearcherBullet):
     """Resolve eligible enemy contacts in flight order, including coincident hits."""
+
+    def _deal_damage(self, enemy):
+        return enemy.take_damage(self.damage)
 
     def _contacts(self, enemies, duration, offset, tick_duration, gravity):
         contacts = []

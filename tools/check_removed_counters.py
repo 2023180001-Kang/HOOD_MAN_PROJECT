@@ -96,12 +96,12 @@ def check_no_melee_or_bullet_protection(game):
                 if world.player.hp < 500:
                     break
             release(game, keycode)
-            assert (world.player.hp, world.player.state, enemy.hp, enemy.ammo) == (470, "HIT", 200, 6)
+            assert (world.player.hp, world.player.state, enemy.hp, enemy.ammo) == (470, "IDLE", 200, 6)
             assert world.effects[-1].image_name == config.CLUB_HIT_IMAGE
             if key == "h":
                 capture(game, f"removed_counters_bullet_{index}")
     print("PASS: H/J/K/L cannot interrupt or protect against both-side thug/city/axe attacks "
-          "(20/30/40) or either factory researcher's bullet (30/HIT/impact); no hidden 80 damage.")
+          "(20/30/40) or either factory researcher's bullet (30 damage and impact); no hidden 80 damage.")
 
 
 def check_a_and_existing_actions(game):

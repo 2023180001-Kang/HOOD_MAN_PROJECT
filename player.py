@@ -507,7 +507,7 @@ class Player:
             return enemy.take_strong_hit(self.active_move, self.facing)
         return enemy.take_damage(self.active_move.damage)
 
-    def take_damage(self, damage, *, attacker=None):
+    def take_damage(self, damage, *, attacker=None, stagger=True):
         if not self.alive or self.invincible or self.crowd_escape.active:
             return False
         guarding = self.state == "GUARD"
@@ -515,7 +515,7 @@ class Player:
         self.hp -= self.last_hit_damage
         if attacker is not None and self.hp and self.last_hit_damage > 0:
             self.crowd_escape.record_hit(attacker)
-        if guarding and self.hp:
+        if self.alive and (guarding or not stagger):
             return True
         if self.weapon == "pistol" and self.state == "RELOAD" and self.hp:
             self.pistol_reload_interrupted = True

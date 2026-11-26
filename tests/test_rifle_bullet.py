@@ -46,7 +46,7 @@ class RifleBulletTests(unittest.TestCase):
             player = stationary_player()
             bullet = RifleBullet(player.x - facing * 300, 100, 81, facing)
             self.assertTrue(bullet.update(0.5, player))
-            self.assertEqual((player.hp, player.state), (495, "HIT"))
+            self.assertEqual((player.hp, player.state), (495, "IDLE"))
             self.assertTrue(bullet.spent)
             self.assertFalse(bullet.update(1, player))
             self.assertEqual(player.hp, 495)

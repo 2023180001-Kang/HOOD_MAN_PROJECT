@@ -140,7 +140,7 @@ class ResearcherBallisticsTests(unittest.TestCase):
                                                 * (1125 + config.RESEARCHER_BULLET_SPEED * 0.6))
                 world.projectiles.append(bullet)
                 world.update_projectiles(straight_time() + 0.62)
-                self.assertEqual((player.hp, player.state), (470, "HIT"))
+                self.assertEqual((player.hp, player.state), (470, "IDLE"))
                 self.assertFalse(world.projectiles)
                 self.assertTrue(bullet.falling)
                 self.assertTrue(bullet.spent)

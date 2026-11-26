@@ -159,14 +159,14 @@ class ResearcherTests(unittest.TestCase):
         enemy.update(1, player)
         self.assertEqual(enemy.ammo, 7)
 
-    def test_a_bullet_hit_deals_thirty_enters_player_hit_and_spawns_existing_impact(self):
+    def test_a_bullet_hit_deals_thirty_and_spawns_an_impact_while_player_stays_idle(self):
         for side in (-1, 1):
             for index in (6, 7):
                 for weapon in (None, *config.WEAPON_POSE_IMAGES):
                     world, enemy = encounter(side, index=index)
                     world.player.equip_weapon(weapon)
                     until(world, lambda: world.player.hp < 500)
-                    self.assertEqual((world.player.hp, world.player.state), (470, "HIT"))
+                    self.assertEqual((world.player.hp, world.player.state), (470, "IDLE"))
                     self.assertEqual(enemy.ammo, 6)
                     self.assertEqual(len(world.effects), 1)
                     self.assertEqual(world.effects[0].image_name, config.CLUB_HIT_IMAGE)
@@ -268,15 +268,16 @@ class ResearcherTests(unittest.TestCase):
     def test_multiple_bullets_apply_damage_during_hit_without_restarting_its_clock(self):
         world, _ = encounter()
         world.enemies.clear()
+        world.player.take_damage(20)  # A melee hit is already being played.
         for _ in range(2):
             world.projectiles.append(bullet_at(world.player, x=world.player.x - 40))
         world.step(config.FIXED_DT)
-        self.assertEqual((world.player.hp, world.player.state), (440, "HIT"))
+        self.assertEqual((world.player.hp, world.player.state), (420, "HIT"))
         advance(world, 0.1)
         elapsed = world.player.animation.elapsed
         world.projectiles.append(bullet_at(world.player, x=world.player.x - 35))
         world.step(config.FIXED_DT)
-        self.assertEqual(world.player.hp, 410)
+        self.assertEqual((world.player.hp, world.player.state), (390, "HIT"))
         self.assertGreater(world.player.animation.elapsed, elapsed)
         self.assertEqual(len(world.effects), 3)
 

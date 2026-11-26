@@ -596,7 +596,7 @@ class ARSoldierTests(unittest.TestCase):
                     world.step(config.FIXED_DT)
                     if world.player.hp < 500:
                         break
-                self.assertEqual((world.player.hp, world.player.state), (495, "HIT"))
+                self.assertEqual((world.player.hp, world.player.state), (495, "IDLE"))
                 self.assertLess(enemy.ammo, 19)  # Further rounds are already in flight.
                 self.assertEqual([effect.image_name for effect in world.effects], [config.CLUB_HIT_IMAGE])
                 self.assertGreater(world.camera.shake_remaining, 0)

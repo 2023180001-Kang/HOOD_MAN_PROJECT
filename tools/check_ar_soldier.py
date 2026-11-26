@@ -280,11 +280,11 @@ def check_hits(game):
         for side in (-1, 1):
             world, enemy = encounter(game, index, side, protected=False)
             wait(game, lambda: world.player.hp < 500)
-            assert world.player.hp == 495 and world.player.state == "HIT"
+            assert world.player.hp == 495 and world.player.state == "IDLE"
             assert len(world.effects) == 1 and world.effects[0].image_name == config.CLUB_HIT_IMAGE
             assert world.camera.shake_remaining > 0
             capture(game, f"ar_impact_{index}_{side}")
-    print("PASS: real S hit uses own row 5; rifle deals 5 once with player HIT/effect/shake.")
+    print("PASS: real S hit uses own row 5; rifle deals 5 once with impact and shake while the player stays idle.")
 
 
 def check_bullet_pixels(game):

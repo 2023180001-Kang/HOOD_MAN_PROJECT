@@ -3,6 +3,7 @@ import unittest
 import config
 from combat import MOVES
 from enemy import Enemy
+from projectiles import ResearcherBullet, RifleBullet
 from tests.helpers import advance, tap
 from world import World
 
@@ -15,6 +16,64 @@ def target(world, offset=80):
 
 
 class PlayerDamageTests(unittest.TestCase):
+    def test_enemy_bullets_preserve_running_and_allow_a_melee_strike_through_another_hit(self):
+        for round_type in (ResearcherBullet, RifleBullet):
+            with self.subTest(round_type=round_type):
+                world = World()
+                player = world.player
+                world.controls.press("right")
+                world.controls.press("up")
+                world.controls.press("left_shift")
+                advance(world, 0.1)
+                vx, vy = player.vx, player.ground_vy
+                self.assertGreater(min(vx, vy), 0)
+                world.projectiles.append(round_type(player.x, player.ground_y, 80, -1))
+                world.update_projectiles(0)
+                self.assertEqual((player.state, player.vx, player.ground_vy), ("RUN", vx, vy))
+                x = player.x
+                world.step(config.FIXED_DT)
+                self.assertGreater(player.x, x)
+
+                enemy = target(world)
+                enemy.ground_y = player.ground_y
+                world.controls.press("combat_s")
+                advance(world, 0.05)
+                elapsed = player.animation.elapsed
+                self.assertEqual(player.state, "ATTACK_S")
+                world.projectiles.append(round_type(player.x, player.ground_y, 80, -1))
+                world.update_projectiles(0)
+                self.assertEqual((player.state, player.animation.elapsed), ("ATTACK_S", elapsed))
+                self.assertEqual(player.hp, config.MAX_HP - 2 * round_type.damage)
+                advance(world, 0.35)
+                self.assertEqual([number.damage for number in world.damage_numbers], [MOVES["combat_s"].damage])
+                self.assertEqual(enemy.hp, enemy.max_hp - MOVES["combat_s"].damage)
+
+    def test_incoming_rounds_allow_moving_rifle_fire_and_reload_to_finish(self):
+        world = World()
+        player = world.player
+        player.equip_weapon("ar_rifle")
+        world.controls.press("right")
+        world.controls.press("combat_a")
+        advance(world, 0.05)
+        x, ammo = player.x, player.rifle_ammo
+        for round_type in (ResearcherBullet, RifleBullet):
+            world.projectiles.append(round_type(player.x, player.ground_y, 80, -1))
+            world.update_projectiles(0)
+            self.assertEqual(player.state, "SHOOT")
+            advance(world, 0.1)
+        self.assertGreater(player.x, x)
+        self.assertEqual(player.rifle_ammo, ammo - 2)
+        world.controls.release("combat_a")
+        world.controls.press("combat_r")
+        advance(world, 0.5)
+        for round_type in (ResearcherBullet, RifleBullet):
+            world.projectiles.append(round_type(player.x, player.ground_y, 80, -1))
+        world.update_projectiles(0)
+        self.assertEqual(player.state, "RELOAD")
+        self.assertEqual(player.hp, config.MAX_HP - 2 * (ResearcherBullet.damage + RifleBullet.damage))
+        advance(world, 0.5)
+        self.assertEqual((player.state, player.rifle_ammo), ("WALK", config.FIREARM_MAGAZINE_SIZES["ar_rifle"]))
+
     def test_each_offensive_key_deals_its_requested_damage_once(self):
         for key, damage in zip("asdf", (10, 40, 50, 60)):
             with self.subTest(key=key):

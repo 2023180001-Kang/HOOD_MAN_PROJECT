@@ -11,7 +11,7 @@ from effects import DamageNumber, HitEffect, SpriteAfterimage
 from enemy_spacing import place_ranged_spawns, prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
 from player import Player
-from projectiles import PlayerProjectile, ThrownWeaponProjectile
+from projectiles import EnemyAxeProjectile, PlayerProjectile, ThrownWeaponProjectile
 from rush import RushSequence
 from stage import Stage
 from sword_enemy import SwordEnemy
@@ -269,6 +269,14 @@ class World:
         if self.player.rush_phase == "FLY" and self.rush is None:
             self.rush = RushSequence(self.player, self.stage.area_for(self.player))
         self.handle_death()
+        for item in self.stage.drop_items[:]:
+            owner = item.axe_owner
+            if owner is None:
+                continue
+            if not owner.alive or owner not in self.enemies:
+                item.axe_owner = None
+            elif owner.seek_axe(item, self.player):
+                self.stage.drop_items.remove(item)
         prepare_enemy_spacing(self.player, self.enemies, self.stage.area_for(self.player))
         for enemy in self.enemies:
             if enemy not in stair_moved:
@@ -365,6 +373,8 @@ class World:
                                                                   config.DROP_ITEM_HALF_WIDTH)
                 item = DropItem(bullet.weapon_kind, x, ground_y, bullet.facing,
                                 elapsed=bullet.elapsed, floor=bullet.floor)
+                if isinstance(bullet, EnemyAxeProjectile):
+                    item.axe_owner = bullet.shooter
                 if bullet.height > bullet.half_height:
                     # At the map edge the weapon finishes falling in place.
                     item.jump_height = bullet.height - item.display_height / 2

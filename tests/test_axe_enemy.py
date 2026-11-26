@@ -15,6 +15,7 @@ from combat import STRONG_MOVES
 from enemy import Enemy
 from enemy02 import Enemy02
 from player import Player
+from projectiles import EnemyAxeProjectile
 from researcher import Researcher
 from shield_soldier import ShieldSoldier
 from tests.helpers import advance, spawn_encounter, tap
@@ -39,6 +40,146 @@ def encounter(side=1, *, hp=400, weapon=None, index=4):
 
 
 class AxeEnemyTests(unittest.TestCase):
+    def advance_until(self, world, condition, seconds=6):
+        for _ in range(round(seconds / config.FIXED_DT)):
+            world.step(config.FIXED_DT)
+            if condition():
+                return
+        self.fail("Combat condition was not reached before the timeout")
+
+    def swing_then_throw(self, world, enemy):
+        player = world.player
+        player.invincible = False
+        enemy.cooldown = 0
+        hp = player.hp
+        self.advance_until(world, lambda: player.hp < hp)
+        self.assertEqual((enemy.attack_kind, player.hp), ("swing", hp - 40))
+        player.x = enemy.x + enemy.facing * 440
+        with patch.object(enemy.rng, "random", return_value=0):
+            self.advance_until(world, lambda: bool(world.projectiles))
+        shot, = world.projectiles
+        self.assertIsInstance(shot, EnemyAxeProjectile)
+        self.assertIs(shot.shooter, enemy)
+        self.assertEqual((enemy.animation.row, enemy.animation.frame, enemy.armed), (7, 4, False))
+        self.assertFalse(enemy.attack_box)
+        self.assertIsNone(enemy.take_projectile())
+        return shot
+
+    def test_throw_requires_prior_swing_range_and_a_successful_random_roll(self):
+        world, enemy = encounter()
+        player = world.player
+        enemy.cooldown = 0
+        player.x = enemy.x - 400
+        with patch.object(enemy.rng, "random", side_effect=[0.9, 0.1]) as roll:
+            self.assertFalse(enemy.try_start_throw(0, player))
+            enemy.start_attack()
+            enemy.update(4.1 / enemy.attack_fps, player)
+            enemy.update(4.1 / enemy.attack_fps, player)
+            enemy.cooldown = 0
+            for dx, depth in ((100, 0), (800, 0), (400, 50)):
+                player.x, player.ground_y = enemy.x - dx, enemy.ground_y + depth
+                self.assertFalse(enemy.try_start_throw(0, player))
+            roll.assert_not_called()
+            player.ground_y = enemy.ground_y
+            self.assertFalse(enemy.try_start_throw(0, player))
+            self.assertFalse(enemy.try_start_throw(0.1, player))
+            self.assertTrue(enemy.try_start_throw(config.AXE_ENEMY_THROW_RETRY, player))
+            self.assertEqual(roll.call_count, 2)
+            self.assertEqual((enemy.animation.row, enemy.facing), (7, -1))
+            enemy.animation.elapsed = 3.99 / enemy.attack_fps
+            self.assertIsNone(enemy.take_projectile())
+            enemy.take_damage(10)
+            self.assertIsNone(enemy.take_projectile())
+            self.assertTrue(enemy.armed)
+
+    def test_throw_flies_level_then_falls_hits_once_and_owner_recovers_and_reuses_it(self):
+        for side in (-1, 1):
+            with self.subTest(side=side):
+                world, enemy = encounter(side)
+                world.stage.drop_items.clear()
+                shot = self.swing_then_throw(world, enemy)
+                start_x, start_height = shot.x, shot.height
+                self.assertEqual(shot.facing, -side)
+                self.advance_until(world, lambda: shot.elapsed >= 0.75)
+                self.assertEqual(shot.height, start_height)
+                self.assertAlmostEqual(shot.x, start_x + shot.facing * shot.speed * shot.elapsed)
+                self.assertEqual(world.player.hp, 410)
+                self.assertEqual(enemy.sprite_image, config.AXE_ENEMY_UNARMED_IMAGE)
+                self.advance_until(world, lambda: shot.elapsed > shot.straight_duration + 0.05)
+                self.assertLess(shot.height, start_height)
+                self.advance_until(world, lambda: bool(world.stage.drop_items))
+                item, = world.stage.drop_items
+                self.assertEqual((item.kind, item.grounded, item.floor), ("axe", True, enemy.floor))
+                self.assertIs(item.axe_owner, enemy)
+                self.assertFalse(world.projectiles)
+                self.assertEqual(world.player.hp, 410)
+                self.advance_until(world, lambda: enemy.armed)
+                self.assertFalse(world.stage.drop_items)
+                self.assertFalse(enemy.has_swung)
+                self.assertEqual(enemy.sprite_image, config.AXE_ENEMY_IMAGE)
+                # Give the recovered weapon room to travel on its next throw.
+                world.player.x = enemy.x + side * 80
+                self.swing_then_throw(world, enemy)
+
+    def test_player_can_claim_the_same_drop_first_and_enemy_fights_unarmed(self):
+        world, enemy = encounter()
+        world.stage.drop_items.clear()
+        self.swing_then_throw(world, enemy)
+        self.advance_until(world, lambda: bool(world.stage.drop_items))
+        item, = world.stage.drop_items
+        world.player.x, world.player.ground_y = item.x, item.ground_y
+        enemy.x, enemy.ground_y = item.x + 65, item.ground_y
+        tap(world.controls, "weapon_interact")
+        world.step(config.FIXED_DT)
+        self.assertEqual(world.player.weapon, "axe")
+        self.assertFalse(world.stage.drop_items or enemy.armed)
+        for kind, row, damage in (("punch", 4, 15), ("kick", 5, 20)):
+            with patch.object(enemy.rng, "choice", return_value=kind):
+                hp = world.player.hp
+                self.advance_until(world, lambda: world.player.hp < hp)
+                self.assertEqual((enemy.sprite_image, enemy.animation.row, hp - world.player.hp),
+                                 (config.AXE_ENEMY_UNARMED_IMAGE, row, damage))
+        enemy.take_damage(1)
+        self.assertEqual((enemy.sprite_image, enemy.animation.row), (config.AXE_ENEMY_UNARMED_IMAGE, 6))
+        enemy.take_damage(enemy.hp)
+        self.assertEqual((enemy.sprite_image, enemy.animation.row), (config.AXE_ENEMY_UNARMED_IMAGE, 7))
+
+    def test_wall_drop_stays_collectible_after_owner_dies_and_cannot_arm_another_enemy(self):
+        world, enemy = encounter(-1)
+        world.stage.drop_items.clear()
+        world.player.x, enemy.x = 2350, 2270
+        shot = self.swing_then_throw(world, enemy)
+        enemy.take_damage(enemy.hp)
+        other = AxeEnemy(2400, ground_y=enemy.ground_y)
+        other._set_armed(False)
+        world.enemies.append(other)
+        self.advance_until(world, lambda: bool(world.stage.drop_items))
+        item, = world.stage.drop_items
+        self.assertFalse(item.grounded)
+        self.assertGreater(shot.height, shot.half_height)
+        self.advance_until(world, lambda: item.grounded)
+        other.x, other.ground_y = item.x, item.ground_y
+        world.step(config.FIXED_DT)
+        self.assertFalse(other.armed)
+        self.assertEqual(world.stage.drop_items, [item])
+        world.player.x, world.player.ground_y = item.x, item.ground_y
+        tap(world.controls, "weapon_interact")
+        world.step(config.FIXED_DT)
+        self.assertEqual(world.player.weapon, "axe")
+
+    def test_owner_can_retrieve_at_wall_with_player_standing_on_the_landing_spot(self):
+        world, enemy = encounter(-1)
+        world.stage.drop_items.clear()
+        world.player.x, enemy.x = 2350, 2270
+        shot = self.swing_then_throw(world, enemy)
+        self.advance_until(world, lambda: bool(world.stage.drop_items))
+        item, = world.stage.drop_items
+        self.assertGreater(shot.height, shot.half_height)
+        self.assertFalse(item.grounded)
+        self.advance_until(world, lambda: enemy.armed)
+        self.assertFalse(world.stage.drop_items)
+        self.assertEqual(world.player.hp, 410)
+
     def test_both_factory_exteriors_summon_axe_enemies_with_their_own_max_hp(self):
         world = World(rng=random.Random(42))
         for index, stage in enumerate(world.stages):
@@ -310,44 +451,46 @@ class AxeEnemyTests(unittest.TestCase):
             with patch("pico2d.draw_rectangle"):
                 UI().draw(assets, world)
             labels = [call.args[2] for call in assets.font.draw.call_args_list]
-            self.assertIn("적 공격: 도끼 40", labels)
+            self.assertIn("적 공격: 도끼 40 / 투척 50 / 주먹 15 / 발차기 20", labels)
             self.assertTrue(any(f"{index + 1}번 맵" in text and "도끼 적" in text for text in labels))
 
-    def test_sheet_metadata_has_six_rows_with_exact_clips_flips_feet_and_no_stun_mapping(self):
-        with Image.open(config.ROOT / config.AXE_ENEMY_IMAGE) as image:
-            self.assertEqual((image.size, image.mode), ((2048, 1536), "RGBA"))
-            with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
-                metadata = json.load(file)
-            rows = metadata[config.AXE_ENEMY_IMAGE]
-            texture = Mock()
-            assets = SimpleNamespace(frames=metadata, images={config.AXE_ENEMY_IMAGE: texture})
-            self.assertEqual(len(rows), 6)
-            for row_index, row in enumerate(rows):
-                self.assertEqual(len(row), 8)
-                for column, tile in enumerate(row):
-                    bounds = image.crop((column * 256, row_index * 256,
-                                         (column + 1) * 256, (row_index + 1) * 256)).getbbox()
-                    left, top, right, bottom = bounds
-                    self.assertEqual(tile["clip"], [column * 256 + left,
-                                                    image.height - row_index * 256 - bottom,
-                                                    right - left, bottom - top])
-                    self.assertEqual(bottom, 240)
-                    for facing in (-1, 1):
-                        Assets.draw_sprite(assets, config.AXE_ENEMY_IMAGE, row_index + 1, column,
-                                           500, 100, facing)
-                        args = texture.clip_composite_draw.call_args.args
-                        self.assertEqual(args[:4], tuple(tile["clip"]))
-                        self.assertEqual(args[5], "h" if facing < 0 else "")
-                        self.assertEqual(args[7] - args[9] / 2, 100)
+    def test_both_sheets_have_seven_rows_with_exact_clips_flips_and_grounding(self):
+        with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
+            metadata = json.load(file)
+        for name in (config.AXE_ENEMY_IMAGE, config.AXE_ENEMY_UNARMED_IMAGE):
+            with self.subTest(name=name), Image.open(config.ROOT / name) as image:
+                self.assertEqual((image.size, image.mode), ((2048, 1792), "RGBA"))
+                rows = metadata[name]
+                texture = Mock()
+                assets = SimpleNamespace(frames=metadata, images={name: texture})
+                self.assertEqual(len(rows), 7)
+                for row_index, row in enumerate(rows):
+                    self.assertEqual(len(row), 8)
+                    for column, tile in enumerate(row):
+                        bounds = image.crop((column * 256, row_index * 256,
+                                             (column + 1) * 256, (row_index + 1) * 256)).getbbox()
+                        left, top, right, bottom = bounds
+                        self.assertEqual(tile["clip"], [column * 256 + left,
+                                                        image.height - row_index * 256 - bottom,
+                                                        right - left, bottom - top])
+                        for facing in (-1, 1):
+                            Assets.draw_sprite(assets, name, row_index + 1, column,
+                                               500, 100, facing)
+                            args = texture.clip_composite_draw.call_args.args
+                            self.assertEqual(args[:4], tuple(tile["clip"]))
+                            self.assertEqual(args[5], "h" if facing < 0 else "")
+                            self.assertEqual(args[7] - args[9] / 2, 100)
         enemy = AxeEnemy(1000)
         self.assertTrue(all(1 <= row <= 6 for row, _, _ in enemy.animation.definitions.values()))
 
     def test_new_sheet_and_archived_original_keep_supplied_bytes_and_only_new_art_is_loaded(self):
-        self.assertEqual(config.AXE_ENEMY_IMAGE, "axe_enemy_pico2d_256x256.png")
-        self.assertEqual(config.ARCHIVED_AXE_ENEMY_IMAGE, "before_sheets/axe_enemy_pico2d_2048x1792.png")
+        self.assertEqual(config.AXE_ENEMY_IMAGE, "HoodMan_AxeEnemy_8x7.png")
+        self.assertEqual(config.ARCHIVED_AXE_ENEMY_IMAGE, "before_sheets/axe_enemy_pico2d_256x256.png")
         for name, digest, height in (
-            (config.AXE_ENEMY_IMAGE, "866eb4fda2e77de47d4ca49fe79ce98103076db5378182f926bfeb00a42deea4", 1536),
-            (config.ARCHIVED_AXE_ENEMY_IMAGE, "d677ad34fa101aecd32e111dcdd9c75b5738ee075b3a2a76491093cf8d3fd8a7", 1792),
+            (config.AXE_ENEMY_IMAGE, "bb68733078fc39248cb976b9e38da9410bdb0f1b88e1fca9752d2e818f0e2c74", 1792),
+            (config.AXE_ENEMY_UNARMED_IMAGE, "a92d2099c995cb889dde2da68a971f732fa36bc6134730fef2bd05811fdb4a4a", 1792),
+            (config.ARCHIVED_AXE_ENEMY_IMAGE, "866eb4fda2e77de47d4ca49fe79ce98103076db5378182f926bfeb00a42deea4", 1536),
+            ("before_sheets/axe_enemy_pico2d_2048x1792.png", "d677ad34fa101aecd32e111dcdd9c75b5738ee075b3a2a76491093cf8d3fd8a7", 1792),
         ):
             with self.subTest(name=name):
                 self.assertEqual(hashlib.sha256((config.ROOT / name).read_bytes()).hexdigest(), digest)
@@ -357,14 +500,16 @@ class AxeEnemyTests(unittest.TestCase):
         with patch("pico2d.load_image", return_value=Mock()), patch("pico2d.load_font"):
             assets = Assets()
         from tools.prepare_assets import SHEETS
-        for name in (config.ARCHIVED_AXE_ENEMY_IMAGE, "axe_enemy_pico2d_2048x1792.png"):
+        for name in (config.ARCHIVED_AXE_ENEMY_IMAGE, "axe_enemy_pico2d_256x256.png",
+                     "before_sheets/axe_enemy_pico2d_2048x1792.png", "axe_enemy_pico2d_2048x1792.png"):
             self.assertNotIn(name, assets.images)
             self.assertNotIn(name, assets.frames)
             self.assertNotIn(name, SHEETS)
-        self.assertIn(config.AXE_ENEMY_IMAGE, assets.images)
-        self.assertEqual(SHEETS[config.AXE_ENEMY_IMAGE], 6)
-        self.assertEqual(len(assets.frames), 23)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1160)
+        for name in (config.AXE_ENEMY_IMAGE, config.AXE_ENEMY_UNARMED_IMAGE):
+            self.assertIn(name, assets.images)
+            self.assertEqual(SHEETS[name], 7)
+        self.assertEqual(len(assets.frames), 24)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1224)
 
     def test_revisiting_pauses_axe_hp_animation_and_effects_and_f5_restores_fresh_summons(self):
         world, enemy = encounter()

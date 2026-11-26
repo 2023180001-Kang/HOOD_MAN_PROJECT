@@ -149,7 +149,7 @@ def place_ranged_spawns(player, existing, spawned):
         placed.append(enemy)
 
 
-def _clear_route(enemy, goal, obstacles):
+def clear_route(enemy, goal, obstacles, waypoint_tolerance=1e-8):
     """Find a walkable first waypoint around the rectangles, using either axis for a detour."""
     x, y = enemy.x, enemy.ground_y
     gx, gy = goal
@@ -181,7 +181,8 @@ def _clear_route(enemy, goal, obstacles):
             continue
         length = hypot(first[0] - x, first[1] - y) + hypot(second[0] - first[0], second[1] - first[1])
         length += hypot(gx - second[0], gy - second[1])
-        waypoint = next((p for p in (first, second, goal) if hypot(p[0] - x, p[1] - y) > 1e-8), goal)
+        waypoint = next((p for p in (first, second, goal)
+                         if hypot(p[0] - x, p[1] - y) > waypoint_tolerance), goal)
         candidates.append((length, waypoint))
     return min(candidates)[1] if candidates else None
 
@@ -190,13 +191,13 @@ def _approach_waypoint(enemy, goal, peers, player):
     if goal == (enemy.x, enemy.ground_y):
         return goal
     obstacles = _ranged_obstacles(enemy, peers, player)
-    waypoint = _clear_route(enemy, goal, obstacles)
+    waypoint = clear_route(enemy, goal, obstacles)
     if waypoint is not None:
         return waypoint
     # A narrow floor may not fit a whole sprite above or below the front
     # shooter. Pass on a separate foot lane and spread out again at the goal.
     bodies = _foot_obstacles(obstacles, config.ENEMY_SPACING_MARGIN)
-    return _clear_route(enemy, goal, bodies) or goal
+    return clear_route(enemy, goal, bodies) or goal
 
 
 def _prepare_ranged_approach(player, enemies):

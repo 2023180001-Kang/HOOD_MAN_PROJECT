@@ -208,8 +208,32 @@ class TrainingRoomTests(unittest.TestCase):
                 self.assertEqual((target.sprite_image, target.animation.row), (image, hit_row))
                 target.take_damage(hp * 2)
                 self.assertEqual((target.hp, target.last_hit_damage), (1, hp * 2))
+                player.ground_y = target.ground_y - config.ATTACK_DEPTH_TOLERANCE - 1
                 advance(self.world, 2)
                 self.assertEqual(target.state, "IDLE")
+
+    def test_practice_axe_throws_after_retreat_and_shows_unarmed_damage_until_recovery(self):
+        self.press("spawn_3")
+        self.press("training_target")
+        enemy = self.world.stage.target
+        player = self.world.player
+        with patch.object(enemy.rng, "random", return_value=0):
+            advance(self.world, 0.55)
+            self.assertEqual(player.hp, 460)
+            player.x = enemy.x - 350
+            advance(self.world, 1.2)
+            self.assertFalse(enemy.armed)
+            assets = Mock()
+            with patch("pico2d.draw_rectangle"):
+                self.game.ui.draw(assets, self.world)
+            labels = [call.args[2] for call in assets.font.draw.call_args_list]
+            self.assertIn("공격력   주먹 15 / 발차기 20", labels)
+            advance(self.world, 0.4)
+            self.assertEqual(player.hp, 410)
+            advance(self.world, 4)
+        self.assertTrue(enemy.armed)
+        self.assertEqual(enemy.sprite_image, config.AXE_ENEMY_IMAGE)
+        self.assertFalse(any(item.axe_owner is enemy for item in self.world.stage.drop_items))
 
     def test_practice_player_survives_repeated_hits_and_guard_reduces_displayed_damage(self):
         player = self.world.player

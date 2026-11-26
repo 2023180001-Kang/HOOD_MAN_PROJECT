@@ -24,6 +24,7 @@ class Assets:
                          *(sprite.image for sprite in config.THROWN_WEAPON_SPRITES.values()),
                          config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
+                         config.AXE_ENEMY_UNARMED_IMAGE,
                          config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,
                          config.AR_SOLDIER_IMAGE, config.RIFLE_BULLET_IMAGE,
                          config.SHIELD_SOLDIER_IMAGE, config.SWORD_ENEMY_IMAGE,

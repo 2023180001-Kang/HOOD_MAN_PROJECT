@@ -1,5 +1,6 @@
 """Exercise replacement axe art, both factory summons and combat through SDL."""
 
+from math import isclose, tau
 from pathlib import Path
 import random
 import sys
@@ -158,33 +159,85 @@ def check_summons(game):
 
 def check_source_frames(game):
     world, enemy = encounter(game)
-    assert config.AXE_ENEMY_IMAGE == "axe_enemy_pico2d_256x256.png"
-    texture = game.assets.images[config.AXE_ENEMY_IMAGE]
-    assert (texture.w, texture.h) == (2048, 1536)
-    assert len(game.assets.frames[config.AXE_ENEMY_IMAGE]) == 6
     for name in (config.ARCHIVED_AXE_ENEMY_IMAGE, Path(config.ARCHIVED_AXE_ENEMY_IMAGE).name):
         assert name not in game.assets.images and name not in game.assets.frames
-    for facing in (-1, 1):
-        enemy.facing = facing
-        for state, row in (("IDLE", 1), ("WALK", 2), ("RUN", 3), ("ATTACK", 4),
-                           ("HIT", 5), ("DYING", 6)):
-            enemy.animation.set_state(state)
-            fps = enemy.animation.definitions[state][1]
-            for frame in range(8):
-                enemy.animation.elapsed = (frame + 0.05) / fps
-                tile = game.assets.frames[config.AXE_ENEMY_IMAGE][row - 1][frame]
-                with patch.object(texture, "clip_composite_draw",
-                                  wraps=texture.clip_composite_draw) as draw:
-                    render_image(game)
-                args = draw.call_args.args
-                assert args[:4] == tuple(tile["clip"])
-                assert args[5] == ("h" if facing < 0 else "")
-                assert abs(args[7] - args[9] / 2 - (enemy.y - world.camera.render_y)) < 1e-8
-                assert enemy.animation.row != 7
-                if (state, frame) in (("IDLE", 0), ("ATTACK", 4), ("HIT", 0), ("DYING", 7)):
-                    capture(game, f"axe_replacement_{state.lower()}_{facing}_{frame}")
-    print("PASS: replacement 2048x1536 sheet, all 6x8x2 exact clips/flips/feet; "
-          "old seven-row sheet is archived and never loaded; no stun state.")
+    for armed in (True, False):
+        enemy._set_armed(armed)
+        name = config.AXE_ENEMY_IMAGE if armed else config.AXE_ENEMY_UNARMED_IMAGE
+        texture = game.assets.images[name]
+        assert (texture.w, texture.h) == (2048, 1792)
+        assert len(game.assets.frames[name]) == 7
+        poses = ("IDLE", "WALK", "RUN", "swing", "HIT", "DYING", "throw") if armed else (
+            "IDLE", "WALK", "RUN", "punch", "kick", "HIT", "DYING")
+        for row, state in enumerate(poses, 1):
+            if state in enemy.attacks:
+                enemy._start_move(state)
+            else:
+                enemy.animation.set_state(state)
+            assert enemy.sprite_image == name and enemy.animation.row == row
+            for facing in (-1, 1):
+                enemy.facing = facing
+                check_pose_frames(game, world, enemy, texture, state)
+    print("PASS: both 7x8 sheets rendered with the expected clips, flips and feet in both directions.")
+
+
+def check_pose_frames(game, world, enemy, texture, state):
+    fps = enemy.animation.definitions[enemy.state][1]
+    for frame, tile in enumerate(game.assets.frames[enemy.sprite_image][enemy.animation.row - 1]):
+        enemy.animation.elapsed = (frame + 0.05) / fps
+        with patch.object(texture, "clip_composite_draw", wraps=texture.clip_composite_draw) as draw:
+            render_image(game)
+        args = draw.call_args.args
+        assert args[:4] == tuple(tile["clip"])
+        assert args[5] == ("h" if enemy.facing < 0 else "")
+        assert abs(args[7] - args[9] / 2 - (enemy.y - world.camera.render_y)) < 1e-8
+        if frame == 4 and state in ("swing", "throw", "punch", "kick"):
+            capture(game, f"axe_replacement_{state}_{enemy.facing}_{frame}")
+
+
+def check_throw_and_pickup(game):
+    world, enemy = encounter(game, side=-1)
+    player = world.player
+    world.stage.drop_items.clear()
+    enemy.cooldown = 0
+    player.invincible = False
+    tick(game, 30)
+    assert player.hp == 460
+    with patch.object(enemy.rng, "random", return_value=0):
+        push_key(pico2d.SDLK_LSHIFT)
+        push_key(pico2d.SDLK_RIGHT)
+        for _ in range(150):
+            tick(game)
+            if enemy.attack_kind == "throw":
+                break
+        assert enemy.attack_kind == "throw", (player.state, player.x, enemy.x)
+        release(game, pico2d.SDLK_RIGHT)
+        release(game, pico2d.SDLK_LSHIFT)
+        for _ in range(60):
+            tick(game)
+            if world.projectiles:
+                break
+    shot, = world.projectiles
+    assert enemy.animation.row == 7 and enemy.animation.frame == 4 and not enemy.armed
+    capture(game, "axe_enemy_release")
+    texture = game.assets.images[config.AXE_PROJECTILE_IMAGE]
+    for _ in range(2):
+        tick(game)
+        with patch.object(texture, "clip_composite_draw", wraps=texture.clip_composite_draw) as draw:
+            render_image(game)
+        assert isclose(draw.call_args.args[4], -shot.facing * tau * 8 * shot.elapsed)
+    for _ in range(100):
+        tick(game)
+        if world.stage.drop_items:
+            break
+    item, = world.stage.drop_items
+    assert item.grounded and player.hp == 410 and item.axe_owner is enemy
+    player.x, player.ground_y = item.x, item.ground_y
+    push_key(pico2d.SDLK_g)
+    tick(game)
+    release(game, pico2d.SDLK_g)
+    assert player.weapon == "axe" and not enemy.armed and not world.stage.drop_items
+    print("PASS: retreat triggered one spinning axe in cell five, 50 damage, landing and SDL G pickup.")
 
 
 def check_health_pixels(game):
@@ -368,6 +421,7 @@ def main():
         check_stair_free_dock_floor(game)
         check_summons(game)
         check_source_frames(game)
+        check_throw_and_pickup(game)
         check_health_pixels(game)
         check_player_damage_pixels(game)
         check_axe_attack(game)

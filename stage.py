@@ -244,6 +244,8 @@ class Stage:
 
     def update_navigation(self, dt, player, controls):
         """Route cross-floor enemies and grant stair entry in arrival order."""
+        for enemy in self.enemies:
+            enemy.navigation_target = None
         if not self.stairs:
             return set()
         actors = [player, *self.enemies]
@@ -259,7 +261,6 @@ class Stage:
             self.assign_descent_routes(destination)
         requests = {stair: [] for stair in self.stairs}
         for enemy in self.enemies:
-            enemy.navigation_target = None
             if not player.alive or not can_use_stairs(enemy):
                 continue
             if enemy.floor == destination and player.staircase is None:

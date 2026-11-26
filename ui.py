@@ -248,6 +248,11 @@ class UI:
         damage = f"{target.attack_damage}"
         if target.opponent.slam_damage is not None:
             damage = f"타격 {damage}   /   내려찍기 {target.opponent.slam_damage}"
+        elif target.image_name == config.AXE_ENEMY_IMAGE:
+            if target.armed:
+                damage = f"휘두르기 {config.AXE_ENEMY_DAMAGE} / 투척 {config.AXE_ENEMY_THROW_DAMAGE}"
+            else:
+                damage = f"주먹 {config.AXE_ENEMY_PUNCH_DAMAGE} / 발차기 {config.AXE_ENEMY_KICK_DAMAGE}"
         font.draw(986, 483, f"공격력   {damage}", body)
         font.draw(986, 454, f"현재 HP  {target.hp:g}     최대 HP  {target.max_hp:g}", body)
         font.draw(986, 410, "HP 조절", body)
@@ -379,7 +384,8 @@ class UI:
                 enemy_help = f"적 공격: 몽둥이 {clubs} / 착지 {slam}"
             elif source_image in config.AXE_ENEMY_STAGE_IMAGES:
                 enemy_name = "도끼 적"
-                enemy_help = f"적 공격: 도끼 {config.AXE_ENEMY_DAMAGE}"
+                enemy_help = (f"적 공격: 도끼 {config.AXE_ENEMY_DAMAGE} / 투척 {config.AXE_ENEMY_THROW_DAMAGE}"
+                              f" / 주먹 {config.AXE_ENEMY_PUNCH_DAMAGE} / 발차기 {config.AXE_ENEMY_KICK_DAMAGE}")
             elif source_image in config.FACTORY_INSIDE_IMAGES:
                 enemy_name = "연구원"
                 enemy_help = (f"적 권총 {config.RESEARCHER_DAMAGE} · "

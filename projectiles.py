@@ -138,6 +138,8 @@ class ResearcherBullet:
         return player.take_damage(self.damage, attacker=self.shooter, stagger=False)
 
     def _contacts(self, target, duration, offset, tick_duration, gravity):
+        if self.hit_targets is not None and target in self.hit_targets:
+            return ()
         contact = self._contact_time(target, duration, offset, tick_duration, gravity)
         return () if contact is None else ((contact, target),)
 
@@ -221,7 +223,7 @@ class PlayerPistolBullet(PlayerProjectile):
 
 
 @dataclass
-class ThrownWeaponProjectile(PlayerProjectile):
+class ThrownWeaponProjectile(ResearcherBullet):
     """A spinning weapon that drops in its own lane when flight ends."""
 
     hit_targets: set = field(default_factory=set, init=False, repr=False, compare=False)
@@ -237,14 +239,14 @@ class ThrownWeaponProjectile(PlayerProjectile):
         return config.DROP_ITEM_HALF_WIDTH, self.world_width - config.DROP_ITEM_HALF_WIDTH
 
 
-class SteelClubProjectile(ThrownWeaponProjectile):
+class SteelClubProjectile(ThrownWeaponProjectile, PlayerProjectile):
     weapon_kind = "steel_club"
     image_name = config.STEEL_CLUB_PROJECTILE_IMAGE
     damage = config.STEEL_CLUB_THROW_DAMAGE
     release_offset = (76, 103)
 
 
-class DualBatonProjectile(ThrownWeaponProjectile):
+class DualBatonProjectile(ThrownWeaponProjectile, PlayerProjectile):
     weapon_kind = "dual_black_batons"
     image_name = config.DUAL_BATON_PROJECTILE_IMAGE
     damage = config.DUAL_BATONS_THROW_DAMAGE
@@ -253,7 +255,7 @@ class DualBatonProjectile(ThrownWeaponProjectile):
     half_height = config.THROWN_WEAPON_SPRITES[weapon_kind].rest_height / 2
 
 
-class ShieldProjectile(ThrownWeaponProjectile):
+class ShieldProjectile(ThrownWeaponProjectile, PlayerProjectile):
     weapon_kind = "shield_item"
     image_name = config.SHIELD_PROJECTILE_IMAGE
     damage = config.SHIELD_THROW_DAMAGE
@@ -263,12 +265,23 @@ class ShieldProjectile(ThrownWeaponProjectile):
     half_height = config.THROWN_WEAPON_SPRITES[weapon_kind].rest_height / 2
 
 
-class AxeProjectile(ThrownWeaponProjectile):
+class ThrownAxe(ThrownWeaponProjectile):
     weapon_kind = "axe"
     image_name = config.AXE_PROJECTILE_IMAGE
+    half_height = config.THROWN_WEAPON_SPRITES["axe"].rest_height / 2
+
+
+class AxeProjectile(ThrownAxe, PlayerProjectile):
     damage = config.AXE_THROW_DAMAGE
     release_offset = (56, 133)  # Put the grip at the extended hand in row 6, cell 5.
-    half_height = config.THROWN_WEAPON_SPRITES["axe"].rest_height / 2
+
+
+class EnemyAxeProjectile(ThrownAxe):
+    damage = config.AXE_ENEMY_THROW_DAMAGE
+    release_offset = (108, 123)  # Extended hand in row seven, cell five.
+
+    def _deal_damage(self, player):
+        return player.take_damage(self.damage, attacker=self.shooter)
 
 
 class RifleBullet(ResearcherBullet):

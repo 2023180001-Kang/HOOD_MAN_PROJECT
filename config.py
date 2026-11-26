@@ -323,10 +323,17 @@ ARCHIVED_COUNTER_IMAGES = (
     "before_sheets/HoodMan_Counter_Enemy_2048x1024.png",
 )
 ENEMY_IMAGE = "HoodMan_StreetThug_FINAL_2048x1536.png"
-AXE_ENEMY_IMAGE = "axe_enemy_pico2d_256x256.png"
-ARCHIVED_AXE_ENEMY_IMAGE = "before_sheets/axe_enemy_pico2d_2048x1792.png"
+AXE_ENEMY_IMAGE = "HoodMan_AxeEnemy_8x7.png"
+AXE_ENEMY_UNARMED_IMAGE = "HoodMan_AxeEnemy_Unarmed_HitFallFix_8x7.png"
+ARCHIVED_AXE_ENEMY_IMAGE = "before_sheets/axe_enemy_pico2d_256x256.png"
 AXE_ENEMY_MAX_HP = 400
 AXE_ENEMY_DAMAGE = 40
+AXE_ENEMY_THROW_DAMAGE = 50
+AXE_ENEMY_PUNCH_DAMAGE = 15
+AXE_ENEMY_KICK_DAMAGE = 20
+AXE_ENEMY_THROW_MIN_DISTANCE = 180.0
+AXE_ENEMY_THROW_CHANCE = 0.5
+AXE_ENEMY_THROW_RETRY = 0.6
 SHIELD_SOLDIER_IMAGE = "hoodman_shield_soldier.png"
 SHIELD_SOLDIER_MAX_HP = 400
 SHIELD_SOLDIER_DAMAGE = 40
@@ -630,10 +637,15 @@ ENEMY_ANIMATIONS = {
     "DYING": (6, 10.0, False),
     "DEAD": (6, 10.0, False),
 }
-# The replacement sheet has six active rows; old stun art is archived only.
 AXE_ENEMY_ANIMATIONS = {
     **ENEMY_ANIMATIONS,
     "CAR_HIT": (6, CAR_HIT_FPS, False),
+}
+AXE_ENEMY_UNARMED_ANIMATIONS = {
+    **AXE_ENEMY_ANIMATIONS,
+    "HIT": (6, 12.0, False), "KNOCKBACK": (6, 12.0, False),
+    "DYING": (7, 10.0, False), "DEAD": (7, 10.0, False),
+    "CAR_HIT": (7, CAR_HIT_FPS, False),
 }
 RESEARCHER_ANIMATIONS = {
     **ENEMY_ANIMATIONS,

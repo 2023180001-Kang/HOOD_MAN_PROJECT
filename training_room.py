@@ -111,7 +111,17 @@ class TrainingSwordEnemy(TrainingTarget, SwordEnemy):
 
 
 class TrainingAxe(TrainingTarget, AxeEnemy):
-    pass
+    def _update_ai(self, dt, player):
+        if (self.navigation_target is not None
+                or (self.state == "ATTACK" and self.attack_kind == "throw")):
+            AxeEnemy._update_ai(self, dt, player)
+        else:
+            if self.state in ("WALK", "RUN"):
+                self.stop()
+            if self.state == "IDLE" and self.try_start_throw(dt, player):
+                self.animation.update(dt)
+                return
+            super()._update_ai(dt, player)
 
 
 class TrainingShield(TrainingTarget, ShieldSoldier):

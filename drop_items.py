@@ -22,6 +22,7 @@ class DropItem:
     pistol_ammo: int | None = None
     support_height: float = 0.0
     rifle_ammo: int | None = None
+    axe_owner: object | None = None
 
     @property
     def firearm_ammo(self):

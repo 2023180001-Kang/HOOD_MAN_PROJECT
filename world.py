@@ -14,7 +14,7 @@ from player import Player
 from projectiles import PlayerProjectile, ThrownWeaponProjectile
 from rush import RushSequence
 from stage import Stage
-from training_room import TrainingRoom
+from training_room import TrainingPlayer, TrainingRoom
 
 
 class World:
@@ -37,11 +37,13 @@ class World:
                 stair.queue.clear()
         self.controls.reset_for_restart()
         self.rush = None
-        self.player = Player()
         if self.training:
-            self.stages = [TrainingRoom()]
+            room = TrainingRoom()
+            self.stages = [room]
+            self.player = TrainingPlayer(room)
             self.player.x = self.player.previous_x = config.SCREEN_WIDTH / 2
         else:
+            self.player = Player()
             self.player.equip_weapon(self.starting_weapon)
             attack_sequence = count()
             self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,
@@ -342,6 +344,7 @@ class World:
                 bullet = enemy.take_projectile()
                 if bullet is None:
                     continue
+                bullet.world_width = self.stage.width
                 self.projectiles.append(bullet)
                 bullet.update(0, self.player, on_impact=self.projectile_impact)
                 if not self.player.alive:

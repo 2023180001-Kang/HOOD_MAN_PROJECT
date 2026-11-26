@@ -6,8 +6,12 @@ import config
 from ar_soldier import ARSoldier
 from axe_enemy import AxeEnemy
 from drop_items import DropItem
+from effects import DamageNumber
 from enemy import Enemy
 from enemy02 import Enemy02
+from physics import clamp
+from player import Player
+from projectiles import PlayerProjectile
 from researcher import Researcher
 from shield_soldier import ShieldSoldier
 from stage import Stage
@@ -18,38 +22,38 @@ from walkable import WalkableArea
 class PracticeOpponent:
     name: str
     enemy_type: type[Enemy]
-    damage: int
     slam_damage: int | None = None
 
 
-OPPONENTS = (
-    PracticeOpponent("쇠몽둥이", Enemy, config.ENEMY_DAMAGE),
-    PracticeOpponent("쌍몽둥이", Enemy02, config.ENEMY02_ATTACKS["clubs"][1], config.ENEMY02_ATTACKS["slam"][1]),
-    PracticeOpponent("도끼", AxeEnemy, config.AXE_ENEMY_DAMAGE),
-    PracticeOpponent("권총", Researcher, config.RESEARCHER_DAMAGE),
-    PracticeOpponent("방패", ShieldSoldier, config.SHIELD_SOLDIER_DAMAGE),
-    PracticeOpponent("AR 소총", ARSoldier, config.AR_SOLDIER_DAMAGE),
-)
-SELECTION_KEYS = {f"spawn_{i}": opponent for i, opponent in enumerate(OPPONENTS, 1)}
+class TrainingPlayer(Player):
+    def __init__(self, room):
+        super().__init__()
+        self.room = room
+
+    def _apply_damage(self, damage):
+        self.last_hit_damage = damage
+        self.hp = max(1, self.hp - damage)
+        self.room.damage_numbers.append(DamageNumber.above_body(
+            self.body, damage, depth=self.ground_y - config.GROUND_Y, on_player=True))
+
+    def adjust_hp(self, delta):
+        self.hp = clamp(self.hp + delta, 1, config.MAX_HP)
+
+    def restore_hp(self):
+        self.hp = config.MAX_HP
 
 
-class TrainingTarget(Enemy):
-    """Use the selected enemy's art and stats with passive practice behavior."""
+class TrainingTarget:
+    """Keep each opponent in place and use its native close-range attack."""
 
     uses_melee_slots = False
+    uses_ranged_spacing = False
     blocks_movement = False
+    practice_reach = config.ENEMY_ATTACK_REACH + config.PLAYER_HALF_WIDTH
 
     def __init__(self, opponent, x, facing, ground_y):
         self.opponent = opponent
-        self.image_name = opponent.enemy_type.image_name
-        self.animations = opponent.enemy_type.animations
-        self.boundary_padding = opponent.enemy_type.boundary_padding
-        self.max_hp = opponent.enemy_type.max_hp
         super().__init__(x, facing, ground_y=ground_y)
-
-    @property
-    def attack_damage(self):
-        return self.opponent.damage
 
     def adjust_hp(self, delta):
         new_max = max(1, self.max_hp + delta)
@@ -74,9 +78,66 @@ class TrainingTarget(Enemy):
         return self.take_damage(move.damage)
 
     def _update_ai(self, dt, player):
-        self.animation.update(dt)
-        if self.state == "HIT" and self.animation.finished:
-            self.animation.set_state("IDLE")
+        dx = player.x - self.x
+        nearby = (abs(dx) < self.practice_reach
+                  and abs(player.ground_y - self.ground_y) <= config.ATTACK_DEPTH_TOLERANCE)
+        if self.state == "ATTACK" and (not nearby or dx * self.facing < 0):
+            self.stop()
+        if self.state != "IDLE":
+            super()._update_ai(dt, player)
+            return
+        self.cooldown = max(0.0, self.cooldown - dt)
+        if nearby and self.cooldown == 0:
+            if dx:
+                self.facing = 1 if dx > 0 else -1
+            self.start_attack()
+        else:
+            self.animation.update(dt)
+
+
+class TrainingThug(TrainingTarget, Enemy):
+    pass
+
+
+class TrainingDualClub(TrainingTarget, Enemy02):
+    pass
+
+
+class TrainingAxe(TrainingTarget, AxeEnemy):
+    pass
+
+
+class TrainingShield(TrainingTarget, ShieldSoldier):
+    start_attack = ShieldSoldier.start_swing
+
+
+class TrainingGunner(TrainingTarget):
+    practice_reach = 200
+
+    def _update_ai(self, dt, player):
+        # Keep a point-blank shot from starting on the far side of the player.
+        gap = abs(player.x - self.x)
+        self.muzzle_x = min(type(self).muzzle_x, max(0, gap - self.projectile_type.half_width))
+        super()._update_ai(dt, player)
+
+
+class TrainingResearcher(TrainingGunner, Researcher):
+    pass
+
+
+class TrainingARSoldier(TrainingGunner, ARSoldier):
+    pass
+
+
+OPPONENTS = (
+    PracticeOpponent("쇠몽둥이", TrainingThug),
+    PracticeOpponent("쌍몽둥이", TrainingDualClub, config.ENEMY02_ATTACKS["slam"][1]),
+    PracticeOpponent("도끼", TrainingAxe),
+    PracticeOpponent("권총", TrainingResearcher),
+    PracticeOpponent("방패", TrainingShield),
+    PracticeOpponent("AR 소총", TrainingARSoldier),
+)
+SELECTION_KEYS = {f"spawn_{i}": opponent for i, opponent in enumerate(OPPONENTS, 1)}
 
 
 class TrainingRoom(Stage):
@@ -125,4 +186,5 @@ class TrainingRoom(Stage):
         if not left <= player.x + facing * distance <= right:
             facing = -facing
         x, y = self.walkable.project(player.x + facing * distance, player.ground_y, padding)
-        self.enemies[:] = [TrainingTarget(self.selected_opponent, x, -facing, y)]
+        self.projectiles[:] = [shot for shot in self.projectiles if isinstance(shot, PlayerProjectile)]
+        self.enemies[:] = [self.selected_opponent.enemy_type(self.selected_opponent, x, -facing, y)]

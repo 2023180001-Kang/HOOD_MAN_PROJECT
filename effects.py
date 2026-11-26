@@ -72,12 +72,13 @@ class DamageNumber:
     y: float
     damage: int
     elapsed: float = 0.0
+    on_player: bool = False
 
     @classmethod
-    def above_body(cls, body, damage, *, depth=0.0):
+    def above_body(cls, body, damage, *, depth=0.0, on_player=False):
         return cls((body.left + body.right) / 2,
                    body.top + config.ENEMY_HP_BAR_GAP + config.ENEMY_HP_BAR_HEIGHT
-                   + config.DAMAGE_NUMBER_GAP + depth, damage)
+                   + config.DAMAGE_NUMBER_GAP + depth, damage, on_player=on_player)
 
     def update(self, dt):
         self.elapsed += dt

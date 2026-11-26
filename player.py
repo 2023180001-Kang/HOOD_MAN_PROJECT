@@ -507,12 +507,15 @@ class Player:
             return enemy.take_strong_hit(self.active_move, self.facing)
         return enemy.take_damage(self.active_move.damage)
 
+    def _apply_damage(self, damage):
+        self.last_hit_damage = min(self.hp, damage)
+        self.hp -= self.last_hit_damage
+
     def take_damage(self, damage, *, attacker=None, stagger=True):
         if not self.alive or self.invincible or self.crowd_escape.active:
             return False
         guarding = self.state == "GUARD"
-        self.last_hit_damage = min(self.hp, damage * 0.5 if guarding else damage)
-        self.hp -= self.last_hit_damage
+        self._apply_damage(damage * 0.5 if guarding else damage)
         if attacker is not None and self.hp and self.last_hit_damage > 0:
             self.crowd_escape.record_hit(attacker)
         if self.alive and (guarding or not stagger):

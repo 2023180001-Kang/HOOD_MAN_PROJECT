@@ -154,11 +154,12 @@ class TrainingRoomTests(unittest.TestCase):
             self.assertAlmostEqual(abs(target.x - x), 92)
             self.assertEqual(target.ground_y, player.ground_y)
         position = target.x, target.y
+        player.x = target.x - 350
         advance(self.world, 3)
         self.assertEqual((target.x, target.y, target.state), (*position, "IDLE"))
         self.assertEqual(player.hp, config.MAX_HP)
 
-    def test_number_then_plus_summons_the_matching_passive_stage_enemy(self):
+    def test_number_then_plus_summons_the_matching_enemy_and_it_attacks_only_nearby(self):
         cases = (
             (config.ENEMY_IMAGE, 20, 200, 5), (config.ENEMY02_IMAGE, 30, 200, 6),
             (config.AXE_ENEMY_IMAGE, 40, 400, 5), (config.RESEARCHER_IMAGE, 30, 200, 6),
@@ -166,6 +167,8 @@ class TrainingRoomTests(unittest.TestCase):
         )
         for number, (image, damage, hp, hit_row) in enumerate(cases, 1):
             with self.subTest(number=number):
+                self.press("restart")
+                player = self.world.player
                 previous = self.world.stage.target
                 prefix = "KP_" if number % 2 == 0 else ""
                 key = getattr(pico2d, f"SDLK_{prefix}{number}")
@@ -177,10 +180,26 @@ class TrainingRoomTests(unittest.TestCase):
                 self.assertEqual((target.sprite_image, target.attack_damage, target.hp, target.max_hp),
                                  (image, damage, hp, hp))
                 position = target.x, target.y
+                player.x = target.x - 350
                 advance(self.world, 3)
                 self.assertEqual((target.x, target.y, target.state), (*position, "IDLE"))
                 self.assertEqual(self.world.player.hp, config.MAX_HP)
                 self.assertFalse(self.world.projectiles)
+                player.x = target.x + 85
+                player.ground_y = target.ground_y + 50
+                advance(self.world, 1)
+                self.assertEqual(player.hp, config.MAX_HP)
+                player.ground_y = target.ground_y
+                for _ in range(240):
+                    self.world.step(config.FIXED_DT)
+                    if player.hp < config.MAX_HP:
+                        break
+                self.assertEqual((player.hp, target.facing), (config.MAX_HP - damage, 1))
+                self.assertEqual((target.x, target.y), position)
+                number_hit, = self.world.damage_numbers
+                self.assertTrue(number_hit.on_player)
+                self.assertEqual((number_hit.damage, number_hit.x), (damage, player.x))
+                player.x = target.x - 350
                 bullet = PlayerPistolBullet(target.x, target.ground_y, 60, 1)
                 self.world.projectiles.append(bullet)
                 self.world.update_projectiles(0)
@@ -190,6 +209,22 @@ class TrainingRoomTests(unittest.TestCase):
                 self.assertEqual((target.hp, target.last_hit_damage), (1, hp * 2))
                 advance(self.world, 2)
                 self.assertEqual(target.state, "IDLE")
+
+    def test_practice_player_survives_repeated_hits_and_guard_reduces_displayed_damage(self):
+        player = self.world.player
+        player.hp = 2
+        player.equip_weapon("shield_item")
+        self.press("combat_s")
+        self.press("spawn_6")
+        self.press("training_target")
+        advance(self.world, 2)
+        self.assertEqual((player.hp, player.state), (1, "GUARD"))
+        hits = [n.damage for n in self.world.damage_numbers if n.on_player]
+        self.assertGreater(len(hits), 1)
+        self.assertTrue(all(damage == 2.5 for damage in hits))
+        self.launch("game_start")
+        self.assertTrue(self.world.player.take_damage(config.MAX_HP))
+        self.assertEqual(self.world.player.state, "DYING")
 
     def test_selection_and_summon_follow_event_order_in_one_batch(self):
         for key in (pico2d.SDLK_2, pico2d.SDLK_PLUS, pico2d.SDLK_6, pico2d.SDLK_PLUS, pico2d.SDLK_2):

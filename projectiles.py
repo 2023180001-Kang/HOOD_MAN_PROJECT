@@ -36,8 +36,7 @@ class ResearcherBullet:
     world_width = config.WORLD_WIDTH
     hit_targets = None  # Piercing projectiles keep a set for the lifetime of the throw.
     deflectable = True
-    ricochet_angle = radians(35)
-    ricochet_duration = 0.16
+    ricochet_angle = radians(-35)
 
     @property
     def y(self):
@@ -57,10 +56,16 @@ class ResearcherBullet:
 
     @property
     def falling(self):
-        return not self.range_limited and self.elapsed + 1e-12 >= self.straight_duration
+        return self.deflected or (not self.range_limited and self.elapsed + 1e-12 >= self.straight_duration)
+
+    @property
+    def horizontal_speed(self):
+        return self.speed * cos(self.ricochet_angle) if self.deflected else self.speed
 
     @property
     def vy(self):
+        if self.deflected:
+            return self.speed * sin(self.ricochet_angle) - self.gravity * self.elapsed
         return -self.gravity * max(0.0, self.elapsed - self.straight_duration) if self.falling else 0.0
 
     @property
@@ -70,19 +75,14 @@ class ResearcherBullet:
     @property
     def finished(self):
         left, right = self.horizontal_limits
-        if self.deflected:
-            return self.elapsed + 1e-12 >= self.ricochet_duration or not left <= self.x <= right
         return (self.spent or self.height <= self.half_height
                 or self.x < left or self.x > right
-                or (self.range_limited and self.elapsed + 1e-12 >= self.straight_duration))
+                or (self.range_limited and not self.deflected and self.elapsed + 1e-12 >= self.straight_duration))
 
     def update(self, dt, targets, *, on_impact=None):
         if self.finished:
             return False
         dt = max(0.0, dt)
-        if self.deflected:
-            self._advance_ricochet(dt)
-            return False
         offset = 0.0
         dealt_damage = False
         while True:
@@ -102,33 +102,37 @@ class ResearcherBullet:
                 step = min(step, ground_time)
             left, right = self.horizontal_limits
             edge_gap = right - self.x if self.facing > 0 else self.x - left
-            edge_time = edge_gap / self.speed
+            speed_x = self.facing * self.horizontal_speed
+            edge_time = edge_gap / abs(speed_x)
             step = min(step, edge_time)
             terminal = min(ground_time, edge_time, range_time) <= step + 1e-12
             travel = step
+            parried = False
             for contact, target in self._contacts(targets, step, offset, dt, gravity):
                 # Ground/world contact wins a simultaneous tie.
                 if terminal and contact >= step - 1e-12:
                     break
                 if self.deflectable and target.state == "SWORD_PARRY":
-                    self.x += self.facing * self.speed * contact
-                    self.height += vy * contact - gravity * contact * contact / 2
-                    self.facing *= -1
-                    self.deflected = True
-                    self.elapsed = 0.0
-                    self._advance_ricochet(dt - offset - contact)
-                    return False
+                    travel = contact
+                    parried = True
+                    break
                 if self._apply_hit(target):
                     dealt_damage = True
                     if on_impact is not None:
-                        x = self.impact_x + self.facing * self.speed * contact
+                        x = self.impact_x + speed_x * contact
                         y = self.y + vy * contact - gravity * contact * contact / 2
                         on_impact(self, x, y)
                 if self.spent:
                     travel = contact
                     break
-            self.x += self.facing * self.speed * travel
+            self.x += speed_x * travel
             self.height += vy * travel - gravity * travel * travel / 2
+            if parried:
+                self.facing *= -1
+                self.deflected = True
+                self.elapsed = 0.0
+                offset += travel
+                continue
             self.elapsed += travel
             if self.spent:
                 return dealt_damage
@@ -140,12 +144,6 @@ class ResearcherBullet:
             offset += step
             if offset >= dt:
                 return dealt_damage
-
-    def _advance_ricochet(self, dt):
-        step = min(dt, self.ricochet_duration - self.elapsed)
-        self.x += self.facing * self.speed * cos(self.ricochet_angle) * step
-        self.height += self.speed * sin(self.ricochet_angle) * step
-        self.elapsed += step
 
     def _apply_hit(self, target):
         if self.hit_targets is None:
@@ -161,7 +159,7 @@ class ResearcherBullet:
         return player.take_damage(self.damage, attacker=self.shooter, stagger=False)
 
     def _contacts(self, target, duration, offset, tick_duration, gravity):
-        if self.hit_targets is not None and target in self.hit_targets:
+        if self.deflected or (self.hit_targets is not None and target in self.hit_targets):
             return ()
         contact = self._contact_time(target, duration, offset, tick_duration, gravity)
         return () if contact is None else ((contact, target),)

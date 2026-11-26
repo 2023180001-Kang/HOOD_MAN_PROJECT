@@ -63,7 +63,7 @@ class PlayerSwordTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         self.assertEqual((player.state, player.sprite_row), ("IDLE", 1))
 
-    def test_only_rounds_in_contact_while_s_is_held_ricochet_and_expire(self):
+    def test_parried_rounds_reverse_and_fall_until_they_reach_the_floor(self):
         for kind in (ResearcherBullet, RifleBullet):
             for facing in (-1, 1):
                 world = equipped_world("sword")
@@ -79,11 +79,12 @@ class PlayerSwordTests(unittest.TestCase):
                         break
                 self.assertTrue(shot.deflected)
                 self.assertEqual((shot.facing, player.hp), (-facing, player.max_hp))
-                x, height = shot.x, shot.height
+                x, height, vy = shot.x, shot.height, shot.vy
                 world.controls.release("combat_s")
                 world.step(config.FIXED_DT)
                 self.assertGreater((shot.x - x) * -facing, 0)
-                self.assertGreater(shot.height, height)
+                self.assertLess(shot.height, height)
+                self.assertLess(shot.vy, vy)
                 self.assertFalse(world.effects or world.damage_numbers)
                 next_shot = kind(player.x, floor_y, 80, facing)
                 world.projectiles.append(next_shot)
@@ -91,7 +92,28 @@ class PlayerSwordTests(unittest.TestCase):
                 self.assertFalse(next_shot.deflected)
                 self.assertEqual(player.hp, player.max_hp - next_shot.damage)
                 advance(world, 0.3)
+                self.assertEqual(shot.height, shot.half_height)
                 self.assertFalse(world.projectiles)
+
+    def test_airborne_parry_falls_to_the_same_landing_point_across_update_sizes(self):
+        world = equipped_world("sword")
+        player = world.player
+        world.controls.press("combat_s")
+        world.step(config.FIXED_DT)
+        player.jump_height = player.previous_jump_height = 240
+        for kind in (ResearcherBullet, RifleBullet):
+            shot = kind(player.x - 100, player.ground_y, 320, 1)
+            stepped = kind(shot.x, shot.ground_y, shot.height, shot.facing)
+            shot.update(0.3, player)
+            self.assertTrue(shot.deflected)
+            self.assertFalse(shot.finished)
+            self.assertGreater(shot.height, shot.half_height)
+            shot.update(1, player)
+            for _ in range(120):
+                stepped.update(config.FIXED_DT, player)
+            self.assertTrue(shot.finished and stepped.finished)
+            self.assertEqual((shot.height, stepped.height), (shot.half_height, shot.half_height))
+            self.assertAlmostEqual(shot.x, stepped.x)
 
     def test_melee_and_thrown_axes_still_hit_and_interrupt_the_parry(self):
         for attack in ("melee", "axe"):

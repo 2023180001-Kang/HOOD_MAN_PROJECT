@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import config
 from main_menu import MainMenu
@@ -85,14 +85,18 @@ class PlayerSwordTests(unittest.TestCase):
             self.assertEqual(player.facing, facing)
             self.assertEqual((player.x, player.ground_y), position)
 
-    def test_parried_rounds_reverse_and_fall_until_they_reach_the_floor(self):
+    @patch("projectiles.choice")
+    def test_parried_rounds_enlarge_at_contact_then_bounce_and_fall(self, choose):
         for kind in (ResearcherBullet, RifleBullet):
-            for facing in (-1, 1):
+            for facing, pick in ((-1, min), (-1, max), (1, min), (1, max)):
+                choose.reset_mock()
+                choose.side_effect = pick
                 world = equipped_world("sword")
                 player = world.player
                 player.invincible = False
                 floor_y = player.ground_y
                 shot = kind(player.x - facing * 100, floor_y, 80, facing)
+                self.assertEqual(shot.display_scale, shot.scale)
                 world.projectiles.append(shot)
                 world.controls.press("combat_s")
                 for _ in range(60):
@@ -102,22 +106,34 @@ class PlayerSwordTests(unittest.TestCase):
                 self.assertTrue(shot.deflected)
                 self.assertEqual((shot.facing, player.hp), (-facing, player.max_hp))
                 x, height, vy = shot.x, shot.height, shot.vy
+                peak_scale = shot.scale * 2.5
+                self.assertEqual(shot.display_scale, peak_scale)
                 world.controls.release("combat_s")
-                world.step(config.FIXED_DT)
+                advance(world, 0.05)
+                self.assertEqual((shot.x, shot.height, shot.display_scale), (x, height, peak_scale))
+                advance(world, 0.1)
                 self.assertGreater((shot.x - x) * -facing, 0)
-                self.assertLess(shot.height, height)
+                if pick is max:
+                    self.assertGreater(shot.height, height)
+                else:
+                    self.assertLess(shot.height, height)
                 self.assertLess(shot.vy, vy)
+                self.assertTrue(shot.scale < shot.display_scale < peak_scale)
                 self.assertFalse(world.effects or world.damage_numbers)
                 next_shot = kind(player.x, floor_y, 80, facing)
                 world.projectiles.append(next_shot)
                 world.step(config.FIXED_DT)
                 self.assertFalse(next_shot.deflected)
                 self.assertEqual(player.hp, player.max_hp - next_shot.damage)
-                advance(world, 0.3)
+                advance(world, 1)
+                self.assertEqual(shot.display_scale, shot.scale)
+                self.assertLess(shot.vy, 0)
                 self.assertEqual(shot.height, shot.half_height)
                 self.assertFalse(world.projectiles)
+                choose.assert_called_once_with(shot.ricochet_vertical_speeds)
 
-    def test_airborne_parry_falls_to_the_same_landing_point_across_update_sizes(self):
+    @patch("projectiles.choice", side_effect=max)
+    def test_airborne_parry_falls_to_the_same_landing_point_across_update_sizes(self, _choose):
         world = equipped_world("sword")
         player = world.player
         world.controls.press("combat_s")
@@ -130,8 +146,8 @@ class PlayerSwordTests(unittest.TestCase):
             self.assertTrue(shot.deflected)
             self.assertFalse(shot.finished)
             self.assertGreater(shot.height, shot.half_height)
-            shot.update(1, player)
-            for _ in range(120):
+            shot.update(2, player)
+            for _ in range(240):
                 stepped.update(config.FIXED_DT, player)
             self.assertTrue(shot.finished and stepped.finished)
             self.assertEqual((shot.height, stepped.height), (shot.half_height, shot.half_height))

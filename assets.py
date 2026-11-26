@@ -2,7 +2,7 @@
 
 import json
 import os
-from math import atan2, radians, tau
+from math import atan2, cos, radians, sin, tau
 from pathlib import Path
 
 import pico2d
@@ -94,17 +94,20 @@ class Assets:
         image = self.images[bullet.image_name]
         tile = self.frames[bullet.image_name][0][bullet.frame]
         left, bottom, width, height = tile["clip"]
-        scale = bullet.scale
-        angle = bullet.facing * atan2(bullet.vy, bullet.horizontal_speed) if bullet.deflected else 0
+        scale = bullet.display_scale
         # Keep the copper nose on the physics body while the animated trail
-        # extends backward, never moving the impact point as clips get wider.
+        # changes length, scale and direction.
+        dx = bullet.facing * (bullet.half_width - width * scale / 2)
+        dy = (bottom + height / 2 - image.h + bullet.anchor_y) * scale
+        angle = 0.0
+        if bullet.deflected:
+            angle = bullet.facing * atan2(bullet.vy, bullet.horizontal_speed)
+            c, s = cos(angle), sin(angle)
+            dx, dy = dx * c - dy * s, dx * s + dy * c
         image.clip_composite_draw(
             left, bottom, width, height, angle,
             "h" if bullet.facing < 0 else "",
-            bullet.x - camera_x + bullet.facing * (
-                bullet.half_width - width * scale / 2),
-            bullet.y - camera_y + (
-                bottom + height / 2 - image.h + bullet.anchor_y) * scale,
+            bullet.x - camera_x + dx, bullet.y - camera_y + dy,
             width * scale, height * scale,
         )
 

@@ -1,8 +1,9 @@
 """Ranged rounds with continuous collision and per-weapon flight/render profiles."""
 
 from dataclasses import dataclass, field
-from math import cos, radians, sin, sqrt
+from math import sqrt
 from operator import itemgetter
+from random import choice
 
 import config
 from collision import same_floor
@@ -20,7 +21,7 @@ class ResearcherBullet:
     shooter: object = field(default=None, kw_only=True, repr=False, compare=False)
     impact_target: object = field(default=None, init=False, repr=False)
     impact_damage: int = field(default=0, init=False)
-    deflected: bool = field(default=False, init=False)
+    ricochet_launch_vy: float | None = field(default=None, init=False)
 
     image_name = config.RESEARCHER_BULLET_IMAGE
     damage = config.RESEARCHER_DAMAGE
@@ -36,7 +37,23 @@ class ResearcherBullet:
     world_width = config.WORLD_WIDTH
     hit_targets = None  # Piercing projectiles keep a set for the lifetime of the throw.
     deflectable = True
-    ricochet_angle = radians(-35)
+    ricochet_hold = 0.08
+    ricochet_shrink_time = 0.16
+    ricochet_magnification = 2.5
+    ricochet_horizontal_speed = 260.0
+    ricochet_vertical_speeds = (-240.0, 240.0)
+
+    @property
+    def deflected(self):
+        return self.ricochet_launch_vy is not None
+
+    @property
+    def display_scale(self):
+        if not self.deflected:
+            return self.scale
+        flight_time = max(0.0, self.elapsed - self.ricochet_hold)
+        highlight = max(0.0, 1.0 - flight_time / self.ricochet_shrink_time)
+        return self.scale * (1.0 + (self.ricochet_magnification - 1.0) * highlight)
 
     @property
     def y(self):
@@ -60,12 +77,12 @@ class ResearcherBullet:
 
     @property
     def horizontal_speed(self):
-        return self.speed * cos(self.ricochet_angle) if self.deflected else self.speed
+        return self.ricochet_horizontal_speed if self.deflected else self.speed
 
     @property
     def vy(self):
-        if self.deflected:
-            return self.speed * sin(self.ricochet_angle) - self.gravity * self.elapsed
+        if self.ricochet_launch_vy is not None:
+            return self.ricochet_launch_vy - self.gravity * max(0.0, self.elapsed - self.ricochet_hold)
         return -self.gravity * max(0.0, self.elapsed - self.straight_duration) if self.falling else 0.0
 
     @property
@@ -86,6 +103,12 @@ class ResearcherBullet:
         offset = 0.0
         dealt_damage = False
         while True:
+            if self.deflected and self.elapsed < self.ricochet_hold:
+                hold = min(dt - offset, self.ricochet_hold - self.elapsed)
+                self.elapsed += hold
+                offset += hold
+                if offset >= dt:
+                    return dealt_damage
             gravity = self.gravity if self.falling else 0.0
             vy = self.vy
             step = dt - offset
@@ -98,7 +121,9 @@ class ResearcherBullet:
             ground_time = float("inf")
             if gravity:
                 clearance = self.height - self.half_height
-                ground_time = 2 * clearance / (sqrt(vy * vy + 2 * gravity * clearance) - vy)
+                impact_speed = sqrt(vy * vy + 2 * gravity * clearance)
+                ground_time = ((impact_speed + vy) / gravity if vy > 0
+                               else 2 * clearance / (impact_speed - vy))
                 step = min(step, ground_time)
             left, right = self.horizontal_limits
             edge_gap = right - self.x if self.facing > 0 else self.x - left
@@ -129,7 +154,7 @@ class ResearcherBullet:
             self.height += vy * travel - gravity * travel * travel / 2
             if parried:
                 self.facing *= -1
-                self.deflected = True
+                self.ricochet_launch_vy = choice(self.ricochet_vertical_speeds)
                 self.elapsed = 0.0
                 offset += travel
                 continue

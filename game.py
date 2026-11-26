@@ -120,7 +120,7 @@ class Game:
                     self.menu.clear_hover()
                     if (not self._menu_requested and event.type == pico2d.SDL_MOUSEBUTTONDOWN
                             and event.button.button == SDL_BUTTON_LEFT):
-                        self.ui.click_training_hp(self.world.stage, x, y)
+                        self.ui.click_training_hp(self.world, x, y)
             elif not self._menu_requested and event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if (event.key.keysym.sym == pico2d.SDLK_EQUALS

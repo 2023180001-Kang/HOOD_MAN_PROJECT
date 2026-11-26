@@ -270,7 +270,7 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertFalse(self.world.rush.captives)
         self.assertEqual((target.x, target.y, target.jump_height), (*position, 0))
 
-    def test_guide_and_damage_stay_visible_without_drawing_hp(self):
+    def test_training_guide_hp_and_damage_stay_visible_with_campaign_details_hidden(self):
         self.game.ui.details_visible = False
         assets = Mock()
         assets.images = {}  # Accessing the campaign HP texture would fail.
@@ -283,10 +283,87 @@ class TrainingRoomTests(unittest.TestCase):
             self.game.ui.draw(assets, self.world)
         self.assertEqual(assets.damage_font.draw.call_args.args[2], "-20")
         texts = " ".join(call.args[2] for call in assets.font.draw.call_args_list)
-        for word in ("조작법 익히기", "이단 점프", "G", "+", "Esc", "왼손 잽",
+        for word in ("조작법 익히기", "이단 점프", "G", "+", "Esc", "왼손 잽", "주인공 HP  500 / 500",
                      "소환된 적  ·  쇠몽둥이", "공격력   20", "현재 HP  180", "최대 HP  200", "-10", "+10",
                      "HP 전체 복구"):
             self.assertIn(word, texts)
+
+    def test_left_hp_controls_are_independent_and_full_restore_works_without_a_target(self):
+        def click(x, button=pico2d.SDL_BUTTON_LEFT):
+            event = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, x, 465, button)
+            process_menu_events(self.game, event, menu_screen=False)
+
+        player = self.world.player
+        click(400)
+        self.assertEqual(player.hp, 490)
+        click(480)
+        click(480)
+        self.assertEqual(player.hp, 500)
+        player.hp = 6
+        click(400)
+        self.assertEqual(player.hp, 1)
+        click(480)
+        self.assertEqual(player.hp, 11)
+        click(600, SDL_BUTTON_RIGHT)
+        self.assertEqual(player.hp, 11)
+        click(600)
+        self.assertEqual(player.hp, 500)
+        self.press("training_target")
+        enemy = self.world.stage.target
+        enemy.take_damage(50)
+        click(400)
+        self.assertEqual((enemy.hp, enemy.max_hp, player.hp), (150, 200, 490))
+        click(600)
+        self.assertEqual((enemy.hp, player.hp), (150, 500))
+        self.assertFalse(self.world.damage_numbers)
+
+    def test_left_attack_values_follow_weapon_pickup_and_return(self):
+        assets = Mock()
+        player = self.world.player
+
+        def attack_text():
+            assets.font.draw.reset_mock()
+            with patch("pico2d.draw_rectangle"):
+                self.game.ui.draw(assets, self.world)
+            return " ".join(call.args[2] for call in assets.font.draw.call_args_list
+                            if call.args[0] < config.SCREEN_WIDTH / 2)
+
+        self.assertIn("A  왼손 잽  10", attack_text())
+        for item in list(self.world.stage.drop_items):
+            with self.subTest(weapon=item.kind):
+                player.x, player.ground_y = item.x, item.ground_y
+                self.press("weapon_interact")
+                text = attack_text()
+                self.assertIn(f"주인공 공격력  ·  {config.WEAPON_NAMES[item.kind]}", text)
+                if item.kind in config.FIREARM_MAGAZINE_SIZES:
+                    self.assertIn("20 / 발", text)
+                    self.assertIn("S 방향 고정", text)
+                else:
+                    for move in player.moves.values():
+                        self.assertIn(f"{move.key.upper()}  {move.name}  {move.damage}", text)
+                if item.kind == "axe":
+                    self.assertIn("D 내려찍기  40", text)
+                self.press("weapon_interact")
+                self.assertIn("주인공 공격력  ·  맨손", attack_text())
+
+    def test_incoming_damage_is_drawn_over_the_player_and_blocked_hits_show_no_number(self):
+        player = self.world.player
+        player.hp = 1
+        player.invincible = True
+        self.press("training_target")
+        advance(self.world, 1)
+        self.assertFalse(self.world.damage_numbers)
+        player.invincible = False
+        for _ in range(240):
+            self.world.step(config.FIXED_DT)
+            if self.world.damage_numbers:
+                break
+        assets = Mock()
+        self.game.ui.draw_enemy_health(assets, self.world, 0, 0)
+        x, y, label, color = assets.damage_font.draw.call_args.args
+        self.assertEqual((label, color, player.hp), ("-20", (255, 143, 143), 1))
+        self.assertLess(abs(x - player.x), 20)
+        self.assertGreater(y, player.body.top)
 
     def test_restore_button_recovers_the_summoned_enemy_in_place(self):
         click = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1100, 368)

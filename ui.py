@@ -3,7 +3,7 @@
 from math import ceil, floor, hypot
 
 import config
-from combat import STRONG_MOVES
+from combat import STRONG_MOVES, moves_for_weapon
 from physics import clamp
 from training_room import OPPONENTS
 
@@ -11,8 +11,11 @@ from training_room import OPPONENTS
 PLAYER_BOUNDS_COLOR = (80, 220, 255)
 ENEMY_BOUNDS_COLOR = (255, 185, 70)
 STAIR_BOUNDS_COLOR = (180, 255, 150)
-TRAINING_HP_BUTTONS = ((-10, (1064, 394, 1138, 427)), (10, (1148, 394, 1230, 427)))
-TRAINING_HP_RESTORE_BUTTON = (986, 352, 1230, 385)
+# Delta and screen-space bounds. A full restore has no fixed delta.
+ENEMY_HP_BUTTONS = ((-10, (1064, 394, 1138, 427)), (10, (1148, 394, 1230, 427)),
+                    (None, (986, 352, 1230, 385)))
+PLAYER_HP_BUTTONS = ((-10, (364, 449, 437, 482)), (10, (447, 449, 520, 482)),
+                     (None, (530, 449, 680, 482)))
 
 
 def firearm_controls(player):
@@ -160,11 +163,12 @@ class UI:
                                       215, 38, 45, filled=True)
         if (world.training or self.details_visible) and assets.damage_font is not None:
             for number in world.damage_numbers:
-                text = f"-{number.damage}"
+                text = f"-{number.damage:g}"
                 x = number.x - camera_x - len(text) * config.DAMAGE_NUMBER_FONT_SIZE / 4
                 y = number.display_y - camera_y
                 assets.damage_font.draw(x + 1, y - 1, text, (12, 15, 20))
-                assets.damage_font.draw(x, y, text, (255, 224, 110))
+                color = (255, 143, 143) if number.on_player else (255, 224, 110)
+                assets.damage_font.draw(x, y, text, color)
 
     def draw_pickup_prompt(self, assets, world, camera_x, camera_y):
         if (not self.details_visible and not world.training) or assets.font is None:
@@ -192,34 +196,35 @@ class UI:
         pico2d.draw_rectangle(panel_left, 542, 1250, 698, 17, 22, 29, filled=True)
         font = assets.font
         heading, body = (255, 218, 130), (230, 234, 239)
-        font.draw(text_left, 671, "조작법 익히기", heading)
-        font.draw(text_left, 637, "방향키  이동     Shift + 방향키  달리기", body)
-        font.draw(text_left, 609, "Space  점프 · 두 번 눌러 이단 점프", body)
-        font.draw(text_left, 581, "G  무기 줍기 · 교체 · 내려놓기 (책상 앞에서 반납)", body)
-        font.draw(text_left, 555, "1~6  연습 상대 선택     +  소환     Esc  메인 메뉴", body)
+        help_x = 740
+        font.draw(help_x, 671, "조작법 익히기", heading)
+        font.draw(help_x, 637, "방향키  이동     Shift + 방향키  달리기", body)
+        font.draw(help_x, 609, "Space  점프 · 두 번 눌러 이단 점프", body)
+        font.draw(help_x, 581, "G  무기 줍기 · 교체 · 내려놓기 (책상 앞에서 반납)", body)
+        font.draw(help_x, 555, "1~6  연습 상대 선택     +  소환     Esc  메인 메뉴", body)
         weapon = config.WEAPON_NAMES.get(player.weapon, "맨손")
-        font.draw(620, 671, f"공격 연습  ·  {weapon}", heading)
-        if player.weapon in config.FIREARM_MAGAZINE_SIZES:
+        font.draw(text_left, 671, f"주인공 공격력  ·  {weapon}", heading)
+        moves = moves_for_weapon(player.weapon)
+        labels = {key: f"{move.key.upper()}  {move.name}  {move.damage}" for key, move in moves.items()}
+        firearm = player.weapon in config.FIREARM_MAGAZINE_SIZES
+        if firearm:
             fire, turn = firearm_controls(player)
-            basic = (f"{fire}     {turn}     R  재장전     "
-                     f"탄약  {player.firearm_ammo} / {config.FIREARM_MAGAZINE_SIZES[player.weapon]}")
+            damage = config.PLAYER_RIFLE_DAMAGE if player.weapon == "ar_rifle" else config.PLAYER_PISTOL_DAMAGE
+            labels["combat_a"] = f"{fire}  {damage} / 발"
+            labels["combat_s"] = turn
         elif player.weapon == "shield_item":
-            basic = "A  방패 밀치기 (20)     S 유지  방어 (피해 절반)"
-        else:
-            basic = "     ".join(f"{key[-1].upper()}  {player.moves[key].name}" for key in ("combat_a", "combat_s"))
-        font.draw(620, 637, basic, body)
-        if player.weapon in ("steel_club", "axe"):
-            kicks = f"D  왼발 차기 · 이단 점프 중 D  조준 → D  {weapon} 내려찍기     F  오른발 차기"
-        elif player.weapon == "shield_item":
-            kicks = "D  방패 관통 투척 (50)     F  오른발 차기"
-        elif player.moves["combat_d"].jump_attack:
-            kicks = "이단 점프 후 D  조준 · 다시 눌러 내려찍기     F  오른발 차기"
-        else:
-            kicks = "D  왼발 차기     F  오른발 차기"
-        font.draw(620, 609, kicks, body)
-        font.draw(620, 581, "Q  양주먹     W 유지  돌진     E 두 번  연속 발차기", body)
-        last = "T  어퍼컷" if player.weapon in config.FIREARM_MAGAZINE_SIZES else "R 두 번  올려치기     T  어퍼컷"
-        font.draw(620, 555, last, body)
+            labels["combat_s"] = "S 유지  방어 (피해 절반)"
+        for i, key in enumerate(("combat_a", "combat_s", "combat_d", "combat_f")):
+            font.draw(text_left + (i % 2) * 280, 637 - (i // 2) * 28, labels[key], body)
+        strong = "Q 양주먹 · W 유지 돌진 · E 두 번 발차기 · "
+        strong += "T 어퍼컷" if firearm else "R 두 번 올려치기 · T 어퍼컷"
+        font.draw(text_left, 581, f"{strong}  (각 {config.STRONG_ATTACK_DAMAGE})", body)
+        dive = moves_for_weapon(player.weapon, double_jump=True)["combat_d"]
+        if dive.jump_attack:
+            font.draw(text_left, 555, f"이단 점프 후 D 조준 → D 내려찍기  {dive.damage}", body)
+        elif firearm:
+            font.draw(text_left, 555, f"R 재장전     탄약  {player.firearm_ammo} / "
+                      f"{config.FIREARM_MAGAZINE_SIZES[player.weapon]}", body)
         pico2d.draw_rectangle(panel_left, 496, 885, 534, 17, 22, 29, filled=True)
         font.draw(text_left, 515, "다음 소환", heading)
         for index, opponent in enumerate(OPPONENTS):
@@ -229,6 +234,9 @@ class UI:
                 pico2d.draw_rectangle(x - 7, 502, x + 94, 528, 56, 74, 86, filled=True)
             font.draw(x, 515, f"{index + 1}  {opponent.name}", heading if selected else body)
 
+        pico2d.draw_rectangle(panel_left, 443, 694, 489, 17, 22, 29, filled=True)
+        font.draw(text_left, 465, f"주인공 HP  {player.hp:g} / {config.MAX_HP}", heading)
+        UI.draw_training_hp_buttons(font, PLAYER_HP_BUTTONS, body)
         target = world.stage.target
         if target is None:
             return
@@ -240,23 +248,30 @@ class UI:
         font.draw(986, 483, f"공격력   {damage}", body)
         font.draw(986, 454, f"현재 HP  {target.hp:g}     최대 HP  {target.max_hp:g}", body)
         font.draw(986, 410, "HP 조절", body)
-        for delta, (left, bottom, right, top) in TRAINING_HP_BUTTONS:
-            pico2d.draw_rectangle(left, bottom, right, top, 56, 74, 86, filled=True)
-            font.draw((left + right) / 2 - 15, (bottom + top) / 2, f"{delta:+d}", body)
-        left, bottom, right, top = TRAINING_HP_RESTORE_BUTTON
-        pico2d.draw_rectangle(left, bottom, right, top, 56, 74, 86, filled=True)
-        font.draw((left + right) / 2 - 45, (bottom + top) / 2, "HP 전체 복구", body)
+        UI.draw_training_hp_buttons(font, ENEMY_HP_BUTTONS, body)
 
     @staticmethod
-    def click_training_hp(stage, x, y):
-        if stage.target is not None:
-            for delta, (left, bottom, right, top) in TRAINING_HP_BUTTONS:
+    def draw_training_hp_buttons(font, buttons, color):
+        import pico2d
+
+        for delta, (left, bottom, right, top) in buttons:
+            pico2d.draw_rectangle(left, bottom, right, top, 56, 74, 86, filled=True)
+            label = "HP 전체 복구" if delta is None else f"{delta:+d}"
+            offset = 45 if delta is None else 15
+            font.draw((left + right) / 2 - offset, (bottom + top) / 2, label, color)
+
+    @staticmethod
+    def click_training_hp(world, x, y):
+        for actor, buttons in ((world.player, PLAYER_HP_BUTTONS), (world.stage.target, ENEMY_HP_BUTTONS)):
+            if actor is None:
+                continue
+            for delta, (left, bottom, right, top) in buttons:
                 if left <= x < right and bottom <= y < top:
-                    stage.target.adjust_hp(delta)
+                    if delta is None:
+                        actor.restore_hp()
+                    else:
+                        actor.adjust_hp(delta)
                     return
-            left, bottom, right, top = TRAINING_HP_RESTORE_BUTTON
-            if left <= x < right and bottom <= y < top:
-                stage.target.restore_hp()
 
     def draw(self, assets, world):
         import pico2d

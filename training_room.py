@@ -56,6 +56,10 @@ class TrainingTarget(Enemy):
         self.hp = max(1, self.hp + new_max - self.max_hp)
         self.max_hp = new_max
 
+    def restore_hp(self):
+        self.max_hp = self.opponent.enemy_type.max_hp
+        self.hp = self.max_hp
+
     def take_damage(self, damage):
         self.last_hit_damage = damage
         self.hp = max(1, self.hp - damage)

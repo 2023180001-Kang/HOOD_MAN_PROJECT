@@ -249,8 +249,32 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertEqual(assets.damage_font.draw.call_args.args[2], "-20")
         texts = " ".join(call.args[2] for call in assets.font.draw.call_args_list)
         for word in ("조작법 익히기", "이단 점프", "G", "+", "Esc", "왼손 잽",
-                     "소환된 적  ·  쇠몽둥이", "공격력   20", "현재 HP  180", "최대 HP  200", "-10", "+10"):
+                     "소환된 적  ·  쇠몽둥이", "공격력   20", "현재 HP  180", "최대 HP  200", "-10", "+10",
+                     "HP 전체 복구"):
             self.assertIn(word, texts)
+
+    def test_restore_button_recovers_the_summoned_enemy_in_place(self):
+        click = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1100, 368)
+        process_menu_events(self.game, click, menu_screen=False)
+        self.assertIsNone(self.world.stage.target)
+        for number in range(1, 7):
+            with self.subTest(number=number):
+                self.press(f"spawn_{number}")
+                self.press("training_target")
+                target, = self.world.enemies
+                original_hp = target.max_hp
+                adjust_x = 1190 if number % 2 else 1100
+                process_menu_events(self.game, mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, adjust_x, 410),
+                                    menu_screen=False)
+                self.assertNotEqual(target.max_hp, original_hp)
+                target.take_damage(original_hp * 2)
+                self.press(f"spawn_{number % 6 + 1}")
+                process_menu_events(self.game, mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1100, 368, SDL_BUTTON_RIGHT),
+                                    menu_screen=False)
+                self.assertEqual(target.hp, 1)
+                process_menu_events(self.game, click, click, menu_screen=False)
+                self.assertEqual(self.world.enemies, [target])
+                self.assertEqual((target.hp, target.max_hp), (original_hp, original_hp))
 
     def test_hp_buttons_adjust_only_the_displayed_target_and_never_kill(self):
         plus = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1190, 410)

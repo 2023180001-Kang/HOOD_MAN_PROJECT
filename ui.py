@@ -12,6 +12,7 @@ PLAYER_BOUNDS_COLOR = (80, 220, 255)
 ENEMY_BOUNDS_COLOR = (255, 185, 70)
 STAIR_BOUNDS_COLOR = (180, 255, 150)
 TRAINING_HP_BUTTONS = ((-10, (1064, 394, 1138, 427)), (10, (1148, 394, 1230, 427)))
+TRAINING_HP_RESTORE_BUTTON = (986, 352, 1230, 385)
 
 
 def firearm_controls(player):
@@ -231,7 +232,7 @@ class UI:
         target = world.stage.target
         if target is None:
             return
-        pico2d.draw_rectangle(970, 385, 1250, 534, 17, 22, 29, filled=True)
+        pico2d.draw_rectangle(970, 343, 1250, 534, 17, 22, 29, filled=True)
         font.draw(986, 513, f"소환된 적  ·  {target.opponent.name}", heading)
         damage = f"{target.attack_damage}"
         if target.opponent.slam_damage is not None:
@@ -242,6 +243,9 @@ class UI:
         for delta, (left, bottom, right, top) in TRAINING_HP_BUTTONS:
             pico2d.draw_rectangle(left, bottom, right, top, 56, 74, 86, filled=True)
             font.draw((left + right) / 2 - 15, (bottom + top) / 2, f"{delta:+d}", body)
+        left, bottom, right, top = TRAINING_HP_RESTORE_BUTTON
+        pico2d.draw_rectangle(left, bottom, right, top, 56, 74, 86, filled=True)
+        font.draw((left + right) / 2 - 45, (bottom + top) / 2, "HP 전체 복구", body)
 
     @staticmethod
     def click_training_hp(stage, x, y):
@@ -250,6 +254,9 @@ class UI:
                 if left <= x < right and bottom <= y < top:
                     stage.target.adjust_hp(delta)
                     return
+            left, bottom, right, top = TRAINING_HP_RESTORE_BUTTON
+            if left <= x < right and bottom <= y < top:
+                stage.target.restore_hp()
 
     def draw(self, assets, world):
         import pico2d

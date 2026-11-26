@@ -27,7 +27,7 @@ class CombatIntegrationTests(unittest.TestCase):
                     remaining -= dt
                 self.assertEqual(world.player.state, f"ATTACK_{key.upper()}")
                 health.append(enemy.hp)
-            self.assertEqual(health, [200, 160, 110, 50, 40])
+            self.assertEqual(health, [200, 185, 165, 140, 130])
             outcomes.append((world.player.state, world.player.animation.elapsed, health))
         self.assertTrue(all(outcome == outcomes[0] for outcome in outcomes))
 

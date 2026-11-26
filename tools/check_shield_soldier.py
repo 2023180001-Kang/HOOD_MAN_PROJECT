@@ -192,7 +192,7 @@ def check_player_damage(game):
                 world, enemy = encounter(game, -1 if number % 2 else 1, index=index,
                                          weapon=weapon, guarded=guarded)
                 damage = world.player.moves[f"combat_{key}"].damage
-                damage = damage // 2 if guarded else damage
+                damage = damage / 2 if guarded else damage
                 press_attack(game, key, enemy)
                 assert enemy.hp == 400 - damage
                 assert [value.damage for value in world.damage_numbers] == [damage]

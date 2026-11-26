@@ -181,7 +181,7 @@ class ShieldSoldierTests(unittest.TestCase):
                             world, enemy = encounter(side, index=index, weapon=weapon, guarded=guarded)
                             strike(world, enemy, f"combat_{key}")
                             move = world.player.active_move
-                            damage = move.damage // 2 if guarded else move.damage
+                            damage = move.damage / 2 if guarded else move.damage
                             self.assertEqual(enemy.hp, 400 - damage)
                             self.assertEqual([number.damage for number in world.damage_numbers], [damage])
                             self.assertEqual(world.effects[-1].image_name, move.hit_image)

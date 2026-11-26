@@ -305,7 +305,7 @@ def check_player_attack_switches(game):
     game.world.enemies = [enemy]
     push_key(pico2d.SDLK_a)
     tick(game, 4)
-    for previous, key_name, hp in (("a", "s", 160), ("s", "d", 110), ("d", "f", 50)):
+    for previous, key_name, hp in (("a", "s", 185), ("s", "d", 165), ("d", "f", 140)):
         push_key(getattr(pico2d, f"SDLK_{key_name}"))
         tick(game)
         assert game.world.player.state == f"ATTACK_{key_name.upper()}"
@@ -314,17 +314,17 @@ def check_player_attack_switches(game):
         assert enemy.hp == hp
         capture(game, f"attack_switch_{previous}_to_{key_name}")
     tick(game, 40)
-    assert game.world.player.state == "IDLE" and enemy.hp == 50
+    assert game.world.player.state == "IDLE" and enemy.hp == 140
     for key_name in "asdf":
         push_key(getattr(pico2d, f"SDLK_{key_name}"), down=False)
     game.handle_events()
     print("PASS: SDL all 12 attack switches respond on the next tick; "
           "same-tick inputs select the latest fresh press, including release/repress; "
-          "A windup cancels into S/D/F with HP 200->160->110->50 and no held-key loops.")
+          "A windup cancels into S/D/F with HP 200->185->165->140 and no held-key loops.")
 
 
 def check_player_damage_and_enemy_health(game):
-    for key_name, damage in zip("asdf", (10, 40, 50, 60)):
+    for key_name, damage in zip("asdf", (10, 15, 20, 25)):
         game.world = World()
         enemy = Enemy(config.START_X + 80, -1)
         enemy.cooldown = 100
@@ -362,7 +362,7 @@ def check_player_damage_and_enemy_health(game):
     enemy = Enemy(config.START_X + 80, -1)
     enemy.cooldown = 100
     game.world.enemies = [enemy]
-    for _ in range(4):
+    for _ in range(8):
         push_key(pico2d.SDLK_f)
         tick(game, 48)
         push_key(pico2d.SDLK_f, down=False)
@@ -370,8 +370,8 @@ def check_player_damage_and_enemy_health(game):
     tick(game, 60)
     assert enemy.hp == 0 and enemy.state == "DEAD" and enemy.animation.frame == 7
     capture(game, "enemy_defeated")
-    print("PASS: SDL A/S/D/F deal 10/40/50/60 once; red enemy HP bars "
-          "are full/half/hidden at 200/100/0; four right kicks defeat an enemy.")
+    print("PASS: SDL A/S/D/F deal 10/15/20/25 once; red enemy HP bars "
+          "are full/half/hidden at 200/100/0; eight right kicks defeat an enemy.")
 
 
 def verify_hit_effect_pixels(game, name, expected_image):

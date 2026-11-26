@@ -296,9 +296,9 @@ HIT_EFFECT_SIZE = 128.0  # Display cell width; both 512px source cells use 0.25 
 # Key, name, one-based source row, damage, horizontal reach, attack height, FPS.
 COMBAT_MOVE_SPECS = (
     ("a", "왼손 잽", 3, 10, 95.0, 146.0, COMBAT_JAB_FPS),
-    ("s", "오른손 스트레이트", 4, 40, 105.0, 146.0, COMBAT_STRAIGHT_FPS),
-    ("d", "왼발 차기", 1, 50, 115.0, 146.0, COMBAT_KICK_FPS),
-    ("f", "오른발 차기", 2, 60, 130.0, 146.0, COMBAT_KICK_FPS),
+    ("s", "오른손 스트레이트", 4, 15, 105.0, 146.0, COMBAT_STRAIGHT_FPS),
+    ("d", "왼발 차기", 1, 20, 115.0, 146.0, COMBAT_KICK_FPS),
+    ("f", "오른발 차기", 2, 25, 130.0, 146.0, COMBAT_KICK_FPS),
 )
 WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프", "pistol": "권총",
                 "steel_club": "쇠몽둥이", "axe": "도끼", "ar_rifle": "AR 소총",

@@ -107,7 +107,7 @@ STEEL_CLUB_SWING = Move("a", "쇠몽둥이 휘두르기", 5, 40, 130.0, 146.0, 1
 STEEL_CLUB_THROW = Move("s", "쇠몽둥이 던지기", 6, config.STEEL_CLUB_THROW_DAMAGE, 0, 0, 16.0,
                        image_name=config.PLAYER_STEEL_CLUB_IMAGE, active_frames=())
 WEAPON_LOADOUTS["steel_club"] = {**MOVES, "combat_a": STEEL_CLUB_SWING, "combat_s": STEEL_CLUB_THROW}
-STEEL_CLUB_DIVE = replace(MOVES["combat_d"], name="쇠몽둥이 내려찍기", reach=140.0,
+STEEL_CLUB_DIVE = replace(MOVES["combat_d"], name="쇠몽둥이 내려찍기", damage=50, reach=140.0,
                           image_name=STEEL_CLUB_SWING.image_name, row=STEEL_CLUB_SWING.row,
                           active_frames=STEEL_CLUB_SWING.active_frames,
                           hit_image=STEEL_CLUB_SWING.hit_image, jump_attack=True)

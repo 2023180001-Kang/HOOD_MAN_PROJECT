@@ -50,7 +50,7 @@ class StairCombatTests(ArchivedTwoFloorTests):
         enemy = on_stairs(world)
         feet = enemy.y
         self.assertTrue(attack(world, enemy))
-        self.assertEqual((enemy.hp, enemy.state), (160, "HIT"))
+        self.assertEqual((enemy.hp, enemy.state), (185, "HIT"))
         self.assertIsNotNone(enemy.staircase)
         self.assertEqual(enemy.y, feet)
         self.assertEqual(enemy.floor, 0)
@@ -60,7 +60,7 @@ class StairCombatTests(ArchivedTwoFloorTests):
         world = World()
         enemy = on_stairs(world, progress=65)
         self.assertTrue(attack(world, enemy, floor=0))
-        self.assertEqual(enemy.hp, 160)
+        self.assertEqual(enemy.hp, 185)
 
     def test_descending_enemies_are_also_hittable_in_actual_height_range(self):
         world = World()
@@ -118,7 +118,7 @@ class StairCombatTests(ArchivedTwoFloorTests):
         world.player.start_move(MOVES["combat_s"], 1)
         world.player.animation.elapsed = 3 / MOVES["combat_s"].fps
         world.step(config.FIXED_DT)
-        self.assertEqual(enemy.hp, 120)
+        self.assertEqual(enemy.hp, 170)
         effect = world.effects[-1]
         box = world_rect(world.player.attack_box, world.player)
         body = world_rect(enemy.body, enemy)
@@ -169,7 +169,7 @@ class StairCombatTests(ArchivedTwoFloorTests):
     def test_lethal_stair_hit_releases_occupancy_falls_and_eventually_fades(self):
         world = World()
         enemy = on_stairs(world)
-        enemy.hp = 40
+        enemy.hp = MOVES["combat_s"].damage
         before = enemy.y
         self.assertTrue(attack(world, enemy))
         self.assertEqual(enemy.hp, 0)

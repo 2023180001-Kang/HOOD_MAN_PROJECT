@@ -16,7 +16,7 @@ def target(world, offset=80):
 
 class DamageNumberTests(unittest.TestCase):
     def test_each_attack_reports_hp_loss_once_and_a_new_swing_can_report_again(self):
-        for key, damage in zip("asdf", (10, 40, 50, 60)):
+        for key, damage in zip("asdf", (10, 15, 20, 25)):
             with self.subTest(key=key):
                 world = World()
                 enemy = target(world)
@@ -61,8 +61,8 @@ class DamageNumberTests(unittest.TestCase):
         enemies = [target(world, offset) for offset in (80, 95, 110)]
         world.controls.press("combat_s")
         advance(world, 0.175)
-        self.assertEqual([enemy.hp for enemy in enemies], [160, 160, 160])
-        self.assertEqual([number.damage for number in world.damage_numbers], [40, 40, 40])
+        self.assertEqual([enemy.hp for enemy in enemies], [185, 185, 185])
+        self.assertEqual([number.damage for number in world.damage_numbers], [15, 15, 15])
         self.assertEqual([number.x for number in world.damage_numbers],
                          [enemy.x for enemy in enemies])
 
@@ -94,7 +94,7 @@ class DamageNumberTests(unittest.TestCase):
         target(world)
         world.controls.press("combat_d")
         advance(world, 4 / MOVES["combat_d"].fps)
-        self.assertEqual([number.damage for number in world.damage_numbers], [50])
+        self.assertEqual([number.damage for number in world.damage_numbers], [20])
         self.assertEqual(first.elapsed, elapsed)
         world.stage_index = 0
         self.assertIs(world.damage_numbers[0], first)

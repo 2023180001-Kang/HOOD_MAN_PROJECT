@@ -43,7 +43,7 @@ def kill_with_s(game, enemy_type=Enemy, *, selected=False):
     world.player.x, world.player.ground_y = 1050, 100
     world.stage.constrain_actor(world.player)
     enemy.x, enemy.ground_y = world.player.x + 70, world.player.ground_y
-    enemy.facing, enemy.hp, enemy.cooldown = -1, 40, 100
+    enemy.facing, enemy.hp, enemy.cooldown = -1, 15, 100
     enemy.animation.set_state("HIT")
     world.stage.constrain_actor(enemy)
     items = list(world.stage.drop_items)
@@ -56,7 +56,7 @@ def kill_with_s(game, enemy_type=Enemy, *, selected=False):
     release(game, pico2d.SDLK_s)
     assert not enemy.alive and enemy.state == "DYING"
     assert world.stage.drop_items == items
-    assert [number.damage for number in world.damage_numbers] == [40]
+    assert [number.damage for number in world.damage_numbers] == [15]
     return world, enemy, items
 
 

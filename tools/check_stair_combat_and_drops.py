@@ -44,20 +44,20 @@ def check_stair_hits(game):
         if enemy.hp < 200:
             break
     release(game, pico2d.SDLK_s)
-    assert enemy.hp == 160 and enemy.state == "HIT"
+    assert enemy.hp == 185 and enemy.state == "HIT"
     assert enemy.staircase is stair
-    assert world.damage_numbers[-1].damage == 40 and world.effects
+    assert world.damage_numbers[-1].damage == 15 and world.effects
     capture(game, "stair_combat_normal_hit")
     progress = stair.occupants[enemy]
     tick(game, 10)
-    assert enemy.hp == 160 and stair.occupants[enemy] == progress
+    assert enemy.hp == 185 and stair.occupants[enemy] == progress
     push_key(pico2d.SDLK_q)
     for _ in range(60):
         tick(game)
-        if enemy.hp < 160:
+        if enemy.hp < 185:
             break
     release(game, pico2d.SDLK_q)
-    assert enemy.hp == 110 and enemy.state == "STRONG_HIT"
+    assert enemy.hp == 135 and enemy.state == "STRONG_HIT"
     assert enemy.falling_from_upper and enemy.staircase is None
     assert enemy not in stair.occupants
     capture(game, "stair_combat_strong_knockoff")
@@ -66,7 +66,7 @@ def check_stair_hits(game):
     capture(game, "stair_combat_hit_fall")
     tick(game, 80)
     assert not enemy.falling_from_upper and enemy.jump_height == 0
-    print("PASS: real SDL S deals 40 to an ascending enemy in visible reach, shows "
+    print("PASS: real SDL S deals 15 to an ascending enemy in visible reach, shows "
           "damage/effects and pauses its stair progress; Q deals 50, releases its "
           "stair slot and applies the strong-hit reaction while falling without a teleport.")
 

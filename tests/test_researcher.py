@@ -289,7 +289,7 @@ class ResearcherTests(unittest.TestCase):
         world.player.start_move(move, 1)
         world.player.animation.elapsed = 3 / move.fps
         world.step(config.FIXED_DT)
-        self.assertEqual((world.player.hp, enemy.hp, enemy.state, enemy.ammo), (500, 160, "HIT", 7))
+        self.assertEqual((world.player.hp, enemy.hp, enemy.state, enemy.ammo), (500, 185, "HIT", 7))
         self.assertFalse(world.projectiles)
 
     def test_an_already_fired_bullet_survives_its_shooters_death(self):

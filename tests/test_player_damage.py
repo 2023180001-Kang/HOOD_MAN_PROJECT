@@ -75,7 +75,7 @@ class PlayerDamageTests(unittest.TestCase):
         self.assertEqual((player.state, player.rifle_ammo), ("WALK", config.FIREARM_MAGAZINE_SIZES["ar_rifle"]))
 
     def test_each_offensive_key_deals_its_requested_damage_once(self):
-        for key, damage in zip("asdf", (10, 40, 50, 60)):
+        for key, damage in zip("asdf", (10, 15, 20, 25)):
             with self.subTest(key=key):
                 world = World()
                 enemy = target(world)
@@ -108,10 +108,10 @@ class PlayerDamageTests(unittest.TestCase):
         advance(world, 0.1)
         self.assertEqual(enemy.hp, 200)
         advance(world, 0.1)
-        self.assertEqual(enemy.hp, 160)
-        self.assertEqual([number.damage for number in world.damage_numbers], [40])
+        self.assertEqual(enemy.hp, 185)
+        self.assertEqual([number.damage for number in world.damage_numbers], [15])
         advance(world, 0.5)
-        self.assertEqual(enemy.hp, 160)
+        self.assertEqual(enemy.hp, 185)
 
     def test_switch_after_hit_allows_new_damage_once_on_the_same_targets(self):
         world = World()
@@ -123,10 +123,10 @@ class PlayerDamageTests(unittest.TestCase):
         world.update(config.FIXED_DT)
         self.assertEqual([enemy.hp for enemy in enemies], [190, 190])
         advance(world, 0.2)
-        self.assertEqual([enemy.hp for enemy in enemies], [150, 150])
-        self.assertEqual([number.damage for number in world.damage_numbers], [10, 10, 40, 40])
+        self.assertEqual([enemy.hp for enemy in enemies], [175, 175])
+        self.assertEqual([number.damage for number in world.damage_numbers], [10, 10, 15, 15])
         advance(world, 0.3)
-        self.assertEqual([enemy.hp for enemy in enemies], [150, 150])
+        self.assertEqual([enemy.hp for enemy in enemies], [175, 175])
 
     def test_walking_does_not_lock_movement_or_prevent_damage(self):
         world = World()
@@ -155,7 +155,7 @@ class PlayerDamageTests(unittest.TestCase):
         world.controls.press("left")
         world.controls.press("combat_d")
         advance(world, 0.5)
-        self.assertEqual(enemy.hp, 150)
+        self.assertEqual(enemy.hp, 180)
         for key in ("combat_a", "combat_s", "combat_d", "combat_f"):
             world = World()
             enemy = target(world)
@@ -177,13 +177,13 @@ class PlayerDamageTests(unittest.TestCase):
         self.assertEqual(world.player.hp, 500)
         self.assertIsNone(enemy.attack_box)
 
-    def test_four_right_kicks_kill_and_dead_enemy_cannot_block_or_resurrect(self):
+    def test_eight_right_kicks_kill_and_dead_enemy_cannot_block_or_resurrect(self):
         world = World()
         enemy = target(world)
-        for index in range(4):
+        for index in range(8):
             tap(world.controls, "combat_f")
             advance(world, 0.8)
-            self.assertEqual(enemy.hp, max(0, 200 - (index + 1) * 60))
+            self.assertEqual(enemy.hp, max(0, 200 - (index + 1) * 25))
         self.assertEqual(enemy.state, "DYING")
         self.assertEqual(enemy.animation.row, 6)
         self.assertFalse(enemy.take_damage(50))

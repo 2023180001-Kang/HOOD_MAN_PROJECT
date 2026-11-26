@@ -53,7 +53,7 @@ class InvincibilityTests(unittest.TestCase):
         self.assertGreater(world.camera.shake_remaining, 0)
 
     def test_immune_hits_keep_all_player_attacks_active(self):
-        for key, damage in zip("asdf", (10, 40, 50, 60)):
+        for key, damage in zip("asdf", (10, 15, 20, 25)):
             with self.subTest(key=key):
                 world = World()
                 world.controls.press("invincibility")

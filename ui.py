@@ -36,7 +36,7 @@ class UI:
 
     def update(self, dt, player):
         """Keep the blue fill immediate while a red damage trail catches up."""
-        hp = clamp(player.hp, 0, config.MAX_HP)
+        hp = clamp(player.hp, 0, player.max_hp)
         if player is not self._hp_player or hp > self._hp:
             # A new player (F5) or healing must not retain an old damage trail.
             self._hp_player = player
@@ -235,7 +235,7 @@ class UI:
             font.draw(x, 515, f"{index + 1}  {opponent.name}", heading if selected else body)
 
         pico2d.draw_rectangle(panel_left, 443, 694, 489, 17, 22, 29, filled=True)
-        font.draw(text_left, 465, f"주인공 HP  {player.hp:g} / {config.MAX_HP}", heading)
+        font.draw(text_left, 465, f"주인공 HP  {player.hp:g} / {player.max_hp}", heading)
         UI.draw_training_hp_buttons(font, PLAYER_HP_BUTTONS, body)
         target = world.stage.target
         if target is None:
@@ -285,7 +285,7 @@ class UI:
         y = config.SCREEN_HEIGHT - config.UI_MARGIN - image.h * scale
         image.draw_to_origin(x, y, image.w * scale, image.h * scale)
         left, bottom, width, height = config.HP_FILL
-        ratio = clamp(world.player.hp / config.MAX_HP, 0.0, 1.0)
+        ratio = clamp(world.player.hp / world.player.max_hp, 0.0, 1.0)
         if ratio < 1:
             # Cover whole pixels: SDL truncates fractional rectangle sizes,
             # otherwise leaving blue slivers along the bottom and right edges.
@@ -298,7 +298,7 @@ class UI:
                 8, 15, 24, filled=True,
             )
             if self._hp_player is world.player and self._hp == world.player.hp:
-                damage_ratio = clamp(self.damage_hp / config.MAX_HP, ratio, 1.0)
+                damage_ratio = clamp(self.damage_hp / world.player.max_hp, ratio, 1.0)
                 if damage_ratio > ratio:
                     damage_right = ceil(x + (left + width * damage_ratio) * scale)
                     pico2d.draw_rectangle(
@@ -307,7 +307,7 @@ class UI:
                     )
         if assets.font is not None:
             assets.font.draw(x + image.w * scale + 16, y + 56,
-                             f"{world.player.hp:g} / {config.MAX_HP}", (218, 228, 240))
+                             f"{world.player.hp:g} / {world.player.max_hp}", (218, 228, 240))
             if world.player.weapon in config.FIREARM_MAGAZINE_SIZES:
                 gun = world.player.weapon
                 assets.font.draw(x + image.w * scale + 16, y + 8,

@@ -295,10 +295,14 @@ class TrainingRoomTests(unittest.TestCase):
 
         player = self.world.player
         click(400)
-        self.assertEqual(player.hp, 490)
+        self.assertEqual((player.hp, player.max_hp), (490, 500))
         click(480)
         click(480)
-        self.assertEqual(player.hp, 500)
+        self.assertEqual((player.hp, player.max_hp), (510, 520))
+        assets = Mock()
+        with patch("pico2d.draw_rectangle"):
+            self.game.ui.draw(assets, self.world)
+        self.assertIn("주인공 HP  510 / 520", [call.args[2] for call in assets.font.draw.call_args_list])
         player.hp = 6
         click(400)
         self.assertEqual(player.hp, 1)
@@ -307,15 +311,21 @@ class TrainingRoomTests(unittest.TestCase):
         click(600, SDL_BUTTON_RIGHT)
         self.assertEqual(player.hp, 11)
         click(600)
-        self.assertEqual(player.hp, 500)
+        self.assertEqual((player.hp, player.max_hp), (530, 530))
         self.press("training_target")
         enemy = self.world.stage.target
         enemy.take_damage(50)
         click(400)
-        self.assertEqual((enemy.hp, enemy.max_hp, player.hp), (150, 200, 490))
+        self.assertEqual((enemy.hp, enemy.max_hp, player.hp), (150, 200, 520))
         click(600)
-        self.assertEqual((enemy.hp, player.hp), (150, 500))
+        self.assertEqual((enemy.hp, player.hp), (150, 530))
         self.assertFalse(self.world.damage_numbers)
+        self.press("restart")
+        self.assertEqual((self.world.player.hp, self.world.player.max_hp), (500, 500))
+        click(480)
+        self.assertEqual((self.world.player.hp, self.world.player.max_hp), (510, 510))
+        self.launch("game_start")
+        self.assertEqual((self.world.player.hp, self.world.player.max_hp), (500, 500))
 
     def test_left_attack_values_follow_weapon_pickup_and_return(self):
         assets = Mock()

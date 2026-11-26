@@ -43,7 +43,8 @@ class Player:
         self.jump_count = 0
         self._facing = 1
         self.firearm_facing_locked = False
-        self.hp = config.MAX_HP
+        self.max_hp = config.MAX_HP
+        self.hp = self.max_hp
         self.last_hit_damage = 0
         self.invincible = False
         self.crowd_escape = CrowdEscape()

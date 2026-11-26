@@ -37,10 +37,12 @@ class TrainingPlayer(Player):
             self.body, damage, depth=self.ground_y - config.GROUND_Y, on_player=True))
 
     def adjust_hp(self, delta):
-        self.hp = clamp(self.hp + delta, 1, config.MAX_HP)
+        if delta > 0:
+            self.max_hp += delta
+        self.hp = clamp(self.hp + delta, 1, self.max_hp)
 
     def restore_hp(self):
-        self.hp = config.MAX_HP
+        self.hp = self.max_hp
 
 
 class TrainingTarget:

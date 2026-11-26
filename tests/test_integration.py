@@ -136,7 +136,7 @@ class IntegrationTests(unittest.TestCase):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:
             rows = json.load(file)[config.SWORD_ENEMY_IMAGE]
         leap, death = rows[4], rows[6]
-        self.assertEqual([tile.get("offset_y", 0) for tile in leap], [0, 0, 0, 0, 0, 0, -2, 0])
+        self.assertEqual([tile.get("offset_y", 0) for tile in leap], [0, 0, 0, 0, 0, 0, -4, 0])
         self.assertEqual([tile["offset_y"] for tile in death], [0, 0, 0, 0, -8, -8, -12, -12])
 
     def test_weapon_airborne_attack_clips_do_not_double_add_the_physical_jump(self):

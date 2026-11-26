@@ -7853,7 +7853,7 @@
       }
     ]
   ],
-  "HoodMan_SwordEnemy_LandingFX_8x7.png": [
+  "HoodMan_SwordEnemy_TwoHand_8x7.png": [
     [
       {
         "clip": [
@@ -8103,165 +8103,165 @@
     [
       {
         "clip": [
-          76,
+          74,
           784,
-          116,
-          208
-        ],
-        "offset_x": 6.0,
-        "offset_y": 0
-      },
-      {
-        "clip": [
-          314,
-          784,
-          114,
+          112,
           206
         ],
-        "offset_x": -13.0,
+        "offset_x": 2.0,
         "offset_y": 0
       },
       {
         "clip": [
-          534,
+          324,
+          784,
+          126,
+          204
+        ],
+        "offset_x": 3.0,
+        "offset_y": 0
+      },
+      {
+        "clip": [
+          536,
           784,
           144,
-          202
+          204
         ],
-        "offset_x": -34.0,
+        "offset_x": -32.0,
         "offset_y": 0
       },
       {
         "clip": [
           772,
           784,
+          162,
+          202
+        ],
+        "offset_x": -43.0,
+        "offset_y": 0
+      },
+      {
+        "clip": [
+          1058,
+          784,
           172,
-          204
+          216
         ],
-        "offset_x": -38.0,
+        "offset_x": -8.0,
         "offset_y": 0
       },
       {
         "clip": [
-          1068,
+          1308,
           784,
-          210,
-          218
+          218,
+          198
         ],
-        "offset_x": 21.0,
+        "offset_x": 9.0,
         "offset_y": 0
       },
       {
         "clip": [
-          1346,
+          1582,
           784,
-          188,
-          206
+          200,
+          182
         ],
-        "offset_x": 32.0,
-        "offset_y": 0
-      },
-      {
-        "clip": [
-          1600,
-          784,
-          190,
-          204
-        ],
-        "offset_x": 31.0,
+        "offset_x": 18.0,
         "offset_y": 0
       },
       {
         "clip": [
           1868,
           784,
-          164,
-          208
+          110,
+          202
         ],
-        "offset_x": 30.0,
+        "offset_x": 3.0,
         "offset_y": 0
       }
     ],
     [
       {
         "clip": [
-          76,
+          70,
           528,
           116,
-          208
+          168
         ],
-        "offset_x": 6.0,
+        "offset_x": 0.0,
         "jump_height": 0
       },
       {
         "clip": [
-          338,
-          528,
-          114,
-          194
+          322,
+          542,
+          116,
+          192
         ],
-        "offset_x": 11.0,
-        "jump_height": 0
+        "offset_x": -4.0,
+        "jump_height": 14
       },
       {
         "clip": [
-          564,
-          546,
-          132,
-          200
-        ],
-        "offset_x": -10.0,
-        "jump_height": 18
-      },
-      {
-        "clip": [
-          776,
-          566,
-          168,
-          188
-        ],
-        "offset_x": -36.0,
-        "jump_height": 38
-      },
-      {
-        "clip": [
-          1050,
+          538,
           570,
-          154,
-          182
+          138,
+          184
         ],
-        "offset_x": -25.0,
+        "offset_x": -33.0,
         "jump_height": 42
       },
       {
         "clip": [
-          1332,
-          554,
-          202,
-          196
+          772,
+          592,
+          158,
+          162
         ],
-        "offset_x": 25.0,
-        "jump_height": 26
+        "offset_x": -45.0,
+        "jump_height": 64
+      },
+      {
+        "clip": [
+          1094,
+          544,
+          140,
+          220
+        ],
+        "offset_x": 12.0,
+        "jump_height": 16
+      },
+      {
+        "clip": [
+          1324,
+          538,
+          196,
+          180
+        ],
+        "offset_x": 14.0,
+        "jump_height": 10
       },
       {
         "clip": [
           1570,
-          526,
-          220,
-          208
+          524,
+          217,
+          178
         ],
-        "offset_x": 16.0,
+        "offset_x": 14.5,
         "jump_height": 0,
-        "offset_y": -2
+        "offset_y": -4
       },
       {
         "clip": [
           1810,
           528,
-          236,
-          208
+          231,
+          200
         ],
-        "offset_x": 8.0,
+        "offset_x": 5.5,
         "jump_height": 0
       }
     ],

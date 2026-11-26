@@ -224,7 +224,7 @@ class PlayerPistolBullet(PlayerProjectile):
 
 @dataclass
 class ThrownWeaponProjectile(ResearcherBullet):
-    """A spinning weapon that drops in its own lane when flight ends."""
+    """A thrown weapon that drops in its own lane when flight ends."""
 
     hit_targets: set = field(default_factory=set, init=False, repr=False, compare=False)
 
@@ -243,6 +243,7 @@ class KnifeProjectile(ThrownWeaponProjectile, PlayerProjectile):
     weapon_kind = "combat_knife"
     image_name = config.DROP_ITEM_IMAGES[weapon_kind]
     damage = config.KNIFE_THROW_DAMAGE
+    speed = 1200.0
     release_offset = (90, 118)
     half_width = config.KNIFE_PROJECTILE_CLIP[2] * config.KNIFE_PROJECTILE_SCALE / 2
     half_height = config.DROP_ITEM_BODY_HEIGHTS[weapon_kind] * config.DROP_ITEM_SCALE / 2

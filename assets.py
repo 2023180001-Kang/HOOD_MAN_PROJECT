@@ -139,12 +139,11 @@ class Assets:
         )
 
     def draw_thrown_weapon(self, kind, x, y, facing, elapsed, *, grounded=False):
-        spin = -facing * tau * config.THROWN_WEAPON_TURNS_PER_SECOND * elapsed
         if kind == "combat_knife":
             left, bottom, width, height = config.KNIFE_PROJECTILE_CLIP
             scale = config.KNIFE_PROJECTILE_SCALE
             self.images[config.DROP_ITEM_IMAGES[kind]].clip_composite_draw(
-                left, bottom, width, height, spin, "h" if facing < 0 else "", x, y,
+                left, bottom, width, height, 0, "h" if facing < 0 else "", x, y,
                 width * scale, height * scale)
             return
         sprite = config.THROWN_WEAPON_SPRITES[kind]
@@ -160,14 +159,14 @@ class Assets:
                                           x + facing * side * 20 * sprite.scale, y + side * 12 * sprite.scale,
                                           cell * sprite.scale, cell * sprite.scale)
             return
-        angle = facing * radians(sprite.rest_angle) if grounded else spin
-        image.clip_composite_draw(0, 0, image.w, image.h, angle,
+        angle = radians(sprite.rest_angle) if grounded else -tau * config.THROWN_WEAPON_TURNS_PER_SECOND * elapsed
+        image.clip_composite_draw(0, 0, image.w, image.h, facing * angle,
                                   "h" if facing < 0 else "", x, y,
                                   image.w * sprite.scale, image.h * sprite.scale)
 
     def draw_drop_item(self, item, camera_x, camera_y):
         x, ground_y = item.x - camera_x, item.surface_y - camera_y
-        if item.kind in config.THROWN_WEAPON_SPRITES or (item.spin_while_falling and not item.grounded):
+        if item.kind in config.THROWN_WEAPON_SPRITES or (item.was_thrown and not item.grounded):
             self.draw_thrown_weapon(item.kind, x, ground_y + item.jump_height + item.display_height / 2,
                                    item.facing, item.elapsed, grounded=item.grounded)
             return

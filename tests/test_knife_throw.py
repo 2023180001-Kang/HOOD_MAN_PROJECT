@@ -1,5 +1,4 @@
 import unittest
-from math import tau
 from unittest.mock import Mock
 
 import config
@@ -33,10 +32,10 @@ class KnifeThrowTests(unittest.TestCase):
                 self.assertEqual((knife.facing, enemy.hp), (facing, 160))
                 x, height = knife.x, knife.height
                 tap(world.controls, "combat_s")
-                advance(world, 0.8)
+                advance(world, 0.6)
                 self.assertEqual(world.projectiles, [knife])
-                self.assertEqual(knife.height, height)
-                self.assertAlmostEqual((knife.x - x) * facing, knife.speed * 0.8)
+                self.assertAlmostEqual(knife.height, height)
+                self.assertAlmostEqual((knife.x - x) * facing, 720)
                 advance(world, 0.12)
                 self.assertGreater((knife.x - x) * facing, knife.straight_range)
                 self.assertLess(knife.height, height)
@@ -59,7 +58,7 @@ class KnifeThrowTests(unittest.TestCase):
             self.assertIsNone(world.player.weapon_leap_phase)
             self.assertEqual(world.time_scale, 1.0)
 
-    def test_in_flight_and_edge_fall_render_the_spinning_blade_without_its_floor_shadow(self):
+    def test_blade_keeps_its_throw_direction_during_flight_and_at_the_map_edge(self):
         assets = Assets.__new__(Assets)
         texture = Mock()
         assets.images = {KnifeProjectile.image_name: texture}
@@ -75,7 +74,7 @@ class KnifeThrowTests(unittest.TestCase):
                 assets.draw_projectile(knife, 0, 0)
                 args = texture.clip_composite_draw.call_args.args
                 self.assertEqual(args[:4], config.KNIFE_PROJECTILE_CLIP)
-                self.assertAlmostEqual(args[4], -facing * tau * 8 * knife.elapsed)
+                self.assertEqual(args[4:6], (0, "h" if facing < 0 else ""))
                 world.step(config.FIXED_DT)
             advance(world, 0.05)
             item, = world.stage.drop_items
@@ -83,4 +82,4 @@ class KnifeThrowTests(unittest.TestCase):
             assets.draw_drop_item(item, 0, 0)
             args = texture.clip_composite_draw.call_args.args
             self.assertEqual(args[:4], config.KNIFE_PROJECTILE_CLIP)
-            self.assertAlmostEqual(args[4], -facing * tau * 8 * item.elapsed)
+            self.assertEqual(args[4:6], (0, "h" if facing < 0 else ""))

@@ -374,12 +374,11 @@ class World:
                 x, ground_y = self.stage.area_for(bullet).project(bullet.x, bullet.ground_y,
                                                                   config.DROP_ITEM_HALF_WIDTH)
                 item = DropItem(bullet.weapon_kind, x, ground_y, bullet.facing,
-                                elapsed=bullet.elapsed, floor=bullet.floor)
+                                elapsed=bullet.elapsed, floor=bullet.floor, was_thrown=True)
                 if isinstance(bullet, EnemyAxeProjectile):
                     item.axe_owner = bullet.shooter
                 if bullet.height > bullet.half_height:
                     # At the map edge the weapon finishes falling in place.
-                    item.spin_while_falling = True
                     item.jump_height = bullet.height - item.display_height / 2
                     item.vy = bullet.vy
                 self.stage.drop_items.append(item)

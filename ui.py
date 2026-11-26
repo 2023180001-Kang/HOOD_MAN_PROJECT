@@ -369,6 +369,8 @@ class UI:
                     help_text = "슬로 모션: 방향키로 공중 조준 / D 다시 눌러 빠르게 내려찍기"
                 elif phase in ("DIVE", "LANDING"):
                     help_text = "시간 가속: 선택한 방향으로 내려찍기!"
+                elif world.player.weapon == "combat_knife":
+                    help_text = "A 단검 찌르기 · S 단검 던지기 · G 회수"
                 elif world.player.weapon == "steel_club":
                     help_text = "A 휘두르기 · S 던지기 · G 회수 · 이단 점프 중 D 조준 → D 내려찍기"
                 elif world.player.weapon == "axe":

@@ -174,6 +174,10 @@ PLAYER_AXE_IMAGE = "HoodMan_Axe_2048x2048.png"
 AXE_PROJECTILE_IMAGE = "HoodMan_Axe_Projectile_256.png"
 STEEL_CLUB_PROJECTILE_IMAGE = "HoodMan_SteelClub_Projectile_256.png"
 STEEL_CLUB_THROW_DAMAGE = 50
+KNIFE_THROW_DAMAGE = 40
+# The first pickup cell contains a horizontal knife above a separate floor shadow.
+KNIFE_PROJECTILE_CLIP = (58, 114, 139, 40)
+KNIFE_PROJECTILE_SCALE = 56 * SPRITE_SCALE / KNIFE_PROJECTILE_CLIP[2]
 DUAL_BATONS_THROW_DAMAGE = 60
 AXE_THROW_DAMAGE = 60
 THROWN_WEAPON_RELEASE_FRAME = 4  # Fifth cell of row six, counted from zero.
@@ -228,18 +232,18 @@ PLAYER_PISTOL_MUZZLE_OFFSETS = {
     "SHOOT": ((77, 118), (76, 120), (68, 131), (72, 132), (72, 130), (75, 118), (73, 118), (71, 120)),
 }
 WEAPON_POSE_IMAGES = {
-    "combat_knife": "HOOD_MAN_DAGGER_move and fight.png",
+    "combat_knife": "HoodMan_CombatKnife_changed_version_8x8.png",
     "steel_pipe": "HOOD_MAN_STEEL_PIPE_move and fight.png",
 }
 WEAPON_POSE_SCALE = SPRITE_SCALE
-WEAPON_SHEET_ROWS = {"combat_knife": 9, "steel_pipe": 8}
+WEAPON_SHEET_ROWS = {"combat_knife": 8, "steel_pipe": 8}
 WEAPON_POSE_ROWS = {
     "combat_knife": {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4,
-                     "HIT": 5, "DYING": 6, "DEAD": 6},
+                     "HIT": 7, "DYING": 8, "DEAD": 8},
     # The pipe sheet has attacks in rows 6..8, so use the shared death sprite.
     "steel_pipe": {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4, "HIT": 5},
 }
-WEAPON_AIRBORNE_ROWS = {"combat_knife": 9, "steel_pipe": 8}
+WEAPON_AIRBORNE_ROWS = {"steel_pipe": 8}
 WEAPON_AIM_TIME_SCALE = 0.2
 WEAPON_DIVE_TIME_SCALE = 2.0
 WEAPON_DIVE_SPEED = 720.0
@@ -307,9 +311,7 @@ WEAPON_HIT_IMAGES = {"combat_knife": PUNCH_KICK_HIT_IMAGE, "steel_pipe": CLUB_HI
 # Impact windows follow the source strike poses; jump attacks hit on their downswing.
 WEAPON_MOVE_SPECS = {
     "combat_knife": (
-        ("a", "단검 찌르기", 7, 10, 120.0, 146.0, COMBAT_JAB_FPS, (3, 4)),
-        ("s", "단검 베기", 8, 40, 130.0, 146.0, COMBAT_STRAIGHT_FPS, (3, 4)),
-        ("d", "도약 내려찌르기", 9, 50, 140.0, 146.0, COMBAT_KICK_FPS, (5, 6)),
+        ("a", "단검 찌르기", 5, 10, 120.0, 146.0, COMBAT_JAB_FPS, (3, 4)),
     ),
     "steel_pipe": (
         ("a", "쇠파이프 찌르기", 6, 10, 120.0, 146.0, COMBAT_JAB_FPS, (3, 4)),

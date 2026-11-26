@@ -79,12 +79,12 @@ def check_clips(game):
                                          tile["clip"][3] * config.WEAPON_POSE_SCALE)
                     assert abs(args[7] - args[9] / 2 - player.y
                                - tile.get("offset_y", 0) * config.WEAPON_POSE_SCALE) < 1e-8
-    print("PASS: all 6 equipped attacks x 8 frames x 2 facings use exact new source clips, "
+    print("PASS: equipped melee attacks x 8 frames x 2 facings use exact source clips, "
           "0.75 scale and D poses without a second height offset.")
 
 
 def check_slow_aim_and_dive(game):
-    for kind in WEAPON_MOVES:
+    for kind in config.WEAPON_AIRBORNE_ROWS:
         for side in (-1, 1):
             for enemy_type in (Enemy, Enemy02):
                 world = scene(game, kind, side=side)
@@ -207,7 +207,7 @@ def check_damage_effects_and_hud(game):
 
 
 def check_dive_afterimages(game):
-    for kind in WEAPON_MOVES:
+    for kind in config.WEAPON_AIRBORNE_ROWS:
         for side in (-1, 1):
             world = scene(game, kind, side=side)
             double_jump(game)
@@ -262,17 +262,23 @@ def check_switches_and_discard(game):
             tick(game, frames)
             assert enemy.hp == hp, (kind, key, enemy.hp)
         tick(game, 15)
-        double_jump(game)
-        tap(game, pico2d.SDLK_d)
-        tick(game, 6)
-        tap(game, pico2d.SDLK_d)
-        tick(game, 30)
-        assert enemy.hp == 100
+        if kind in config.WEAPON_AIRBORNE_ROWS:
+            double_jump(game)
+            tap(game, pico2d.SDLK_d)
+            tick(game, 6)
+            tap(game, pico2d.SDLK_d)
+            tick(game, 30)
+            assert enemy.hp == 100
+        else:
+            assert world.player.weapon is None and len(world.projectiles) == 1
         capture(game, f"weapon_combo_{kind}")
         world = scene(game, kind, Enemy)
         enemy = world.enemies[0]
-        double_jump(game)
-        tap(game, pico2d.SDLK_d)
+        if kind in config.WEAPON_AIRBORNE_ROWS:
+            double_jump(game)
+            tap(game, pico2d.SDLK_d)
+        else:
+            tap(game, pico2d.SDLK_s)
         tick(game, 3)
         tap(game, pico2d.SDLK_g)
         tick(game, 90)

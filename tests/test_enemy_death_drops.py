@@ -49,10 +49,11 @@ class RemovedEnemyDeathDropTests(unittest.TestCase):
                         self.assertEqual(world.stage.drop_items, [])
                         advance(world, 6)
                         self.assertNotIn(enemy, world.enemies)
-                        self.assertEqual(world.stage.drop_items, [])
+                        expected = ["combat_knife"] if weapon == "combat_knife" and key == "s" else []
+                        self.assertEqual([item.kind for item in world.stage.drop_items], expected)
 
     def test_lethal_weapon_dive_does_not_drop_a_club(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             with self.subTest(kind=kind):
                 world = aim(kind)
                 world.controls.press("right")

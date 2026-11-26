@@ -189,7 +189,7 @@ class ResearcherTests(unittest.TestCase):
                     self.assertEqual(enemy.sprite_image, config.RESEARCHER_IMAGE)
                     self.assertEqual([number.damage for number in world.damage_numbers], [move.damage])
                     self.assertEqual(world.effects[-1].image_name, move.hit_image)
-                if weapon is not None:
+                if weapon in config.WEAPON_AIRBORNE_ROWS:
                     world, enemy = encounter(side, gap=80, invincible=True)
                     world.player.equip_weapon(weapon)
                     enemy.cooldown = 100

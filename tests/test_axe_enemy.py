@@ -338,7 +338,7 @@ class AxeEnemyTests(unittest.TestCase):
         self.assertFalse(any("STUN" in state for state in enemy.animation.definitions))
 
     def test_both_weapon_dive_landings_deal_fifty_with_existing_feedback(self):
-        for weapon in config.WEAPON_POSE_IMAGES:
+        for weapon in config.WEAPON_AIRBORNE_ROWS:
             for side in (-1, 1):
                 world, enemy = encounter(side, weapon=weapon)
                 for action in ("jump", "jump", "combat_d", "combat_d"):
@@ -509,7 +509,7 @@ class AxeEnemyTests(unittest.TestCase):
             self.assertIn(name, assets.images)
             self.assertEqual(SHEETS[name], 7)
         self.assertEqual(len(assets.frames), 24)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1224)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1216)
 
     def test_revisiting_pauses_axe_hp_animation_and_effects_and_f5_restores_fresh_summons(self):
         world, enemy = encounter()

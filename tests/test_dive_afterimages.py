@@ -13,7 +13,7 @@ def release_dive(world):
 
 class DiveAfterimageTests(unittest.TestCase):
     def test_only_second_d_emits_frozen_weapon_poses_behind_both_dive_directions(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for side in (-1, 1):
                 world = aim(kind)
                 advance(world, 1)
@@ -36,7 +36,7 @@ class DiveAfterimageTests(unittest.TestCase):
                                     for echo in world.afterimages))
 
     def test_landing_stops_emission_and_the_remaining_trail_fades_away(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             world = aim(kind)
             advance(world, 1)
             release_dive(world)
@@ -55,7 +55,7 @@ class DiveAfterimageTests(unittest.TestCase):
             self.assertEqual(world.time_scale, 1)
 
     def test_cancelled_attacks_leave_only_existing_fading_snapshots(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for cause in ("hit", "drop", "swap", "attack", "car"):
                 with self.subTest(kind=kind, cause=cause):
                     world = aim(kind)
@@ -81,7 +81,7 @@ class DiveAfterimageTests(unittest.TestCase):
                     self.assertFalse(world.afterimages)
 
     def test_loading_and_inactive_stages_pause_trails_and_f5_clears_every_stage(self):
-        world = aim("combat_knife")
+        world = aim("steel_pipe")
         release_dive(world)
         first = world.stage
         image = first.afterimages[0]
@@ -101,7 +101,7 @@ class DiveAfterimageTests(unittest.TestCase):
         self.assertTrue(all(not stage.afterimages for stage in world.stages))
 
     def test_trail_density_is_bounded_and_identical_at_different_render_rates(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             results = []
             for fps in (30, 60, 120, 144):
                 world = aim(kind)

@@ -379,6 +379,7 @@ class World:
                     item.axe_owner = bullet.shooter
                 if bullet.height > bullet.half_height:
                     # At the map edge the weapon finishes falling in place.
+                    item.spin_while_falling = True
                     item.jump_height = bullet.height - item.display_height / 2
                     item.vy = bullet.vy
                 self.stage.drop_items.append(item)

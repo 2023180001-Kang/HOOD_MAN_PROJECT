@@ -25,7 +25,7 @@ def aim(kind):
 
 class WeaponLeapTests(unittest.TestCase):
     def test_d_requires_two_manual_jumps_and_accepts_second_space_and_d_in_one_tick(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             world = equipped_world(kind)
             player = world.player
             tap(world.controls, "combat_d")
@@ -52,7 +52,7 @@ class WeaponLeapTests(unittest.TestCase):
             self.assertAlmostEqual(world.elapsed - elapsed, scaled_dt)
 
     def test_slow_motion_scales_player_physics_and_both_enemy_types_on_the_entry_tick(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for enemy_type in (Enemy, Enemy02):
                 world = equipped_world(kind)
                 double_jump(world)
@@ -83,7 +83,7 @@ class WeaponLeapTests(unittest.TestCase):
                 self.assertEqual(player.jump_count, 2)
 
     def test_items_effects_damage_numbers_and_traffic_share_slow_and_fast_time(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             world = aim(kind)
             item = DropItem("steel_pipe", 500, 100, jump_height=200)
             effect, number = HitEffect(500, 200, 1), DamageNumber(500, 200, 10)
@@ -107,7 +107,7 @@ class WeaponLeapTests(unittest.TestCase):
             self.assertAlmostEqual(car.x - 100, car.speed * simulated)
 
     def test_air_steering_turns_and_the_second_d_locks_a_fast_directional_dive(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for side in (-1, 1):
                 world = aim(kind)
                 player = world.player
@@ -143,7 +143,7 @@ class WeaponLeapTests(unittest.TestCase):
                 self.assertEqual(player.facing, side)
 
     def test_direction_pressed_with_the_second_d_is_used_immediately(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             world = aim(kind)
             player = world.player
             world.controls.press("left")
@@ -155,7 +155,7 @@ class WeaponLeapTests(unittest.TestCase):
             self.assertEqual(player.vx, -config.WEAPON_DIVE_SPEED)
 
     def test_held_or_repeated_d_does_not_release_and_represses_never_add_a_jump(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             world = aim(kind)
             for _ in range(60):
                 world.controls.press("combat_d")
@@ -179,7 +179,7 @@ class WeaponLeapTests(unittest.TestCase):
             self.assertEqual(world.time_scale, 1)
 
     def test_only_the_released_dive_landing_deals_damage_once_then_restores_normal_time(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for enemy_type in (Enemy, Enemy02):
                 for side in (-1, 1):
                     world = aim(kind)
@@ -210,7 +210,7 @@ class WeaponLeapTests(unittest.TestCase):
                     self.assertEqual((player.state, world.time_scale), ("IDLE", 1))
 
     def test_landing_without_a_second_d_cancels_aim_with_no_automatic_hit(self):
-        for kind in (*config.WEAPON_POSE_IMAGES, "steel_club", "axe"):
+        for kind in (*config.WEAPON_AIRBORNE_ROWS, "steel_club", "axe"):
             world = aim(kind)
             enemy = target(world)
             advance(world, 8)
@@ -222,7 +222,7 @@ class WeaponLeapTests(unittest.TestCase):
             self.assertEqual(world.camera.shake_remaining, 0)
 
     def test_dive_hit_shake_doubles_both_axes_without_changing_duration_or_decay(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for enemy_type in (Enemy, Enemy02, AxeEnemy, Researcher):
                 for side in (-1, 1):
                     with self.subTest(kind=kind, enemy=enemy_type.__name__, side=side):
@@ -260,7 +260,7 @@ class WeaponLeapTests(unittest.TestCase):
                         self.assertEqual((player.x, player.ground_y, enemy.x, enemy.ground_y), position)
 
     def test_aim_airborne_dive_and_missed_landing_do_not_start_shake(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             world = aim(kind)
             phases = {world.player.weapon_leap_phase}
             advance(world, 0.1)
@@ -276,7 +276,7 @@ class WeaponLeapTests(unittest.TestCase):
             self.assertTrue({"AIM", "DIVE", "LANDING", None} <= phases)
 
     def test_dive_boost_does_not_leak_into_the_next_basic_hit_or_restart(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for action in ("basic_hit", "restart"):
                 world = aim(kind)
                 enemy = target(world)
@@ -306,7 +306,7 @@ class WeaponLeapTests(unittest.TestCase):
                 self.assertEqual(world.camera.shake_strength, config.SHAKE_STRENGTH)
 
     def test_interruptions_clear_slow_or_fast_time_and_allow_natural_falling(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for phase in ("AIM", "DIVE"):
                 for cause in ("hit", "death", "drop", "attack", "swap", "car"):
                     with self.subTest(kind=kind, phase=phase, cause=cause):
@@ -334,7 +334,7 @@ class WeaponLeapTests(unittest.TestCase):
                         self.assertTrue(player.grounded)
 
     def test_switching_away_and_back_to_d_preserves_height_velocity_and_jump_count(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             world = aim(kind)
             tap(world.controls, "combat_a")
             world.step(config.FIXED_DT)
@@ -348,7 +348,7 @@ class WeaponLeapTests(unittest.TestCase):
             self.assertEqual(world.player.jump_count, 2)
 
     def test_all_stage_corners_keep_aiming_and_diving_feet_inside_the_floor(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for index in range(len(config.STAGE_IMAGES)):
                 for side, sy in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
                     world = equipped_world(kind)
@@ -372,7 +372,7 @@ class WeaponLeapTests(unittest.TestCase):
                     self.assertEqual((world.stage_index, world.time_scale), (index, 1))
 
     def test_loading_pauses_aim_and_dive_and_f5_restores_normal_time(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             for phase in ("AIM", "DIVE", "LANDING"):
                 world = aim(kind)
                 player = world.player
@@ -395,7 +395,7 @@ class WeaponLeapTests(unittest.TestCase):
                 self.assertEqual(world.time_scale, 1)
 
     def test_two_stage_d_and_enemy_motion_are_identical_at_different_render_rates(self):
-        for kind in config.WEAPON_POSE_IMAGES:
+        for kind in config.WEAPON_AIRBORNE_ROWS:
             results = []
             for fps in (30, 60, 120, 144):
                 world = equipped_world(kind)

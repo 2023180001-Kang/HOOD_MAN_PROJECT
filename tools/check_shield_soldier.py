@@ -228,7 +228,7 @@ def check_strong_and_dives(game):
             capture(game, f"shield_strong_{move.key}_{'guard' if guarded else 'full'}")
             tick(game, 120)
             assert enemy.sprite_image == config.SHIELD_SOLDIER_IMAGE
-        for weapon in config.WEAPON_POSE_IMAGES:
+        for weapon in config.WEAPON_AIRBORNE_ROWS:
             world, enemy = encounter(game, weapon=weapon)
             for key in (pico2d.SDLK_SPACE, pico2d.SDLK_SPACE, pico2d.SDLK_d, pico2d.SDLK_d):
                 tap(game, key)

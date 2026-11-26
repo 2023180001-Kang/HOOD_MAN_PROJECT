@@ -296,7 +296,7 @@ class StrongAttackTests(unittest.TestCase):
         self.assertEqual(enemy.hp, 200)
         self.assertIsNone(world.player.weapon)
         for dive in (False, True):
-            world = aim("combat_knife")
+            world = aim("steel_pipe")
             if dive:
                 tap(world.controls, "combat_d")
                 world.step(config.FIXED_DT)

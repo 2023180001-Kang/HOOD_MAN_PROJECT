@@ -39,7 +39,7 @@ def double_jump(world):
 class WeaponCombatTests(unittest.TestCase):
     def test_weapon_strikes_hit_one_pixel_inside_their_forward_reach_and_miss_outside(self):
         reaches = {
-            "combat_knife": {"a": 120, "s": 130, "d": 140},
+            "combat_knife": {"a": 120},
             "steel_pipe": {"a": 120, "s": 130, "d": 140},
             "steel_club": {"a": 130, "d": 140},
             "axe": {"a": 130, "d": 130},
@@ -70,7 +70,7 @@ class WeaponCombatTests(unittest.TestCase):
                         self.assertTrue(player.try_hit(enemy))
 
     def test_g_pickup_remaps_asd_to_each_weapon_and_keeps_f_as_the_kick(self):
-        for kind, rows in (("combat_knife", (7, 8, 9)), ("steel_pipe", (6, 7, 8))):
+        for kind, rows in (("combat_knife", (5,)), ("steel_pipe", (6, 7, 8))):
             for key, row, damage in zip("asd", rows, (10, 40, 50)):
                 world = equipped_world(kind)
                 player = world.player
@@ -94,7 +94,7 @@ class WeaponCombatTests(unittest.TestCase):
                 self.assertIs(player.active_move, MOVES["combat_f"])
                 self.assertEqual(player.sprite_image, config.COMBAT_IMAGE)
 
-    def test_six_attacks_hit_both_enemy_types_on_both_sides_once_with_existing_effects(self):
+    def test_melee_attacks_hit_both_enemy_types_on_both_sides_once_with_existing_effects(self):
         for kind, moves in WEAPON_MOVES.items():
             for key, move in moves.items():
                 for enemy_type in (Enemy, Enemy02):
@@ -128,9 +128,9 @@ class WeaponCombatTests(unittest.TestCase):
                             self.assertEqual((hits, enemy.hp, world.player.hp),
                                              (1, 200 - move.damage, 500))
 
-    def test_pipe_swing_and_both_jump_strikes_wait_for_the_source_impact_pose(self):
+    def test_pipe_swing_and_jump_strike_wait_for_the_source_impact_pose(self):
         for kind, key, before in (("steel_pipe", "s", 0.18),
-                                  ("combat_knife", "d", 0.3), ("steel_pipe", "d", 0.3)):
+                                  ("steel_pipe", "d", 0.3)):
             world = equipped_world(kind)
             enemy = target(world)
             if key == "d":
@@ -251,15 +251,19 @@ class WeaponCombatTests(unittest.TestCase):
             for fps in (30, 60, 120, 144):
                 world = equipped_world(kind)
                 enemy = target(world)
-                double_jump(world)
-                tap(world.controls, "combat_d")
-                advance(world, 0.1, fps)
-                for key, seconds in (("combat_d", 0.5), ("combat_s", 0.5), ("combat_a", 0.5)):
+                if kind == "steel_pipe":
+                    double_jump(world)
+                    tap(world.controls, "combat_d")
+                    advance(world, 0.1, fps)
+                    first_attack = "combat_d"
+                else:
+                    first_attack = "combat_a"
+                for key, seconds in ((first_attack, 0.5), ("combat_s", 0.5), ("combat_a", 0.5)):
                     tap(world.controls, key)
                     advance(world, seconds, fps)
                 results.append((enemy.hp, world.player.state, world.player.animation.elapsed,
                                 world.player.weapon))
-                self.assertEqual(enemy.hp, 100)
+                self.assertEqual(enemy.hp, 100 if kind == "steel_pipe" else 140)
                 tap(world.controls, "restart")
                 world.update(config.FIXED_DT)
                 self.assertIsNone(world.player.weapon)

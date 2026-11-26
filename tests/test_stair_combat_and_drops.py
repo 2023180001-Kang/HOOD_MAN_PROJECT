@@ -79,8 +79,8 @@ class StairCombatTests(ArchivedTwoFloorTests):
                     self.assertEqual(enemy.hp, config.ENEMY_MAX_HP - move.damage)
 
     def test_knife_and_pipe_attacks_hit_stair_enemies(self):
-        for kind in config.WEAPON_POSE_IMAGES:
-            for key in ("combat_a", "combat_s"):
+        for kind, keys in (("combat_knife", ("combat_a",)), ("steel_pipe", ("combat_a", "combat_s"))):
+            for key in keys:
                 world = World()
                 enemy = on_stairs(world)
                 world.player.equip_weapon(kind)

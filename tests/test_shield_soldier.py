@@ -209,7 +209,7 @@ class ShieldSoldierTests(unittest.TestCase):
 
     def test_both_weapon_dive_landings_respect_guard_and_use_existing_feedback(self):
         for guarded in (False, True):
-            for weapon in config.WEAPON_POSE_IMAGES:
+            for weapon in config.WEAPON_AIRBORNE_ROWS:
                 world, enemy = encounter(weapon=weapon)
                 for action in ("jump", "jump", "combat_d", "combat_d"):
                     tap(world.controls, action)

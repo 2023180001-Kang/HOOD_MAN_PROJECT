@@ -97,8 +97,11 @@ WEAPON_MOVES = {
     }
     for kind, specs in config.WEAPON_MOVE_SPECS.items()
 }
-# F remains the right-foot kick; A/S/D are replaced by the equipped attacks.
 WEAPON_LOADOUTS = {kind: {**MOVES, **moves} for kind, moves in WEAPON_MOVES.items()}
+KNIFE_THROW = Move("s", "단검 던지기", 6, config.KNIFE_THROW_DAMAGE, 0, 0, 16.0,
+                  image_name=config.WEAPON_POSE_IMAGES["combat_knife"], active_frames=(),
+                  hit_image=config.CLUB_HIT_IMAGE)
+WEAPON_LOADOUTS["combat_knife"]["combat_s"] = KNIFE_THROW
 WEAPON_LOADOUTS["pistol"] = {key: move for key, move in MOVES.items() if key != "combat_a"}
 WEAPON_LOADOUTS["ar_rifle"] = WEAPON_LOADOUTS["pistol"]
 STEEL_CLUB_SWING = Move("a", "쇠몽둥이 휘두르기", 5, 40, 130.0, 146.0, 16.0,

@@ -239,6 +239,15 @@ class ThrownWeaponProjectile(ResearcherBullet):
         return config.DROP_ITEM_HALF_WIDTH, self.world_width - config.DROP_ITEM_HALF_WIDTH
 
 
+class KnifeProjectile(ThrownWeaponProjectile, PlayerProjectile):
+    weapon_kind = "combat_knife"
+    image_name = config.DROP_ITEM_IMAGES[weapon_kind]
+    damage = config.KNIFE_THROW_DAMAGE
+    release_offset = (90, 118)
+    half_width = config.KNIFE_PROJECTILE_CLIP[2] * config.KNIFE_PROJECTILE_SCALE / 2
+    half_height = config.DROP_ITEM_BODY_HEIGHTS[weapon_kind] * config.DROP_ITEM_SCALE / 2
+
+
 class SteelClubProjectile(ThrownWeaponProjectile, PlayerProjectile):
     weapon_kind = "steel_club"
     image_name = config.STEEL_CLUB_PROJECTILE_IMAGE

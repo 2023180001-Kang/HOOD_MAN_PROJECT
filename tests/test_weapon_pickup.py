@@ -201,7 +201,7 @@ class WeaponPickupTests(unittest.TestCase):
                     world.enemies = [attacking_enemy(player.x - 80)]
                     world.step(config.FIXED_DT)
                     self.assertEqual((player.hp, player.state), (480, "HIT"))
-                    self.assertEqual((player.sprite_image, player.sprite_row), (image, 5))
+                    self.assertEqual((player.sprite_image, player.sprite_row), (image, config.WEAPON_POSE_ROWS[kind]["HIT"]))
                     advance(world, 0.1)
                     self.assertEqual(player.state, "HIT")
                     self.assertGreater(player.animation.frame, 0)

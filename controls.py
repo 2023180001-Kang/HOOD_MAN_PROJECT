@@ -11,14 +11,18 @@ class Controls:
         self.pressed = []
 
     def press(self, key):
-        if key not in self.held:
-            # Preserve the sequence for combos, escape, and selecting then summoning a target.
-            ordered = (key.startswith(("combat_", "spawn_")) or key == "training_target"
-                       or key in config.CROWD_ESCAPE_KEYS)
-            if not ordered and key in self.pressed:
-                self.pressed.remove(key)
-            self.pressed.append(key)
+        if key in self.held:
+            return
         self.held.add(key)
+        # Resolve the prefix on the number's KEYDOWN, even if both keys are
+        # released before the next simulation step. A held C can qualify more numbers.
+        if key.startswith("spawn_") and (self.take_press("sword_spawn") or "sword_spawn" in self.held):
+            key = key.replace("spawn_", "spawn_sword_", 1)
+        ordered = (key.startswith(("combat_", "spawn_")) or key == "training_target"
+                   or key in config.CROWD_ESCAPE_KEYS)
+        if not ordered and key in self.pressed:
+            self.pressed.remove(key)
+        self.pressed.append(key)
 
     def release(self, key):
         self.held.discard(key)

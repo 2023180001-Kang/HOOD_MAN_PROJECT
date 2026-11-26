@@ -14,7 +14,12 @@ from player import Player
 from projectiles import PlayerProjectile, ThrownWeaponProjectile
 from rush import RushSequence
 from stage import Stage
+from sword_enemy import SwordEnemy
 from training_room import TrainingPlayer, TrainingRoom
+
+
+SPAWN_REQUESTS = {f"spawn_{n}": (n, None) for n in config.SPAWN_COUNTS}
+SPAWN_REQUESTS.update({f"spawn_sword_{n}": (n, SwordEnemy) for n in config.SPAWN_COUNTS})
 
 
 class World:
@@ -247,9 +252,10 @@ class World:
             self.controls.take_press("training_target")
         if self.controls.take_press("cycle_spawn_enemy") and self.player.alive and not self.training:
             self.stage.cycle_spawn_enemy_type()
-        for count in config.SPAWN_COUNTS:
-            if self.controls.take_press(f"spawn_{count}") and self.player.alive and not self.training:
-                spawned = self.spawner.spawn(count, self.elapsed)
+        for request in self.controls.take_presses(SPAWN_REQUESTS):
+            if self.player.alive and not self.training:
+                count, enemy_type = SPAWN_REQUESTS[request]
+                spawned = self.spawner.spawn(count, self.elapsed, enemy_type=enemy_type)
                 place_ranged_spawns(self.player, self.enemies, spawned)
                 self.enemies.extend(spawned)
         for enemy in self.enemies:

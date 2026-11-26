@@ -27,6 +27,7 @@ SHEETS = {
     config.SHIELD_SOLDIER_IMAGE: 7,
     config.RESEARCHER_BULLET_IMAGE: 1,
     config.ENEMY02_IMAGE: 7,
+    config.SWORD_ENEMY_IMAGE: 7,
     config.COMBAT_IMAGE: 4,
     config.STRONG_ATTACK_IMAGE: 5,
     config.STRONG_HIT_IMAGE: 5,
@@ -60,12 +61,12 @@ def main():
                                  right - left, bottom - top],
                         "offset_x": (left + right) / 2 - cell_width / 2,
                     }
-                    if ((name == config.ENEMY02_IMAGE and row == 4)
+                    if ((name in (config.ENEMY02_IMAGE, config.SWORD_ENEMY_IMAGE) and row == 4)
                             or row + 1 == AIRBORNE_WEAPON_ROWS.get(name)):
                         # Keep the source-pose lift for inspection. The leap
                         # controller owns actual height; do not add offset_y too.
                         frame["jump_height"] = ground_anchor - bottom
-                    elif name in (config.ENEMY02_IMAGE,
+                    elif name in (config.ENEMY02_IMAGE, config.SWORD_ENEMY_IMAGE,
                                   config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                                   config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE):
                         # Keep airborne throws above the floor instead of moving

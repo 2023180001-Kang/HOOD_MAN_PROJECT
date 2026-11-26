@@ -26,7 +26,7 @@ class Assets:
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
                          config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,
                          config.AR_SOLDIER_IMAGE, config.RIFLE_BULLET_IMAGE,
-                         config.SHIELD_SOLDIER_IMAGE,
+                         config.SHIELD_SOLDIER_IMAGE, config.SWORD_ENEMY_IMAGE,
                          config.HP_IMAGE,
                          *config.HIT_EFFECT_IMAGES,
                          *config.DROP_ITEM_IMAGES.values(),

@@ -384,6 +384,7 @@ RIFLE_BULLET_SPEED = 1200.0
 RIFLE_BULLET_FPS = 16.0
 RIFLE_BULLET_RANGE = 1200.0  # Straight flight only, then expire; no landed ammunition.
 ENEMY02_IMAGE = "HOOD_MAN_enemy02.png"
+SWORD_ENEMY_IMAGE = "HoodMan_SwordEnemy_8x7_2048x1792.png"
 CITY_STAGE_IMAGES = ("cityStage1_ground_300px_1672x941.png", "cityStage2_ground_300px_1672x941.png")
 ARCHIVED_CITY_STAGE_IMAGES = ("before_sheets/cityStage-1.png", "before_sheets/cityStage-2.png")
 ENEMY02_STAGE_IMAGES = CITY_STAGE_IMAGES
@@ -392,6 +393,10 @@ ENEMY02_BOUNDARY_PADDING = 128.0  # Living attack/effect envelope reaches 126.75
 ENEMY02_ATTACKS = {
     "clubs": (4, 30, (3, 4, 5)),
     "slam": (5, 50, (5, 6)),
+}
+SWORD_ENEMY_ATTACKS = {
+    "slash": (4, 30, (4, 5, 6)),
+    "slam": (5, 40, (6,)),
 }
 ENEMY02_LEAP_MIN_DISTANCE = 320.0
 ENEMY02_LEAP_MAX_DISTANCE = 640.0

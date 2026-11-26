@@ -37,6 +37,7 @@ KEYS = {
     pico2d.SDLK_u: "toggle_details",
     pico2d.SDLK_g: "weapon_interact",
     pico2d.SDLK_m: "cycle_spawn_enemy",
+    pico2d.SDLK_c: "sword_spawn",
     pico2d.SDLK_PLUS: "training_target",
     pico2d.SDLK_KP_PLUS: "training_target",
 }
@@ -128,6 +129,9 @@ class Game:
                     key = "training_target"
                 if key is not None:
                     if event.type == pico2d.SDL_KEYDOWN and not event.key.repeat:
+                        if key == "sword_spawn" and (self.world.training or self.world.stage_loading
+                                                    or not self.world.player.alive):
+                            continue
                         self.world.controls.press(key)
                     elif event.type == pico2d.SDL_KEYUP:
                         self.world.controls.release(key)

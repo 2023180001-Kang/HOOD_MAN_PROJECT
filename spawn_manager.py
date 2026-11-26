@@ -41,7 +41,9 @@ class SpawnManager:
         self.enemy_type = enemy_type
         self.extra_sources = extra_sources
 
-    def spawn(self, count, elapsed):
+    def spawn(self, count, elapsed, *, enemy_type=None):
+        if enemy_type is None:
+            enemy_type = self.enemy_type
         enemies = []
         sources = tuple(self.extra_sources()) if self.extra_sources is not None else ()
         for _ in range(count):
@@ -54,12 +56,12 @@ class SpawnManager:
                      else config.WORLD_WIDTH - config.ENEMY_HALF_WIDTH)
                 _, bottom, _, top = self.spawn_area.bounds
                 ground_y = self.rng.uniform(bottom, top)
-                x, ground_y = self.spawn_area.project(x, ground_y, self.enemy_type.boundary_padding)
+                x, ground_y = self.spawn_area.project(x, ground_y, enemy_type.boundary_padding)
                 floor, area, source = 0, self.walkable, ("edge", side)
                 facing = -side
             else:
                 x, ground_y = point.walkable.project(point.x, point.ground_y,
-                                                     self.enemy_type.boundary_padding)
+                                                     enemy_type.boundary_padding)
                 floor, area, source = point.floor, point.walkable, point.source
                 facing = 1 if x < config.WORLD_WIDTH / 2 else -1
             run_speed = config.ENEMY_RUN_SPEEDS[self.spawned_count % len(config.ENEMY_RUN_SPEEDS)]
@@ -68,8 +70,8 @@ class SpawnManager:
             # must not change later spawn sides/depths or another enemy's moves.
             enemy_rng = random.Random()
             enemy_rng.setstate(self.rng.getstate())
-            enemy = self.enemy_type(x, facing=facing, spawned_at=elapsed, run_speed=run_speed,
-                                   ground_y=ground_y, attack_speed=attack_speed, rng=enemy_rng)
+            enemy = enemy_type(x, facing=facing, spawned_at=elapsed, run_speed=run_speed,
+                               ground_y=ground_y, attack_speed=attack_speed, rng=enemy_rng)
             enemy.floor, enemy.walkable, enemy.spawn_source = floor, area, source
             if enemy.formation_ground_min is not None:
                 # City pavement height belongs to this map, not the old y=100 line.

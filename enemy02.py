@@ -19,10 +19,14 @@ class Enemy02(Enemy):
     animations = config.ENEMY02_ANIMATIONS
     boundary_padding = config.ENEMY02_BOUNDARY_PADDING
     formation_ground_min = config.GROUND_Y
+    attacks = config.ENEMY02_ATTACKS
+    basic_attack = "clubs"
+    airborne_frames = (2, 3)
+    strikes_on_air_contact = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.attack_kind = "clubs"
+        self.attack_kind = self.basic_attack
         self.vy = 0.0
         self.leap_phase = None
         self.leap_cooldown = 0.0
@@ -37,11 +41,11 @@ class Enemy02(Enemy):
 
     @property
     def attack_damage(self):
-        return config.ENEMY02_ATTACKS[self.attack_kind][1]
+        return self.attacks[self.attack_kind][1]
 
     @property
     def attack_active_frames(self):
-        return config.ENEMY02_ATTACKS[self.attack_kind][2]
+        return self.attacks[self.attack_kind][2]
 
     @property
     def leaping(self):
@@ -62,9 +66,9 @@ class Enemy02(Enemy):
         return box
 
     def start_attack(self, *, air_contact=False):
-        self.attack_kind = "clubs"
+        self.attack_kind = self.basic_attack
         self.air_contact_attack = self.air_contact_pending = air_contact
-        row, _, _ = config.ENEMY02_ATTACKS["clubs"]
+        row, _, _ = self.attacks[self.attack_kind]
         self.animation.definitions["ATTACK"] = (row, self.attack_fps, False)
         super().start_attack()
 
@@ -80,7 +84,7 @@ class Enemy02(Enemy):
         self.attack_kind = "slam"
         self.leap_blocked = False
         self.air_contact_attack = self.air_contact_pending = False
-        row, _, _ = config.ENEMY02_ATTACKS["slam"]
+        row, _, _ = self.attacks[self.attack_kind]
         self.animation.definitions["ATTACK"] = (row, self.attack_fps, False)
         self.leap_phase = "WINDUP"
         self.running = False
@@ -122,7 +126,7 @@ class Enemy02(Enemy):
                          + (player.jump_height - player.previous_jump_height) * contact)
         height = (self.previous_jump_height
                   + (self.jump_height - self.previous_jump_height) * contact)
-        if player_height > 1e-9 and height > 1e-9:
+        if self.strikes_on_air_contact and player_height > 1e-9 and height > 1e-9:
             self.jump_height = height
             self._cancel_leap()
             self.start_attack(air_contact=True)
@@ -161,7 +165,9 @@ class Enemy02(Enemy):
                 self.vy = self.leap_launch_speed - config.GRAVITY * self.leap_elapsed
                 self.jump_height = max(0.0, self.leap_launch_speed * self.leap_elapsed
                                        - config.GRAVITY * self.leap_elapsed ** 2 / 2)
-                self.animation.elapsed = (2.05 if self.vy >= 0 else 3.05) / self.attack_fps
+                frames = self.airborne_frames
+                frame = frames[min(int(ratio * len(frames)), len(frames) - 1)]
+                self.animation.elapsed = (frame + 0.05) / self.attack_fps
                 if self._resolve_leap_contact(player):
                     return
                 if self.leap_elapsed + 1e-9 >= self.leap_duration:
@@ -170,7 +176,7 @@ class Enemy02(Enemy):
                     self.jump_height = self.vy = self.vx = self.ground_vy = 0.0
                     self.leap_phase = "LANDING"
                     self.leap_cooldown = config.ENEMY02_LEAP_COOLDOWN
-                    self.animation.elapsed = 4 / self.attack_fps
+                    self.animation.elapsed = (self.airborne_frames[-1] + 1) / self.attack_fps
             elif self.leap_phase == "LANDING":
                 self.animation.update(remaining)
                 remaining = 0.0

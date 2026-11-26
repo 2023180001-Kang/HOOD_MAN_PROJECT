@@ -1,6 +1,5 @@
 import random
 import unittest
-from math import hypot
 
 import pico2d
 
@@ -14,9 +13,9 @@ from tests.test_menu_return import key_event, scene
 from world import World
 
 
-def encounter():
+def encounter(stage_index=0):
     world = World(rng=random.Random(5))
-    world.select_stage(len(world.stages) - 1)
+    world.select_stage(stage_index)
     world.controls.press("sniper_spawn")
     world.controls.press("spawn_1")
     world.step(config.FIXED_DT)
@@ -27,7 +26,7 @@ def encounter():
 
 
 class SniperTests(unittest.TestCase):
-    def test_v_prefix_only_on_last_stage_with_both_number_rows(self):
+    def test_v_prefix_on_normal_stages_and_final_boss_with_both_number_rows(self):
         game = scene()
         world = game.world
 
@@ -35,6 +34,15 @@ class SniperTests(unittest.TestCase):
             process_menu_events(game, key_event(symbol), key_event(symbol, down=False), menu_screen=False)
             world.step(config.FIXED_DT)
 
+        for index, image in enumerate(config.STAGE_IMAGES):
+            if image in config.BOSS_STAGE_IMAGES:
+                continue
+            with self.subTest(stage=index + 1):
+                world.select_stage(index)
+                key(pico2d.SDLK_v)
+                key(pico2d.SDLK_KP_2)
+                key(pico2d.SDLK_1)
+                self.assertEqual([type(e) for e in world.enemies], [Sniper, Sniper, world.spawner.enemy_type])
         world.select_stage(len(world.stages) - 2)
         key(pico2d.SDLK_v)
         key(pico2d.SDLK_1)
@@ -55,7 +63,7 @@ class SniperTests(unittest.TestCase):
         self.assertEqual([type(e) for e in world.enemies[-3:]], [Sniper] * 3)
 
     def test_tracking_lock_four_hits_stillness_and_full_reload(self):
-        world, sniper = encounter()
+        world, sniper = encounter(len(config.STAGE_IMAGES) - 1)
         dt = config.FIXED_DT
         p = world.player
         start_x = sniper.x
@@ -92,17 +100,44 @@ class SniperTests(unittest.TestCase):
         world.step(dt)
         self.assertIsNotNone(sniper.visible_target)
 
-    def test_reticle_tracks_a_moving_player_and_a_fired_round_can_be_dodged(self):
+    def test_reticle_speeds_up_with_actual_running_speed(self):
         world, sniper = encounter()
         p = world.player
-        world.controls.press("right")
-        world.controls.press("jump")
-        for _ in range(18):
-            prev = sniper.visible_target
-            world.step(config.FIXED_DT)
-            x, y = sniper.visible_target
-            self.assertAlmostEqual(hypot(x - prev[0], y - prev[1]), config.SNIPER_TRACK_SPEED * config.FIXED_DT)
-        world.controls.release("right")
+        for vx, depth_speed, expected in ((0, 0, 480), (300, 0, 780), (0, -720, 1200), (432, 576, 1200)):
+            with self.subTest(velocity=(vx, depth_speed)):
+                p.vx, p.ground_vy = vx, depth_speed
+                start = (p.x - 200, p.y + config.PLAYER_HEIGHT * 0.6)
+                sniper.reticle = start
+                sniper.track_player(config.FIXED_DT, p)
+                self.assertAlmostEqual(sniper.reticle[0] - start[0], expected * config.FIXED_DT)
+
+    def test_reticle_locks_and_fires_during_single_and_running_double_jumps(self):
+        for double_jump in (False, True):
+            with self.subTest(double_jump=double_jump):
+                world, sniper = encounter()
+                p = world.player
+                if double_jump:
+                    world.controls.press("right")
+                    world.controls.press("left_shift")
+                world.controls.press("jump")
+                world.step(config.FIXED_DT)
+                if double_jump:
+                    world.controls.release("jump")
+                    world.controls.press("jump")
+                for _ in range(100):
+                    world.step(config.FIXED_DT)
+                    if world.projectiles:
+                        break
+                shot, = world.projectiles
+                self.assertGreater(p.jump_height, 0)
+                self.assertEqual(p.jump_count, 2 if double_jump else 1)
+                self.assertEqual(sniper.visible_target, (p.x, p.y + config.PLAYER_HEIGHT * 0.6))
+                self.assertEqual(sniper.locked_target, (p.x, p.ground_y, p.jump_height + config.PLAYER_HEIGHT * 0.6))
+                self.assertGreater(shot.vy, 0)
+
+    def test_a_fired_round_can_be_dodged(self):
+        world, sniper = encounter()
+        p = world.player
         for _ in range(240):
             world.step(config.FIXED_DT)
             if world.projectiles:

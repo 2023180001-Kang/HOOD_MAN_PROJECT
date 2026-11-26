@@ -1,4 +1,4 @@
-"""Final-stage sniper with a visible tracking reticle and single-shot recovery."""
+"""Sniper with a visible tracking reticle and single-shot recovery."""
 
 from math import hypot
 
@@ -51,7 +51,10 @@ class Sniper(Researcher):
         target_x, target_y = (x, y) if in_range else (x + side * 120, y + 90)
         dx, dy = target_x - self.reticle[0], target_y - self.reticle[1]
         distance = hypot(dx, dy)
-        step = config.SNIPER_TRACK_SPEED * dt
+        # Match the player's movement and use the base speed to close the gap.
+        # Depth and vertical velocity matter for diagonal runs and double jumps.
+        player_speed = hypot(player.vx, player.ground_vy, player.vy)
+        step = (config.SNIPER_TRACK_SPEED + player_speed) * dt
         if distance <= step:
             self.reticle = (target_x, target_y)
             if in_range:

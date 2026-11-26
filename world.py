@@ -82,7 +82,7 @@ class World:
 
     @property
     def sniper_stage(self):
-        return not self.training and self.stage_index == len(config.STAGE_IMAGES) - 1
+        return not self.training and self.stage.image_name not in config.BOSS_STAGE_IMAGES[:-1]
 
     @property
     def stage_loading(self):

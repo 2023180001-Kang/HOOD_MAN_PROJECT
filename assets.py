@@ -8,7 +8,7 @@ from pathlib import Path
 import pico2d
 
 import config
-from projectiles import ThrownWeaponProjectile
+from projectiles import SniperBullet, ThrownWeaponProjectile
 
 
 class Assets:
@@ -28,6 +28,8 @@ class Assets:
                          config.AXE_ENEMY_UNARMED_IMAGE,
                          config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,
                          config.AR_SOLDIER_IMAGE, config.RIFLE_BULLET_IMAGE,
+                         config.SNIPER_IMAGE, config.SNIPER_BULLET_IMAGE,
+                         config.SNIPER_TARGET_IMAGE, config.SNIPER_LOCKED_IMAGE,
                          config.SHIELD_SOLDIER_IMAGE, config.SWORD_ENEMY_IMAGE,
                          config.HP_IMAGE,
                          *config.HIT_EFFECT_IMAGES,
@@ -92,6 +94,13 @@ class Assets:
                                    bullet.facing, bullet.elapsed)
             return
         image = self.images[bullet.image_name]
+        if isinstance(bullet, SniperBullet):
+            angle = bullet.facing * atan2(bullet.vy + bullet.depth_speed, bullet.horizontal_speed)
+            _, _, width, height = bullet.clip
+            image.clip_composite_draw(*bullet.clip, angle, "h" if bullet.facing < 0 else "",
+                                      bullet.x - camera_x, bullet.y - camera_y,
+                                      width * bullet.display_scale, height * bullet.display_scale)
+            return
         tile = self.frames[bullet.image_name][0][bullet.frame]
         left, bottom, width, height = tile["clip"]
         scale = bullet.display_scale
@@ -110,6 +119,12 @@ class Assets:
             bullet.x - camera_x + dx, bullet.y - camera_y + dy,
             width * scale, height * scale,
         )
+
+    def draw_sniper_target(self, sniper, camera_x, camera_y):
+        x, y = sniper.visible_target
+        name = config.SNIPER_LOCKED_IMAGE if sniper.state == "ATTACK" else config.SNIPER_TARGET_IMAGE
+        # Both reticles are centered on pixel (627, 627) in the original PNGs.
+        self.images[name].clip_draw(377, 377, 500, 500, x - camera_x, y - camera_y, 72, 72)
 
     def draw_researcher_aim(self, researcher, camera_x, camera_y):
         line = researcher.aim_line

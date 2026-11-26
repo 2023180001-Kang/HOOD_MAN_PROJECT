@@ -15,11 +15,13 @@ from projectiles import EnemyAxeProjectile, PlayerProjectile, ThrownWeaponProjec
 from rush import RushSequence
 from stage import Stage
 from sword_enemy import SwordEnemy
+from sniper import Sniper
 from training_room import TrainingPlayer, TrainingRoom
 
 
 SPAWN_REQUESTS = {f"spawn_{n}": (n, None) for n in config.SPAWN_COUNTS}
 SPAWN_REQUESTS.update({f"spawn_sword_{n}": (n, SwordEnemy) for n in config.SPAWN_COUNTS})
+SPAWN_REQUESTS.update({f"spawn_sniper_{n}": (n, Sniper) for n in config.SPAWN_COUNTS})
 
 
 class World:
@@ -77,6 +79,10 @@ class World:
     @property
     def stage(self):
         return self.stages[self.stage_index]
+
+    @property
+    def sniper_stage(self):
+        return not self.training and self.stage_index == len(config.STAGE_IMAGES) - 1
 
     @property
     def stage_loading(self):
@@ -257,6 +263,8 @@ class World:
         for request in self.controls.take_presses(SPAWN_REQUESTS):
             if self.player.alive and not self.training:
                 count, enemy_type = SPAWN_REQUESTS[request]
+                if enemy_type is Sniper and not self.sniper_stage:
+                    continue
                 spawned = self.spawner.spawn(count, self.elapsed, enemy_type=enemy_type)
                 place_ranged_spawns(self.player, self.enemies, spawned)
                 self.enemies.extend(spawned)
@@ -488,6 +496,8 @@ class World:
         side = 1 if destination > self.stage_index else -1
         self._dive_afterimage_remaining = 0.0
         self.stage.release_actor(self.player)
+        self.controls.take_press("sniper_spawn")
+        self.controls.held.discard("sniper_spawn")
         self.stage_index = destination
         player = self.player
         player.floor = 0

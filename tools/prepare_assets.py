@@ -38,6 +38,7 @@ SHEETS = {
     **{name: config.WEAPON_SHEET_ROWS[kind] for kind, name in config.WEAPON_POSE_IMAGES.items()},
     config.AR_SOLDIER_IMAGE: 7,
     config.RIFLE_BULLET_IMAGE: 1,
+    config.SNIPER_IMAGE: 7,
 }
 AIRBORNE_WEAPON_ROWS = {config.WEAPON_POSE_IMAGES[kind]: row
                         for kind, row in config.WEAPON_AIRBORNE_ROWS.items()}

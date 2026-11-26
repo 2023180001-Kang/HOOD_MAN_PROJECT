@@ -1,7 +1,7 @@
 """Ranged rounds with continuous collision and per-weapon flight/render profiles."""
 
 from dataclasses import dataclass, field
-from math import cos, radians, sin, sqrt
+from math import cos, hypot, radians, sin, sqrt
 from operator import itemgetter
 from random import uniform
 
@@ -34,6 +34,7 @@ class ResearcherBullet:
     scale = config.RESEARCHER_BULLET_SCALE
     anchor_y = config.RESEARCHER_BULLET_ANCHOR_Y
     range_limited = False
+    depth_speed = 0.0
     world_width = config.WORLD_WIDTH
     hit_targets = None  # Piercing projectiles keep a set for the lifetime of the throw.
     deflectable = True
@@ -124,10 +125,13 @@ class ResearcherBullet:
                 ground_time = ((impact_speed + vy) / gravity if vy > 0
                                else 2 * clearance / (impact_speed - vy))
                 step = min(step, ground_time)
+            elif vy < 0:
+                ground_time = (self.height - self.half_height) / -vy
+                step = min(step, ground_time)
             left, right = self.horizontal_limits
             edge_gap = right - self.x if self.facing > 0 else self.x - left
             speed_x = self.facing * self.horizontal_speed
-            edge_time = edge_gap / abs(speed_x)
+            edge_time = edge_gap / abs(speed_x) if speed_x else float("inf")
             step = min(step, edge_time)
             terminal = min(ground_time, edge_time, range_time) <= step + 1e-12
             travel = step
@@ -144,12 +148,13 @@ class ResearcherBullet:
                     dealt_damage = True
                     if on_impact is not None:
                         x = self.impact_x + speed_x * contact
-                        y = self.y + vy * contact - gravity * contact * contact / 2
+                        y = self.y + (vy + self.depth_speed) * contact - gravity * contact * contact / 2
                         on_impact(self, x, y)
                 if self.spent:
                     travel = contact
                     break
             self.x += speed_x * travel
+            self.ground_y += self.depth_speed * travel
             self.height += vy * travel - gravity * travel * travel / 2
             if parried:
                 self.facing *= -1
@@ -206,8 +211,8 @@ class ResearcherBullet:
         half_width = (player.body.right - player.body.left) / 2 + self.half_width
         half_height = self.half_height
         axes = (
-            (self.x - px, self.facing * self.speed - vx, -half_width, half_width),
-            (self.ground_y - py, -ground_vy,
+            (self.x - px, self.facing * self.horizontal_speed - vx, -half_width, half_width),
+            (self.ground_y - py, self.depth_speed - ground_vy,
               -config.ATTACK_DEPTH_TOLERANCE, config.ATTACK_DEPTH_TOLERANCE),
         )
         enter, leave = 0.0, duration
@@ -370,3 +375,37 @@ class RifleBullet(ResearcherBullet):
 
 class PlayerRifleBullet(PlayerProjectile, RifleBullet):
     damage = config.PLAYER_RIFLE_DAMAGE
+
+
+class SniperBullet(RifleBullet):
+    image_name = config.SNIPER_BULLET_IMAGE
+    damage = config.SNIPER_DAMAGE
+    speed = 1500.0
+    straight_range = 1800.0
+    half_width, half_height = 15.0, 2.7
+    scale = 0.02
+    # Single supplied sprite; exclude transparent padding around the round.
+    clip = (331, 218, 1510, 272)
+    flight_x, flight_depth, flight_height = speed, 0.0, 0.0
+
+    def aim_at(self, x, ground_y, height):
+        dx, depth, rise = x - self.x, ground_y - self.ground_y, height - self.height
+        length = hypot(dx, depth, rise)
+        if length:
+            self.flight_x = self.speed * abs(dx) / length
+            self.flight_depth = self.speed * depth / length
+            self.flight_height = self.speed * rise / length
+            if dx:
+                self.facing = 1 if dx > 0 else -1
+
+    @property
+    def horizontal_speed(self):
+        return super().horizontal_speed if self.deflected else self.flight_x
+
+    @property
+    def depth_speed(self):
+        return 0.0 if self.deflected else self.flight_depth
+
+    @property
+    def vy(self):
+        return super().vy if self.deflected else self.flight_height

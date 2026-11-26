@@ -5,6 +5,9 @@ from math import hypot
 import config
 
 
+SPAWN_PREFIXES = {"sword_spawn": "sword", "sniper_spawn": "sniper"}
+
+
 class Controls:
     def __init__(self):
         self.held = set()
@@ -13,11 +16,18 @@ class Controls:
     def press(self, key):
         if key in self.held:
             return
-        self.held.add(key)
         # Resolve the prefix on the number's KEYDOWN, even if both keys are
-        # released before the next simulation step. A held C can qualify more numbers.
-        if key.startswith("spawn_") and (self.take_press("sword_spawn") or "sword_spawn" in self.held):
-            key = key.replace("spawn_", "spawn_sword_", 1)
+        # released before the next simulation step. The most recent prefix wins.
+        if key in SPAWN_PREFIXES:
+            self.take_presses(SPAWN_PREFIXES)
+            self.held.difference_update(SPAWN_PREFIXES)
+        self.held.add(key)
+        if key.startswith("spawn_"):
+            prefix = self.take_latest_press(SPAWN_PREFIXES)
+            if prefix is None:
+                prefix = next((name for name in SPAWN_PREFIXES if name in self.held), None)
+            if prefix:
+                key = key.replace("spawn_", f"spawn_{SPAWN_PREFIXES[prefix]}_", 1)
         ordered = (key.startswith(("combat_", "spawn_")) or key == "training_target"
                    or key in config.CROWD_ESCAPE_KEYS)
         if not ordered and key in self.pressed:

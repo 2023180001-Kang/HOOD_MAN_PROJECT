@@ -423,6 +423,8 @@ class UI:
             landing = config.SWORD_ENEMY_ATTACKS["slam"][1]
             assets.font.draw(740, 96, f"C → 1~9: 검병 소환 · 베기 {slash} / 착지 {landing}",
                              (205, 218, 231))
+            if world.sniper_stage:
+                assets.font.draw(740, 120, "V → 1~9  스나이퍼 소환", (205, 218, 231))
             sources = "좌우/열린 문 무작위" if world.stage.doors else "좌우 무작위"
             assets.font.draw(740, 48, f"1~9: 해당 수만큼 적 소환 ({sources})", (205, 218, 231))
             assets.font.draw(22, 25,

@@ -416,7 +416,7 @@ class PistolShootingTests(unittest.TestCase):
             player.equip_weapon(replacement)
             self.assertEqual(player.animation.elapsed, elapsed)
             self.assertEqual(player.animation.definitions["HIT"][1], fps)
-            self.assertEqual(player.sprite_row, 7 if replacement == "pistol" else 5)
+            self.assertEqual(player.sprite_row, 7 if replacement == "pistol" else 8)
             advance(world, 0.17 if fps == 40 else 0.65)
             self.assertEqual(player.state, "IDLE")
             player.take_damage(20)

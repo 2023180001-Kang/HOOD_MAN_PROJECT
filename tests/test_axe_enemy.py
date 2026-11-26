@@ -337,7 +337,7 @@ class AxeEnemyTests(unittest.TestCase):
         self.assertTrue(all(row < 7 for row, _, _ in enemy.animation.definitions.values()))
         self.assertFalse(any("STUN" in state for state in enemy.animation.definitions))
 
-    def test_both_weapon_dive_landings_deal_fifty_with_existing_feedback(self):
+    def test_pipe_dive_landings_deal_sixty_with_existing_feedback(self):
         for weapon in config.WEAPON_AIRBORNE_ROWS:
             for side in (-1, 1):
                 world, enemy = encounter(side, weapon=weapon)
@@ -348,8 +348,8 @@ class AxeEnemyTests(unittest.TestCase):
                     world.step(config.FIXED_DT)
                     if enemy.hp < 400:
                         break
-                self.assertEqual(enemy.hp, 350)
-                self.assertEqual([number.damage for number in world.damage_numbers], [50])
+                self.assertEqual(enemy.hp, 340)
+                self.assertEqual([number.damage for number in world.damage_numbers], [60])
                 self.assertEqual(world.effects[-1].image_name, config.WEAPON_HIT_IMAGES[weapon])
                 self.assertEqual((enemy.sprite_image, enemy.animation.row),
                                  (config.AXE_ENEMY_IMAGE, 5))
@@ -509,7 +509,7 @@ class AxeEnemyTests(unittest.TestCase):
             self.assertIn(name, assets.images)
             self.assertEqual(SHEETS[name], 7)
         self.assertEqual(len(assets.frames), 24)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1216)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1224)
 
     def test_revisiting_pauses_axe_hp_animation_and_effects_and_f5_restores_fresh_summons(self):
         world, enemy = encounter()

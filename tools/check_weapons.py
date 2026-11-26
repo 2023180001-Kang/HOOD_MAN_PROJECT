@@ -100,8 +100,8 @@ def check_pose_frames(game):
                     assert args[8:10] == (tile["clip"][2] * config.WEAPON_POSE_SCALE,
                                          tile["clip"][3] * config.WEAPON_POSE_SCALE)
                     assert abs(args[7] - args[9] / 2 - player.y) < 1e-8
-    print("PASS: new 8-row equipped sheets, movement/hit/death poses x 8 frames x 2 facings, "
-          "exact clips/0.75 scale/feet alignment; pipe death uses the shared player sheet.")
+    print("PASS: equipped knife and pipe sheets, movement/hit/death poses x 8 frames x 2 facings, "
+          "exact clips/0.75 scale/feet alignment; pipe death uses its ninth row.")
 
 
 def check_hit_recovery(game):

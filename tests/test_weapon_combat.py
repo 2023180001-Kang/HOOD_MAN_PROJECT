@@ -40,7 +40,7 @@ class WeaponCombatTests(unittest.TestCase):
     def test_weapon_strikes_hit_one_pixel_inside_their_forward_reach_and_miss_outside(self):
         reaches = {
             "combat_knife": {"a": 120},
-            "steel_pipe": {"a": 120, "s": 130, "d": 140},
+            "steel_pipe": {"a": 130, "d": 140},
             "steel_club": {"a": 130, "d": 140},
             "axe": {"a": 130, "d": 130},
         }
@@ -70,8 +70,9 @@ class WeaponCombatTests(unittest.TestCase):
                         self.assertTrue(player.try_hit(enemy))
 
     def test_g_pickup_remaps_asd_to_each_weapon_and_keeps_f_as_the_kick(self):
-        for kind, rows in (("combat_knife", (5,)), ("steel_pipe", (6, 7, 8))):
-            for key, row, damage in zip("asd", rows, (10, 40, 50)):
+        cases = {"combat_knife": (("a", 5, 10, 32),), "steel_pipe": (("a", 5, 40, 16), ("d", 7, 60, 14))}
+        for kind, attacks in cases.items():
+            for key, row, damage, fps in attacks:
                 world = equipped_world(kind)
                 player = world.player
                 if key == "d":
@@ -81,8 +82,7 @@ class WeaponCombatTests(unittest.TestCase):
                 self.assertEqual((player.sprite_image, player.sprite_row),
                                  (config.WEAPON_POSE_IMAGES[kind], row))
                 self.assertEqual(player.active_move.damage, damage)
-                self.assertEqual(player.animation.definitions[player.state][1],
-                                 MOVES[f"combat_{key}"].fps)
+                self.assertEqual(player.animation.definitions[player.state][1], fps)
                 if key == "d":
                     tap(world.controls, "combat_d")
                 advance(world, 0.7)
@@ -129,7 +129,7 @@ class WeaponCombatTests(unittest.TestCase):
                                              (1, 200 - move.damage, 500))
 
     def test_pipe_swing_and_jump_strike_wait_for_the_source_impact_pose(self):
-        for kind, key, before in (("steel_pipe", "s", 0.18),
+        for kind, key, before in (("steel_pipe", "a", 0.18),
                                   ("steel_pipe", "d", 0.3)):
             world = equipped_world(kind)
             enemy = target(world)
@@ -176,16 +176,17 @@ class WeaponCombatTests(unittest.TestCase):
             world = equipped_world(kind)
             first, second = target(world), target(world)
             second.hp = 15
+            damage = 50 if kind == "steel_pipe" else 40
             world.controls.press("combat_s")
             for _ in range(60):
                 world.step(config.FIXED_DT)
                 if not second.alive:
                     break
-            self.assertEqual((first.hp, second.hp), (160, 0))
-            self.assertEqual(sorted(number.damage for number in world.damage_numbers), [15, 40])
+            self.assertEqual((first.hp, second.hp), (200 - damage, 0))
+            self.assertEqual(sorted(number.damage for number in world.damage_numbers), [15, damage])
             self.assertEqual(len(world.effects), 2)
             advance(world, 0.2)
-            self.assertEqual((first.hp, second.hp), (160, 0))
+            self.assertEqual((first.hp, second.hp), (200 - damage, 0))
 
     def test_latest_attack_input_switches_immediately_without_buffering_or_restarting_same_key(self):
         for kind in WEAPON_MOVES:
@@ -263,7 +264,7 @@ class WeaponCombatTests(unittest.TestCase):
                     advance(world, seconds, fps)
                 results.append((enemy.hp, world.player.state, world.player.animation.elapsed,
                                 world.player.weapon))
-                self.assertEqual(enemy.hp, 100 if kind == "steel_pipe" else 140)
+                self.assertEqual(enemy.hp, 80 if kind == "steel_pipe" else 140)
                 tap(world.controls, "restart")
                 world.update(config.FIXED_DT)
                 self.assertIsNone(world.player.weapon)

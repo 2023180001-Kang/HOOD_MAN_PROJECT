@@ -83,7 +83,7 @@ class RemovedCounterTests(unittest.TestCase):
                     self.assertEqual(world.effects[0].image_name, config.CLUB_HIT_IMAGE)
                     self.assertFalse(world.damage_numbers)
 
-    def test_a_with_retired_keys_is_the_normal_ten_damage_attack_for_every_weapon(self):
+    def test_a_with_retired_keys_is_the_normal_equipped_attack_for_every_weapon(self):
         for weapon in (None, *config.WEAPON_POSE_IMAGES):
             for key in "hjkl":
                 game = scene()
@@ -94,9 +94,10 @@ class RemovedCounterTests(unittest.TestCase):
                 enemy.cooldown = 100
                 world.enemies = [enemy]
                 send_keys(game, key + "a")
-                advance(world, 0.12, 120)
-                self.assertEqual(enemy.hp, 190)
-                self.assertEqual([number.damage for number in world.damage_numbers], [10])
+                move = world.player.moves["combat_a"]
+                advance(world, (move.active_frames[0] + 1) / move.fps, 120)
+                self.assertEqual(enemy.hp, 200 - move.damage)
+                self.assertEqual([number.damage for number in world.damage_numbers], [move.damage])
                 self.assertEqual(world.player.active_move, world.player.moves["combat_a"])
                 self.assertFalse(world.controls.held & {f"counter_{key}" for key in "hjkl"})
 
@@ -155,7 +156,7 @@ class RemovedCounterTests(unittest.TestCase):
         self.assertFalse(retired & assets.images.keys())
         self.assertFalse(retired & assets.frames.keys())
         self.assertEqual(len(assets.frames), 24)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1216)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1224)
 
     def test_hud_has_no_counter_keys_techniques_hold_or_followup_help_on_any_stage(self):
         game = scene()

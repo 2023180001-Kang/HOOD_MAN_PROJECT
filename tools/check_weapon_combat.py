@@ -198,7 +198,7 @@ def check_damage_effects_and_hud(game):
                     assert player.active_move is None and player.state == "IDLE"
                     assert player.sprite_image == config.WEAPON_POSE_IMAGES[kind]
                     release(game, key)
-    print("PASS: SDL G+ASD, both weapons/enemy types/facings: 10/40/50 damage once, "
+    print("PASS: SDL equipped melee strikes, both enemy types and facings: configured damage once, "
            "correct source impact frames, existing hit-effect pixels, damage numbers/shake, "
            "equipped HUD labels and return to weapon IDLE.")
     print("PASS: double-jump D landing-hit shake is 16px/8px, exactly twice the previous "
@@ -256,21 +256,14 @@ def check_switches_and_discard(game):
     for kind in WEAPON_MOVES:
         world = scene(game, kind, Enemy)
         enemy = world.enemies[0]
-        for key, frames, hp in ((pico2d.SDLK_a, 5, 190),
-                                (pico2d.SDLK_s, 14, 150)):
+        for key, frames, damage in ((pico2d.SDLK_a, 15, world.player.moves["combat_a"].damage),
+                                    (pico2d.SDLK_s, 15, world.player.moves["combat_s"].damage)):
+            hp = enemy.hp - damage
             tap(game, key)
             tick(game, frames)
             assert enemy.hp == hp, (kind, key, enemy.hp)
         tick(game, 15)
-        if kind in config.WEAPON_AIRBORNE_ROWS:
-            double_jump(game)
-            tap(game, pico2d.SDLK_d)
-            tick(game, 6)
-            tap(game, pico2d.SDLK_d)
-            tick(game, 30)
-            assert enemy.hp == 100
-        else:
-            assert world.player.weapon is None and len(world.projectiles) == 1
+        assert world.player.weapon is None and len(world.projectiles) == 1
         capture(game, f"weapon_combo_{kind}")
         world = scene(game, kind, Enemy)
         enemy = world.enemies[0]

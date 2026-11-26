@@ -238,7 +238,7 @@ def check_strong_and_dives(game):
                 tick(game)
                 if enemy.hp < 400:
                     break
-            assert enemy.hp == (375 if guarded else 350)
+            assert enemy.hp == (370 if guarded else 340)
             assert [effect.image_name for effect in world.effects] == [config.WEAPON_HIT_IMAGES[weapon]]
             assert world.camera.shake_strength == 16
             capture_number(game, f"shield_dive_{weapon}_{'guard' if guarded else 'full'}")

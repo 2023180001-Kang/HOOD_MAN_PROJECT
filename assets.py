@@ -21,7 +21,7 @@ class Assets:
                          config.BAG_UI_IMAGE, config.BAG_BUTTON_IMAGE,
                          *(image for _, image, _ in config.BAG_ITEM_SPECS),
                          config.PLAYER_IMAGE, *config.PLAYER_EQUIPPED_SHEETS.values(), config.COMBAT_IMAGE,
-                         config.KNIFE_PROJECTILE_IMAGE,
+                         *(name for name, _, _ in config.CLIPPED_THROW_SPRITES.values()),
                          *(sprite.image for sprite in config.THROWN_WEAPON_SPRITES.values()),
                          config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
@@ -140,11 +140,11 @@ class Assets:
         )
 
     def draw_thrown_weapon(self, kind, x, y, facing, elapsed, *, grounded=False):
-        if kind == "combat_knife":
-            left, bottom, width, height = config.KNIFE_PROJECTILE_CLIP
-            scale = config.KNIFE_PROJECTILE_SCALE
-            self.images[config.KNIFE_PROJECTILE_IMAGE].clip_composite_draw(
-                left, bottom, width, height, 0, "h" if facing < 0 else "", x, y,
+        spin = -facing * tau * config.THROWN_WEAPON_TURNS_PER_SECOND * elapsed
+        if kind in config.CLIPPED_THROW_SPRITES:
+            name, (left, bottom, width, height), scale = config.CLIPPED_THROW_SPRITES[kind]
+            self.images[name].clip_composite_draw(
+                left, bottom, width, height, spin if kind == "steel_pipe" else 0, "h" if facing < 0 else "", x, y,
                 width * scale, height * scale)
             return
         sprite = config.THROWN_WEAPON_SPRITES[kind]
@@ -160,8 +160,8 @@ class Assets:
                                           x + facing * side * 20 * sprite.scale, y + side * 12 * sprite.scale,
                                           cell * sprite.scale, cell * sprite.scale)
             return
-        angle = radians(sprite.rest_angle) if grounded else -tau * config.THROWN_WEAPON_TURNS_PER_SECOND * elapsed
-        image.clip_composite_draw(0, 0, image.w, image.h, facing * angle,
+        angle = facing * radians(sprite.rest_angle) if grounded else spin
+        image.clip_composite_draw(0, 0, image.w, image.h, angle,
                                   "h" if facing < 0 else "", x, y,
                                   image.w * sprite.scale, image.h * sprite.scale)
 

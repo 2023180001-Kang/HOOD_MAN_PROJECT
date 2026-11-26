@@ -179,6 +179,15 @@ KNIFE_PROJECTILE_IMAGE = "hoodman_throw_combat_knife.png"
 # Opaque blade and grip within the right-facing 256px projectile sprite.
 KNIFE_PROJECTILE_CLIP = (58, 114, 139, 40)
 KNIFE_PROJECTILE_SCALE = 56 * SPRITE_SCALE / KNIFE_PROJECTILE_CLIP[2]
+PIPE_THROW_DAMAGE = 50
+PIPE_PROJECTILE_IMAGE = "HoodMan_SteelPipe_Projectile.png"
+# Crop the pipe from its padded 1254px canvas and match the held pipe's length.
+PIPE_PROJECTILE_CLIP = (159, 491, 934, 254)
+PIPE_PROJECTILE_SCALE = 88 * SPRITE_SCALE / PIPE_PROJECTILE_CLIP[2]
+CLIPPED_THROW_SPRITES = {
+    "combat_knife": (KNIFE_PROJECTILE_IMAGE, KNIFE_PROJECTILE_CLIP, KNIFE_PROJECTILE_SCALE),
+    "steel_pipe": (PIPE_PROJECTILE_IMAGE, PIPE_PROJECTILE_CLIP, PIPE_PROJECTILE_SCALE),
+}
 DUAL_BATONS_THROW_DAMAGE = 60
 AXE_THROW_DAMAGE = 60
 THROWN_WEAPON_RELEASE_FRAME = 4  # Fifth cell of row six, counted from zero.
@@ -234,17 +243,17 @@ PLAYER_PISTOL_MUZZLE_OFFSETS = {
 }
 WEAPON_POSE_IMAGES = {
     "combat_knife": "HoodMan_CombatKnife_changed_version_8x8.png",
-    "steel_pipe": "HOOD_MAN_STEEL_PIPE_move and fight.png",
+    "steel_pipe": "HoodMan_CompactPipe_8x9_2048x2304.png",
 }
 WEAPON_POSE_SCALE = SPRITE_SCALE
-WEAPON_SHEET_ROWS = {"combat_knife": 8, "steel_pipe": 8}
+WEAPON_SHEET_ROWS = {"combat_knife": 8, "steel_pipe": 9}
 WEAPON_POSE_ROWS = {
     "combat_knife": {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4,
                      "HIT": 7, "DYING": 8, "DEAD": 8},
-    # The pipe sheet has attacks in rows 6..8, so use the shared death sprite.
-    "steel_pipe": {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4, "HIT": 5},
+    "steel_pipe": {"IDLE": 1, "WALK": 2, "RUN": 3, "JUMP": 4,
+                   "HIT": 8, "DYING": 9, "DEAD": 9},
 }
-WEAPON_AIRBORNE_ROWS = {"steel_pipe": 8}
+WEAPON_AIRBORNE_ROWS = {"steel_pipe": 7}
 WEAPON_AIM_TIME_SCALE = 0.2
 WEAPON_DIVE_TIME_SCALE = 2.0
 WEAPON_DIVE_SPEED = 720.0
@@ -315,9 +324,8 @@ WEAPON_MOVE_SPECS = {
         ("a", "단검 찌르기", 5, 10, 120.0, 146.0, COMBAT_JAB_FPS, (3, 4)),
     ),
     "steel_pipe": (
-        ("a", "쇠파이프 찌르기", 6, 10, 120.0, 146.0, COMBAT_JAB_FPS, (3, 4)),
-        ("s", "쇠파이프 휘두르기", 7, 40, 130.0, 146.0, COMBAT_STRAIGHT_FPS, (4, 5)),
-        ("d", "도약 내려치기", 8, 50, 140.0, 146.0, COMBAT_KICK_FPS, (5, 6)),
+        ("a", "쇠파이프 내려치기", 5, 40, 130.0, 146.0, 16.0, (4, 5)),
+        ("d", "쇠파이프 도약 내려찍기", 7, 60, 140.0, 146.0, COMBAT_KICK_FPS, (5, 6)),
     ),
 }
 # Retired H/J/K/L art is preserved but never loaded by normal gameplay.

@@ -1,15 +1,61 @@
 import unittest
+from math import tau
+from unittest.mock import Mock
 
 import config
+from assets import Assets
 from enemy import Enemy
-from projectiles import AxeProjectile, DualBatonProjectile, ShieldProjectile, SteelClubProjectile
+from projectiles import AxeProjectile, DualBatonProjectile, ShieldProjectile, SteelClubProjectile, SteelPipeProjectile
 from shield_soldier import ShieldSoldier
+from tests.helpers import advance, tap
+from tests.test_weapon_combat import equipped_world
 from world import World
 
 
 class ThrowPiercingTests(unittest.TestCase):
+    def test_pipe_leaves_the_hand_on_cell_five_spins_and_can_be_recovered(self):
+        assets = Assets.__new__(Assets)
+        texture = Mock()
+        assets.images = {config.PIPE_PROJECTILE_IMAGE: texture}
+        for facing in (-1, 1):
+            with self.subTest(facing=facing):
+                world = equipped_world("steel_pipe")
+                player = world.player
+                player.facing = facing
+                tap(world.controls, "combat_s")
+                for _ in range(29):
+                    world.step(config.FIXED_DT)
+                self.assertEqual((player.sprite_row, player.animation.frame, player.weapon), (6, 3, "steel_pipe"))
+                self.assertFalse(world.projectiles)
+                world.step(config.FIXED_DT)
+                pipe, = world.projectiles
+                self.assertIsInstance(pipe, SteelPipeProjectile)
+                self.assertEqual((player.sprite_row, player.animation.frame, player.weapon), (6, 4, None))
+                start, height = pipe.x, pipe.height
+                tap(world.controls, "combat_s")
+                for _ in range(3):
+                    world.step(config.FIXED_DT)
+                    assets.draw_projectile(pipe, 0, 0)
+                    args = texture.clip_composite_draw.call_args.args
+                    self.assertEqual(args[:4], config.PIPE_PROJECTILE_CLIP)
+                    self.assertAlmostEqual(args[4], -facing * tau * 8 * pipe.elapsed)
+                    self.assertEqual(args[5], "h" if facing < 0 else "")
+                self.assertEqual(world.projectiles, [pipe])
+                self.assertGreater((pipe.x - start) * facing, 0)
+                self.assertEqual(pipe.height, height)
+                advance(world, 0.95)
+                self.assertGreater((pipe.x - start) * facing, 720)
+                self.assertLess(pipe.height, height)
+                advance(world, 0.8)
+                item, = world.stage.drop_items
+                self.assertEqual((item.kind, item.grounded, world.projectiles), ("steel_pipe", True, []))
+                player.x, player.ground_y = item.x, item.ground_y
+                tap(world.controls, "weapon_interact")
+                world.step(config.FIXED_DT)
+                self.assertEqual((player.weapon, world.stage.drop_items), ("steel_pipe", []))
+
     def test_each_enemy_is_hit_once_in_order_through_straight_flight_and_fall(self):
-        for weapon, damage in ((SteelClubProjectile, 50), (AxeProjectile, 60),
+        for weapon, damage in ((SteelClubProjectile, 50), (SteelPipeProjectile, 50), (AxeProjectile, 60),
                                (DualBatonProjectile, 60), (ShieldProjectile, 50)):
             for facing in (-1, 1):
                 for dt, steps in ((2.0, 1), (config.FIXED_DT, 240)):
@@ -54,7 +100,7 @@ class ThrowPiercingTests(unittest.TestCase):
                         self.assertGreater((drop.x - in_fall.x) * facing, 0)
 
     def test_overlapping_targets_at_release_can_be_hit_again_by_a_new_throw(self):
-        for weapon in (SteelClubProjectile, AxeProjectile, DualBatonProjectile, ShieldProjectile):
+        for weapon in (SteelClubProjectile, SteelPipeProjectile, AxeProjectile, DualBatonProjectile, ShieldProjectile):
             world = World()
             x, y = world.player.x, world.player.ground_y
             world.enemies = [Enemy(x, ground_y=y) for _ in range(3)]

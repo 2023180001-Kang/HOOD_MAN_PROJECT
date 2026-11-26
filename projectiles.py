@@ -249,6 +249,15 @@ class KnifeProjectile(ThrownWeaponProjectile, PlayerProjectile):
     half_height = config.DROP_ITEM_BODY_HEIGHTS[weapon_kind] * config.DROP_ITEM_SCALE / 2
 
 
+class SteelPipeProjectile(ThrownWeaponProjectile, PlayerProjectile):
+    weapon_kind = "steel_pipe"
+    image_name = config.PIPE_PROJECTILE_IMAGE
+    damage = config.PIPE_THROW_DAMAGE
+    release_offset = (108, 104)  # Grip at the outstretched hand in row six, cell five.
+    half_width = config.PIPE_PROJECTILE_CLIP[2] * config.PIPE_PROJECTILE_SCALE / 2
+    half_height = config.DROP_ITEM_BODY_HEIGHTS[weapon_kind] * config.DROP_ITEM_SCALE / 2
+
+
 class SteelClubProjectile(ThrownWeaponProjectile, PlayerProjectile):
     weapon_kind = "steel_club"
     image_name = config.STEEL_CLUB_PROJECTILE_IMAGE

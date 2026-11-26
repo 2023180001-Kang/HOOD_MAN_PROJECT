@@ -197,8 +197,8 @@ class ResearcherTests(unittest.TestCase):
                         tap(world.controls, action)
                         world.step(config.FIXED_DT)
                     until(world, lambda: enemy.hp < 200)
-                    self.assertEqual(enemy.hp, 150)
-                    self.assertEqual([number.damage for number in world.damage_numbers], [50])
+                    self.assertEqual(enemy.hp, 140)
+                    self.assertEqual([number.damage for number in world.damage_numbers], [60])
                     self.assertEqual(world.effects[-1].image_name, config.WEAPON_HIT_IMAGES[weapon])
 
     def test_lethal_bullet_uses_normal_player_death_instead_of_hit(self):

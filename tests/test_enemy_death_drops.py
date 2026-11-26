@@ -49,7 +49,7 @@ class RemovedEnemyDeathDropTests(unittest.TestCase):
                         self.assertEqual(world.stage.drop_items, [])
                         advance(world, 6)
                         self.assertNotIn(enemy, world.enemies)
-                        expected = ["combat_knife"] if weapon == "combat_knife" and key == "s" else []
+                        expected = [weapon] if weapon is not None and key == "s" else []
                         self.assertEqual([item.kind for item in world.stage.drop_items], expected)
 
     def test_lethal_weapon_dive_does_not_drop_a_club(self):

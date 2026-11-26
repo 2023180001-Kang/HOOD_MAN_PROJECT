@@ -206,7 +206,7 @@ class WeaponLeapTests(unittest.TestCase):
                             self.assertEqual(world.effects[-1].image_name, config.WEAPON_HIT_IMAGES[kind])
                         if player.active_move is None:
                             break
-                    self.assertEqual((hits, enemy.hp), (1, 150))
+                    self.assertEqual((hits, enemy.hp), (1, 140))
                     self.assertEqual((player.state, world.time_scale), ("IDLE", 1))
 
     def test_landing_without_a_second_d_cancels_aim_with_no_automatic_hit(self):
@@ -239,7 +239,7 @@ class WeaponLeapTests(unittest.TestCase):
                             world.step(config.FIXED_DT)
                             if enemy.hp != hp:
                                 break
-                        self.assertEqual(enemy.hp, hp - 50)
+                        self.assertEqual(enemy.hp, hp - 60)
                         self.assertEqual(player.weapon_leap_phase, "LANDING")
                         self.assertEqual(world.camera.shake_strength, config.SHAKE_STRENGTH * 2)
                         self.assertAlmostEqual(world.camera.shake_remaining,
@@ -302,7 +302,7 @@ class WeaponLeapTests(unittest.TestCase):
                     world.step(config.FIXED_DT)
                     if enemy.hp < hp:
                         break
-                self.assertEqual(enemy.hp, hp - 10)
+                self.assertEqual(enemy.hp, hp - 40)
                 self.assertEqual(world.camera.shake_strength, config.SHAKE_STRENGTH)
 
     def test_interruptions_clear_slow_or_fast_time_and_allow_natural_falling(self):

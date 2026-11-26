@@ -220,8 +220,8 @@ class ShieldSoldierTests(unittest.TestCase):
                     world.step(config.FIXED_DT)
                     if enemy.hp < 400:
                         break
-                self.assertEqual(enemy.hp, 375 if guarded else 350)
-                self.assertEqual([number.damage for number in world.damage_numbers], [25 if guarded else 50])
+                self.assertEqual(enemy.hp, 370 if guarded else 340)
+                self.assertEqual([number.damage for number in world.damage_numbers], [30 if guarded else 60])
                 self.assertEqual(world.effects[-1].image_name, config.WEAPON_HIT_IMAGES[weapon])
 
     def test_fifth_row_swing_deals_forty_once_at_active_frames_on_both_sides(self):

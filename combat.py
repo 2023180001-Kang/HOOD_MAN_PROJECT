@@ -102,6 +102,9 @@ KNIFE_THROW = Move("s", "단검 던지기", 6, config.KNIFE_THROW_DAMAGE, 0, 0, 
                   image_name=config.WEAPON_POSE_IMAGES["combat_knife"], active_frames=(),
                   hit_image=config.CLUB_HIT_IMAGE)
 WEAPON_LOADOUTS["combat_knife"]["combat_s"] = KNIFE_THROW
+PIPE_THROW = replace(KNIFE_THROW, name="쇠파이프 던지기", damage=config.PIPE_THROW_DAMAGE,
+                     image_name=config.WEAPON_POSE_IMAGES["steel_pipe"])
+WEAPON_LOADOUTS["steel_pipe"]["combat_s"] = PIPE_THROW
 WEAPON_LOADOUTS["pistol"] = {key: move for key, move in MOVES.items() if key != "combat_a"}
 WEAPON_LOADOUTS["ar_rifle"] = WEAPON_LOADOUTS["pistol"]
 STEEL_CLUB_SWING = Move("a", "쇠몽둥이 휘두르기", 5, 40, 130.0, 146.0, 16.0,

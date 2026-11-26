@@ -79,13 +79,12 @@ class StairCombatTests(ArchivedTwoFloorTests):
                     self.assertEqual(enemy.hp, config.ENEMY_MAX_HP - move.damage)
 
     def test_knife_and_pipe_attacks_hit_stair_enemies(self):
-        for kind, keys in (("combat_knife", ("combat_a",)), ("steel_pipe", ("combat_a", "combat_s"))):
-            for key in keys:
-                world = World()
-                enemy = on_stairs(world)
-                world.player.equip_weapon(kind)
-                self.assertTrue(attack(world, enemy, key))
-                self.assertEqual(enemy.hp, config.ENEMY_MAX_HP - world.player.active_move.damage)
+        for kind in ("combat_knife", "steel_pipe"):
+            world = World()
+            enemy = on_stairs(world)
+            world.player.equip_weapon(kind)
+            self.assertTrue(attack(world, enemy, "combat_a"))
+            self.assertEqual(enemy.hp, config.ENEMY_MAX_HP - world.player.active_move.damage)
 
     def test_distant_heights_horizontal_range_and_wrong_facing_still_miss(self):
         world = World()

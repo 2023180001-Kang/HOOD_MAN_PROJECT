@@ -380,7 +380,7 @@ class UI:
                 elif world.player.weapon == "shield_item":
                     help_text = "A 방패 밀치기 · S 유지 방어 · D 관통 투척 · G 줍기 / 내려놓기"
                 else:
-                    help_text = "무기 내려찍기: Space 두 번 → D 슬로 모션 / 방향키 조준 → D 급강하"
+                    help_text = "A 쇠파이프 내려치기 · S 관통 투척 · 이단 점프 중 D 조준 → D 내려찍기"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))
             source_index = world.stage.spawn_enemy_stage_index
             source_image = config.STAGE_IMAGES[source_index]

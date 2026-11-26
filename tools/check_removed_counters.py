@@ -37,7 +37,7 @@ def check_ignored_keys_and_hud(game):
     assert not retired & game.assets.images.keys()
     assert not retired & game.assets.frames.keys()
     assert len(game.assets.frames) == 24
-    assert sum(len(row) for rows in game.assets.frames.values() for row in rows) == 1216
+    assert sum(len(row) for rows in game.assets.frames.values() for row in rows) == 1224
     for index in range(len(config.STAGE_IMAGES)):
         game.world = World(item_rng=random.Random(23))
         game.world.select_stage(index)
@@ -113,8 +113,9 @@ def check_a_and_existing_actions(game):
         for key in "hjkl":
             push_key(getattr(pico2d, f"SDLK_{key}"))
         push_key(pico2d.SDLK_a)
-        tick(game, 7)
-        assert enemy.hp == 190 and [number.damage for number in world.damage_numbers] == [10]
+        move = world.player.moves["combat_a"]
+        tick(game, int(60 * move.active_frames[0] / move.fps) + 1)
+        assert enemy.hp == 200 - move.damage and [number.damage for number in world.damage_numbers] == [move.damage]
         assert world.player.active_move == world.player.moves["combat_a"]
         capture(game, f"removed_counters_a_{weapon or 'unarmed'}")
         release(game, pico2d.SDLK_a)

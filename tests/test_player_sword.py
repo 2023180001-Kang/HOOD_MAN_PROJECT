@@ -156,23 +156,27 @@ class PlayerSwordTests(unittest.TestCase):
             self.assertEqual((shot.height, stepped.height), (shot.half_height, shot.half_height))
             self.assertAlmostEqual(shot.x, stepped.x)
 
-    def test_melee_and_thrown_axes_still_hit_and_interrupt_the_parry(self):
-        for attack in ("melee", "axe"):
-            world = equipped_world("sword")
-            player = world.player
-            player.invincible = False
-            world.controls.press("combat_s")
-            world.step(config.FIXED_DT)
-            if attack == "melee":
-                self.assertTrue(attacking_enemy(player.x - 80).try_hit(player))
-                damage = 20
-            else:
-                axe = EnemyAxeProjectile(player.x, player.ground_y, 80, 1)
-                world.projectiles.append(axe)
-                world.step(config.FIXED_DT)
-                self.assertFalse(axe.deflected)
-                damage = axe.damage
-            self.assertEqual((player.hp, player.state), (player.max_hp - damage, "HIT"))
+    def test_melee_hits_during_parry(self):
+        world = equipped_world("sword")
+        player = world.player
+        player.invincible = False
+        world.controls.press("combat_s")
+        world.step(config.FIXED_DT)
+        self.assertTrue(attacking_enemy(player.x - 80).try_hit(player))
+        self.assertEqual((player.hp, player.state), (player.max_hp - 20, "HIT"))
+
+    def test_releasing_s_before_axe_contact_takes_full_throw_damage(self):
+        world = equipped_world("sword")
+        player = world.player
+        player.invincible = False
+        world.controls.press("combat_s")
+        world.step(config.FIXED_DT)
+        world.controls.release("combat_s")
+        axe = EnemyAxeProjectile(player.x, player.ground_y, 80, 1)
+        world.projectiles.append(axe)
+        world.step(config.FIXED_DT)
+        self.assertFalse(axe.deflected)
+        self.assertEqual((player.hp, player.state), (player.max_hp - 50, "HIT"))
 
     def test_dropping_the_sword_ends_the_parry_and_it_can_be_picked_up(self):
         world = equipped_world("sword")

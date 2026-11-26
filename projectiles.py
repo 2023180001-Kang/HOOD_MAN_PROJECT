@@ -345,6 +345,7 @@ class AxeProjectile(ThrownAxe, PlayerProjectile):
 
 
 class EnemyAxeProjectile(ThrownAxe):
+    deflectable = True
     damage = config.AXE_ENEMY_THROW_DAMAGE
     release_offset = (108, 123)  # Extended hand in row seven, cell five.
 

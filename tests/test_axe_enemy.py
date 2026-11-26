@@ -121,6 +121,35 @@ class AxeEnemyTests(unittest.TestCase):
                 world.player.x = enemy.x + side * 80
                 self.swing_then_throw(world, enemy)
 
+    def test_sword_parries_thrown_axe_and_either_fighter_can_recover_it(self):
+        for side in (-1, 1):
+            with self.subTest(side=side):
+                world, enemy = encounter(side, weapon="sword")
+                player = world.player
+                world.stage.drop_items.clear()
+                axe = self.swing_then_throw(world, enemy)
+                hp = player.hp
+                world.controls.press("combat_s")
+                with patch("projectiles.uniform", return_value=side * 0.6):
+                    self.advance_until(world, lambda: axe.deflected)
+                self.assertEqual((player.hp, player.state, axe.facing), (hp, "SWORD_PARRY", side))
+                contact_x = axe.x
+                world.controls.release("combat_s")
+                self.advance_until(world, lambda: bool(world.stage.drop_items))
+                item, = world.stage.drop_items
+                self.assertGreater((item.x - contact_x) * side, 0)
+                self.assertEqual((item.kind, item.grounded, player.hp), ("axe", True, hp))
+                self.assertIs(item.axe_owner, enemy)
+                self.assertFalse(world.projectiles)
+                if side == 1:
+                    player.x, player.ground_y = item.x, item.ground_y
+                    tap(world.controls, "weapon_interact")
+                    world.step(config.FIXED_DT)
+                    self.assertEqual(player.weapon, "axe")
+                else:
+                    self.advance_until(world, lambda: enemy.armed)
+                self.assertNotIn(item, world.stage.drop_items)
+
     def test_player_can_claim_the_same_drop_first_and_enemy_fights_unarmed(self):
         world, enemy = encounter()
         world.stage.drop_items.clear()

@@ -124,7 +124,7 @@ class Assets:
         x, y = sniper.visible_target
         name = config.SNIPER_LOCKED_IMAGE if sniper.state == "ATTACK" else config.SNIPER_TARGET_IMAGE
         # Both reticles are centered on pixel (627, 627) in the original PNGs.
-        self.images[name].clip_draw(377, 377, 500, 500, x - camera_x, y - camera_y, 72, 72)
+        self.images[name].clip_draw(377, 377, 500, 500, x - camera_x, y - camera_y, 144, 144)
 
     def draw_researcher_aim(self, researcher, camera_x, camera_y):
         line = researcher.aim_line

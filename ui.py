@@ -115,6 +115,8 @@ class UI:
             labels[:2] = firearm_controls(player)
         elif player.weapon == "shield_item":
             labels.insert(1, "S 유지  방어 (피해 절반)")
+        elif player.weapon == "sword":
+            labels.insert(1, "S 유지  총알 튕기기")
         for index, label in enumerate(labels):
             x = 704 + index % 2 * 270
             y = 659 - index // 2 * 24
@@ -216,6 +218,8 @@ class UI:
             labels["combat_s"] = turn
         elif player.weapon == "shield_item":
             labels["combat_s"] = "S 유지  방어 (피해 절반)"
+        elif player.weapon == "sword":
+            labels["combat_s"] = "S 유지  총알 튕기기"
         for i, key in enumerate(("combat_a", "combat_s", "combat_d", "combat_f")):
             font.draw(text_left + (i % 2) * 280, 637 - (i // 2) * 28, labels[key], body)
         strong = "Q 양주먹 · W 유지 돌진 · E 두 번 발차기 · "
@@ -379,6 +383,8 @@ class UI:
                     help_text = "A 쌍몽둥이 휘두르기 · S 관통 투척 · G 줍기 / 내려놓기"
                 elif world.player.weapon == "shield_item":
                     help_text = "A 방패 밀치기 · S 유지 방어 · D 관통 투척 · G 줍기 / 내려놓기"
+                elif world.player.weapon == "sword":
+                    help_text = "A 검 베기 · 총알이 닿을 때 S 유지 · 근접 공격에는 피격"
                 else:
                     help_text = "A 쇠파이프 내려치기 · S 관통 투척 · 이단 점프 중 D 조준 → D 내려찍기"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))

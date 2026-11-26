@@ -41,22 +41,22 @@ class DropItem:
     def image_name(self):
         if self.kind in config.THROWN_WEAPON_SPRITES:
             return config.THROWN_WEAPON_SPRITES[self.kind].image
-        if self.kind in config.FIREARM_DROP_SPRITES:
-            return config.FIREARM_DROP_SPRITES[self.kind][0]
+        if self.kind in config.STATIC_DROP_SPRITES:
+            return config.STATIC_DROP_SPRITES[self.kind][0]
         return config.DROP_ITEM_IMAGES[self.kind]
 
     @property
     def display_height(self):
         if self.kind in config.THROWN_WEAPON_SPRITES:
             return config.THROWN_WEAPON_SPRITES[self.kind].rest_height
-        if self.kind in config.FIREARM_DROP_SPRITES:
-            _, clip, scale = config.FIREARM_DROP_SPRITES[self.kind]
+        if self.kind in config.STATIC_DROP_SPRITES:
+            _, clip, scale = config.STATIC_DROP_SPRITES[self.kind]
             return clip[3] * scale
         return config.DROP_ITEM_BODY_HEIGHTS[self.kind] * config.DROP_ITEM_SCALE
 
     @property
     def frame(self):
-        if self.kind in config.FIREARM_DROP_SPRITES or self.kind in config.THROWN_WEAPON_SPRITES:
+        if self.kind in config.STATIC_DROP_SPRITES or self.kind in config.THROWN_WEAPON_SPRITES:
             return 0
         return int(self.elapsed * config.DROP_ITEM_FPS + 1e-9) % self.frame_count
 

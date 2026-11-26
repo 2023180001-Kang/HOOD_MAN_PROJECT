@@ -143,8 +143,8 @@ class World:
         area = (self.stage.drop_spawn_area if player.floor == 0 else self.stage.area_for(player))
         left, bottom, right, top = area.bounds
         half_width, height = config.DROP_ITEM_HALF_WIDTH, config.DROP_ITEM_HEIGHT
-        if kind in config.FIREARM_DROP_SPRITES:
-            _, clip, scale = config.FIREARM_DROP_SPRITES[kind]
+        if kind in config.STATIC_DROP_SPRITES:
+            _, clip, scale = config.STATIC_DROP_SPRITES[kind]
             half_width = max(half_width, clip[2] * scale / 2)
             height = clip[3] * scale
         else:

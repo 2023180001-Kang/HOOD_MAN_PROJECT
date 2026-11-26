@@ -129,6 +129,9 @@ DUAL_BATONS_SWING = replace(STEEL_CLUB_SWING, name="쌍몽둥이 휘두르기", 
 DUAL_BATONS_THROW = replace(STEEL_CLUB_THROW, name="쌍몽둥이 던지기", damage=config.DUAL_BATONS_THROW_DAMAGE,
                             image_name=config.PLAYER_DUAL_BATONS_IMAGE)
 WEAPON_LOADOUTS["dual_black_batons"] = {**MOVES, "combat_a": DUAL_BATONS_SWING, "combat_s": DUAL_BATONS_THROW}
+SWORD_SLASH = Move("a", "검 베기", 5, 70, 140.0, 146.0, 16.0, image_name=config.PLAYER_SWORD_IMAGE,
+                   active_frames=(3, 4, 5), hit_image=config.CLUB_HIT_IMAGE)
+WEAPON_LOADOUTS["sword"] = {"combat_a": SWORD_SLASH, "combat_d": MOVES["combat_d"], "combat_f": MOVES["combat_f"]}
 SHIELD_BASH = replace(STEEL_CLUB_SWING, name="방패 밀치기", damage=20, reach=110.0,
                       image_name=config.PLAYER_SHIELD_IMAGE, active_frames=(3, 4, 5))
 SHIELD_THROW = replace(STEEL_CLUB_THROW, key="d", name="방패 던지기", row=7, damage=config.SHIELD_THROW_DAMAGE,

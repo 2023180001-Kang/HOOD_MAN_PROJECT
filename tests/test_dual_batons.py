@@ -3,37 +3,12 @@ from unittest.mock import Mock
 
 import config
 from assets import Assets
-from main_menu import MainMenu
 from projectiles import DualBatonProjectile
 from tests.helpers import advance, tap
-from tests.test_bag_drag import slot_center
 from tests.test_weapon_combat import equipped_world, target
-from world import World
 
 
 class DualBatonTests(unittest.TestCase):
-    def test_drag_between_bag_and_player_then_start_with_equipped_pair(self):
-        menu = MainMenu()
-        menu.screen = "backpack"
-        menu.press_pointer(*slot_center(1))
-        menu.release_pointer(640, 420)
-        assets = Mock()
-        menu.draw_bag_player(assets)
-        self.assertEqual(assets.draw_sprite.call_args.args[:3], (config.PLAYER_DUAL_BATONS_IMAGE, 1, 0))
-        menu.press_pointer(640, 420)
-        menu.release_pointer(*slot_center(4))
-        self.assertIsNone(menu.equipped_weapon)
-        menu.draw_bag_player(assets)
-        self.assertEqual(assets.draw_sprite.call_args.args[0], config.PLAYER_IMAGE)
-        menu.press_pointer(*slot_center(4))
-        menu.release_pointer(640, 420)
-        self.assertCountEqual(menu.bag_items, config.BAG_ITEM_SPECS)
-        world = World()
-        world.starting_weapon = menu.equipped_weapon
-        world.reset()
-        self.assertEqual((world.player.weapon, world.player.sprite_image),
-                         ("dual_black_batons", config.PLAYER_DUAL_BATONS_IMAGE))
-
     def test_a_uses_row_five_and_deals_fifty_once(self):
         for facing in (-1, 1):
             world = equipped_world("dual_black_batons")

@@ -185,7 +185,7 @@ class Player:
             # A mid-flinch G swap changes the sheet/row, not the chosen recovery speed.
             row, _, loop = poses["HIT"]
             self.animation.definitions["HIT"] = (row, hit_fps, loop)
-        if self.active_move is not None or self.state in ("SHOOT", "RELOAD", "GUARD"):
+        if self.active_move is not None or self.state in ("SHOOT", "RELOAD", "GUARD", "SWORD_PARRY"):
             # Dropping/swapping a weapon cannot leave its old strike pending.
             self.cancel_combat()
             self.animation.set_state("IDLE" if self.grounded else "JUMP")
@@ -613,6 +613,15 @@ class Player:
             return
         if self.active_move in THROW_PROJECTILES:
             return
+        if self.weapon == "sword" and "combat_s" in controls.held and not escape.active:
+            if self.state != "SWORD_PARRY":
+                self.cancel_combat()
+                self.vx = self.ground_vy = 0.0
+                self.animation.set_state("SWORD_PARRY")
+                self.animation.elapsed = 1 / config.SWORD_PARRY_FPS
+            return
+        if self.state == "SWORD_PARRY":
+            self.finish_move()
         if self.weapon == "shield_item" and self.active_move is None:
             if "combat_s" in controls.held and not escape.active:
                 self.vx = self.ground_vy = 0.0
@@ -695,6 +704,14 @@ class Player:
                         # An interrupted top-up leaves the remaining rounds usable.
                         self.pistol_reload_interrupted = False
                     self.animation.set_state("IDLE")
+            return
+
+        if self.state == "SWORD_PARRY":
+            self.update_vertical(dt)
+            # Loop source cells 2 through 6 while S is held.
+            first = 1 / config.SWORD_PARRY_FPS
+            duration = 5 / config.SWORD_PARRY_FPS
+            self.animation.elapsed = first + (self.animation.elapsed - first + dt) % duration
             return
 
         if self.state == "GUARD":

@@ -238,7 +238,7 @@ class BagUITests(unittest.TestCase):
     def test_items_match_requested_left_to_right_order(self):
         self.assertEqual(
             [(kind, image) for kind, image, _ in config.BAG_ITEM_SPECS],
-            [("steel_club", "steel_club.png"), ("dual_black_batons", "dual_black_batons_pico2d.png"),
+            [("steel_club", "steel_club.png"), ("sword", "HoodMan_Sword_Item_256x256.png"),
              ("axe", "axe_weapon.png"), ("pistol", "pistol_item_256.png"),
              ("shield_item", "HOOD_MAN_shield_item_256x256.png"),
              ("ar_rifle", "ar_rifle_item_256.png")],
@@ -251,7 +251,7 @@ class BagUITests(unittest.TestCase):
     def test_item_clips_trim_transparent_padding_and_keep_original_files(self):
         originals = {
             "steel_club": ((2172, 724), "efcfcc648e1fa63fa1b52532ed31de415dda19a4c35a29a7613b8a72a67da743"),
-            "dual_black_batons": ((512, 512), "f2545fb5941d486b206b1dd7f52c8c885003c80fdaf8bc6d7d4efa985e3f6b3c"),
+            "sword": ((256, 256), "7ef0dc730732a7361928b0861cb4af3a3c9c938aba17e4fa16fdce4377a094a6"),
             "axe": ((1254, 1254), "6922c22be97be0109d040238f8414d2a00539ba14d1c8811f6b55ae7b4c60a6e"),
             "pistol": ((256, 256), "0ac560814a59cba562bcd57a620de5ae1433f75dc146433068358dc37df29003"),
             "shield_item": ((256, 256), "a4a18bab602767fc49c506272bc540575e8e8aa0dc7f127367540cf4fb35e662"),

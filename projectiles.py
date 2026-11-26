@@ -1,7 +1,7 @@
 """Ranged rounds with continuous collision and per-weapon flight/render profiles."""
 
 from dataclasses import dataclass, field
-from math import sqrt
+from math import cos, radians, sin, sqrt
 from operator import itemgetter
 
 import config
@@ -20,6 +20,7 @@ class ResearcherBullet:
     shooter: object = field(default=None, kw_only=True, repr=False, compare=False)
     impact_target: object = field(default=None, init=False, repr=False)
     impact_damage: int = field(default=0, init=False)
+    deflected: bool = field(default=False, init=False)
 
     image_name = config.RESEARCHER_BULLET_IMAGE
     damage = config.RESEARCHER_DAMAGE
@@ -34,6 +35,9 @@ class ResearcherBullet:
     range_limited = False
     world_width = config.WORLD_WIDTH
     hit_targets = None  # Piercing projectiles keep a set for the lifetime of the throw.
+    deflectable = True
+    ricochet_angle = radians(35)
+    ricochet_duration = 0.16
 
     @property
     def y(self):
@@ -66,6 +70,8 @@ class ResearcherBullet:
     @property
     def finished(self):
         left, right = self.horizontal_limits
+        if self.deflected:
+            return self.elapsed + 1e-12 >= self.ricochet_duration or not left <= self.x <= right
         return (self.spent or self.height <= self.half_height
                 or self.x < left or self.x > right
                 or (self.range_limited and self.elapsed + 1e-12 >= self.straight_duration))
@@ -74,6 +80,9 @@ class ResearcherBullet:
         if self.finished:
             return False
         dt = max(0.0, dt)
+        if self.deflected:
+            self._advance_ricochet(dt)
+            return False
         offset = 0.0
         dealt_damage = False
         while True:
@@ -101,6 +110,14 @@ class ResearcherBullet:
                 # Ground/world contact wins a simultaneous tie.
                 if terminal and contact >= step - 1e-12:
                     break
+                if self.deflectable and target.state == "SWORD_PARRY":
+                    self.x += self.facing * self.speed * contact
+                    self.height += vy * contact - gravity * contact * contact / 2
+                    self.facing *= -1
+                    self.deflected = True
+                    self.elapsed = 0.0
+                    self._advance_ricochet(dt - offset - contact)
+                    return False
                 if self._apply_hit(target):
                     dealt_damage = True
                     if on_impact is not None:
@@ -123,6 +140,12 @@ class ResearcherBullet:
             offset += step
             if offset >= dt:
                 return dealt_damage
+
+    def _advance_ricochet(self, dt):
+        step = min(dt, self.ricochet_duration - self.elapsed)
+        self.x += self.facing * self.speed * cos(self.ricochet_angle) * step
+        self.height += self.speed * sin(self.ricochet_angle) * step
+        self.elapsed += step
 
     def _apply_hit(self, target):
         if self.hit_targets is None:
@@ -203,6 +226,8 @@ class ResearcherBullet:
 class PlayerProjectile(ResearcherBullet):
     """Resolve eligible enemy contacts in flight order, including coincident hits."""
 
+    deflectable = False
+
     def _deal_damage(self, enemy):
         return enemy.take_damage(self.damage)
 
@@ -225,6 +250,8 @@ class PlayerPistolBullet(PlayerProjectile):
 @dataclass
 class ThrownWeaponProjectile(ResearcherBullet):
     """A thrown weapon that drops in its own lane when flight ends."""
+
+    deflectable = False
 
     hit_targets: set = field(default_factory=set, init=False, repr=False, compare=False)
 

@@ -98,7 +98,8 @@ class Assets:
         # Keep the copper nose on the physics body while the animated trail
         # extends backward, never moving the impact point as clips get wider.
         image.clip_composite_draw(
-            left, bottom, width, height, 0, "h" if bullet.facing < 0 else "",
+            left, bottom, width, height, bullet.facing * bullet.ricochet_angle if bullet.deflected else 0,
+            "h" if bullet.facing < 0 else "",
             bullet.x - camera_x + bullet.facing * (
                 bullet.half_width - width * scale / 2),
             bullet.y - camera_y + (
@@ -172,8 +173,8 @@ class Assets:
                                    item.facing, item.elapsed, grounded=item.grounded)
             return
         image = self.images[item.image_name]
-        if item.kind in config.FIREARM_DROP_SPRITES:
-            _, (left, bottom, width, height), scale = config.FIREARM_DROP_SPRITES[item.kind]
+        if item.kind in config.STATIC_DROP_SPRITES:
+            _, (left, bottom, width, height), scale = config.STATIC_DROP_SPRITES[item.kind]
             image.clip_composite_draw(
                 left, bottom, width, height, 0, "h" if item.facing < 0 else "",
                 x, ground_y + item.jump_height + item.display_height / 2,

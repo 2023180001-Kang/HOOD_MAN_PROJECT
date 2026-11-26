@@ -123,7 +123,7 @@ BAG_PLAYER_RECT = (528, 24, 752, 410)  # Screen top-left coordinates, including 
 BAG_EQUIPPED_PISTOL_RECT = (640, 196, 752, 262)  # Grab the pistol/hand, not the entire character.
 BAG_EQUIPPED_RECTS = {
     "pistol": BAG_EQUIPPED_PISTOL_RECT,
-    "dual_black_batons": (510, 36, 780, 401),  # Both hands and the equipped preview.
+    "sword": (528, 24, 766, 410),  # Include the blade to the right of the preview.
     "shield_item": BAG_PLAYER_RECT,
     "steel_club": (642, 162, 784, 276),
     "axe": (687, 150, 833, 292),
@@ -133,18 +133,21 @@ PISTOL_ITEM_IMAGE = "pistol_item_256.png"
 PISTOL_ITEM_CLIP = (22, 49, 212, 158)
 RIFLE_ITEM_IMAGE = "ar_rifle_item_256.png"
 RIFLE_ITEM_CLIP = (15, 86, 226, 84)
+SWORD_ITEM_IMAGE = "HoodMan_Sword_Item_256x256.png"
+SWORD_ITEM_CLIP = (100, 61, 56, 134)
 # Grip to muzzle (pistol) and stock to muzzle (rifle), measured on the player's 256px cells.
 PISTOL_DROP_SCALE = 57 * SPRITE_SCALE / PISTOL_ITEM_CLIP[2]
 RIFLE_DROP_SCALE = 136 * SPRITE_SCALE / RIFLE_ITEM_CLIP[2]
-FIREARM_DROP_SPRITES = {
+STATIC_DROP_SPRITES = {
     "pistol": (PISTOL_ITEM_IMAGE, PISTOL_ITEM_CLIP, PISTOL_DROP_SCALE),
     "ar_rifle": (RIFLE_ITEM_IMAGE, RIFLE_ITEM_CLIP, RIFLE_DROP_SCALE),
+    "sword": (SWORD_ITEM_IMAGE, SWORD_ITEM_CLIP, SPRITE_SCALE),
 }
 # Item order and visible source clips (pico2d bottom-left coordinates).
 # Alpha > 8 ignores almost-invisible stray pixels in the club/axe originals.
 BAG_ITEM_SPECS = (
     ("steel_club", "steel_club.png", (501, 87, 1174, 530)),
-    ("dual_black_batons", "dual_black_batons_pico2d.png", (27, 67, 458, 379)),
+    ("sword", SWORD_ITEM_IMAGE, SWORD_ITEM_CLIP),
     ("axe", "axe_weapon.png", (393, 273, 496, 730)),
     ("pistol", PISTOL_ITEM_IMAGE, PISTOL_ITEM_CLIP),
     ("shield_item", "HOOD_MAN_shield_item_256x256.png", (62, 16, 132, 224)),
@@ -165,6 +168,8 @@ PLAYER_PISTOL_IMAGE = "HoodMan_Pistol_MovingReload_2048x3072.png"
 PLAYER_RIFLE_IMAGE = "HoodMan_AR_2048x3072.png"
 PLAYER_STEEL_CLUB_IMAGE = "HoodMan_SteelClub_newChanged_version_8x8.png"
 PLAYER_DUAL_BATONS_IMAGE = "HoodMan_DualBatons_2048x2048(1).png"
+PLAYER_SWORD_IMAGE = "HoodMan_Sword_8x8_2048x2048.png"
+SWORD_PARRY_FPS = 24.0
 DUAL_BATON_PROJECTILE_IMAGE = "HoodMan_DualBaton_Projectiles_1024x256.png"
 PLAYER_SHIELD_IMAGE = "HoodMan_Shield_2048x2304.png"
 SHIELD_PROJECTILE_IMAGE = "HoodMan_Shield_Projectile_256x256.png"
@@ -216,7 +221,8 @@ THROWN_WEAPON_SPRITES = {
 }
 PLAYER_EQUIPPED_SHEETS = {"pistol": PLAYER_PISTOL_IMAGE, "ar_rifle": PLAYER_RIFLE_IMAGE,
                           "steel_club": PLAYER_STEEL_CLUB_IMAGE, "axe": PLAYER_AXE_IMAGE,
-                          "dual_black_batons": PLAYER_DUAL_BATONS_IMAGE, "shield_item": PLAYER_SHIELD_IMAGE}
+                          "dual_black_batons": PLAYER_DUAL_BATONS_IMAGE, "shield_item": PLAYER_SHIELD_IMAGE,
+                          "sword": PLAYER_SWORD_IMAGE}
 PLAYER_PISTOL_DAMAGE = 20
 PLAYER_PISTOL_MAGAZINE_SIZE = 7
 PLAYER_RIFLE_DAMAGE = 20
@@ -316,7 +322,7 @@ COMBAT_MOVE_SPECS = (
 )
 WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프", "pistol": "권총",
                 "steel_club": "쇠몽둥이", "axe": "도끼", "ar_rifle": "AR 소총",
-                "dual_black_batons": "검정 쌍몽둥이", "shield_item": "방패"}
+                "dual_black_batons": "검정 쌍몽둥이", "shield_item": "방패", "sword": "검"}
 WEAPON_HIT_IMAGES = {"combat_knife": PUNCH_KICK_HIT_IMAGE, "steel_pipe": CLUB_HIT_IMAGE}
 # Impact windows follow the source strike poses; jump attacks hit on their downswing.
 WEAPON_MOVE_SPECS = {
@@ -632,6 +638,7 @@ PLAYER_RIFLE_ANIMATIONS = {
     "HIT": (11, 12.0, False), "DYING": (12, 10.0, False), "DEAD": (12, 10.0, False),
 }
 EQUIPPED_ANIMATIONS = {"steel_club": ARMED_PLAYER_POSES, "axe": ARMED_PLAYER_POSES,
+                       "sword": {**ARMED_PLAYER_POSES, "SWORD_PARRY": (6, SWORD_PARRY_FPS, True)},
                        "shield_item": {**PLAYER_ANIMATIONS, "GUARD": (6, 12.0, False),
                                        "HIT": (8, 12.0, False), "DYING": (9, 10.0, False),
                                        "DEAD": (9, 10.0, False)},

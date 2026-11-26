@@ -38,7 +38,7 @@ class Stage:
     width = config.WORLD_WIDTH
 
     def __init__(self, index=0, *, rng=None, attack_sequence=None, traffic_rng=None, item_rng=None,
-                 walkable=None, drop_items=None):
+                 walkable=None, drop_items=None, enemy_starting_hp=None):
         self.index = index
         self.arrows_visible = False
         self.spawn_cycle_index = None  # None preserves this map's native default.
@@ -68,7 +68,8 @@ class Stage:
                            else self.walkable)
         self.spawner = SpawnManager(rng=rng, walkable=self.walkable, spawn_area=self.spawn_area,
                                     attack_sequence=attack_sequence,
-                                    enemy_type=enemy_type_for_stage(index), extra_sources=self.open_door_spawns)
+                                    enemy_type=enemy_type_for_stage(index), extra_sources=self.open_door_spawns,
+                                    starting_hp=enemy_starting_hp)
         self.traffic = None  # Road traffic is retired; no stage creates cars.
 
     @property

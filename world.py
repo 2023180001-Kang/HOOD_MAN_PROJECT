@@ -30,6 +30,7 @@ class World:
         self.item_rng = item_rng
         self.starting_weapon = None
         self.starting_hp = self.starting_max_hp = config.MAX_HP
+        self.enemy_starting_hp = {}
         self.training = False
         self.reset()
 
@@ -44,7 +45,7 @@ class World:
         self.controls.reset_for_restart()
         self.rush = None
         if self.training:
-            room = TrainingRoom()
+            room = TrainingRoom(enemy_starting_hp=self.enemy_starting_hp)
             self.stages = [room]
             self.player = TrainingPlayer(room)
             self.player.x = self.player.previous_x = config.SCREEN_WIDTH / 2
@@ -55,7 +56,8 @@ class World:
             self.player.equip_weapon(self.starting_weapon)
             attack_sequence = count()
             self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,
-                                 traffic_rng=self.traffic_rng, item_rng=self.item_rng)
+                                 traffic_rng=self.traffic_rng, item_rng=self.item_rng,
+                                 enemy_starting_hp=self.enemy_starting_hp)
                            for index in range(len(config.STAGE_IMAGES))]
         self.stage_index = 0
         self.stage.constrain_actor(self.player)

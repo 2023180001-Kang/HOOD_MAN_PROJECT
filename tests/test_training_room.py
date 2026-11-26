@@ -386,6 +386,77 @@ class TrainingRoomTests(unittest.TestCase):
         self.launch("game_start")
         self.assertEqual((self.world.player.hp, self.world.player.max_hp), (500, 500))
 
+    def test_applied_enemy_hp_follows_each_type_through_campaign_spawns_and_restart(self):
+        plus = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1190, 410)
+        apply = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1190, 368)
+        expected = []
+        for number in range(1, 8):
+            self.press(f"spawn_{number}")
+            self.press("training_target")
+            target = self.world.stage.target
+            base = target.max_hp
+            target.take_damage(number)
+            self.press(f"spawn_{number % 7 + 1}")  # Only the next summon changes.
+            process_menu_events(self.game, *([plus] * number), apply, plus, menu_screen=False)
+            expected.append((base + 9 * number, base + 10 * number))
+
+        self.launch("game_start")
+        self.assertEqual((self.world.player.hp, self.world.player.max_hp), (500, 500))
+        for index, hp_pair in enumerate(expected[:6]):
+            self.world.select_stage(index * 2)
+            self.press("spawn_2")
+            self.assertEqual([(e.hp, e.max_hp) for e in self.world.enemies], [hp_pair] * 2)
+
+        self.press("cycle_spawn_enemy")  # Summon the first map's thug on the AR map.
+        self.press("spawn_1")
+        thug = self.world.enemies[-1]
+        self.assertEqual((thug.hp, thug.max_hp), expected[0])
+        self.press("sword_spawn")
+        self.press("spawn_2")
+        self.assertEqual([(e.hp, e.max_hp) for e in self.world.enemies[-2:]], [expected[6]] * 2)
+        thug.take_damage(30)
+        self.press("restart")
+        self.press("spawn_1")
+        fresh, = self.world.enemies
+        self.assertEqual((fresh.hp, fresh.max_hp), expected[0])
+
+    def test_enemy_hp_apply_is_explicit_and_restore_can_revert_the_campaign_setting(self):
+        def click(x, y, button=pico2d.SDL_BUTTON_LEFT):
+            event = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, x, y, button)
+            process_menu_events(self.game, event, menu_screen=False)
+
+        click(1190, 368)  # No summoned target.
+        self.press("training_target")
+        click(1100, 410)
+        click(1190, 368, SDL_BUTTON_RIGHT)
+        self.launch("game_start")
+        self.press("spawn_1")
+        self.assertEqual(self.world.enemies[0].hp, 200)
+
+        self.launch("controls")
+        self.press("training_target")
+        click(1100, 410)
+        self.world.stage.target.take_damage(25)
+        click(1190, 368)
+        click(1190, 410)
+        assets = Mock()
+        with patch("pico2d.draw_rectangle"):
+            self.game.ui.draw(assets, self.world)
+        labels = [call.args[2] for call in assets.font.draw.call_args_list]
+        self.assertIn("적 시작 HP  165 / 190", labels)
+        self.assertIn("현재 HP  175     최대 HP  200", labels)
+
+        self.press("restart")
+        self.press("training_target")
+        target = self.world.stage.target
+        self.assertEqual((target.hp, target.max_hp), (165, 190))
+        click(1100, 368)
+        click(1190, 368)
+        self.launch("game_start")
+        self.press("spawn_1")
+        fresh, = self.world.enemies
+        self.assertEqual((fresh.hp, fresh.max_hp), (200, 200))
+
     def test_left_attack_values_follow_weapon_pickup_and_return(self):
         assets = Mock()
         player = self.world.player

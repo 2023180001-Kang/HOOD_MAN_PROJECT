@@ -32,7 +32,7 @@ def attack_speed_for_spawn(index):
 
 class SpawnManager:
     def __init__(self, *, rng=None, walkable=None, attack_sequence=None, spawn_area=None,
-                 enemy_type=Enemy, extra_sources=None):
+                 enemy_type=Enemy, extra_sources=None, starting_hp=None):
         self.rng = random.Random() if rng is None else rng
         self.spawned_count = 0
         self.walkable = default_area() if walkable is None else walkable
@@ -40,6 +40,10 @@ class SpawnManager:
         self.attack_sequence = count() if attack_sequence is None else attack_sequence
         self.enemy_type = enemy_type
         self.extra_sources = extra_sources
+        self.starting_hp = {} if starting_hp is None else starting_hp
+
+    def starting_health_for(self, enemy_type):
+        return self.starting_hp.get(enemy_type, (enemy_type.max_hp, enemy_type.max_hp))
 
     def spawn(self, count, elapsed, *, enemy_type=None):
         if enemy_type is None:
@@ -72,6 +76,7 @@ class SpawnManager:
             enemy_rng.setstate(self.rng.getstate())
             enemy = enemy_type(x, facing=facing, spawned_at=elapsed, run_speed=run_speed,
                                ground_y=ground_y, attack_speed=attack_speed, rng=enemy_rng)
+            enemy.hp, enemy.max_hp = self.starting_health_for(enemy_type)
             enemy.floor, enemy.walkable, enemy.spawn_source = floor, area, source
             if enemy.formation_ground_min is not None:
                 # City pavement height belongs to this map, not the old y=100 line.

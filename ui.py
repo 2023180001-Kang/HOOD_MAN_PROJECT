@@ -13,7 +13,7 @@ ENEMY_BOUNDS_COLOR = (255, 185, 70)
 STAIR_BOUNDS_COLOR = (180, 255, 150)
 # Button actions and screen-space bounds.
 ENEMY_HP_BUTTONS = ((-10, (1064, 394, 1138, 427)), (10, (1148, 394, 1230, 427)),
-                    ("restore", (986, 352, 1230, 385)))
+                    ("restore", (986, 352, 1140, 385)), ("apply", (1148, 352, 1230, 385)))
 PLAYER_HP_BUTTONS = ((-10, (364, 449, 437, 482)), (10, (447, 449, 520, 482)),
                      ("restore", (530, 449, 680, 482)), ("apply", (690, 449, 762, 482)))
 HP_BUTTON_LABELS = {-10: ("-10", 15), 10: ("+10", 15),
@@ -243,7 +243,7 @@ class UI:
         target = world.stage.target
         if target is None:
             return
-        pico2d.draw_rectangle(970, 343, 1250, 534, 17, 22, 29, filled=True)
+        pico2d.draw_rectangle(970, 308, 1250, 534, 17, 22, 29, filled=True)
         font.draw(986, 513, f"소환된 적  ·  {target.opponent.name}", heading)
         damage = f"{target.attack_damage}"
         if target.opponent.slam_damage is not None:
@@ -257,6 +257,8 @@ class UI:
         font.draw(986, 454, f"현재 HP  {target.hp:g}     최대 HP  {target.max_hp:g}", body)
         font.draw(986, 410, "HP 조절", body)
         UI.draw_training_hp_buttons(font, ENEMY_HP_BUTTONS, body)
+        hp, max_hp = world.spawner.starting_health_for(target.opponent.enemy_type)
+        font.draw(986, 328, f"적 시작 HP  {hp:g} / {max_hp:g}", body)
 
     @staticmethod
     def draw_training_hp_buttons(font, buttons, color):
@@ -275,8 +277,10 @@ class UI:
             for action, (left, bottom, right, top) in buttons:
                 if left <= x < right and bottom <= y < top:
                     if action == "apply":
-                        world.starting_hp = actor.hp
-                        world.starting_max_hp = actor.max_hp
+                        if actor is world.player:
+                            world.starting_hp, world.starting_max_hp = actor.hp, actor.max_hp
+                        else:
+                            world.enemy_starting_hp[actor.opponent.enemy_type] = actor.hp, actor.max_hp
                     elif action == "restore":
                         actor.restore_hp()
                     else:
@@ -378,6 +382,8 @@ class UI:
                 assets.font.draw(22, 132, help_text, (126, 218, 255))
             source_index = world.stage.spawn_enemy_stage_index
             source_image = config.STAGE_IMAGES[source_index]
+            hp, max_hp = world.spawner.starting_health_for(world.spawner.enemy_type)
+            spawn_hp = f"{hp:g}" if hp == max_hp else f"{hp:g} / {max_hp:g}"
             if source_image in config.ENEMY02_STAGE_IMAGES:
                 enemy_name = "도시 적"
                 clubs, slam = config.ENEMY02_ATTACKS["clubs"][1], config.ENEMY02_ATTACKS["slam"][1]
@@ -393,11 +399,11 @@ class UI:
             elif source_image in config.LAB_STAGE_IMAGES:
                 enemy_name = "방패 병사"
                 enemy_help = (f"적 공격: 방패 {config.SHIELD_SOLDIER_DAMAGE} · "
-                               f"HP {config.SHIELD_SOLDIER_MAX_HP} · 방어 중 받는 피해 50%")
+                               f"HP {spawn_hp} · 방어 중 받는 피해 50%")
             elif source_image in config.BOSS_STAGE_IMAGES:
                 enemy_name = "AR 병사"
                 enemy_help = (f"적 공격: 소총 연사 {config.AR_SOLDIER_DAMAGE} · "
-                              f"HP {config.AR_SOLDIER_MAX_HP} · "
+                              f"HP {spawn_hp} · "
                               f"{config.AR_SOLDIER_MAGAZINE_SIZE}발 후 재장전")
             else:
                 enemy_name = "기본 적"

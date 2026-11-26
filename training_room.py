@@ -23,6 +23,7 @@ from walkable import WalkableArea
 class PracticeOpponent:
     name: str
     enemy_type: type[Enemy]
+    training_type: type[Enemy]
     slam_damage: int | None = None
 
 
@@ -147,13 +148,13 @@ class TrainingARSoldier(TrainingGunner, ARSoldier):
 
 
 OPPONENTS = (
-    PracticeOpponent("쇠몽둥이", TrainingThug),
-    PracticeOpponent("쌍몽둥이", TrainingDualClub, config.ENEMY02_ATTACKS["slam"][1]),
-    PracticeOpponent("도끼", TrainingAxe),
-    PracticeOpponent("권총", TrainingResearcher),
-    PracticeOpponent("방패", TrainingShield),
-    PracticeOpponent("AR 소총", TrainingARSoldier),
-    PracticeOpponent("검병", TrainingSwordEnemy, config.SWORD_ENEMY_ATTACKS["slam"][1]),
+    PracticeOpponent("쇠몽둥이", Enemy, TrainingThug),
+    PracticeOpponent("쌍몽둥이", Enemy02, TrainingDualClub, config.ENEMY02_ATTACKS["slam"][1]),
+    PracticeOpponent("도끼", AxeEnemy, TrainingAxe),
+    PracticeOpponent("권총", Researcher, TrainingResearcher),
+    PracticeOpponent("방패", ShieldSoldier, TrainingShield),
+    PracticeOpponent("AR 소총", ARSoldier, TrainingARSoldier),
+    PracticeOpponent("검병", SwordEnemy, TrainingSwordEnemy, config.SWORD_ENEMY_ATTACKS["slam"][1]),
 )
 SELECTION_KEYS = {f"spawn_{i}": opponent for i, opponent in enumerate(OPPONENTS, 1)}
 
@@ -165,8 +166,9 @@ class TrainingRoom(Stage):
     arrow_sides = ()
     table_slots = dict(config.TRAINING_TABLE_ITEMS)
 
-    def __init__(self):
-        super().__init__(walkable=WalkableArea.rectangle(*config.TRAINING_FLOOR), drop_items=[])
+    def __init__(self, *, enemy_starting_hp=None):
+        super().__init__(walkable=WalkableArea.rectangle(*config.TRAINING_FLOOR), drop_items=[],
+                         enemy_starting_hp=enemy_starting_hp)
         self.selected_opponent = OPPONENTS[0]
         for kind in self.table_slots:
             self.place_on_table(kind)
@@ -199,10 +201,13 @@ class TrainingRoom(Stage):
         # Leave room for a jab, including when the player faces the nearest wall.
         facing = player.facing
         distance = 92
-        padding = self.selected_opponent.enemy_type.boundary_padding
+        opponent = self.selected_opponent
+        padding = opponent.training_type.boundary_padding
         left, right = self.walkable.x_limits(player.ground_y, padding)
         if not left <= player.x + facing * distance <= right:
             facing = -facing
         x, y = self.walkable.project(player.x + facing * distance, player.ground_y, padding)
         self.projectiles[:] = [shot for shot in self.projectiles if isinstance(shot, PlayerProjectile)]
-        self.enemies[:] = [self.selected_opponent.enemy_type(self.selected_opponent, x, -facing, y)]
+        target = opponent.training_type(opponent, x, -facing, y)
+        target.hp, target.max_hp = self.spawner.starting_health_for(opponent.enemy_type)
+        self.enemies[:] = [target]

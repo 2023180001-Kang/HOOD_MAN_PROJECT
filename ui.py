@@ -384,7 +384,7 @@ class UI:
                 elif world.player.weapon == "shield_item":
                     help_text = "A 방패 밀치기 · S 유지 방어 · D 관통 투척 · G 줍기 / 내려놓기"
                 elif world.player.weapon == "sword":
-                    help_text = "A 검 베기 · 총알이 닿을 때 S 유지 · 근접 공격에는 피격"
+                    help_text = "A 검 베기 · S 유지로 총알 튕기기 · 방어 중 ←/→ 방향 전환 · 근접 공격에는 피격"
                 else:
                     help_text = "A 쇠파이프 내려치기 · S 관통 투척 · 이단 점프 중 D 조준 → D 내려찍기"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))

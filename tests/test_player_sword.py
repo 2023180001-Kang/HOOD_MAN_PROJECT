@@ -63,6 +63,28 @@ class PlayerSwordTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         self.assertEqual((player.state, player.sprite_row), ("IDLE", 1))
 
+    def test_turning_in_place_during_parry_keeps_animation_and_deflects_incoming_rounds(self):
+        world = equipped_world("sword")
+        player = world.player
+        player.invincible = False
+        position = player.x, player.ground_y
+        world.controls.press("combat_s")
+        advance(world, 0.05)
+        for key, facing, bullet_type in (("left", -1, ResearcherBullet), ("right", 1, RifleBullet)):
+            elapsed = player.animation.elapsed
+            bullet = bullet_type(player.x + facing * 10, player.ground_y, 80, -facing)
+            world.projectiles.append(bullet)
+            world.controls.press(key)
+            world.step(config.FIXED_DT)
+            self.assertEqual((player.facing, player.state, player.sprite_row), (facing, "SWORD_PARRY", 6))
+            self.assertAlmostEqual(player.animation.elapsed, elapsed + config.FIXED_DT)
+            self.assertTrue(bullet.deflected)
+            self.assertEqual(player.hp, player.max_hp)
+            world.controls.release(key)
+            world.step(config.FIXED_DT)
+            self.assertEqual(player.facing, facing)
+            self.assertEqual((player.x, player.ground_y), position)
+
     def test_parried_rounds_reverse_and_fall_until_they_reach_the_floor(self):
         for kind in (ResearcherBullet, RifleBullet):
             for facing in (-1, 1):

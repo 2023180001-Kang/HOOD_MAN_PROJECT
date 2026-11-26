@@ -619,6 +619,8 @@ class Player:
                 self.vx = self.ground_vy = 0.0
                 self.animation.set_state("SWORD_PARRY")
                 self.animation.elapsed = 1 / config.SWORD_PARRY_FPS
+            if controls.direction:
+                self.facing = controls.direction
             return
         if self.state == "SWORD_PARRY":
             self.finish_move()

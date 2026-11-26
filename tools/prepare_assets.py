@@ -54,7 +54,10 @@ def main():
                 bounds = [image.crop((col * cell_width, row * cell_height,
                                       (col + 1) * cell_width, (row + 1) * cell_height)).getbbox()
                           for col in range(8)]
-                ground_anchor = max(box[3] for box in bounds)
+                # Each sword-enemy row starts with grounded feet. Sparks and
+                # the fallen blade can extend below them in later frames.
+                ground_anchor = (bounds[0][3] if name == config.SWORD_ENEMY_IMAGE
+                                 else max(box[3] for box in bounds))
                 for col, (left, top, right, bottom) in enumerate(bounds):
                     frame = {
                         "clip": [col * cell_width + left, image.height - row * cell_height - bottom,
@@ -63,9 +66,11 @@ def main():
                     }
                     if ((name in (config.ENEMY02_IMAGE, config.SWORD_ENEMY_IMAGE) and row == 4)
                             or row + 1 == AIRBORNE_WEAPON_ROWS.get(name)):
-                        # Keep the source-pose lift for inspection. The leap
-                        # controller owns actual height; do not add offset_y too.
-                        frame["jump_height"] = ground_anchor - bottom
+                        # The leap controller supplies the lift. Only pixels
+                        # below the feet need a drawing offset on landing.
+                        frame["jump_height"] = max(0, ground_anchor - bottom)
+                        if bottom > ground_anchor:
+                            frame["offset_y"] = ground_anchor - bottom
                     elif name in (config.ENEMY02_IMAGE, config.SWORD_ENEMY_IMAGE,
                                   config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                                   config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE):

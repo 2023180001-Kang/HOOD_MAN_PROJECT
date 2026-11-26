@@ -79,22 +79,26 @@ class SwordEnemyTests(unittest.TestCase):
             self.assertEqual(frames, set(range(8)))
             self.assertEqual(hits, [(40, "LANDING", 0)])
 
-    def test_crossing_an_airborne_player_does_not_trigger_a_slash(self):
-        world = World()
-        player = world.player
-        enemy = SwordEnemy(player.x - 400)
-        self.assertTrue(enemy.start_leap(player))
-        while not enemy.leaping:
-            enemy.update(config.FIXED_DT, player)
-        enemy.update(enemy.leap_duration / 2 - enemy.leap_elapsed, player)
-        player.x = player.previous_x = enemy.x + 60
-        player.jump_height = player.previous_jump_height = enemy.jump_height
-        for _ in range(180):
-            enemy.update(config.FIXED_DT, player)
-            self.assertFalse(enemy.try_hit(player))
-            if enemy.leap_phase is None:
-                break
-            self.assertEqual(enemy.attack_kind, "slam")
-        self.assertEqual(enemy.jump_height, 0)
-        self.assertIsNone(enemy.leap_phase)
-        self.assertEqual(player.hp, 500)
+    def test_meeting_a_jumping_player_replaces_the_landing_strike_with_one_slash(self):
+        for side in (-1, 1):
+            with self.subTest(side=side):
+                world = World()
+                player = world.player
+                enemy, = world.spawner.spawn(1, 0, enemy_type=SwordEnemy)
+                enemy.x = enemy.previous_x = player.x + side * 400
+                enemy.ground_y = enemy.previous_ground_y = player.ground_y
+                world.enemies.append(enemy)
+                for _ in range(60):
+                    world.step(config.FIXED_DT)
+                world.controls.press("jump")
+                for _ in range(120):
+                    world.step(config.FIXED_DT)
+                    if enemy.air_contact_attack:
+                        break
+                self.assertTrue(enemy.air_contact_attack and enemy.has_hit)
+                self.assertGreater(min(player.jump_height, enemy.jump_height), 0)
+                self.assertEqual((enemy.attack_kind, enemy.animation.row, player.hp), ("slash", 4, 470))
+                self.assertIsNone(enemy.leap_phase)
+                for _ in range(84):
+                    world.step(config.FIXED_DT)
+                self.assertEqual((enemy.jump_height, player.hp), (0, 470))

@@ -22,7 +22,6 @@ class Enemy02(Enemy):
     attacks = config.ENEMY02_ATTACKS
     basic_attack = "clubs"
     airborne_frames = (2, 3)
-    strikes_on_air_contact = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -126,13 +125,14 @@ class Enemy02(Enemy):
                          + (player.jump_height - player.previous_jump_height) * contact)
         height = (self.previous_jump_height
                   + (self.jump_height - self.previous_jump_height) * contact)
-        if self.strikes_on_air_contact and player_height > 1e-9 and height > 1e-9:
+        if player_height > 1e-9 and height > 1e-9:
             self.jump_height = height
             self._cancel_leap()
             self.start_attack(air_contact=True)
             # Contact is the strike, not another windup that could miss after
             # the two bodies have already been separated by collision handling.
-            self.animation.elapsed = min(self.attack_active_frames) / self.attack_fps
+            # Stay inside the active frame after conversion back to a frame index.
+            self.animation.elapsed = (min(self.attack_active_frames) + 1e-9) / self.attack_fps
             return True
         # An occupied landing point stops horizontal/depth travel at the body
         # edge. Keep descending and use the landing attack.

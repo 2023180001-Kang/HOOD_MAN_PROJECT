@@ -145,10 +145,11 @@ class Stage:
         """Fresh Space/left/right detaches without changing the visible feet."""
         if player.staircase is None:
             return False
-        lateral = controls.take_latest_press(("left", "right"))
+        # The player also uses these same presses for crowd escape this step.
+        lateral = "left" in controls.pressed or "right" in controls.pressed
         jumping = controls.take_press("jump")
         if (not player.alive or player.state not in ("IDLE", "WALK")
-                or not (jumping or (lateral is not None and controls.direction))):
+                or not (jumping or (lateral and controls.direction))):
             return False
         feet = player.y
         player.staircase.detach(player)

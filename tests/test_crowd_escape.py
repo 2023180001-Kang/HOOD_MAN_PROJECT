@@ -8,15 +8,19 @@ from tests.test_combat import attacking_enemy
 from world import World
 
 
+LEFT_FIRST = ("left", "right", "left", "right")
+RIGHT_FIRST = ("right", "left", "right", "left")
+
+
 def tick(world, count=1):
     for _ in range(count):
         world.step(config.FIXED_DT)
 
 
-def tap_keys(world, keys):
+def tap_keys(world, *keys):
     for key in keys:
-        world.controls.press(f"combat_{key}")
-        world.controls.release(f"combat_{key}")
+        world.controls.press(key)
+        world.controls.release(key)
     tick(world)
 
 
@@ -38,7 +42,7 @@ def fire_at_player(world, shooter):
 
 class CrowdEscapeTests(unittest.TestCase):
     def test_four_melee_hits_and_alternating_keys_release_hit_and_allow_movement(self):
-        for sequence in ("dfdf", "fdfd"):
+        for sequence in (LEFT_FIRST, RIGHT_FIRST):
             with self.subTest(sequence=sequence):
                 world = World()
                 player = world.player
@@ -48,11 +52,12 @@ class CrowdEscapeTests(unittest.TestCase):
                     tap_keys(world, key)
                     tick(world, 10)
                 self.assertFalse(player.crowd_escape.active)
-                world.controls.press("right")
-                tap_keys(world, sequence[-1])
+                world.controls.press(sequence[-1])
+                tick(world)
                 self.assertEqual((player.hp, player.state), (420, "WALK"))
                 tick(world, 75)
-                self.assertGreater(player.x, config.START_X + 100)
+                direction = 1 if sequence[-1] == "right" else -1
+                self.assertGreater((player.x - config.START_X) * direction, 100)
                 self.assertTrue(player.crowd_escape.active)
 
     def test_mixed_melee_pistol_and_rifle_hits_count_the_shooters_on_impact(self):
@@ -65,7 +70,7 @@ class CrowdEscapeTests(unittest.TestCase):
         self.assertFalse(world.player.crowd_escape.ready)
         tick(world, 45)
         self.assertEqual(world.player.hp, 425)
-        tap_keys(world, "fdfd")  # Four distinct keydown edges in a single event batch.
+        tap_keys(world, *RIGHT_FIRST)  # Four distinct keydown edges in a single event batch.
         self.assertTrue(world.player.crowd_escape.active)
 
     def test_one_rifle_burst_counts_once_even_with_other_enemies_present(self):
@@ -77,7 +82,7 @@ class CrowdEscapeTests(unittest.TestCase):
         world.enemies.append(Enemy(world.player.x + 600))
         tick(world, 30)
         self.assertEqual(world.player.hp, 440)
-        tap_keys(world, "dfdf")
+        tap_keys(world, *LEFT_FIRST)
         self.assertFalse(world.player.crowd_escape.active)
 
     def test_four_ranged_attackers_qualify_and_blocked_or_missed_rounds_do_not(self):
@@ -100,7 +105,7 @@ class CrowdEscapeTests(unittest.TestCase):
         shooters[-1].ground_y = player.ground_y
         fire_at_player(world, shooters[-1])
         tick(world, 45)
-        tap_keys(world, "dfdf")
+        tap_keys(world, *LEFT_FIRST)
         self.assertTrue(player.crowd_escape.active)
 
     def test_holding_one_key_and_slow_taps_do_not_activate(self):
@@ -109,41 +114,52 @@ class CrowdEscapeTests(unittest.TestCase):
                 world = World()
                 melee_group(world)
                 if inputs == "held":
-                    for key in "dfdfdfdf":
-                        world.controls.press(f"combat_{key}")
+                    for key in LEFT_FIRST * 2:
+                        world.controls.press(key)
                         tick(world)
                 elif inputs == "single_key":
-                    tap_keys(world, "dddd")
+                    tap_keys(world, "left", "left", "left", "left")
                 else:
-                    tap_keys(world, "dfd")
+                    tap_keys(world, "left", "right", "left")
                     tick(world, 74)
-                    tap_keys(world, "f")
+                    tap_keys(world, "right")
                 self.assertFalse(world.player.crowd_escape.active)
 
     def test_expired_hits_and_preemptive_taps_cannot_complete_an_escape(self):
         world = World()
-        tap_keys(world, "dfd")
+        tap_keys(world, "left", "right", "left")
         melee_group(world)
-        tap_keys(world, "f")
+        tap_keys(world, "right")
         self.assertFalse(world.player.crowd_escape.active)
         world.enemies.clear()
         tick(world, 121)
-        tap_keys(world, "dfdf")
+        tap_keys(world, *LEFT_FIRST)
         self.assertFalse(world.player.crowd_escape.active)
-        self.assertIsNotNone(world.player.active_move)
+        self.assertIsNone(world.player.active_move)
+
+    def test_d_and_f_do_not_trigger_escape_and_can_attack_during_immunity(self):
+        world = World()
+        melee_group(world)
+        tap_keys(world, "combat_d", "combat_f", "combat_d", "combat_f")
+        self.assertFalse(world.player.crowd_escape.active)
+        tap_keys(world, *LEFT_FIRST)
+        for key in ("d", "f"):
+            tap_keys(world, f"combat_{key}")
+            self.assertTrue(world.player.crowd_escape.active)
+            self.assertEqual(world.player.active_move.key, key)
 
     def test_one_second_blocks_bullets_and_melee_then_new_hits_apply(self):
         world = World()
         player = world.player
         melee_group(world)
-        tap_keys(world, "dfdf")
+        tap_keys(world, *LEFT_FIRST)
         world.enemies = [attacking_enemy(player.x - 80)]
         bullet = fire_at_player(world, ARSoldier(player.x - 200, 1))
         tick(world, 20)
         self.assertTrue(world.enemies[0].has_hit and bullet.spent)
         self.assertEqual((player.hp, bullet.impact_damage), (420, 0))
         world.enemies.clear()
-        tap_keys(world, "dfdf")
+        tap_keys(world, *LEFT_FIRST)
         tick(world, 98)
         self.assertTrue(player.crowd_escape.active)  # 119 of 120 ticks.
         world.enemies.append(attacking_enemy(player.x - 80))
@@ -155,19 +171,19 @@ class CrowdEscapeTests(unittest.TestCase):
     def test_restart_stage_change_and_lethal_hits_discard_escape_opportunity(self):
         world = World()
         melee_group(world)
-        tap_keys(world, "dfd")
+        tap_keys(world, "left", "right", "left")
         world.select_stage(1)
-        tap_keys(world, "f")
+        tap_keys(world, "right")
         self.assertFalse(world.player.crowd_escape.active)
         melee_group(world)
-        tap_keys(world, "dfdf")
+        tap_keys(world, *LEFT_FIRST)
         self.assertTrue(world.player.crowd_escape.active)
         world.controls.press("restart")
         world.update(config.FIXED_DT)
         self.assertFalse(world.player.crowd_escape.active)
         world.player.hp = 80
         melee_group(world)
-        tap_keys(world, "dfdf")
+        tap_keys(world, *LEFT_FIRST)
         self.assertEqual((world.player.hp, world.player.state), (0, "DYING"))
         self.assertFalse(world.player.crowd_escape.active)
 
@@ -176,10 +192,10 @@ class CrowdEscapeTests(unittest.TestCase):
         player = world.player
         melee_group(world, 5)
         world.enemies.clear()
-        tap_keys(world, "dfdf")
+        tap_keys(world, *LEFT_FIRST)
         self.assertTrue(player.crowd_escape.active)
         world.controls.press("invincibility")
-        tap_keys(world, "r")
+        tap_keys(world, "combat_r")
         self.assertLess(world.time_scale, 1.0)
         tick(world, 119)
         self.assertFalse(player.crowd_escape.active)

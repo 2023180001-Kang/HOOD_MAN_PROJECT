@@ -593,15 +593,13 @@ class Player:
             toggles = controls.take_presses(("combat_s",))
             if self.alive and len(toggles) % 2:
                 self.firearm_facing_locked = not self.firearm_facing_locked
-        presses = controls.take_presses(ALL_MOVES)
         escape = self.crowd_escape
-        if self.alive and any(escape.press(key) for key in presses):
+        arrow_presses = controls.take_presses(config.CROWD_ESCAPE_KEYS)
+        if self.alive and any(escape.press(key) for key in arrow_presses):
             self.finish_move()
             if self.pistol_ammo:
                 self.pistol_reload_interrupted = False
-        if escape.active:
-            presses = [key for key in presses if key not in config.CROWD_ESCAPE_KEYS]
-        combat_pressed = presses[-1] if presses else None
+        combat_pressed = controls.take_latest_press(ALL_MOVES)
         if self.state == "HIT" and self.pistol_reload_interrupted:
             # Leave one jump press in Controls until the hit reaction finishes.
             return

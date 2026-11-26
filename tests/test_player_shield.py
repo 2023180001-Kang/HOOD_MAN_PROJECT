@@ -78,8 +78,9 @@ class PlayerShieldTests(unittest.TestCase):
         self.assertFalse(player.take_damage(100))
         player.invincible = False
         melee_group(world)
+        tap_keys(world, "left", "right", "left")
         world.controls.press("right")
-        tap_keys(world, "dfdf")
+        tick(world)
         self.assertTrue(player.crowd_escape.active)
         self.assertEqual(player.state, "WALK")
         self.assertFalse(player.take_damage(100))

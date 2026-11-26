@@ -250,9 +250,7 @@ class World:
         stair_moved = self.stage.update_navigation(dt, self.player, self.controls)
         if self.player not in stair_moved:
             self.player.update(dt, self.controls, self.stage.area_for(self.player), process_input=False)
-            if self.stage.try_player_stair_catch(self.player):
-                # The held approach direction predates entry, not a fresh exit.
-                self.controls.take_latest_press(("left", "right"))
+            self.stage.try_player_stair_catch(self.player)
             self.stage.resolve_player_platforms(self.player, self.controls)
         self.cancel_invalid_rush()
         if self.player.rush_phase == "FLY" and self.rush is None:

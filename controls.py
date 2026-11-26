@@ -12,8 +12,10 @@ class Controls:
 
     def press(self, key):
         if key not in self.held:
-            # Combat and crowd escape need every fresh press in SDL event order.
-            if key in self.pressed and key not in config.CROWD_ESCAPE_KEYS and not key.startswith("combat_"):
+            # Preserve the sequence for combos, escape, and selecting then summoning a target.
+            ordered = (key.startswith(("combat_", "spawn_")) or key == "training_target"
+                       or key in config.CROWD_ESCAPE_KEYS)
+            if not ordered and key in self.pressed:
                 self.pressed.remove(key)
             self.pressed.append(key)
         self.held.add(key)

@@ -158,6 +158,52 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertEqual((target.x, target.y, target.state), (*position, "IDLE"))
         self.assertEqual(player.hp, config.MAX_HP)
 
+    def test_number_then_plus_summons_the_matching_passive_stage_enemy(self):
+        cases = (
+            (config.ENEMY_IMAGE, 20, 200, 5), (config.ENEMY02_IMAGE, 30, 200, 6),
+            (config.AXE_ENEMY_IMAGE, 40, 400, 5), (config.RESEARCHER_IMAGE, 30, 200, 6),
+            (config.SHIELD_SOLDIER_IMAGE, 40, 400, 6), (config.AR_SOLDIER_IMAGE, 5, 300, 5),
+        )
+        for number, (image, damage, hp, hit_row) in enumerate(cases, 1):
+            with self.subTest(number=number):
+                previous = self.world.stage.target
+                prefix = "KP_" if number % 2 == 0 else ""
+                key = getattr(pico2d, f"SDLK_{prefix}{number}")
+                process_menu_events(self.game, key_event(key), key_event(key, down=False), menu_screen=False)
+                self.world.update(config.FIXED_DT)
+                self.assertIs(self.world.stage.target, previous)
+                self.press("training_target")
+                target, = self.world.enemies
+                self.assertEqual((target.sprite_image, target.attack_damage, target.hp, target.max_hp),
+                                 (image, damage, hp, hp))
+                position = target.x, target.y
+                advance(self.world, 3)
+                self.assertEqual((target.x, target.y, target.state), (*position, "IDLE"))
+                self.assertEqual(self.world.player.hp, config.MAX_HP)
+                self.assertFalse(self.world.projectiles)
+                bullet = PlayerPistolBullet(target.x, target.ground_y, 60, 1)
+                self.world.projectiles.append(bullet)
+                self.world.update_projectiles(0)
+                self.assertEqual((self.world.damage_numbers[-1].damage, target.hp), (20, hp - 20))
+                self.assertEqual((target.sprite_image, target.animation.row), (image, hit_row))
+                target.take_damage(hp * 2)
+                self.assertEqual((target.hp, target.last_hit_damage), (1, hp * 2))
+                advance(self.world, 2)
+                self.assertEqual(target.state, "IDLE")
+
+    def test_selection_and_summon_follow_event_order_in_one_batch(self):
+        for key in (pico2d.SDLK_2, pico2d.SDLK_PLUS, pico2d.SDLK_6, pico2d.SDLK_PLUS, pico2d.SDLK_2):
+            process_menu_events(self.game, key_event(key), key_event(key, down=False), menu_screen=False)
+        self.world.update(config.FIXED_DT)
+        target, = self.world.enemies
+        self.assertEqual(target.sprite_image, config.AR_SOLDIER_IMAGE)
+        self.press("training_target")
+        self.assertEqual(self.world.stage.target.sprite_image, config.ENEMY02_IMAGE)
+        self.press("restart")
+        self.assertIsNone(self.world.stage.target)
+        self.press("training_target")
+        self.assertEqual(self.world.stage.target.sprite_image, config.ENEMY_IMAGE)
+
     def test_repeated_melee_and_projectile_hits_show_full_damage_and_never_kill(self):
         self.press("training_target")
         target, = self.world.enemies
@@ -175,7 +221,7 @@ class TrainingRoomTests(unittest.TestCase):
             self.world.update_projectiles(0)
             self.assertEqual(self.world.damage_numbers[-1].damage, damage)
             self.assertEqual(target.state, "HIT")
-        self.assertEqual((target.hp, target.x, target.y), (target.max_hp, *position))
+        self.assertEqual((target.hp, target.x, target.y), (1, *position))
         self.assertTrue(target.alive)
 
     def test_held_w_hits_once_without_carrying_or_displacing_the_target(self):

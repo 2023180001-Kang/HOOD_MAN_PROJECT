@@ -236,8 +236,10 @@ class World:
         for number in self.damage_numbers:
             number.update(dt)
         self.damage_numbers = [number for number in self.damage_numbers if not number.finished]
-        if self.controls.take_press("training_target") and self.training and self.player.alive:
-            self.stage.summon_target(self.player)
+        if self.training:
+            self.stage.handle_target_input(self.controls, self.player)
+        else:
+            self.controls.take_press("training_target")
         if self.controls.take_press("cycle_spawn_enemy") and self.player.alive and not self.training:
             self.stage.cycle_spawn_enemy_type()
         for count in config.SPAWN_COUNTS:

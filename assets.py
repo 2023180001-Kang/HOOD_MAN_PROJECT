@@ -21,6 +21,7 @@ class Assets:
                          config.BAG_UI_IMAGE, config.BAG_BUTTON_IMAGE,
                          *(image for _, image, _ in config.BAG_ITEM_SPECS),
                          config.PLAYER_IMAGE, *config.PLAYER_EQUIPPED_SHEETS.values(), config.COMBAT_IMAGE,
+                         config.KNIFE_PROJECTILE_IMAGE,
                          *(sprite.image for sprite in config.THROWN_WEAPON_SPRITES.values()),
                          config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
@@ -142,7 +143,7 @@ class Assets:
         if kind == "combat_knife":
             left, bottom, width, height = config.KNIFE_PROJECTILE_CLIP
             scale = config.KNIFE_PROJECTILE_SCALE
-            self.images[config.DROP_ITEM_IMAGES[kind]].clip_composite_draw(
+            self.images[config.KNIFE_PROJECTILE_IMAGE].clip_composite_draw(
                 left, bottom, width, height, 0, "h" if facing < 0 else "", x, y,
                 width * scale, height * scale)
             return

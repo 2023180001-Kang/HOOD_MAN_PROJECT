@@ -175,7 +175,8 @@ AXE_PROJECTILE_IMAGE = "HoodMan_Axe_Projectile_256.png"
 STEEL_CLUB_PROJECTILE_IMAGE = "HoodMan_SteelClub_Projectile_256.png"
 STEEL_CLUB_THROW_DAMAGE = 50
 KNIFE_THROW_DAMAGE = 40
-# The first pickup cell contains a horizontal knife above a separate floor shadow.
+KNIFE_PROJECTILE_IMAGE = "hoodman_throw_combat_knife.png"
+# Opaque blade and grip within the right-facing 256px projectile sprite.
 KNIFE_PROJECTILE_CLIP = (58, 114, 139, 40)
 KNIFE_PROJECTILE_SCALE = 56 * SPRITE_SCALE / KNIFE_PROJECTILE_CLIP[2]
 DUAL_BATONS_THROW_DAMAGE = 60

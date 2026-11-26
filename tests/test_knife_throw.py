@@ -61,7 +61,7 @@ class KnifeThrowTests(unittest.TestCase):
     def test_blade_keeps_its_throw_direction_during_flight_and_at_the_map_edge(self):
         assets = Assets.__new__(Assets)
         texture = Mock()
-        assets.images = {KnifeProjectile.image_name: texture}
+        assets.images = {config.KNIFE_PROJECTILE_IMAGE: texture}
         for facing in (-1, 1):
             world = equipped_world("combat_knife")
             player = world.player
@@ -70,6 +70,7 @@ class KnifeThrowTests(unittest.TestCase):
             tap(world.controls, "combat_s")
             advance(world, 0.25)
             knife, = world.projectiles
+            self.assertEqual(knife.image_name, "hoodman_throw_combat_knife.png")
             for _ in range(2):
                 assets.draw_projectile(knife, 0, 0)
                 args = texture.clip_composite_draw.call_args.args

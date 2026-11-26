@@ -241,7 +241,7 @@ class ThrownWeaponProjectile(ResearcherBullet):
 
 class KnifeProjectile(ThrownWeaponProjectile, PlayerProjectile):
     weapon_kind = "combat_knife"
-    image_name = config.DROP_ITEM_IMAGES[weapon_kind]
+    image_name = config.KNIFE_PROJECTILE_IMAGE
     damage = config.KNIFE_THROW_DAMAGE
     speed = 1200.0
     release_offset = (90, 118)

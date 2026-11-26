@@ -219,7 +219,8 @@ class UI:
         font.draw(text_left, 581, strong, body)
         dive = moves_for_weapon(player.weapon, double_jump=True)["combat_d"]
         if dive.jump_attack:
-            font.draw(text_left, 555, f"이단 점프 후 D 조준 → D 내려찍기  {dive.damage}", body)
+            strike = dive.name if dive.strike_during_dive else "내려찍기"
+            font.draw(text_left, 555, f"이단 점프 후 D 조준 → D {strike}  {dive.damage}", body)
         elif firearm:
             font.draw(text_left, 555, f"R 재장전     탄약  {player.firearm_ammo} / "
                       f"{config.FIREARM_MAGAZINE_SIZES[player.weapon]}", body)
@@ -361,10 +362,11 @@ class UI:
                                  (126, 218, 255))
             elif world.player.weapon in config.WEAPON_NAMES:
                 phase = world.player.weapon_leap_phase
+                strike = "급강하 베기" if world.player.weapon == "sword" else "내려찍기"
                 if phase == "AIM":
-                    help_text = "슬로 모션: 방향키로 공중 조준 / D 다시 눌러 빠르게 내려찍기"
+                    help_text = f"슬로 모션: 방향키로 공중 조준 / D 다시 눌러 {strike}"
                 elif phase in ("DIVE", "LANDING"):
-                    help_text = "시간 가속: 선택한 방향으로 내려찍기!"
+                    help_text = f"시간 가속: 선택한 방향으로 {strike}!"
                 elif world.player.weapon == "combat_knife":
                     help_text = "A 단검 찌르기 · S 단검 던지기 · G 회수"
                 elif world.player.weapon == "steel_club":
@@ -376,7 +378,10 @@ class UI:
                 elif world.player.weapon == "shield_item":
                     help_text = "A 방패 밀치기 · S 유지 방어 · D 관통 투척 · G 줍기 / 내려놓기"
                 elif world.player.weapon == "sword":
-                    help_text = "A 검 베기 · S 유지로 총알·투척 도끼 튕기기 · 방어 중 ←/→ 방향 전환 · 근접 공격에는 피격"
+                    if world.player.state == "SWORD_PARRY":
+                        help_text = "S 유지로 총알·투척 도끼 튕기기 · 방어 중 ←/→ 방향 전환 · 근접 공격에는 피격"
+                    else:
+                        help_text = "A 검 베기 · S 유지로 총알·투척 도끼 튕기기 · 이단 점프 중 D 조준 → D 급강하 베기"
                 else:
                     help_text = "A 쇠파이프 내려치기 · S 관통 투척 · 이단 점프 중 D 조준 → D 내려찍기"
                 assets.font.draw(22, 132, help_text, (126, 218, 255))

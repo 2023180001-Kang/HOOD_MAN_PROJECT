@@ -391,7 +391,7 @@ class Player:
             if controls.moving:
                 self.weapon_leap_direction = controls.movement
             self.update_vertical(dt)
-            self.animation.elapsed = (2.05 if self.vy >= 0 else 3.05) / move.fps
+            self.animation.elapsed = (2.05 if move.strike_during_dive or self.vy >= 0 else 3.05) / move.fps
             if self.grounded:
                 # Waiting out the jump without a second D never releases a hit.
                 self.cancel_combat()
@@ -403,11 +403,12 @@ class Player:
             self.ground_y += self.ground_vy * dt
             self.walkable.constrain(self, config.PLAYER_HALF_WIDTH)
             self.update_vertical(dt)
-            self.animation.elapsed = 3.05 / move.fps
+            if move.strike_during_dive:
+                self.animation.elapsed = min(self.animation.elapsed + dt, max(move.active_frames) / move.fps)
             if self.grounded:
                 self.weapon_leap_phase = "LANDING"
                 self.vx = self.ground_vy = 0.0
-                self.animation.elapsed = 4 / move.fps
+                self.animation.elapsed = max(self.animation.elapsed, 4 / move.fps)
             return
         self.vx = self.ground_vy = 0.0
         self.animation.update(dt)
@@ -432,8 +433,11 @@ class Player:
         if (not self.alive or move is None or self.state != move.state
                 or self.animation.frame not in move.active_frames):
             return None
-        if move.jump_attack and (self.weapon_leap_phase != "LANDING" or not self.grounded):
-            return None
+        if move.jump_attack:
+            descending_strike = move.strike_during_dive and self.weapon_leap_phase == "DIVE"
+            landing_strike = self.weapon_leap_phase == "LANDING" and self.grounded
+            if not (descending_strike or landing_strike):
+                return None
         if self.air_kick_phase is not None and (
                 self.air_kick_phase != "KICK" or self.animation.frame != self.air_kick_strike_frame):
             return None

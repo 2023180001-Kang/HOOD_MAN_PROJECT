@@ -210,7 +210,7 @@ class WeaponLeapTests(unittest.TestCase):
                     self.assertEqual((player.state, world.time_scale), ("IDLE", 1))
 
     def test_landing_without_a_second_d_cancels_aim_with_no_automatic_hit(self):
-        for kind in (*config.WEAPON_AIRBORNE_ROWS, "steel_club", "axe"):
+        for kind in (*config.WEAPON_AIRBORNE_ROWS, "steel_club", "axe", "sword"):
             world = aim(kind)
             enemy = target(world)
             advance(world, 8)

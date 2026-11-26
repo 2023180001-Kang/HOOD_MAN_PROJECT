@@ -66,6 +66,7 @@ class Move:
     hit_image: str = config.PUNCH_KICK_HIT_IMAGE
     jump_attack: bool = False
     enemy_hit_row: int | None = None
+    strike_during_dive: bool = False
 
     @property
     def state(self):
@@ -130,6 +131,7 @@ DUAL_BATONS_THROW = replace(STEEL_CLUB_THROW, name="쌍몽둥이 던지기", dam
 WEAPON_LOADOUTS["dual_black_batons"] = {**MOVES, "combat_a": DUAL_BATONS_SWING, "combat_s": DUAL_BATONS_THROW}
 SWORD_SLASH = Move("a", "검 베기", 5, 70, 140.0, 146.0, 16.0, image_name=config.PLAYER_SWORD_IMAGE,
                    active_frames=(3, 4, 5), hit_image=config.CLUB_HIT_IMAGE)
+SWORD_DIVE = replace(SWORD_SLASH, key="d", name="검 급강하 베기", jump_attack=True, strike_during_dive=True)
 WEAPON_LOADOUTS["sword"] = {"combat_a": SWORD_SLASH, "combat_d": MOVES["combat_d"], "combat_f": MOVES["combat_f"]}
 SHIELD_BASH = replace(STEEL_CLUB_SWING, name="방패 밀치기", damage=20, reach=110.0,
                       image_name=config.PLAYER_SHIELD_IMAGE, active_frames=(3, 4, 5))
@@ -139,6 +141,7 @@ WEAPON_LOADOUTS["shield_item"] = {"combat_a": SHIELD_BASH, "combat_d": SHIELD_TH
 DOUBLE_JUMP_LOADOUTS = {
     "steel_club": {**WEAPON_LOADOUTS["steel_club"], "combat_d": STEEL_CLUB_DIVE},
     "axe": {**WEAPON_LOADOUTS["axe"], "combat_d": AXE_DIVE},
+    "sword": {**WEAPON_LOADOUTS["sword"], "combat_d": SWORD_DIVE},
 }
 
 

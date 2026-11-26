@@ -8,7 +8,7 @@ from projectiles import EnemyAxeProjectile, ResearcherBullet, RifleBullet
 from tests.helpers import advance, tap
 from tests.test_bag_drag import slot_center
 from tests.test_combat import attacking_enemy
-from tests.test_weapon_combat import equipped_world, target
+from tests.test_weapon_combat import double_jump, equipped_world, target
 from world import World
 
 
@@ -46,6 +46,53 @@ class PlayerSwordTests(unittest.TestCase):
             advance(world, 0.6)
             self.assertEqual((enemy.hp, world.player.state), (130, "IDLE"))
             self.assertEqual([number.damage for number in world.damage_numbers], [70])
+
+    def test_double_jump_second_d_slashes_on_descent_and_leaves_sword_afterimages(self):
+        for side in (-1, 1):
+            with self.subTest(side=side):
+                world = equipped_world("sword")
+                player = world.player
+                double_jump(world)
+                advance(world, 0.23)
+                enemy = target(world, side=side)
+                enemy.x = player.x + side * 165
+                tap(world.controls, "combat_d")
+                advance(world, 0.2)
+                self.assertEqual((player.weapon_leap_phase, world.time_scale), ("AIM", 0.2))
+                self.assertIsNone(player.attack_box)
+                self.assertFalse(world.afterimages)
+                self.assertEqual(enemy.hp, 200)
+
+                world.controls.press("left" if side < 0 else "right")
+                tap(world.controls, "combat_d")
+                for _ in range(60):
+                    world.step(config.FIXED_DT)
+                    if enemy.hp < 200:
+                        break
+                self.assertEqual((player.weapon_leap_phase, enemy.hp), ("DIVE", 130))
+                self.assertGreater(player.jump_height, 0)
+                self.assertLess(player.vy, 0)
+                self.assertEqual((player.sprite_image, player.sprite_row), (config.PLAYER_SWORD_IMAGE, 5))
+                self.assertGreaterEqual(len(world.afterimages), 2)
+                for image in world.afterimages:
+                    self.assertEqual((image.image_name, image.row, image.facing), (config.PLAYER_SWORD_IMAGE, 5, side))
+                    self.assertGreater(image.jump_height, player.jump_height)
+                world.controls.release("left" if side < 0 else "right")
+                advance(world, 0.7)
+                self.assertEqual((player.state, world.time_scale, enemy.hp), ("IDLE", 1, 130))
+                self.assertFalse(world.afterimages)
+
+    def test_sword_d_on_ground_or_first_jump_keeps_the_basic_kick(self):
+        for jumping in (False, True):
+            world = equipped_world("sword")
+            if jumping:
+                tap(world.controls, "jump")
+                world.step(config.FIXED_DT)
+            tap(world.controls, "combat_d")
+            world.step(config.FIXED_DT)
+            self.assertEqual((world.player.active_move.name, world.player.active_move.damage), ("왼발 차기", 20))
+            self.assertIsNone(world.player.weapon_leap_phase)
+            self.assertEqual(world.time_scale, 1)
 
     def test_s_loops_only_cells_two_to_six_then_releases_to_idle(self):
         world = equipped_world("sword")

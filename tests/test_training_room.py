@@ -164,6 +164,7 @@ class TrainingRoomTests(unittest.TestCase):
             (config.ENEMY_IMAGE, 20, 200, 5), (config.ENEMY02_IMAGE, 30, 200, 6),
             (config.AXE_ENEMY_IMAGE, 40, 400, 5), (config.RESEARCHER_IMAGE, 30, 200, 6),
             (config.SHIELD_SOLDIER_IMAGE, 40, 400, 6), (config.AR_SOLDIER_IMAGE, 5, 300, 5),
+            (config.SWORD_ENEMY_IMAGE, 30, 200, 6),
         )
         for number, (image, damage, hp, hit_row) in enumerate(cases, 1):
             with self.subTest(number=number):
@@ -227,11 +228,12 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertEqual(self.world.player.state, "DYING")
 
     def test_selection_and_summon_follow_event_order_in_one_batch(self):
-        for key in (pico2d.SDLK_2, pico2d.SDLK_PLUS, pico2d.SDLK_6, pico2d.SDLK_PLUS, pico2d.SDLK_2):
+        for key in (pico2d.SDLK_2, pico2d.SDLK_PLUS, pico2d.SDLK_6, pico2d.SDLK_PLUS,
+                    pico2d.SDLK_KP_7, pico2d.SDLK_KP_PLUS, pico2d.SDLK_2):
             process_menu_events(self.game, key_event(key), key_event(key, down=False), menu_screen=False)
         self.world.update(config.FIXED_DT)
         target, = self.world.enemies
-        self.assertEqual(target.sprite_image, config.AR_SOLDIER_IMAGE)
+        self.assertEqual(target.sprite_image, config.SWORD_ENEMY_IMAGE)
         self.press("training_target")
         self.assertEqual(self.world.stage.target.sprite_image, config.ENEMY02_IMAGE)
         self.press("restart")
@@ -283,7 +285,7 @@ class TrainingRoomTests(unittest.TestCase):
             self.game.ui.draw(assets, self.world)
         self.assertEqual(assets.damage_font.draw.call_args.args[2], "-20")
         texts = " ".join(call.args[2] for call in assets.font.draw.call_args_list)
-        for word in ("조작법 익히기", "이단 점프", "G", "+", "Esc", "왼손 잽", "주인공 HP  500 / 500",
+        for word in ("조작법 익히기", "1~7", "7  검병", "이단 점프", "G", "+", "Esc", "왼손 잽", "주인공 HP  500 / 500",
                      "소환된 적  ·  쇠몽둥이", "공격력   20", "현재 HP  180", "최대 HP  200", "-10", "+10",
                      "HP 전체 복구", "적용", "시작 HP  500 / 500"):
             self.assertIn(word, texts)
@@ -412,7 +414,7 @@ class TrainingRoomTests(unittest.TestCase):
         click = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1100, 368)
         process_menu_events(self.game, click, menu_screen=False)
         self.assertIsNone(self.world.stage.target)
-        for number in range(1, 7):
+        for number in range(1, 8):
             with self.subTest(number=number):
                 self.press(f"spawn_{number}")
                 self.press("training_target")
@@ -423,7 +425,7 @@ class TrainingRoomTests(unittest.TestCase):
                                     menu_screen=False)
                 self.assertNotEqual(target.max_hp, original_hp)
                 target.take_damage(original_hp * 2)
-                self.press(f"spawn_{number % 6 + 1}")
+                self.press(f"spawn_{number % 7 + 1}")
                 process_menu_events(self.game, mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1100, 368, SDL_BUTTON_RIGHT),
                                     menu_screen=False)
                 self.assertEqual(target.hp, 1)

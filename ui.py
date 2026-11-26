@@ -203,7 +203,7 @@ class UI:
         font.draw(help_x, 637, "방향키  이동     Shift + 방향키  달리기", body)
         font.draw(help_x, 609, "Space  점프 · 두 번 눌러 이단 점프", body)
         font.draw(help_x, 581, "G  무기 줍기 · 교체 · 내려놓기 (책상 앞에서 반납)", body)
-        font.draw(help_x, 555, "1~6  연습 상대 선택     +  소환     Esc  메인 메뉴", body)
+        font.draw(help_x, 555, f"1~{len(OPPONENTS)}  연습 상대 선택     +  소환     Esc  메인 메뉴", body)
         weapon = config.WEAPON_NAMES.get(player.weapon, "맨손")
         font.draw(text_left, 671, f"주인공 공격력  ·  {weapon}", heading)
         moves = moves_for_weapon(player.weapon)
@@ -227,11 +227,11 @@ class UI:
         elif firearm:
             font.draw(text_left, 555, f"R 재장전     탄약  {player.firearm_ammo} / "
                       f"{config.FIREARM_MAGAZINE_SIZES[player.weapon]}", body)
-        pico2d.draw_rectangle(panel_left, 496, 885, 534, 17, 22, 29, filled=True)
+        pico2d.draw_rectangle(panel_left, 496, 958, 534, 17, 22, 29, filled=True)
         font.draw(text_left, 515, "다음 소환", heading)
         for index, opponent in enumerate(OPPONENTS):
             selected = opponent == world.stage.selected_opponent
-            x = 222 + index * 110
+            x = 222 + index * 104
             if selected:
                 pico2d.draw_rectangle(x - 7, 502, x + 94, 528, 56, 74, 86, filled=True)
             font.draw(x, 515, f"{index + 1}  {opponent.name}", heading if selected else body)

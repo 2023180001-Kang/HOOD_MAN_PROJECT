@@ -15,6 +15,7 @@ from projectiles import PlayerProjectile
 from researcher import Researcher
 from shield_soldier import ShieldSoldier
 from stage import Stage
+from sword_enemy import SwordEnemy
 from walkable import WalkableArea
 
 
@@ -105,6 +106,10 @@ class TrainingDualClub(TrainingTarget, Enemy02):
     pass
 
 
+class TrainingSwordEnemy(TrainingTarget, SwordEnemy):
+    pass
+
+
 class TrainingAxe(TrainingTarget, AxeEnemy):
     pass
 
@@ -138,6 +143,7 @@ OPPONENTS = (
     PracticeOpponent("권총", TrainingResearcher),
     PracticeOpponent("방패", TrainingShield),
     PracticeOpponent("AR 소총", TrainingARSoldier),
+    PracticeOpponent("검병", TrainingSwordEnemy, config.SWORD_ENEMY_ATTACKS["slam"][1]),
 )
 SELECTION_KEYS = {f"spawn_{i}": opponent for i, opponent in enumerate(OPPONENTS, 1)}
 

@@ -248,5 +248,43 @@ class TrainingRoomTests(unittest.TestCase):
             self.game.ui.draw(assets, self.world)
         self.assertEqual(assets.damage_font.draw.call_args.args[2], "-20")
         texts = " ".join(call.args[2] for call in assets.font.draw.call_args_list)
-        for word in ("조작법 익히기", "이단 점프", "G", "+", "Esc", "왼손 잽"):
+        for word in ("조작법 익히기", "이단 점프", "G", "+", "Esc", "왼손 잽",
+                     "소환된 적  ·  쇠몽둥이", "공격력   20", "현재 HP  180", "최대 HP  200", "-10", "+10"):
             self.assertIn(word, texts)
+
+    def test_hp_buttons_adjust_only_the_displayed_target_and_never_kill(self):
+        plus = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1190, 410)
+        minus = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1100, 410)
+        process_menu_events(self.game, plus, menu_screen=False)
+        self.assertIsNone(self.world.stage.target)
+        self.press("spawn_2")
+        self.press("training_target")
+        target = self.world.stage.target
+        target.take_damage(30)
+        self.press("spawn_6")
+        process_menu_events(self.game, plus, plus, minus, menu_screen=False)
+        self.assertEqual((target.hp, target.max_hp), (180, 210))
+        for event in (mouse_event(pico2d.SDL_MOUSEMOTION, 1190, 410),
+                      mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1190, 410, SDL_BUTTON_RIGHT),
+                      mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, 1190, 450)):
+            process_menu_events(self.game, event, menu_screen=False)
+        self.assertEqual((target.hp, target.max_hp), (180, 210))
+        assets = Mock()
+        with patch("pico2d.draw_rectangle"):
+            self.game.ui.draw(assets, self.world)
+        texts = [call.args[2] for call in assets.font.draw.call_args_list]
+        self.assertIn("소환된 적  ·  쌍몽둥이", texts)
+        self.assertIn("공격력   타격 30   /   내려찍기 50", texts)
+        self.assertIn("현재 HP  180     최대 HP  210", texts)
+        process_menu_events(self.game, *([minus] * 25), menu_screen=False)
+        self.assertEqual((target.hp, target.max_hp), (1, 1))
+        projectile = SteelClubProjectile(target.x, target.ground_y, 60, 1)
+        self.world.projectiles.append(projectile)
+        self.world.update_projectiles(0)
+        self.assertEqual((target.hp, self.world.damage_numbers[-1].damage), (1, 50))
+        process_menu_events(self.game, plus, menu_screen=False)
+        self.assertEqual((target.hp, target.max_hp), (11, 11))
+        advance(self.world, 2)  # Let the piercing club fly past the summon point.
+        self.press("training_target")
+        target = self.world.stage.target
+        self.assertEqual((target.opponent.name, target.hp, target.max_hp), ("AR 소총", 300, 300))

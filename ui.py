@@ -5,11 +5,13 @@ from math import ceil, floor, hypot
 import config
 from combat import STRONG_MOVES
 from physics import clamp
+from training_room import OPPONENTS
 
 
 PLAYER_BOUNDS_COLOR = (80, 220, 255)
 ENEMY_BOUNDS_COLOR = (255, 185, 70)
 STAIR_BOUNDS_COLOR = (180, 255, 150)
+TRAINING_HP_BUTTONS = ((-10, (1064, 394, 1138, 427)), (10, (1148, 394, 1230, 427)))
 
 
 def firearm_controls(player):
@@ -178,11 +180,12 @@ class UI:
         assets.font.draw(x, y, label, (255, 224, 110))
 
     @staticmethod
-    def draw_training_help(assets, player):
+    def draw_training_help(assets, world):
         import pico2d
 
         if assets.font is None:
             return
+        player = world.player
         panel_left = config.BAG_BACK_BUTTON_LEFT + config.BAG_BACK_BUTTON_SIZE[0] + 12
         text_left = panel_left + 22
         pico2d.draw_rectangle(panel_left, 542, 1250, 698, 17, 22, 29, filled=True)
@@ -192,7 +195,7 @@ class UI:
         font.draw(text_left, 637, "방향키  이동     Shift + 방향키  달리기", body)
         font.draw(text_left, 609, "Space  점프 · 두 번 눌러 이단 점프", body)
         font.draw(text_left, 581, "G  무기 줍기 · 교체 · 내려놓기 (책상 앞에서 반납)", body)
-        font.draw(text_left, 555, "+  내 앞에 연습 상대 소환     Esc  메인 메뉴", body)
+        font.draw(text_left, 555, "1~6  연습 상대 선택     +  소환     Esc  메인 메뉴", body)
         weapon = config.WEAPON_NAMES.get(player.weapon, "맨손")
         font.draw(620, 671, f"공격 연습  ·  {weapon}", heading)
         if player.weapon in config.FIREARM_MAGAZINE_SIZES:
@@ -216,12 +219,43 @@ class UI:
         font.draw(620, 581, "Q  양주먹     W 유지  돌진     E 두 번  연속 발차기", body)
         last = "T  어퍼컷" if player.weapon in config.FIREARM_MAGAZINE_SIZES else "R 두 번  올려치기     T  어퍼컷"
         font.draw(620, 555, last, body)
+        pico2d.draw_rectangle(panel_left, 496, 885, 534, 17, 22, 29, filled=True)
+        font.draw(text_left, 515, "다음 소환", heading)
+        for index, opponent in enumerate(OPPONENTS):
+            selected = opponent == world.stage.selected_opponent
+            x = 222 + index * 110
+            if selected:
+                pico2d.draw_rectangle(x - 7, 502, x + 94, 528, 56, 74, 86, filled=True)
+            font.draw(x, 515, f"{index + 1}  {opponent.name}", heading if selected else body)
+
+        target = world.stage.target
+        if target is None:
+            return
+        pico2d.draw_rectangle(970, 385, 1250, 534, 17, 22, 29, filled=True)
+        font.draw(986, 513, f"소환된 적  ·  {target.opponent.name}", heading)
+        damage = f"{target.attack_damage}"
+        if target.opponent.slam_damage is not None:
+            damage = f"타격 {damage}   /   내려찍기 {target.opponent.slam_damage}"
+        font.draw(986, 483, f"공격력   {damage}", body)
+        font.draw(986, 454, f"현재 HP  {target.hp:g}     최대 HP  {target.max_hp:g}", body)
+        font.draw(986, 410, "HP 조절", body)
+        for delta, (left, bottom, right, top) in TRAINING_HP_BUTTONS:
+            pico2d.draw_rectangle(left, bottom, right, top, 56, 74, 86, filled=True)
+            font.draw((left + right) / 2 - 15, (bottom + top) / 2, f"{delta:+d}", body)
+
+    @staticmethod
+    def click_training_hp(stage, x, y):
+        if stage.target is not None:
+            for delta, (left, bottom, right, top) in TRAINING_HP_BUTTONS:
+                if left <= x < right and bottom <= y < top:
+                    stage.target.adjust_hp(delta)
+                    return
 
     def draw(self, assets, world):
         import pico2d
 
         if world.training:
-            self.draw_training_help(assets, world.player)
+            self.draw_training_help(assets, world)
             return
         image = assets.images[config.HP_IMAGE]
         scale = config.UI_SCALE

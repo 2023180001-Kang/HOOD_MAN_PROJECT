@@ -111,12 +111,16 @@ class Game:
             elif self.world.training and event.type in (pico2d.SDL_MOUSEMOTION, pico2d.SDL_MOUSEBUTTONDOWN):
                 pointer = event.motion if event.type == pico2d.SDL_MOUSEMOTION else event.button
                 back = self.menu.bag_back_button
-                if back.contains(pointer.x, config.SCREEN_HEIGHT - 1 - pointer.y):
+                x, y = pointer.x, config.SCREEN_HEIGHT - 1 - pointer.y
+                if back.contains(x, y):
                     self.menu.hovered_button = back
                     if event.type == pico2d.SDL_MOUSEBUTTONDOWN and event.button.button == SDL_BUTTON_LEFT:
                         self.request_main_menu()
                 else:
                     self.menu.clear_hover()
+                    if (not self._menu_requested and event.type == pico2d.SDL_MOUSEBUTTONDOWN
+                            and event.button.button == SDL_BUTTON_LEFT):
+                        self.ui.click_training_hp(self.world.stage, x, y)
             elif not self._menu_requested and event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP):
                 key = KEYS.get(event.key.keysym.sym)
                 if (event.key.keysym.sym == pico2d.SDLK_EQUALS

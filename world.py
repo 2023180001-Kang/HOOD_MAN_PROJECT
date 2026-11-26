@@ -24,6 +24,7 @@ class World:
         self.traffic_rng = traffic_rng
         self.item_rng = item_rng
         self.starting_weapon = None
+        self.starting_hp = self.starting_max_hp = config.MAX_HP
         self.training = False
         self.reset()
 
@@ -44,6 +45,8 @@ class World:
             self.player.x = self.player.previous_x = config.SCREEN_WIDTH / 2
         else:
             self.player = Player()
+            self.player.hp = self.starting_hp
+            self.player.max_hp = self.starting_max_hp
             self.player.equip_weapon(self.starting_weapon)
             attack_sequence = count()
             self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,

@@ -11,11 +11,13 @@ from training_room import OPPONENTS
 PLAYER_BOUNDS_COLOR = (80, 220, 255)
 ENEMY_BOUNDS_COLOR = (255, 185, 70)
 STAIR_BOUNDS_COLOR = (180, 255, 150)
-# Delta and screen-space bounds. A full restore has no fixed delta.
+# Button actions and screen-space bounds.
 ENEMY_HP_BUTTONS = ((-10, (1064, 394, 1138, 427)), (10, (1148, 394, 1230, 427)),
-                    (None, (986, 352, 1230, 385)))
+                    ("restore", (986, 352, 1230, 385)))
 PLAYER_HP_BUTTONS = ((-10, (364, 449, 437, 482)), (10, (447, 449, 520, 482)),
-                     (None, (530, 449, 680, 482)))
+                     ("restore", (530, 449, 680, 482)), ("apply", (690, 449, 762, 482)))
+HP_BUTTON_LABELS = {-10: ("-10", 15), 10: ("+10", 15),
+                    "restore": ("HP 전체 복구", 45), "apply": ("적용", 15)}
 
 
 def firearm_controls(player):
@@ -234,9 +236,10 @@ class UI:
                 pico2d.draw_rectangle(x - 7, 502, x + 94, 528, 56, 74, 86, filled=True)
             font.draw(x, 515, f"{index + 1}  {opponent.name}", heading if selected else body)
 
-        pico2d.draw_rectangle(panel_left, 443, 694, 489, 17, 22, 29, filled=True)
+        pico2d.draw_rectangle(panel_left, 443, 958, 489, 17, 22, 29, filled=True)
         font.draw(text_left, 465, f"주인공 HP  {player.hp:g} / {player.max_hp}", heading)
         UI.draw_training_hp_buttons(font, PLAYER_HP_BUTTONS, body)
+        font.draw(774, 465, f"시작 HP  {world.starting_hp:g} / {world.starting_max_hp}", body)
         target = world.stage.target
         if target is None:
             return
@@ -254,10 +257,9 @@ class UI:
     def draw_training_hp_buttons(font, buttons, color):
         import pico2d
 
-        for delta, (left, bottom, right, top) in buttons:
+        for action, (left, bottom, right, top) in buttons:
             pico2d.draw_rectangle(left, bottom, right, top, 56, 74, 86, filled=True)
-            label = "HP 전체 복구" if delta is None else f"{delta:+d}"
-            offset = 45 if delta is None else 15
+            label, offset = HP_BUTTON_LABELS[action]
             font.draw((left + right) / 2 - offset, (bottom + top) / 2, label, color)
 
     @staticmethod
@@ -265,12 +267,15 @@ class UI:
         for actor, buttons in ((world.player, PLAYER_HP_BUTTONS), (world.stage.target, ENEMY_HP_BUTTONS)):
             if actor is None:
                 continue
-            for delta, (left, bottom, right, top) in buttons:
+            for action, (left, bottom, right, top) in buttons:
                 if left <= x < right and bottom <= y < top:
-                    if delta is None:
+                    if action == "apply":
+                        world.starting_hp = actor.hp
+                        world.starting_max_hp = actor.max_hp
+                    elif action == "restore":
                         actor.restore_hp()
                     else:
-                        actor.adjust_hp(delta)
+                        actor.adjust_hp(action)
                     return
 
     def draw(self, assets, world):

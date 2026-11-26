@@ -285,7 +285,7 @@ class TrainingRoomTests(unittest.TestCase):
         texts = " ".join(call.args[2] for call in assets.font.draw.call_args_list)
         for word in ("조작법 익히기", "이단 점프", "G", "+", "Esc", "왼손 잽", "주인공 HP  500 / 500",
                      "소환된 적  ·  쇠몽둥이", "공격력   20", "현재 HP  180", "최대 HP  200", "-10", "+10",
-                     "HP 전체 복구"):
+                     "HP 전체 복구", "적용", "시작 HP  500 / 500"):
             self.assertIn(word, texts)
 
     def test_left_hp_controls_are_independent_and_full_restore_works_without_a_target(self):
@@ -324,6 +324,39 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertEqual((self.world.player.hp, self.world.player.max_hp), (500, 500))
         click(480)
         self.assertEqual((self.world.player.hp, self.world.player.max_hp), (510, 510))
+        self.launch("game_start")
+        self.assertEqual((self.world.player.hp, self.world.player.max_hp), (500, 500))
+
+    def test_apply_sets_current_and_max_campaign_hp_until_applied_again(self):
+        def click(x, button=pico2d.SDL_BUTTON_LEFT):
+            event = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, x, 465, button)
+            process_menu_events(self.game, event, menu_screen=False)
+
+        click(480)
+        click(480)
+        click(400)
+        click(726, SDL_BUTTON_RIGHT)
+        self.assertEqual((self.world.starting_hp, self.world.starting_max_hp), (500, 500))
+        click(726)
+        click(480)
+        assets = Mock()
+        with patch("pico2d.draw_rectangle"):
+            self.game.ui.draw(assets, self.world)
+        labels = [call.args[2] for call in assets.font.draw.call_args_list]
+        self.assertIn("주인공 HP  520 / 530", labels)
+        self.assertIn("시작 HP  510 / 520", labels)
+
+        self.launch("game_start")
+        player = self.world.player
+        self.assertEqual((player.hp, player.max_hp), (510, 520))
+        self.assertTrue(player.take_damage(20))
+        self.world.select_stage(1)
+        self.assertEqual((player.hp, player.max_hp), (490, 520))
+        self.press("restart")
+        self.assertEqual((self.world.player.hp, self.world.player.max_hp), (510, 520))
+
+        self.launch("controls")
+        click(726)
         self.launch("game_start")
         self.assertEqual((self.world.player.hp, self.world.player.max_hp), (500, 500))
 

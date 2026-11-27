@@ -5,13 +5,12 @@ from drop_items import DropItem
 from enemy import Enemy
 from main_menu import MainMenu
 from projectiles import PlayerRifleBullet
-from tests.helpers import advance, tap
+from tests.helpers import ManualSpawnWorld, advance, tap
 from tests.test_bag_drag import slot_center
-from world import World
 
 
 def rifle_world():
-    world = World()
+    world = ManualSpawnWorld()
     world.starting_weapon = "ar_rifle"
     world.reset()
     world.stage.drop_items.clear()

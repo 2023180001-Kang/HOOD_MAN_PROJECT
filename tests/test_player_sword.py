@@ -113,27 +113,58 @@ class PlayerSwordTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         self.assertEqual((player.state, player.sprite_row), ("IDLE", 1))
 
-    def test_turning_in_place_during_parry_keeps_animation_and_deflects_incoming_rounds(self):
+    def test_moving_parry_uses_full_stride_and_deflects_at_walking_and_running_speed(self):
+        for key, facing, running, row in (("left", -1, False, 9), ("right", 1, True, 10)):
+            with self.subTest(row=row):
+                world = equipped_world("sword")
+                player = world.player
+                player.invincible = False
+                world.controls.press(key)
+                if running:
+                    world.controls.press("left_shift")
+                advance(world, 0.4)
+                speed = config.RUN_SPEED if running else config.WALK_SPEED
+                start = player.x
+                world.controls.press("combat_s")
+                frames = set()
+                for _ in range(48):
+                    world.step(config.FIXED_DT)
+                    self.assertEqual((player.state, player.sprite_row, player.facing), ("SWORD_PARRY", row, facing))
+                    self.assertEqual(player.vx, facing * speed)
+                    frames.add(player.animation.frame)
+                self.assertEqual(frames, set(range(8)))
+                self.assertAlmostEqual(player.x - start, facing * speed * 48 * config.FIXED_DT)
+                for kind in (ResearcherBullet, RifleBullet, EnemyAxeProjectile):
+                    shot = kind(player.x + facing * 10, player.ground_y, 80, -facing)
+                    world.projectiles.append(shot)
+                    world.step(config.FIXED_DT)
+                    self.assertTrue(shot.deflected)
+                self.assertEqual(player.hp, player.max_hp)
+                world.controls.release("combat_s")
+                world.step(config.FIXED_DT)
+                self.assertEqual((player.sprite_row, player.vx), (3 if running else 2, facing * speed))
+
+    def test_held_parry_switches_rows_with_depth_movement_shift_and_stop(self):
         world = equipped_world("sword")
         player = world.player
-        player.invincible = False
-        position = player.x, player.ground_y
+        x, y = player.x, player.ground_y
         world.controls.press("combat_s")
+        world.controls.press("up")
         advance(world, 0.05)
-        for key, facing, bullet_type in (("left", -1, ResearcherBullet), ("right", 1, RifleBullet)):
-            elapsed = player.animation.elapsed
-            bullet = bullet_type(player.x + facing * 10, player.ground_y, 80, -facing)
-            world.projectiles.append(bullet)
-            world.controls.press(key)
-            world.step(config.FIXED_DT)
-            self.assertEqual((player.facing, player.state, player.sprite_row), (facing, "SWORD_PARRY", 6))
-            self.assertAlmostEqual(player.animation.elapsed, elapsed + config.FIXED_DT)
-            self.assertTrue(bullet.deflected)
-            self.assertEqual(player.hp, player.max_hp)
-            world.controls.release(key)
-            world.step(config.FIXED_DT)
-            self.assertEqual(player.facing, facing)
-            self.assertEqual((player.x, player.ground_y), position)
+        self.assertEqual((player.sprite_row, player.x), (9, x))
+        self.assertGreater(player.ground_y, y)
+        world.controls.press("right_shift")
+        world.controls.press("left")
+        world.step(config.FIXED_DT)
+        self.assertEqual((player.sprite_row, player.facing), (10, -1))
+        world.controls.release("right_shift")
+        world.step(config.FIXED_DT)
+        self.assertEqual(player.sprite_row, 9)
+        world.controls.release("up")
+        world.controls.release("left")
+        advance(world, 0.2)
+        self.assertEqual((player.state, player.sprite_row, player.vx, player.ground_vy), ("SWORD_PARRY", 6, 0, 0))
+        self.assertIn(player.animation.frame, range(1, 6))
 
     @patch("projectiles.uniform")
     def test_parried_volley_spreads_immediately_while_enlarging_then_falls(self, roll_angle):

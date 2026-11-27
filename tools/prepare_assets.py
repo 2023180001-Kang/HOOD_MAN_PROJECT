@@ -19,7 +19,7 @@ SHEETS = {
     config.PLAYER_RIFLE_IMAGE: 12,
     config.PLAYER_STEEL_CLUB_IMAGE: 8,
     config.PLAYER_DUAL_BATONS_IMAGE: 8,
-    config.PLAYER_SWORD_IMAGE: 8,
+    config.PLAYER_SWORD_IMAGE: 10,
     config.PLAYER_SHIELD_IMAGE: 9,
     config.PLAYER_AXE_IMAGE: 8,
     config.ENEMY_IMAGE: 6,
@@ -74,11 +74,11 @@ def main():
                         frame["jump_height"] = max(0, ground_anchor - bottom)
                         if bottom > ground_anchor:
                             frame["offset_y"] = ground_anchor - bottom
-                    elif name in (config.ENEMY02_IMAGE, config.SWORD_ENEMY_IMAGE,
-                                  config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
-                                  config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE):
-                        # Keep airborne throws above the floor instead of moving
-                        # every cropped frame's bottom down to the same feet y.
+                    elif (name in (config.ENEMY02_IMAGE, config.SWORD_ENEMY_IMAGE,
+                                   config.STRONG_ATTACK_IMAGE, config.STRONG_HIT_IMAGE,
+                                   config.PLAYER_CAR_HIT_IMAGE, config.ENEMY_CAR_HIT_IMAGE)
+                          or (name == config.PLAYER_SWORD_IMAGE and row + 1 in config.SWORD_PARRY_MOVING_ROWS.values())):
+                        # Keep the source lift of the feet when cropping each frame.
                         frame["offset_y"] = ground_anchor - bottom
                     frames.append(frame)
                 rows.append(frames)

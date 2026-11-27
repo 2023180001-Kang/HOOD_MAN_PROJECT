@@ -204,8 +204,9 @@ PLAYER_PISTOL_IMAGE = "HoodMan_Pistol_MovingReload_2048x3072.png"
 PLAYER_RIFLE_IMAGE = "HoodMan_AR_2048x3072.png"
 PLAYER_STEEL_CLUB_IMAGE = "HoodMan_SteelClub_newChanged_version_8x8.png"
 PLAYER_DUAL_BATONS_IMAGE = "HoodMan_DualBatons_2048x2048(1).png"
-PLAYER_SWORD_IMAGE = "HoodMan_Sword_8x8_2048x2048.png"
+PLAYER_SWORD_IMAGE = "HoodMan_Sword_Spin_Walk_Run_8x10_2048x2560.png"
 SWORD_PARRY_FPS = 24.0
+SWORD_PARRY_MOVING_ROWS = {"WALK": 9, "RUN": 10}
 DUAL_BATON_PROJECTILE_IMAGE = "HoodMan_DualBaton_Projectiles_1024x256.png"
 PLAYER_SHIELD_IMAGE = "HoodMan_Shield_2048x2304.png"
 SHIELD_PROJECTILE_IMAGE = "HoodMan_Shield_Projectile_256x256.png"
@@ -259,7 +260,7 @@ PLAYER_EQUIPPED_SHEETS = {"pistol": PLAYER_PISTOL_IMAGE, "ar_rifle": PLAYER_RIFL
                           "steel_club": PLAYER_STEEL_CLUB_IMAGE, "axe": PLAYER_AXE_IMAGE,
                           "dual_black_batons": PLAYER_DUAL_BATONS_IMAGE, "shield_item": PLAYER_SHIELD_IMAGE,
                           "sword": PLAYER_SWORD_IMAGE}
-PLAYER_PISTOL_DAMAGE = 20
+PLAYER_PISTOL_DAMAGE = 50
 PLAYER_PISTOL_MAGAZINE_SIZE = 7
 PLAYER_RIFLE_DAMAGE = 20
 PLAYER_RIFLE_MAGAZINE_SIZE = 20

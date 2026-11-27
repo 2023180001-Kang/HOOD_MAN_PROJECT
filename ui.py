@@ -355,7 +355,7 @@ class UI:
                                  (180, 255, 150))
             if world.player.weapon == "pistol":
                 action = "재장전 중" if world.player.state == "RELOAD" else "A키 사격"
-                assets.font.draw(22, 132, f"권총 {action} · 피해 20 · 7발 후 자동 재장전",
+                assets.font.draw(22, 132, f"권총 {action} · 피해 {config.PLAYER_PISTOL_DAMAGE} · 7발 후 자동 재장전",
                                  (126, 218, 255))
             elif world.player.weapon == "ar_rifle":
                 assets.font.draw(22, 132, "AR 소총 · A 유지 연사 · 피해 10 · R 재장전",
@@ -379,7 +379,7 @@ class UI:
                     help_text = "A 방패 밀치기 · S 유지 방어 · D 관통 투척 · G 줍기 / 내려놓기"
                 elif world.player.weapon == "sword":
                     if world.player.state == "SWORD_PARRY":
-                        help_text = "S 유지로 총알·투척 도끼 튕기기 · 방어 중 ←/→ 방향 전환 · 근접 공격에는 피격"
+                        help_text = "S 유지로 총알·투척 도끼 튕기기 · 방향키 걷기 · Shift + 방향키 달리기 · 근접 공격에는 피격"
                     else:
                         help_text = "A 검 베기 · S 유지로 총알·투척 도끼 튕기기 · 이단 점프 중 D 조준 → D 급강하 베기"
                 else:

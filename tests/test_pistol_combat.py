@@ -104,7 +104,7 @@ class PistolShootingTests(unittest.TestCase):
         self.assertEqual(len(world.projectiles), 1)
         bullet = world.projectiles[0]
         self.assertIsInstance(bullet, PlayerPistolBullet)
-        self.assertEqual((bullet.damage, bullet.facing, bullet.floor), (20, 1, player.floor))
+        self.assertEqual((bullet.damage, bullet.facing, bullet.floor), (50, 1, player.floor))
         muzzle_x, muzzle_y = player.aim_line[:2]
         # First flash meets the barrel at (196, 110) in the cell, with feet at y=241.
         self.assertEqual((muzzle_x, muzzle_y), (player.x + 68 * config.SPRITE_SCALE,
@@ -480,9 +480,9 @@ class PistolBulletTests(unittest.TestCase):
             bullet = PlayerPistolBullet(1280, 100, 80, facing)
             self.assertTrue(bullet.update(0.5, [far, dead, near]))
             self.assertIs(bullet.impact_target, near)
-            self.assertEqual((near.hp, far.hp, bullet.impact_damage), (180, 200, 20))
+            self.assertEqual((near.hp, far.hp, bullet.impact_damage), (150, 200, 50))
             self.assertFalse(bullet.update(1, [far, near]))
-            self.assertEqual((near.hp, far.hp), (180, 200))
+            self.assertEqual((near.hp, far.hp), (150, 200))
 
     def test_depth_height_floor_and_stair_filters_match_existing_pistol_ballistics(self):
         for situation in ("depth_edge", "depth_out", "jump", "floor", "stair"):
@@ -496,7 +496,7 @@ class PistolBulletTests(unittest.TestCase):
             depth = 32 if situation == "depth_edge" else 32.01 if situation == "depth_out" else 0
             bullet = PlayerPistolBullet(1280, 100 + depth, 80, 1)
             self.assertEqual(bullet.update(0.3, [enemy]), situation == "depth_edge")
-            self.assertEqual(enemy.hp, 180 if situation == "depth_edge" else 200)
+            self.assertEqual(enemy.hp, 150 if situation == "depth_edge" else 200)
 
     def test_fast_sweep_hits_a_crossing_enemy_only_at_the_same_depth_and_time(self):
         for approaches in (True, False):
@@ -505,7 +505,7 @@ class PistolBulletTests(unittest.TestCase):
             bullet = PlayerPistolBullet(1280, 100, 80, 1)
             self.assertEqual(bullet.update(0.3, [enemy]), approaches)
 
-    def test_every_enemy_type_receives_twenty_and_real_guard_damage_is_reported(self):
+    def test_every_enemy_type_receives_fifty_and_real_guard_damage_is_reported(self):
         for kind in (Enemy, Enemy02, AxeEnemy, Researcher, ARSoldier, ShieldSoldier):
             world = armed_world()
             enemy = kind(1400)
@@ -513,8 +513,8 @@ class PistolBulletTests(unittest.TestCase):
             bullet = PlayerPistolBullet(1280, 100, 80, 1)
             world.projectiles.append(bullet)
             world.update_projectiles(0.3)
-            self.assertEqual(enemy.hp, enemy.max_hp - 20)
-            self.assertEqual(world.damage_numbers[0].damage, 20)
+            self.assertEqual(enemy.hp, enemy.max_hp - 50)
+            self.assertEqual(world.damage_numbers[0].damage, 50)
             self.assertEqual(len(world.effects), 1)
             self.assertGreater(world.camera.shake_remaining, 0)
             self.assertFalse(world.projectiles)
@@ -525,7 +525,7 @@ class PistolBulletTests(unittest.TestCase):
         world.enemies = [guard]
         world.projectiles.append(PlayerPistolBullet(1280, 100, 80, 1))
         world.update_projectiles(0.3)
-        self.assertEqual((guard.hp, world.damage_numbers[0].damage), (390, 10))
+        self.assertEqual((guard.hp, world.damage_numbers[0].damage), (375, 25))
 
     def test_lethal_bullet_reports_remaining_hp_and_never_pierces(self):
         world = armed_world()
@@ -549,7 +549,7 @@ class PistolBulletTests(unittest.TestCase):
             RifleBullet(1200, 100, 80, 1),
         ))
         world.update_projectiles(0.3)
-        self.assertEqual((enemy.hp, world.player.hp), (180, 465))
+        self.assertEqual((enemy.hp, world.player.hp), (150, 465))
         self.assertEqual(world.player.pistol_ammo, 7)
 
     def test_player_bullets_keep_researcher_flight_and_survive_player_death(self):

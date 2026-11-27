@@ -205,7 +205,7 @@ class TrainingRoomTests(unittest.TestCase):
                 bullet = PlayerPistolBullet(target.x, target.ground_y, 60, 1)
                 self.world.projectiles.append(bullet)
                 self.world.update_projectiles(0)
-                self.assertEqual((self.world.damage_numbers[-1].damage, target.hp), (20, hp - 20))
+                self.assertEqual((self.world.damage_numbers[-1].damage, target.hp), (50, hp - 50))
                 self.assertEqual((target.sprite_image, target.animation.row), (image, hit_row))
                 target.take_damage(hp * 2)
                 self.assertEqual((target.hp, target.last_hit_damage), (1, hp * 2))
@@ -277,7 +277,7 @@ class TrainingRoomTests(unittest.TestCase):
             self.assertEqual(self.world.damage_numbers[-1].damage, move.damage)
             self.assertEqual((target.state, target.sprite_image), ("HIT", config.ENEMY_IMAGE))
             advance(self.world, 0.8)
-        for projectile, damage in ((PlayerPistolBullet, 20), (SteelClubProjectile, 50)):
+        for projectile, damage in ((PlayerPistolBullet, 50), (SteelClubProjectile, 50)):
             bullet = projectile(target.x, target.ground_y, 60, 1)
             self.world.projectiles.append(bullet)
             self.world.update_projectiles(0)
@@ -308,10 +308,10 @@ class TrainingRoomTests(unittest.TestCase):
         with patch("pico2d.draw_rectangle"):
             self.game.ui.draw_enemy_health(assets, self.world, 0, 0)
             self.game.ui.draw(assets, self.world)
-        self.assertEqual(assets.damage_font.draw.call_args.args[2], "-20")
+        self.assertEqual(assets.damage_font.draw.call_args.args[2], "-50")
         texts = " ".join(call.args[2] for call in assets.font.draw.call_args_list)
         for word in ("조작법 익히기", "1~7", "7  검병", "이단 점프", "G", "+", "Esc", "왼손 잽", "주인공 HP  500 / 500",
-                     "소환된 적  ·  쇠몽둥이", "공격력   20", "현재 HP  180", "최대 HP  200", "-10", "+10",
+                     "소환된 적  ·  쇠몽둥이", "공격력   20", "현재 HP  150", "최대 HP  200", "-10", "+10",
                      "HP 전체 복구", "적용", "시작 HP  500 / 500"):
             self.assertIn(word, texts)
 
@@ -478,7 +478,8 @@ class TrainingRoomTests(unittest.TestCase):
                 text = attack_text()
                 self.assertIn(f"주인공 공격력  ·  {config.WEAPON_NAMES[item.kind]}", text)
                 if item.kind in config.FIREARM_MAGAZINE_SIZES:
-                    self.assertIn("20 / 발", text)
+                    damage = config.PLAYER_PISTOL_DAMAGE if item.kind == "pistol" else config.PLAYER_RIFLE_DAMAGE
+                    self.assertIn(f"{damage} / 발", text)
                     self.assertIn("S 방향 고정", text)
                 else:
                     for move in player.moves.values():

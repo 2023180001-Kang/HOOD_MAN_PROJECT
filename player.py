@@ -57,6 +57,7 @@ class Player:
         self.rifle_trigger = False
         self.pistol_shot_pending = False
         self.firearm_gait = "IDLE"
+        self.sword_parry_gait = "IDLE"
         self.pistol_reload_interrupted = False
         self.active_move = None
         self.weapon_leap_phase = None
@@ -141,6 +142,8 @@ class Player:
     def sprite_row(self):
         if self.active_move is not None:
             return self.active_move.row
+        if self.state == "SWORD_PARRY":
+            return config.SWORD_PARRY_MOVING_ROWS.get(self.sword_parry_gait, self.animation.row)
         if self.state in ("SHOOT", "RELOAD"):
             pose = self._firearm_pose_for_frame(self.animation.frame)
             return self.animation.definitions[pose][0]
@@ -564,14 +567,14 @@ class Player:
         if self.weapon == "sword" and "combat_s" in controls.held and not escape.active:
             if self.state != "SWORD_PARRY":
                 self.cancel_combat()
-                self.vx = self.ground_vy = 0.0
+                self.sword_parry_gait = self.movement_state(controls)
                 self.animation.set_state("SWORD_PARRY")
                 self.animation.elapsed = 1 / config.SWORD_PARRY_FPS
             if controls.direction:
                 self.facing = controls.direction
             return
         if self.state == "SWORD_PARRY":
-            self.finish_move()
+            self.animation.set_state(self.movement_state(controls))
         if self.weapon == "shield_item" and self.active_move is None:
             if "combat_s" in controls.held and not escape.active:
                 self.vx = self.ground_vy = 0.0
@@ -652,8 +655,17 @@ class Player:
             return
 
         if self.state == "SWORD_PARRY":
+            if self.grounded:
+                speed = config.RUN_SPEED if controls.running else config.WALK_SPEED
+                self.move_on_ground(dt, controls, speed)
+            else:
+                self.vx = self.ground_vy = 0.0
             self.update_vertical(dt)
-            # Loop source cells 2 through 6 while S is held.
+            self.sword_parry_gait = self.movement_state(controls)
+            if self.sword_parry_gait in config.SWORD_PARRY_MOVING_ROWS:
+                self.animation.update(dt)
+                return
+            # The stationary spin loops only source cells 2 through 6.
             first = 1 / config.SWORD_PARRY_FPS
             duration = 5 / config.SWORD_PARRY_FPS
             self.animation.elapsed = first + (self.animation.elapsed - first + dt) % duration

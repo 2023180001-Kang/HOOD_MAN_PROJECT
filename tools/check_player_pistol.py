@@ -215,8 +215,8 @@ def check_seven_shots_reload_and_hits(game):
                 if shot == 0:
                     capture(game, f"pistol_fire_{side}")
                 tick(game, 17)
-                assert enemy.hp == 400 - (shot + 1) * 20, (side, shot, enemy.hp)
-                assert world.damage_numbers[-1].damage == 20
+                assert enemy.hp == 400 - (shot + 1) * 50, (side, shot, enemy.hp)
+                assert world.damage_numbers[-1].damage == 50
                 assert player.hp == 500
                 if shot == 0:
                     capture(game, f"pistol_hit_{side}")
@@ -233,11 +233,11 @@ def check_seven_shots_reload_and_hits(game):
                 if index < 59:
                     assert player.state == "RELOAD" and player.pistol_ammo == 0
             assert seen_reload == set(range(8))
-            assert (player.state, player.pistol_ammo, enemy.hp) == ("IDLE", 7, 260)
+            assert (player.state, player.pistol_ammo, enemy.hp) == ("IDLE", 7, 50)
             tick(game, 30)
             assert player.pistol_ammo == 7 and not world.projectiles
-    print("PASS: SDL A presses emit once at row-5 flash frame 2; seven real rounds deal 20 each "
-          "on both sides (axe HP400 -> 260), then all eight row-6 frames play for 1s; "
+    print("PASS: SDL A presses emit once at row-5 flash frame 2; seven real rounds deal 50 each "
+          "on both sides (axe HP400 -> 50), then all eight row-6 frames play for 1s; "
           "A presses during reload never fire or queue a shot and completion restores seven rounds.")
 
 

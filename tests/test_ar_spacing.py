@@ -59,6 +59,9 @@ class ARSpacingTests(unittest.TestCase):
     def test_numeric_spawns_and_additional_waves_stay_separate_during_approach_fire_and_reload(self):
         for index in (10, 11):
             world, _ = crowd(0, index=index)
+            # Select riflemen explicitly when exercising rifleman-only formations.
+            while world.stage.spawn_cycle_index != 10:
+                world.stage.cycle_spawn_enemy_type()
             seen_fire, seen_reload = set(), set()
             for wave in range(2):
                 established = {e: (e.x, e.ground_y) for e in world.enemies}

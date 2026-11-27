@@ -9,6 +9,7 @@ from researcher import Researcher
 
 
 class Sniper(Researcher):
+    peer_spacing_depth = config.AR_SOLDIER_SPACING_DEPTH
     death_drop_kind = None
     image_name = config.SNIPER_IMAGE
     animations = config.SNIPER_ANIMATIONS

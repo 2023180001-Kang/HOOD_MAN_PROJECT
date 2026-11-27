@@ -10,7 +10,7 @@ from sniper import Sniper
 from sword_enemy import SwordEnemy
 from tests.test_main_menu import process_menu_events
 from tests.test_menu_return import key_event, scene
-from tests.helpers import ManualSpawnWorld as World, advance
+from tests.helpers import ManualSpawnWorld as World, advance, tap
 
 
 def encounter(stage_index=0):
@@ -26,6 +26,23 @@ def encounter(stage_index=0):
 
 
 class SniperTests(unittest.TestCase):
+    def test_final_boss_encounter_and_manual_summons_keep_separate_counts_on_entry_and_retry(self):
+        world = scene().world
+        world.select_stage(11)
+        tap(world.controls, "spawn_1")
+        advance(world, 0.5)
+        self.assertEqual([type(e) for e in world.enemies], [ARSoldier])
+        advance(world, 0.5)
+        self.assertCountEqual([type(e) for e in world.enemies[1:]], [ARSoldier, Sniper] * 2)
+        tap(world.controls, "spawn_3")
+        world.step(config.FIXED_DT)
+        self.assertEqual([type(e) for e in world.enemies[-3:]], [Sniper, ARSoldier, Sniper])
+        world.retry_current_map()
+        self.assertCountEqual([type(e) for e in world.enemies], [ARSoldier, Sniper] * 2)
+        tap(world.controls, "spawn_2")
+        world.step(config.FIXED_DT)
+        self.assertEqual([type(e) for e in world.enemies[4:]], [ARSoldier, Sniper])
+
     def test_v_prefix_on_normal_stages_and_final_boss_with_both_number_rows(self):
         game = scene()
         world = game.world

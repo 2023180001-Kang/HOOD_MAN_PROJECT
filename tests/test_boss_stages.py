@@ -8,7 +8,7 @@ from PIL import Image
 import config
 from assets import Assets
 from ar_soldier import ARSoldier
-from tests.helpers import advance, tap
+from tests.helpers import advance, expected_numeric_summons, tap
 from tests.helpers import ManualSpawnWorld as World
 
 
@@ -136,8 +136,8 @@ class BossStageTests(unittest.TestCase):
             tap(world.controls, "spawn_9")
             world.step(config.FIXED_DT)
             self.assertEqual((len(world.enemies), stage.spawner.spawned_count), (9, 9))
-            self.assertTrue(all(type(enemy) is ARSoldier and enemy.hp == 300 and enemy.attack_damage == 50
-                                and stage.walkable.contains(enemy.x, enemy.ground_y, 88)
+            self.assertEqual([type(enemy) for enemy in world.enemies], expected_numeric_summons(index, 9))
+            self.assertTrue(all(stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                                 for enemy in world.enemies))
             self.assertTrue(any(enemy.ground_y < 56 for enemy in world.enemies))
             self.assertTrue(any(enemy.ground_y > 148 for enemy in world.enemies))

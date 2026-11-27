@@ -92,15 +92,21 @@ class World:
         if self.training or self.stage.encounter_started:
             return
         total = config.STAGE_ENCOUNTER_SIZE
-        sword_count = total // 2 if self.stage.image_name in config.CITY_STAGE_IMAGES else 0
-        self.spawn_enemies(total - sword_count, enemy_type_for_stage(self.stage_index))
-        if sword_count:
-            self.spawn_enemies(sword_count, SwordEnemy)
+        partner = None
+        if self.stage.image_name in config.CITY_STAGE_IMAGES:
+            partner = SwordEnemy
+        elif self.stage.image_name == config.BOSS_STAGE_IMAGES[-1]:
+            partner = Sniper
+        partner_count = total // 2 if partner is not None else 0
+        self.spawn_enemies(total - partner_count, enemy_type_for_stage(self.stage_index))
+        if partner_count:
+            self.spawn_enemies(partner_count, partner)
         self.stage.encounter_started = True
 
     def spawn_enemies(self, count, enemy_type=None):
         spawned = self.spawner.spawn(count, self.elapsed, enemy_type=enemy_type)
-        place_ranged_spawns(self.player, self.enemies, spawned)
+        place_ranged_spawns(self.player, self.enemies, spawned,
+                            include_snipers=self.stage.image_name == config.BOSS_STAGE_IMAGES[-1])
         self.enemies.extend(spawned)
 
     def update_camera(self, dt):
@@ -324,9 +330,9 @@ class World:
                 count, enemy_type = SPAWN_REQUESTS[request]
                 if enemy_type is Sniper and not self.sniper_stage:
                     continue
-                if enemy_type is None and self.stage.mixes_lab_summons:
+                if enemy_type is None and self.stage.mixes_numeric_summons:
                     for _ in range(count):
-                        self.spawn_enemies(1, next(self.stage.lab_summons))
+                        self.spawn_enemies(1, next(self.stage.summon_cycle))
                 else:
                     self.spawn_enemies(count, enemy_type)
         for enemy in self.enemies:

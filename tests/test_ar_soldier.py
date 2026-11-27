@@ -17,7 +17,7 @@ from game import Game
 from player import Player
 from projectiles import ResearcherBullet, RifleBullet
 from researcher import Researcher
-from tests.helpers import advance, enter_kick_wait, tap
+from tests.helpers import advance, enter_kick_wait, expected_numeric_summons, tap
 from tests.test_strong_attacks import strike
 from ui import UI
 from tests.helpers import ManualSpawnWorld as World
@@ -36,7 +36,7 @@ def encounter(index=10, side=1, gap=300, speed=1.0, invincible=True):
 
 
 class ARSoldierTests(unittest.TestCase):
-    def test_both_boss_maps_spawn_exact_digit_counts_with_300_hp_50_damage_and_twenty_rounds(self):
+    def test_both_boss_maps_spawn_exact_digit_counts_with_each_gunners_loadout(self):
         for index in (10, 11):
             for count in config.SPAWN_COUNTS:
                 with self.subTest(index=index, count=count):
@@ -47,10 +47,12 @@ class ARSoldierTests(unittest.TestCase):
                     tap(world.controls, f"spawn_{count}")
                     world.step(config.FIXED_DT)
                     self.assertEqual((len(world.enemies), world.spawner.spawned_count), (count, count))
-                    self.assertTrue(all(type(enemy) is ARSoldier and enemy.hp == enemy.max_hp == 300
-                                        and enemy.attack_damage == 50 and enemy.ammo == 20
-                                        and world.stage.walkable.contains(enemy.x, enemy.ground_y, 88)
-                                        for enemy in world.enemies))
+                    self.assertEqual([type(enemy) for enemy in world.enemies], expected_numeric_summons(index, count))
+                    for enemy in world.enemies:
+                        stats = (300, 50, 20) if type(enemy) is ARSoldier else (250, 90, 4)
+                        self.assertEqual((enemy.hp, enemy.attack_damage, enemy.ammo), stats)
+                        self.assertEqual(enemy.hp, enemy.max_hp)
+                        self.assertTrue(world.stage.walkable.contains(enemy.x, enemy.ground_y, 88))
                     world.controls.press(f"spawn_{count}")
                     world.step(config.FIXED_DT)
                     self.assertEqual(len(world.enemies), count)

@@ -15,9 +15,16 @@ from enemy02 import Enemy02
 from physics import clamp
 from researcher import Researcher
 from shield_soldier import ShieldSoldier
+from sniper import Sniper
 from spawn_manager import SpawnManager, SpawnPoint
 from stairs import Staircase, can_use_stairs
 from walkable import WalkableArea, for_stage
+
+
+NUMERIC_SUMMON_GROUPS = {
+    **dict.fromkeys(config.LAB_STAGE_IMAGES, (ShieldSoldier, Researcher)),
+    config.BOSS_STAGE_IMAGES[-1]: (ARSoldier, Sniper),
+}
 
 
 def enemy_type_for_stage(index):
@@ -50,7 +57,8 @@ class Stage:
                              if self.image_name == config.FACTORY_EXTERIOR_IMAGE else None)
         self.opening_gate_x = None
         self.spawn_cycle_index = None  # None preserves this map's native default.
-        self.lab_summons = cycle((ShieldSoldier, Researcher)) if self.image_name in config.LAB_STAGE_IMAGES else None
+        group = NUMERIC_SUMMON_GROUPS.get(self.image_name)
+        self.summon_cycle = cycle(group) if group else None
         self.enemies = []
         self.effects = []
         self.afterimages = []
@@ -86,8 +94,8 @@ class Stage:
         return self.index if self.spawn_cycle_index is None else self.spawn_cycle_index
 
     @property
-    def mixes_lab_summons(self):
-        return self.lab_summons is not None and self.spawn_cycle_index is None
+    def mixes_numeric_summons(self):
+        return self.summon_cycle is not None and self.spawn_cycle_index is None
 
     def cycle_spawn_enemy_type(self):
         """M selects stage 1 first, then follows the full route; it never spawns."""

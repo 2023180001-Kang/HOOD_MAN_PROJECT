@@ -8,6 +8,7 @@ import config
 from combat import MOVES
 from collision import same_floor
 from physics import clamp
+from sniper import Sniper
 
 
 @lru_cache(maxsize=16)
@@ -129,12 +130,15 @@ def _nearest_ranged_position(enemy, obstacles, origin, *, firing_at=None):
     return x, y
 
 
-def place_ranged_spawns(player, existing, spawned):
-    """Choose initial feet positions once, before a new rifleman takes its first step."""
-    placed = [e for e in existing if e.uses_ranged_spacing and e.alive
+def place_ranged_spawns(player, existing, spawned, *, include_snipers=False):
+    """Separate new riflemen and, in the final boss room, snipers on arrival."""
+    def spaces_on_entry(enemy):
+        return enemy.uses_ranged_spacing or (include_snipers and isinstance(enemy, Sniper))
+
+    placed = [e for e in existing if spaces_on_entry(e) and e.alive
               and e.staircase is None and not e.falling_from_upper]
     for enemy in spawned:
-        if not enemy.uses_ranged_spacing:
+        if not spaces_on_entry(enemy):
             continue
         start = enemy.x, enemy.ground_y
         obstacles = _ranged_obstacles(enemy, placed, player)

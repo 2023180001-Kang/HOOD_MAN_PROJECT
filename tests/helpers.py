@@ -9,6 +9,7 @@ from enemy import Enemy
 from enemy02 import Enemy02
 from researcher import Researcher
 from shield_soldier import ShieldSoldier
+from sniper import Sniper
 from combat import STRONG_MOVES
 from walkable import default_area
 from world import World
@@ -18,6 +19,8 @@ def expected_numeric_summons(stage_index, count):
     """Expected default lineup for the first numeric request on a fresh map."""
     groups = ((Enemy,), (Enemy02,), (AxeEnemy,), (Researcher,), (ShieldSoldier, Researcher), (ARSoldier,))
     group = groups[stage_index // 2]
+    if stage_index == 11:
+        group = (ARSoldier, Sniper)
     return [group[i % len(group)] for i in range(count)]
 
 

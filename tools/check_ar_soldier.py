@@ -21,6 +21,7 @@ from collision import bodies_overlap
 from enemy_spacing import ranged_half_width
 from game import Game
 from projectiles import RifleBullet
+from tests.helpers import ManualSpawnWorld, expected_numeric_summons
 from tools.check_damage_numbers import capture_number
 from tools.check_render import capture, render_image
 from tools.check_researcher import check_warning_pixels
@@ -29,7 +30,7 @@ from world import World
 
 
 def encounter(game, index=10, side=-1, *, speed=1, gap=300, protected=True):
-    game.world = World(rng=random.Random(23), item_rng=random.Random(5))
+    game.world = ManualSpawnWorld(rng=random.Random(23), item_rng=random.Random(5))
     world = game.world
     world.select_stage(index)
     world.player.invincible = protected
@@ -62,8 +63,8 @@ def check_spawning(game):
                 push_key(key)
                 tick(game)
                 assert len(world.enemies) == world.spawner.spawned_count == count
-                assert all(type(enemy) is ARSoldier and enemy.hp == 300 and enemy.ammo == 20
-                           and enemy.attack_damage == 50
+                assert [type(enemy) for enemy in world.enemies] == expected_numeric_summons(index, count)
+                assert all(enemy.hp == enemy.max_hp and enemy.ammo == enemy.magazine_size
                            and world.stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                            for enemy in world.enemies)
                 push_key(key, repeat=True)
@@ -71,7 +72,7 @@ def check_spawning(game):
                 assert len(world.enemies) == count
                 release(game, key)
         capture(game, f"ar_boss_{index - 9}_summons")
-    print("PASS: both bosses/all 18 digit keys, exact counts, HP 300/ammo 20, repeat latch and floor bounds.")
+    print("PASS: both boss maps, 18 digit/keypad keys, exact mixed counts, full loadouts and floor bounds.")
 
 
 def check_reload_fixed_sheet(game):
@@ -334,6 +335,8 @@ def check_ar_spacing(game):
     for index in (10, 11):
         world, _ = encounter(game, index)
         world.enemies.clear()
+        while world.stage.spawn_cycle_index != 10:
+            world.stage.cycle_spawn_enemy_type()
         seen_reload = False
         for wave in range(2):
             push_key(pico2d.SDLK_9)

@@ -6,6 +6,8 @@ from collision import bodies_overlap, resolve_bodies
 from combat import MOVES
 from enemy import Enemy
 from enemy02 import Enemy02
+from ar_soldier import ARSoldier
+from sniper import Sniper
 from projectiles import PlayerPistolBullet
 from spawn_manager import SpawnManager
 from sword_enemy import SwordEnemy
@@ -39,8 +41,11 @@ class EnemyTests(unittest.TestCase):
                 self.assertEqual(world.enemies, [])
                 world.update(config.FIXED_DT)
             wave = list(world.enemies)
-            expected = ([Enemy02, Enemy02, SwordEnemy, SwordEnemy] if index in (2, 3)
-                        else [world.spawner.enemy_type] * 4)
+            expected = [world.spawner.enemy_type] * 4
+            if index in (2, 3):
+                expected = [Enemy02, Enemy02, SwordEnemy, SwordEnemy]
+            elif index == 11:
+                expected = [ARSoldier, ARSoldier, Sniper, Sniper]
             self.assertCountEqual([type(enemy) for enemy in wave], expected)
             advance(world, 0.2)
             world.select_stage(index)
@@ -162,7 +167,7 @@ class EnemyTests(unittest.TestCase):
                 for enemy in stage.enemies[4:]:
                     sides.add(enemy.facing)
                     distance_from_edge = min(enemy.x, config.WORLD_WIDTH - enemy.x)
-                    if enemy.uses_ranged_spacing:
+                    if enemy.uses_ranged_spacing or isinstance(enemy, Sniper):
                         # AR peers spread before the first visible frame; their
                         # source edge/RNG profile must still be preserved.
                         self.assertIn(enemy.spawn_source, (("edge", -1), ("edge", 1)))

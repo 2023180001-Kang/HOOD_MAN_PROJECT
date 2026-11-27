@@ -8,6 +8,7 @@ import config
 from combat import MOVES, STRONG_MOVES
 from enemy import Enemy
 from projectiles import PlayerPistolBullet, SteelClubProjectile
+from sword_enemy import SwordEnemy
 from tests.helpers import advance, tap
 from tests.test_main_menu import mouse_event, process_menu_events
 from tests.test_menu_return import click_event, key_event, scene
@@ -407,7 +408,10 @@ class TrainingRoomTests(unittest.TestCase):
             self.world.select_stage(index * 2)
             advance(self.world, 1)
             self.press("spawn_2")
-            self.assertEqual([(e.hp, e.max_hp) for e in self.world.enemies], [hp_pair] * 6)
+            self.assertEqual(len(self.world.enemies), 6)
+            for enemy in self.world.enemies:
+                expected_hp = expected[6] if isinstance(enemy, SwordEnemy) else hp_pair
+                self.assertEqual((enemy.hp, enemy.max_hp), expected_hp)
 
         self.press("cycle_spawn_enemy")  # Summon the first map's thug on the AR map.
         self.press("spawn_1")

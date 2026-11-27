@@ -74,9 +74,14 @@ class World:
         self.update_camera(0)
 
     def start_stage_encounter(self):
-        if not self.training and not self.stage.encounter_started:
-            self.spawn_enemies(config.STAGE_ENCOUNTER_SIZE, enemy_type_for_stage(self.stage_index))
-            self.stage.encounter_started = True
+        if self.training or self.stage.encounter_started:
+            return
+        total = config.STAGE_ENCOUNTER_SIZE
+        sword_count = total // 2 if self.stage.image_name in config.CITY_STAGE_IMAGES else 0
+        self.spawn_enemies(total - sword_count, enemy_type_for_stage(self.stage_index))
+        if sword_count:
+            self.spawn_enemies(sword_count, SwordEnemy)
+        self.stage.encounter_started = True
 
     def spawn_enemies(self, count, enemy_type=None):
         spawned = self.spawner.spawn(count, self.elapsed, enemy_type=enemy_type)

@@ -8,6 +8,7 @@ from enemy import Enemy
 from enemy02 import Enemy02
 from projectiles import PlayerPistolBullet
 from spawn_manager import SpawnManager
+from sword_enemy import SwordEnemy
 from tests.helpers import advance, tap
 from world import World
 
@@ -38,8 +39,9 @@ class EnemyTests(unittest.TestCase):
                 self.assertEqual(world.enemies, [])
                 world.update(config.FIXED_DT)
             wave = list(world.enemies)
-            self.assertEqual(len(wave), 4)
-            self.assertTrue(all(type(enemy) is world.spawner.enemy_type for enemy in wave))
+            expected = ([Enemy02, Enemy02, SwordEnemy, SwordEnemy] if index in (2, 3)
+                        else [world.spawner.enemy_type] * 4)
+            self.assertCountEqual([type(enemy) for enemy in wave], expected)
             advance(world, 0.2)
             world.select_stage(index)
             advance(world, 1)
@@ -297,7 +299,8 @@ class EnemyTests(unittest.TestCase):
         advance(world, 1 - 2 * config.FIXED_DT, fps=120)
         self.assertEqual((world.stage_index, len(world.enemies)), (2, 13))
         self.assertTrue(all(type(enemy) is Enemy for enemy in world.enemies[:9]))
-        self.assertTrue(all(type(enemy) is Enemy02 for enemy in world.enemies[9:]))
+        self.assertCountEqual([type(enemy) for enemy in world.enemies[9:]],
+                              [Enemy02, Enemy02, SwordEnemy, SwordEnemy])
 
     def test_distant_enemies_keep_independent_ai_before_melee_spacing(self):
         world = World()

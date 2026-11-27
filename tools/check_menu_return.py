@@ -140,7 +140,7 @@ def check_return_states(game):
             assert game.run(max_frames=2) == 2
         assert phase == "done" and visits == 1
         assert update.call_count == 2 and update.call_args_list[0].args[0] < 0.05
-        reset.assert_called_once_with()
+        reset.assert_called_once_with(stage_index=0)
         assert world.player is not player and world.player.jump_count == 0
         assert world.stage_index == 0 and world.player.hp == 500
         assert all(not stage.enemies and len(stage.drop_items) == 15 for stage in world.stages)

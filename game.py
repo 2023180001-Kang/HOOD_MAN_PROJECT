@@ -96,7 +96,11 @@ class Game:
                     if not menu_screen:
                         self.request_main_menu()
             elif menu_screen:
-                if event.type == pico2d.SDL_MOUSEMOTION:
+                if (self.menu.screen == "stage_progress" and event.type == pico2d.SDL_KEYDOWN
+                        and event.key.keysym.sym == pico2d.SDLK_p and not event.key.repeat):
+                    self.menu.stages_unlocked = not self.menu.stages_unlocked
+                    start_requested = False
+                elif event.type == pico2d.SDL_MOUSEMOTION:
                     self.menu.move_pointer(
                         event.motion.x, config.SCREEN_HEIGHT - 1 - event.motion.y,
                     )
@@ -166,7 +170,7 @@ class Game:
             if self.handle_events(menu_screen=True):
                 self.world.training = self.menu.launch_action == "controls"
                 self.world.starting_weapon = self.menu.equipped_weapon
-                self.world.reset()
+                self.world.reset(stage_index=self.menu.launch_stage)
                 self.ui.update(0, self.world.player)
                 return
             if self.running:

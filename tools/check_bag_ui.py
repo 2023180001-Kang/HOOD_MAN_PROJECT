@@ -393,7 +393,7 @@ def check_bag_wait_return_and_start(game):
     assert phase == "done" and seconds >= 2.2 and not menu.bag_open
     assert seen_idle_frames == set(range(8)), "Live bag loop did not animate all idle frames"
     update.assert_not_called()
-    reset.assert_called_once_with()
+    reset.assert_called_once_with(stage_index=0)
     assert world.player is not player
     assert (world.stage_index, world.player.hp, world.player.state, world.elapsed) == (0, 500, "IDLE", 0)
     assert all(not stage.enemies and len(stage.drop_items) == 15 for stage in world.stages)

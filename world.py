@@ -35,7 +35,7 @@ class World:
         self.training = False
         self.reset()
 
-    def reset(self):
+    def reset(self, *, stage_index=0):
         for stage in getattr(self, "stages", ()):
             for stair in stage.stairs:
                 for actor in tuple(stair.occupants):
@@ -57,7 +57,7 @@ class World:
                                  traffic_rng=self.traffic_rng, item_rng=self.item_rng,
                                  enemy_starting_hp=self.enemy_starting_hp)
                            for index in range(len(config.STAGE_IMAGES))]
-        self.stage_index = 0
+        self.stage_index = stage_index
         self.stage.constrain_actor(self.player)
         self.camera = Camera(self.player.x, self.stage.width)
         self.pending_stage_index = None

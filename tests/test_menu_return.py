@@ -200,7 +200,7 @@ class MenuReturnLoopTests(unittest.TestCase):
                 patch.object(world, "reset", wraps=world.reset) as reset:
             self.assertEqual(self.game.run(max_frames=1), 1)
         self.assertEqual(pages, [False, False, True, False])
-        reset.assert_called_once_with()
+        reset.assert_called_once_with(stage_index=0)
         draw.assert_called_once_with()
         self.assertEqual(update.call_count, 1)
         self.assertLess(update.call_args.args[0], 0.01)

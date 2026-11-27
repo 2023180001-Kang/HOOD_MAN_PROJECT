@@ -47,6 +47,8 @@ class MainMenu:
         )
         self.screen = "main"
         self.launch_action = "game_start"
+        self.launch_stage = 0
+        self.stages_unlocked = False
         self.bag_items = list(config.BAG_ITEM_SPECS)
         self.equipped_weapon = None
         self.cancel_drag()
@@ -64,6 +66,7 @@ class MainMenu:
     def show_main(self):
         self.screen = "main"
         self.launch_action = "game_start"
+        self.launch_stage = 0
         self.cancel_drag()
         self.clear_hover()
 
@@ -162,6 +165,12 @@ class MainMenu:
     def click(self, x, y):
         """Navigate locally or select the playable scene to launch."""
         self.move_pointer(x, y)
+        if self.screen == "stage_progress" and self.stages_unlocked:
+            for stage_index, rect in config.STAGE_PROGRESS_PANELS.items():
+                if self.rect_contains(rect, x, y):
+                    self.launch_stage = stage_index
+                    self.launch_action = "stage_progress"
+                    return True
         if self.hovered_button is None:
             return False
         action = self.hovered_button.action
@@ -187,7 +196,7 @@ class MainMenu:
         if self.bag_open:
             self.draw_bag_player(assets)
             self.draw_bag_items(assets)
-        elif self.screen == "stage_progress":
+        elif self.screen == "stage_progress" and not self.stages_unlocked:
             lock = assets.images[config.STAGE_LOCK_IMAGE]
             for x in config.STAGE_LOCK_CENTERS_X:
                 lock.draw(x, config.STAGE_LOCK_Y)

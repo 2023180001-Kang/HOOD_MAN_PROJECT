@@ -435,7 +435,7 @@ class BagUIFlowTests(unittest.TestCase):
             self.game.show_main_menu()
         self.assertEqual(pages, [False, True, True, True, False])
         update.assert_not_called()
-        reset.assert_called_once_with()
+        reset.assert_called_once_with(stage_index=0)
         self.assertIsNot(world.player, player)
         self.assertEqual((world.stage_index, world.player.hp, world.player.state), (0, 500, "IDLE"))
         self.assertFalse(world.controls.held)

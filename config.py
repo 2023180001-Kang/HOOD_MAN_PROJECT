@@ -90,8 +90,16 @@ ARCHIVED_TITLE_IMAGE = "before_sheets/HOOD_MAN_TITLE_SCREEN_1280x720.png"
 MAIN_MENU_IMAGE = "HOOD_MAN_main_menu_background_1280x720.png"
 STAGE_PROGRESS_IMAGE = "stage_progress_background_1280x720.png"
 STAGE_LOCK_IMAGE = "stage_lock.png"
-# Centers of the six panels, halfway between the labels and their bottom borders.
-STAGE_LOCK_CENTERS_X = (129, 336, 540, 745, 950, 1157)
+# First map of each region and its panel bounds on the 1280×720 menu artwork (top-left origin).
+STAGE_PROGRESS_PANELS = {
+    0: (36, 312, 223, 427),      # WHO — dark alley
+    2: (243, 312, 430, 427),     # WHEN — dark city
+    4: (448, 312, 633, 427),     # WHERE — factory exterior
+    6: (652, 312, 838, 427),     # WHAT — factory interior
+    8: (857, 312, 1044, 427),    # HOW — laboratory
+    10: (1064, 312, 1250, 427),  # WHY — boss room
+}
+STAGE_LOCK_CENTERS_X = tuple((left + right) // 2 for left, _, right, _ in STAGE_PROGRESS_PANELS.values())
 STAGE_LOCK_Y = SCREEN_HEIGHT - 400
 MAIN_MENU_BUTTONS = (
     ("game_start", "menu_game_start.png"),

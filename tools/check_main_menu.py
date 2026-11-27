@@ -188,7 +188,7 @@ def check_wait_start_and_restart(game):
     waited = perf_counter() - shown_at
     assert clicked and waited >= 2.2
     update.assert_not_called()
-    reset.assert_called_once_with()
+    reset.assert_called_once_with(stage_index=0)
     assert world.player is not old_player
     assert (world.stage_index, world.stage.image_name, world.player.hp, world.player.state) == (
         0, config.STAGE_IMAGE, 500, "IDLE",

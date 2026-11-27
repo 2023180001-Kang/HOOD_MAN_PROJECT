@@ -60,6 +60,7 @@ class World:
                                  enemy_starting_hp=self.enemy_starting_hp)
                            for index in range(len(config.STAGE_IMAGES))]
         self.stage_index = stage_index
+        self._map_clears_pending_heal = set()
         self.stage.constrain_actor(self.player)
         self.camera = Camera(self.player.x, self.stage.width)
         self.pending_stage_index = None
@@ -242,7 +243,7 @@ class World:
                 # Draw the fully black exterior once before entering the dock.
                 return
             if self.stage_loading_remaining <= 1e-9:
-                self._enter_stage(self.pending_stage_index)
+                self._finish_stage_exit(self.pending_stage_index)
                 self.pending_stage_index = None
                 self.stage_loading_remaining = 0.0
             return
@@ -374,11 +375,11 @@ class World:
                 if self.stage.factory_gate is None and self.stage.defeated_count == config.STAGE_ENCOUNTER_SIZE:
                     self.stage.arrows_visible = True
                     if not self.training:
-                        self.cleared_stages.add(self.stage_index)
+                        self._record_map_clear()
         if (self.stage.factory_gate is not None and self.stage.factory_gate.state == "CLOSED"
                 and self.stage.encounter_started and self.stage.defeated_count > 0 and self.player.alive
                 and not any(enemy.alive for enemy in self.enemies)):
-            self.cleared_stages.add(self.stage_index)
+            self._record_map_clear()
             self.stage.arrows_visible = False
             self.stage.opening_gate_x, _ = self.stage.factory_doorway(self.player.x)
             self.stage.factory_gate.set_state("OPENING")
@@ -509,9 +510,21 @@ class World:
                 self.stage_loading_remaining = config.STAGE_LOADING_DURATION
                 self.controls.pressed.clear()
             else:
-                self._enter_stage(destination)
+                self._finish_stage_exit(destination)
             return True
         return False
+
+    def _record_map_clear(self):
+        self.cleared_stages.add(self.stage_index)
+        self._map_clears_pending_heal.add(self.stage_index)
+
+    def _finish_stage_exit(self, destination):
+        if destination == self.stage_index + 1 and destination in config.STAGE_PROGRESS_PANELS:
+            region_maps = (self.stage_index - 1, self.stage_index)
+            if self._map_clears_pending_heal.issuperset(region_maps):
+                self.player.hp = self.player.max_hp
+                self._map_clears_pending_heal.difference_update(region_maps)
+        self._enter_stage(destination)
 
     def select_stage(self, destination):
         """Enter a scene for tooling while preserving its actors and player HP."""

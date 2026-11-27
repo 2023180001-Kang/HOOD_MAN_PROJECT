@@ -144,3 +144,76 @@ class StageProgressTests(unittest.TestCase):
         self.assertFalse(process_menu_events(game, key_event(p), key_event(p, down=False), city, back))
         self.assertTrue(process_menu_events(game, click_event(menu.main_buttons[0])))
         self.assertEqual((menu.launch_action, menu.launch_stage), ("game_start", 0))
+
+
+class StageClearHealthTests(unittest.TestCase):
+    def clear_current_map(self, world):
+        if not world.stage.encounter_started:
+            advance(world, config.STAGE_ENCOUNTER_DELAY)
+        self.assertEqual(len(world.enemies), config.STAGE_ENCOUNTER_SIZE)
+        for enemy in world.enemies:
+            enemy.take_damage(enemy.max_hp * 2)  # Also lethal to a guarding shield soldier.
+        world.step(config.FIXED_DT)
+        self.assertIn(world.stage_index, world.cleared_stages)
+
+    def take_arrow(self, world, direction=1):
+        world.player.x = (world.stage.width - config.STAGE_EXIT_MARGIN
+                          if direction > 0 else config.STAGE_EXIT_MARGIN)
+        world.player.vx = direction * config.WALK_SPEED
+        self.assertTrue(world.try_stage_transition())
+
+    def test_each_cleared_region_heals_on_arrival_with_current_max_hp(self):
+        game = scene()
+        world = game.world
+        for first in list(config.STAGE_PROGRESS_PANELS)[:-1]:
+            with self.subTest(first=first):
+                world.reset(stage_index=first)
+                player = world.player
+                player.hp, player.max_hp = 73, 725
+                player.equip_weapon("pistol")
+                player.pistol_ammo = 3
+                self.clear_current_map(world)
+                if world.stage.factory_gate is not None:
+                    advance(world, config.FACTORY_GATE_DURATION + config.FIXED_DT, fps=120)
+                    player.x, player.ground_y = world.stage.factory_doorway(player.x)
+                    self.assertTrue(world.try_stage_transition())
+                    world.update(config.FACTORY_FADE_DURATION)
+                    world.update(0)
+                else:
+                    self.take_arrow(world)
+                self.assertEqual((world.stage_index, player.hp), (first + 1, 73))
+                self.clear_current_map(world)
+                self.take_arrow(world)
+                game.update(config.STAGE_LOADING_DURATION - 0.25)
+                self.assertEqual((world.stage_index, player.hp), (first + 1, 73))
+                game.update(0.25)
+                self.assertEqual((world.stage_index, player.hp, game.ui.damage_hp), (first + 2, 725, 725))
+                self.assertEqual((player.weapon, player.pistol_ammo), ("pistol", 3))
+
+    def test_revisits_and_shortcuts_after_restart_do_not_grant_a_clear_heal(self):
+        world = scene().world
+        self.clear_current_map(world)
+        self.take_arrow(world)
+        self.clear_current_map(world)
+        self.take_arrow(world)
+        world.update(config.STAGE_LOADING_DURATION)
+
+        world.player.hp = 65
+        world.controls.press("stage_exits")
+        world.step(config.FIXED_DT)
+        self.take_arrow(world, -1)
+        world.update(config.STAGE_LOADING_DURATION)
+        self.assertEqual((world.stage_index, world.player.hp), (1, 65))
+        self.take_arrow(world)
+        world.update(config.STAGE_LOADING_DURATION)
+        self.assertEqual((world.stage_index, world.player.hp), (2, 65))
+
+        world.reset()
+        world.player.hp = 35
+        world.controls.press("stage_exits")
+        world.step(config.FIXED_DT)
+        self.take_arrow(world)
+        self.clear_current_map(world)
+        self.take_arrow(world)
+        world.update(config.STAGE_LOADING_DURATION)
+        self.assertEqual((world.stage_index, world.player.hp), (2, 35))

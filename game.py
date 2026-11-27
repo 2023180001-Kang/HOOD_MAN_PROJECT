@@ -57,7 +57,7 @@ class Game:
         self.assets = Assets()
         self.ui = UI()
         self.world = World()
-        self.menu = MainMenu()
+        self.menu = MainMenu(cleared_stages=self.world.cleared_stages)
         self.running = True
         self._menu_requested = False
         self._escape_held = False

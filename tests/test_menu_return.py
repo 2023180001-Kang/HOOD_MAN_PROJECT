@@ -16,7 +16,7 @@ from world import World
 def scene():
     game = Game.__new__(Game)
     game.world = World()
-    game.menu = MainMenu()
+    game.menu = MainMenu(cleared_stages=game.world.cleared_stages)
     game.ui = UI()
     game.running = True
     game._menu_requested = False

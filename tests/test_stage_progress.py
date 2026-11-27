@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import pico2d
 from sdl2 import SDL_BUTTON_RIGHT
@@ -21,29 +21,83 @@ REGIONS = (
 
 
 class StageProgressTests(unittest.TestCase):
-    def test_six_locks_and_clicks_follow_p_only_in_progress_screen(self):
+    def test_only_who_starts_open_and_p_temporarily_opens_the_other_five(self):
         game = scene()
         menu = game.menu
         p = pico2d.SDLK_p
         progress = click_event(menu.main_buttons[1])
         assets = Mock()
-        lock = Mock()
-        assets.images = {config.STAGE_LOCK_IMAGE: lock, config.STAGE_PROGRESS_IMAGE: Mock(),
-                         config.BAG_BUTTON_IMAGE: Mock(w=128, h=64)}
+        assets.images = {name: Mock(w=32, h=24) for name in
+                         (*config.STAGE_STATUS_IMAGES.values(), "stage_status_locked.png",
+                          "stage_status_complete.png", config.STAGE_PROGRESS_IMAGE, config.BAG_BUTTON_IMAGE)}
         process_menu_events(game, key_event(p), key_event(p, down=False), progress)
         for unlocked in (False, True, False):
             with self.subTest(unlocked=unlocked):
                 self.assertEqual(menu.stages_unlocked, unlocked)
-                lock.reset_mock()
+                for image in assets.images.values():
+                    image.reset_mock()
                 menu.draw(assets)
-                self.assertEqual([call.args for call in lock.draw.call_args_list],
-                                 [] if unlocked else [(x, 320) for _, x, _ in REGIONS])
-                for _, x, _ in REGIONS:
+                for status, name in config.STAGE_STATUS_IMAGES.items():
+                    panel_draws = [c for c in assets.images[name].draw.call_args_list if c.args[1] == 320]
+                    expected = [call(x, 320) for label, x, _ in REGIONS
+                                if status == ("in_progress" if unlocked or label == "WHO" else "locked")]
+                    self.assertEqual(panel_draws, expected)
+                for legend_text in ("stage_status_locked.png", "stage_status_complete.png"):
+                    assets.images[legend_text].draw.assert_called_once()
+                for label, x, _ in REGIONS:
                     click = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, x, 360)
-                    self.assertEqual(process_menu_events(game, click), unlocked)
+                    self.assertEqual(process_menu_events(game, click), unlocked or label == "WHO")
                 process_menu_events(game, key_event(p), key_event(p, repeat=True), key_event(p, down=False))
         self.assertFalse(game.world.controls.held or game.world.controls.pressed)
         self.assertFalse(game.world.player.invincible)
+
+    def test_clearing_both_maps_checks_each_region_and_opens_its_successor(self):
+        game = scene()
+        world, menu = game.world, game.menu
+        menu.screen = "stage_progress"
+        for first, (_, x, _) in zip(config.STAGE_PROGRESS_PANELS, REGIONS):
+            self.assertEqual(menu.region_status(first), "in_progress")
+            self.assertTrue(menu.click(x, 360))
+            for index in (first, first + 1):
+                world.select_stage(index)
+                for enemy in world.enemies[:3]:
+                    enemy.take_damage(enemy.hp)
+                world.step(config.FIXED_DT)
+                self.assertEqual(menu.region_status(first), "in_progress")
+                self.assertNotIn(index, world.cleared_stages)
+                world.enemies[-1].take_damage(world.enemies[-1].hp)
+                world.step(config.FIXED_DT)
+                self.assertIn(index, world.cleared_stages)
+                if index == first and first + 2 in config.STAGE_PROGRESS_PANELS:
+                    self.assertEqual(menu.region_status(first + 2), "locked")
+            self.assertEqual(menu.region_status(first), "complete")
+            self.assertTrue(menu.click(x, 360))
+            world.controls.press("restart")
+            world.update(config.FIXED_DT)
+            world.controls.release("restart")
+            self.assertEqual(menu.region_status(first), "complete")
+        self.assertEqual(world.cleared_stages, set(range(12)))
+
+    def test_shortcuts_do_not_award_clears_and_relocking_preserves_earned_access(self):
+        game = scene()
+        world, menu = game.world, game.menu
+        world.controls.press("stage_exits")
+        world.step(config.FIXED_DT)
+        self.assertTrue(world.stage.arrows_visible)
+        self.assertFalse(world.cleared_stages)
+        for index in (1, 0):
+            world.select_stage(index)
+            for enemy in world.enemies:
+                enemy.take_damage(enemy.hp)
+            world.step(config.FIXED_DT)
+            if index == 1:
+                self.assertEqual(menu.region_status(2), "locked")
+        menu.screen = "stage_progress"
+        for expected in (["complete"] + ["in_progress"] * 5,
+                         ["complete", "in_progress"] + ["locked"] * 4):
+            process_menu_events(game, key_event(pico2d.SDLK_p), key_event(pico2d.SDLK_p, down=False))
+            self.assertEqual([menu.region_status(i) for i in config.STAGE_PROGRESS_PANELS], expected)
+        self.assertEqual(world.cleared_stages, {0, 1})
 
     def test_each_panel_starts_a_fresh_campaign_directly_in_its_region(self):
         game = scene()

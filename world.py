@@ -32,6 +32,7 @@ class World:
         self.starting_weapon = None
         self.starting_hp = self.starting_max_hp = config.MAX_HP
         self.enemy_starting_hp = {}
+        self.cleared_stages = set()  # Campaign record for this session, including across F5.
         self.training = False
         self.reset()
 
@@ -339,6 +340,8 @@ class World:
                 self.stage.defeated_count += 1
                 if self.stage.defeated_count == config.STAGE_ENCOUNTER_SIZE:
                     self.stage.arrows_visible = True
+                    if not self.training:
+                        self.cleared_stages.add(self.stage_index)
         self.update_camera(dt)
 
     def update_projectiles(self, dt):

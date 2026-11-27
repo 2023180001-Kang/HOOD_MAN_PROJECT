@@ -110,12 +110,19 @@ def check_pixels_and_placeholders(game):
             assert game.world is world and world.player is player and world.elapsed == 0
             if button.action == "stage_progress":
                 progress = menu_image(game, "main_menu_stage_progress")
-                with Image.open(ROOT / config.STAGE_PROGRESS_IMAGE) as source, \
-                        Image.open(ROOT / config.STAGE_LOCK_IMAGE) as lock:
+                with Image.open(ROOT / config.STAGE_PROGRESS_IMAGE) as source:
                     expected = source.convert("RGB")
-                    # Reference positions on the 1280x720 artwork, in top-left coordinates.
-                    for center_x in (129, 336, 540, 745, 950, 1157):
-                        expected.paste(lock, (center_x - lock.width // 2, 384), lock)
+                # Original-size sprites at their top-left screen positions.
+                status_sprites = [
+                    ("stage_status_in_progress.png", 97, 388),
+                    *((config.STAGE_LOCK_IMAGE, x - 14, 384) for x in (336, 540, 745, 950, 1157)),
+                    (config.STAGE_LOCK_IMAGE, 500, 539), ("stage_status_locked.png", 540, 543),
+                    ("stage_check.png", 697, 542), ("stage_status_complete.png", 742, 543),
+                ]
+                for name, x, y in status_sprites:
+                    with Image.open(ROOT / name) as sprite:
+                        sprite = sprite.convert("RGBA")
+                        expected.paste(sprite, (x, y), sprite)
                 difference = ImageChops.difference(expected, progress)
                 back, = game.menu.buttons
                 back_box = screen_box(back)
@@ -141,7 +148,7 @@ def check_pixels_and_placeholders(game):
     assert config.ARCHIVED_TITLE_IMAGE not in game.assets.images
     print("PASS: original background/left half, four right-side black/gray buttons, "
           "only the hovered rectangle changes, leave/focus restore pixels, "
-          "stage progress shows all six locks beneath their labels and returns to the main menu.")
+          "stage progress shows WHO in progress, five locks and the legend, then returns to the menu.")
 
 
 def check_wait_start_and_restart(game):

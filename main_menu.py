@@ -28,7 +28,7 @@ class MenuButton:
 
 
 class MainMenu:
-    def __init__(self):
+    def __init__(self, *, cleared_stages=None):
         width, height = config.MAIN_MENU_BUTTON_SIZE
         x = config.SCREEN_WIDTH - config.MAIN_MENU_RIGHT_MARGIN - width / 2
         top = config.SCREEN_HEIGHT - config.MAIN_MENU_TOP_MARGIN
@@ -49,6 +49,7 @@ class MainMenu:
         self.launch_action = "game_start"
         self.launch_stage = 0
         self.stages_unlocked = False
+        self.cleared_stages = set() if cleared_stages is None else cleared_stages
         self.bag_items = list(config.BAG_ITEM_SPECS)
         self.equipped_weapon = None
         self.cancel_drag()
@@ -162,12 +163,21 @@ class MainMenu:
         if self.bag_open:
             self.bag_player_animation.update(max(0.0, dt))
 
+    def region_status(self, first_stage):
+        # Each panel represents two successive campaign maps.
+        if self.cleared_stages.issuperset((first_stage, first_stage + 1)):
+            return "complete"
+        if (first_stage == 0 or self.stages_unlocked
+                or self.cleared_stages.issuperset((first_stage - 2, first_stage - 1))):
+            return "in_progress"
+        return "locked"
+
     def click(self, x, y):
         """Navigate locally or select the playable scene to launch."""
         self.move_pointer(x, y)
-        if self.screen == "stage_progress" and self.stages_unlocked:
+        if self.screen == "stage_progress":
             for stage_index, rect in config.STAGE_PROGRESS_PANELS.items():
-                if self.rect_contains(rect, x, y):
+                if self.rect_contains(rect, x, y) and self.region_status(stage_index) != "locked":
                     self.launch_stage = stage_index
                     self.launch_action = "stage_progress"
                     return True
@@ -196,12 +206,21 @@ class MainMenu:
         if self.bag_open:
             self.draw_bag_player(assets)
             self.draw_bag_items(assets)
-        elif self.screen == "stage_progress" and not self.stages_unlocked:
-            lock = assets.images[config.STAGE_LOCK_IMAGE]
-            for x in config.STAGE_LOCK_CENTERS_X:
-                lock.draw(x, config.STAGE_LOCK_Y)
+        elif self.screen == "stage_progress":
+            self.draw_stage_progress(assets)
         for button in self.buttons:
             self.draw_button(assets, button)
+
+    def draw_stage_progress(self, assets):
+        for first_stage, x in zip(config.STAGE_PROGRESS_PANELS, config.STAGE_LOCK_CENTERS_X):
+            status = self.region_status(first_stage)
+            assets.images[config.STAGE_STATUS_IMAGES[status]].draw(x, config.STAGE_LOCK_Y)
+        for status, label_name, center_x in config.STAGE_PROGRESS_LEGEND:
+            icon = assets.images[config.STAGE_STATUS_IMAGES[status]]
+            label = assets.images[label_name]
+            gap = 12
+            icon.draw(center_x - (label.w + gap) / 2, config.STAGE_LEGEND_Y)
+            label.draw(center_x + (icon.w + gap) / 2, config.STAGE_LEGEND_Y)
 
     def draw_button(self, assets, button):
         image = assets.images[button.image_name]

@@ -90,6 +90,17 @@ ARCHIVED_TITLE_IMAGE = "before_sheets/HOOD_MAN_TITLE_SCREEN_1280x720.png"
 MAIN_MENU_IMAGE = "HOOD_MAN_main_menu_background_1280x720.png"
 STAGE_PROGRESS_IMAGE = "stage_progress_background_1280x720.png"
 STAGE_LOCK_IMAGE = "stage_lock.png"
+STAGE_STATUS_IMAGES = {
+    "locked": STAGE_LOCK_IMAGE,
+    "in_progress": "stage_status_in_progress.png",
+    "complete": "stage_check.png",
+}
+# Each legend entry groups the status icon and its Korean label about this center.
+STAGE_PROGRESS_LEGEND = (
+    ("locked", "stage_status_locked.png", 540),
+    ("complete", "stage_status_complete.png", 740),
+)
+STAGE_LEGEND_Y = 165
 # First map of each region and its panel bounds on the 1280×720 menu artwork (top-left origin).
 STAGE_PROGRESS_PANELS = {
     0: (36, 312, 223, 427),      # WHO — dark alley

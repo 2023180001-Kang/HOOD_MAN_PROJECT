@@ -3,6 +3,7 @@
 from itertools import count
 
 import config
+from axe_collisions import axe_clash_times
 from camera import Camera
 from collision import resolve_bodies, same_floor, transit_target, world_rect
 from controls import Controls
@@ -206,6 +207,8 @@ class World:
             if player.weapon is not None:
                 self.drop_weapon(player.weapon)
             self.stage.drop_items.remove(item)
+            if item.axe_owner is not None:
+                item.axe_owner.abandon_axe_recovery()
             if item.kind in config.FIREARM_MAGAZINE_SIZES and item.kind == player.weapon:
                 # Two guns of the same kind still have separate magazines and actions.
                 player.equip_weapon(None)
@@ -386,12 +389,18 @@ class World:
             self.controls.pressed.clear()
         self.update_camera(dt)
 
+    def advance_projectiles(self, projectiles, dt):
+        axes = [shot for shot in projectiles if isinstance(shot, EnemyAxeProjectile) and not shot.finished]
+        stops = axe_clash_times(axes, dt, self.player)
+        for shot in projectiles:
+            targets = self.enemies if isinstance(shot, PlayerProjectile) else self.player
+            shot.update(dt, targets, return_targets=self.enemies, on_impact=self.projectile_impact,
+                        stop_at=stops.get(id(shot), float("inf")))
+
     def update_projectiles(self, dt):
         # Existing rounds survive their shooter's death. New shots are emitted
         # only after the player's strikes have had a chance to interrupt them.
-        for bullet in self.projectiles:
-            targets = self.enemies if isinstance(bullet, PlayerProjectile) else self.player
-            bullet.update(dt, targets, on_impact=self.projectile_impact)
+        self.advance_projectiles(self.projectiles, dt)
         if self.player.alive:
             bullet = self.player.take_projectile()
             if bullet is not None:
@@ -404,7 +413,11 @@ class World:
                     continue
                 bullet.world_width = self.stage.width
                 self.projectiles.append(bullet)
-                bullet.update(0, self.player, on_impact=self.projectile_impact)
+                if isinstance(bullet, EnemyAxeProjectile):
+                    self.advance_projectiles([axe for axe in self.projectiles
+                                              if isinstance(axe, EnemyAxeProjectile)], 0)
+                else:
+                    bullet.update(0, self.player, on_impact=self.projectile_impact)
                 if not self.player.alive:
                     break
         for bullet in self.projectiles:
@@ -426,7 +439,7 @@ class World:
     def projectile_impact(self, bullet, x, y):
         self.effects.append(HitEffect(x, y, bullet.facing,
                                       image_name=config.CLUB_HIT_IMAGE))
-        if isinstance(bullet, PlayerProjectile):
+        if bullet.impact_target is not self.player:
             enemy = bullet.impact_target
             self.damage_numbers.append(DamageNumber.above_body(
                 enemy.body, bullet.impact_damage, depth=enemy.ground_y - config.GROUND_Y))

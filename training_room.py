@@ -109,6 +109,10 @@ class TrainingSwordEnemy(TrainingTarget, SwordEnemy):
 
 
 class TrainingAxe(TrainingTarget, AxeEnemy):
+    def take_damage(self, damage):
+        self.abandon_axe_recovery()
+        return super().take_damage(damage)
+
     def _update_ai(self, dt, player):
         if (self.navigation_target is not None
                 or (self.state == "ATTACK" and self.attack_kind == "throw")):

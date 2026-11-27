@@ -35,6 +35,7 @@ class ResearcherBullet:
     anchor_y = config.RESEARCHER_BULLET_ANCHOR_Y
     range_limited = False
     depth_speed = 0.0
+    hit_depth = config.ATTACK_DEPTH_TOLERANCE
     world_width = config.WORLD_WIDTH
     hit_targets = None  # Piercing projectiles keep a set for the lifetime of the throw.
     deflectable = True
@@ -108,7 +109,8 @@ class ResearcherBullet:
         self.range_limited = False
         self.ricochet_angle = uniform(-self.ricochet_max_angle, self.ricochet_max_angle)
 
-    def update(self, dt, targets, *, on_impact=None):
+    def update(self, dt, targets, *, return_targets=(), on_impact=None,
+               stop_at=float("inf"), on_travel=None):
         if self.finished:
             return False
         dt = max(0.0, dt)
@@ -138,15 +140,17 @@ class ResearcherBullet:
             edge_gap = right - self.x if self.facing > 0 else self.x - left
             speed_x = self.facing * self.horizontal_speed
             edge_time = edge_gap / abs(speed_x) if speed_x else float("inf")
-            step = min(step, edge_time)
-            terminal = min(ground_time, edge_time, range_time) <= step + 1e-12
+            stop_time = min(ground_time, edge_time, range_time, stop_at - offset)
+            step = min(step, stop_time)
+            terminal = stop_time <= step + 1e-12
             travel = step
             parried = False
-            for contact, target in self._contacts(targets, step, offset, dt, gravity):
+            candidates = self._flight_targets(targets, return_targets)
+            for contact, target in self._contacts(candidates, step, offset, dt, gravity):
                 # Ground/world contact wins a simultaneous tie.
                 if terminal and contact >= step - 1e-12:
                     break
-                if self.deflectable and target.state == "SWORD_PARRY":
+                if self.deflectable and not self.deflected and target.state == "SWORD_PARRY":
                     travel = contact
                     parried = True
                     break
@@ -159,6 +163,8 @@ class ResearcherBullet:
                 if self.spent:
                     travel = contact
                     break
+            if on_travel is not None and (travel > 0 or not parried):
+                on_travel(self, offset, travel, speed_x, vy, gravity)
             self.x += speed_x * travel
             self.ground_y += self.depth_speed * travel
             self.height += vy * travel - gravity * travel * travel / 2
@@ -193,11 +199,19 @@ class ResearcherBullet:
     def _deal_damage(self, player):
         return player.take_damage(self.damage, attacker=self.shooter, stagger=False)
 
-    def _contacts(self, target, duration, offset, tick_duration, gravity):
-        if self.deflected or (self.hit_targets is not None and target in self.hit_targets):
-            return ()
-        contact = self._contact_time(target, duration, offset, tick_duration, gravity)
-        return () if contact is None else ((contact, target),)
+    def _flight_targets(self, player, return_targets):
+        return () if self.deflected else (player,)
+
+    def _contacts(self, targets, duration, offset, tick_duration, gravity):
+        contacts = []
+        for target in targets:
+            if self.hit_targets is not None and target in self.hit_targets:
+                continue
+            contact = self._contact_time(target, duration, offset, tick_duration, gravity)
+            if contact is not None:
+                contacts.append((contact, target))
+        contacts.sort(key=itemgetter(0))
+        return contacts
 
     def _contact_time(self, player, duration, offset, tick_duration, gravity):
         if not player.alive or not same_floor(self, player):
@@ -219,7 +233,7 @@ class ResearcherBullet:
         axes = (
             (self.x - px, self.facing * self.horizontal_speed - vx, -half_width, half_width),
             (self.ground_y - py, self.depth_speed - ground_vy,
-              -config.ATTACK_DEPTH_TOLERANCE, config.ATTACK_DEPTH_TOLERANCE),
+              -self.hit_depth, self.hit_depth),
         )
         enter, leave = 0.0, duration
         for start, velocity, low, high in axes:
@@ -264,16 +278,8 @@ class PlayerProjectile(ResearcherBullet):
     def _deal_damage(self, enemy):
         return enemy.take_damage(self.damage)
 
-    def _contacts(self, enemies, duration, offset, tick_duration, gravity):
-        contacts = []
-        for enemy in enemies:
-            if self.hit_targets is not None and enemy in self.hit_targets:
-                continue
-            contact = self._contact_time(enemy, duration, offset, tick_duration, gravity)
-            if contact is not None:
-                contacts.append((contact, enemy))
-        contacts.sort(key=itemgetter(0))
-        return contacts
+    def _flight_targets(self, enemies, return_targets):
+        return enemies
 
 
 class PlayerPistolBullet(PlayerProjectile):
@@ -363,11 +369,17 @@ class EnemyAxeProjectile(ThrownAxe):
     def _start_return_flight(self):
         self.ricochet_angle = 0.0
         self.speed = self.ricochet_speed
-        self.straight_range = 96.0
+        self.straight_range = config.AXE_RETURN_RANGE
+        self.hit_depth = config.AXE_RETURN_HIT_DEPTH
         self.range_limited = True
 
-    def _deal_damage(self, player):
-        return player.take_damage(self.damage, attacker=self.shooter)
+    def _flight_targets(self, player, return_targets):
+        return return_targets if self.deflected else (player,)
+
+    def _deal_damage(self, target):
+        if self.deflected:
+            return target.take_damage(self.damage)
+        return target.take_damage(self.damage, attacker=self.shooter)
 
 
 class RifleBullet(ResearcherBullet):

@@ -3,6 +3,8 @@ from math import cos, radians, sin
 from unittest.mock import Mock, call, patch
 
 import config
+from axe_enemy import AxeEnemy
+from enemy import Enemy
 from main_menu import MainMenu
 from projectiles import EnemyAxeProjectile, ResearcherBullet, RifleBullet
 from tests.helpers import advance, tap
@@ -220,17 +222,50 @@ class PlayerSwordTests(unittest.TestCase):
                     world.update_projectiles(0.05)
                     self.assertEqual((axe.deflected, axe.facing, axe.height), (True, -direction, 90))
                     self.assertAlmostEqual(axe.x, contact_x - direction * 24)
-                    world.update_projectiles(0.5)
+                    world.update_projectiles(1.25)
                     self.assertEqual(world.projectiles, [])
                     item, = world.stage.drop_items
                     left, right = axe.horizontal_limits
-                    landing_x = max(left, min(right, contact_x - direction * 96))
+                    landing_x = max(left, min(right, contact_x - direction * config.AXE_RETURN_RANGE))
                     self.assertAlmostEqual(item.x, landing_x)
                     self.assertFalse(item.grounded)
                     self.assertEqual(item.vy, 0)
                     advance(world, 1)
                     self.assertTrue(item.grounded)
                     self.assertAlmostEqual(item.x, landing_x)
+
+    def test_returning_axe_pierces_each_enemy_once_including_the_thrower(self):
+        for incoming in (-1, 1):
+            for steps in (1, 60):
+                with self.subTest(incoming=incoming, steps=steps):
+                    world = equipped_world("sword")
+                    player = world.player
+                    player.invincible = False
+                    world.controls.press("combat_s")
+                    world.step(config.FIXED_DT)
+                    edge = player.body.left if incoming > 0 else player.body.right
+                    contact_x = edge - incoming * EnemyAxeProjectile.half_width
+                    lane = player.ground_y
+                    shooter = AxeEnemy(contact_x - incoming * 95, ground_y=lane)
+                    shooter._set_armed(False)
+                    pair = [Enemy(contact_x - incoming * 35, ground_y=lane) for _ in range(2)]
+                    far = Enemy(contact_x - incoming * (config.AXE_RETURN_RANGE + 100), ground_y=lane)
+                    off_lane = Enemy(shooter.x, ground_y=lane + config.AXE_RETURN_HIT_DEPTH + 1)
+                    world.enemies = [shooter, far, off_lane, *pair]
+                    axe = EnemyAxeProjectile(contact_x - incoming * 200, lane, 90, incoming, shooter=shooter)
+                    world.projectiles.append(axe)
+                    world.update_projectiles(160 / axe.speed)
+                    self.assertTrue(all(enemy.hp == enemy.max_hp for enemy in world.enemies))
+                    for _ in range(steps):
+                        world.update_projectiles(1.5 / steps)
+                    self.assertEqual([enemy.max_hp - enemy.hp for enemy in world.enemies], [50, 0, 0, 50, 50])
+                    self.assertEqual(player.hp, player.max_hp)
+                    self.assertEqual([number.damage for number in world.damage_numbers], [50, 50, 50])
+                    self.assertEqual(len(world.effects), 3)
+                    self.assertFalse(world.projectiles)
+                    drop, = world.stage.drop_items
+                    self.assertIs(drop.axe_owner, shooter)
+                    self.assertAlmostEqual(drop.x, contact_x - incoming * config.AXE_RETURN_RANGE)
 
     def test_melee_hits_during_parry(self):
         world = equipped_world("sword")

@@ -22,6 +22,7 @@ class AxeEnemy(Enemy):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.armed = True
+        self.recovery_target = None
         self.has_swung = False
         self.attack_kind = "swing"
         self.throw_retry = 0.0
@@ -81,6 +82,7 @@ class AxeEnemy(Enemy):
 
     def _set_armed(self, armed):
         self.armed = armed
+        self.recovery_target = None
         poses = self.animations if armed else config.AXE_ENEMY_UNARMED_ANIMATIONS
         # ATTACK stays on the throw row until its empty-handed follow-through ends.
         for state in ("HIT", "KNOCKBACK", "DYING", "DEAD", "CAR_HIT"):
@@ -127,8 +129,21 @@ class AxeEnemy(Enemy):
                 if waypoint is not None:
                     goal = waypoint
                     break
+        self.recovery_target = item
         self.navigation_target = goal
         return False
+
+    def abandon_axe_recovery(self):
+        if self.recovery_target is not None:
+            self.recovery_target.axe_owner = None
+            self.recovery_target = None
+            self.navigation_target = None
+
+    def take_damage(self, damage):
+        if not super().take_damage(damage):
+            return False
+        self.abandon_axe_recovery()
+        return True
 
     def take_strong_hit(self, move, direction):
         if not super().take_strong_hit(move, direction):

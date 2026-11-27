@@ -12,6 +12,7 @@ from ar_soldier import ARSoldier
 from assets import Assets
 from axe_enemy import AxeEnemy
 from combat import STRONG_MOVES
+from drop_items import DropItem
 from enemy import Enemy
 from enemy02 import Enemy02
 from player import Player
@@ -137,7 +138,7 @@ class AxeEnemyTests(unittest.TestCase):
                 self.advance_until(world, lambda: bool(world.stage.drop_items))
                 item, = world.stage.drop_items
                 # Contact can occur within one fixed step before we observe the reversal.
-                self.assertAlmostEqual((item.x - contact_x) * side, 96,
+                self.assertAlmostEqual((item.x - contact_x) * side, config.AXE_RETURN_RANGE,
                                        delta=axe.ricochet_speed * config.FIXED_DT + 1e-9)
                 self.assertFalse(item.grounded)
                 if side == 1:
@@ -178,6 +179,119 @@ class AxeEnemyTests(unittest.TestCase):
         self.assertEqual((enemy.sprite_image, enemy.animation.row), (config.AXE_ENEMY_UNARMED_IMAGE, 6))
         enemy.take_damage(enemy.hp)
         self.assertEqual((enemy.sprite_image, enemy.animation.row), (config.AXE_ENEMY_UNARMED_IMAGE, 7))
+
+    def test_player_strike_interrupts_recovery_and_enemy_uses_punch_and_kick(self):
+        world, enemy = encounter(weapon="sword")
+        world.player.invincible = False
+        enemy._set_armed(False)
+        item = DropItem("axe", enemy.x - 450, enemy.ground_y, axe_owner=enemy)
+        world.stage.drop_items = [item]
+        world.step(config.FIXED_DT)
+        self.assertIs(enemy.recovery_target, item)
+        strike(world, enemy, "combat_a")
+        self.assertIsNone(item.axe_owner)
+        self.assertIsNone(enemy.navigation_target)
+        self.assertIsNone(enemy.recovery_target)
+        item.x, item.ground_y = enemy.x, enemy.ground_y
+        enemy.cooldown = 0
+        for kind, damage in (("punch", 15), ("kick", 20)):
+            with patch.object(enemy.rng, "choice", return_value=kind):
+                hp = world.player.hp
+                self.advance_until(world, lambda: world.player.hp < hp)
+                self.assertEqual((enemy.attack_kind, hp - world.player.hp), (kind, damage))
+        self.assertFalse(enemy.armed)
+        self.assertIn(item, world.stage.drop_items)
+
+    def test_three_parried_axes_each_damage_five_spawned_fighters_across_the_melee_lanes(self):
+        for side in (-1, 1):
+            world = World(rng=random.Random(23))
+            world.select_stage(4)
+            player = world.player
+            player.equip_weapon("sword")
+            tap(world.controls, "spawn_5")
+            world.controls.press("combat_s")
+            world.step(config.FIXED_DT)
+            world.stage.drop_items.clear()
+            for enemy, distance, lane in zip(world.enemies, (510, 510, 510, 180, 340), (-28, 0, 28, 25, -25)):
+                enemy.x = enemy.previous_x = player.x + side * distance
+                enemy.ground_y = enemy.previous_ground_y = player.ground_y + lane
+                enemy.facing = -side
+                enemy.cooldown = 12
+            for shooter in world.enemies[:3]:
+                shooter._start_move("throw")
+                shooter.animation.elapsed = 4.1 / shooter.attack_fps
+            world.update_projectiles(0)
+            self.assertEqual(len(world.projectiles), 3)
+            axes = list(world.projectiles)
+            for _ in range(220):
+                world.step(config.FIXED_DT)
+            self.assertEqual([enemy.max_hp - enemy.hp for enemy in world.enemies], [150] * 5)
+            self.assertTrue(all(axe.deflected and len(axe.hit_targets) == 5 for axe in axes))
+            self.assertEqual(len(world.stage.drop_items), 3)
+            self.assertEqual(world.player.hp, world.player.max_hp)
+
+    def test_clashing_axes_drop_before_targets_behind_contact_in_either_update_order(self):
+        for steps in (1, 180):
+            for reverse in (False, True):
+                world, first = encounter(weapon="sword")
+                player = world.player
+                world.controls.press("combat_s")
+                world.step(config.FIXED_DT)
+                x = player.body.right + EnemyAxeProjectile.half_width
+                y = player.ground_y
+                second = AxeEnemy(x + 460, ground_y=y)
+                near, far = Enemy(x + 90, ground_y=y), Enemy(x + 300, ground_y=y)
+                world.enemies = [near, far]
+                a = EnemyAxeProjectile(x + 60, y, 90, -1, shooter=first)
+                b = EnemyAxeProjectile(x + 460, y, 90, -1, shooter=second)
+                world.projectiles[:] = [b, a] if reverse else [a, b]
+                world.stage.drop_items.clear()
+                for _ in range(steps):
+                    world.update_projectiles(1.5 / steps)
+                self.assertTrue(a.deflected)
+                self.assertFalse(b.deflected)
+                self.assertEqual((near.max_hp - near.hp, far.max_hp - far.hp), (50, 0))
+                self.assertEqual(len(world.stage.drop_items), 2)
+                self.assertFalse(world.projectiles)
+                self.assertAlmostEqual(b.x - a.x, a.half_width + b.half_width)
+                self.assertEqual({drop.axe_owner for drop in world.stage.drop_items}, {first, second})
+                advance(world, 1)
+                self.assertTrue(all(drop.grounded for drop in world.stage.drop_items))
+
+    def test_descending_axe_clips_returning_blade_after_their_centers_cross(self):
+        for steps in (1, 24):
+            world, owner = encounter()
+            lane = world.player.ground_y
+            returning = EnemyAxeProjectile(900, lane, 90, 1, shooter=owner)
+            returning._start_return_flight()
+            falling = EnemyAxeProjectile(1032, lane, 0, -1, shooter=AxeEnemy(1100))
+            falling.elapsed = falling.straight_duration + 0.3
+            impact = 0.115
+            falling.height = (returning.height + returning.half_height + falling.half_height
+                              - falling.vy * impact + falling.gravity * impact**2 / 2)
+            world.projectiles[:] = [returning, falling]
+            world.stage.drop_items.clear()
+            for _ in range(steps):
+                world.update_projectiles(0.2 / steps)
+            self.assertFalse(world.projectiles)
+            self.assertAlmostEqual(returning.x, 900 + returning.speed * impact)
+            self.assertAlmostEqual(falling.x, 1032 - falling.speed * impact)
+            self.assertEqual(len(world.stage.drop_items), 2)
+
+    def test_crossing_axe_paths_ignore_separate_lanes_heights_floors_and_same_owner(self):
+        for case in ("lane", "height", "floor", "owner"):
+            with self.subTest(case=case):
+                world, owner = encounter()
+                lane = world.player.ground_y
+                returning = EnemyAxeProjectile(600, lane, 90, 1, shooter=owner)
+                returning._start_return_flight()
+                incoming = EnemyAxeProjectile(
+                    740, lane + (30 if case == "lane" else 0), 180 if case == "height" else 90, -1,
+                    floor=int(case == "floor"), shooter=owner if case == "owner" else AxeEnemy(1000))
+                world.projectiles[:] = [incoming, returning]
+                world.update_projectiles(0.2)
+                self.assertEqual(len(world.projectiles), 2)
+                self.assertLess(incoming.x, returning.x)
 
     def test_wall_drop_stays_collectible_after_owner_dies_and_cannot_arm_another_enemy(self):
         world, enemy = encounter(-1)

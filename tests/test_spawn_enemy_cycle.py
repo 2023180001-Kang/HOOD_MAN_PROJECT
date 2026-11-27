@@ -291,7 +291,7 @@ class SpawnEnemyCycleTests(unittest.TestCase):
         self.assertEqual(enemy.boundary_padding, 88)
         self.assertIs(type(enemy), ShieldSoldier)
 
-    def test_mixed_enemy_deaths_do_not_add_items_regardless_of_map_or_selection(self):
+    def test_mixed_enemy_deaths_drop_their_own_weapons_regardless_of_map_or_selection(self):
         world = World()
         world.select_stage(8)
         items = list(world.stage.drop_items)
@@ -304,9 +304,9 @@ class SpawnEnemyCycleTests(unittest.TestCase):
         thug.take_damage(200)
         world.step(config.FIXED_DT)
         self.assertFalse(shield.alive or thug.alive)
-        self.assertEqual(world.stage.drop_items, items)
-        self.assertFalse(any(item.kind == "metal_club" for item in world.stage.drop_items))
-        self.assertEqual(len(world.stage.drop_items), 15)
+        self.assertEqual(world.stage.drop_items[:len(items)], items)
+        self.assertEqual([item.kind for item in world.stage.drop_items[len(items):]],
+                         ["shield_item", "steel_club"])
 
     def test_hud_tracks_selected_source_damage_and_m_help_and_respects_u_hiding(self):
         world = World()

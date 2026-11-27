@@ -12,6 +12,7 @@ from walkable import default_area
 
 
 class Enemy:
+    death_drop_kind = "steel_club"
     stair_following = True
     uses_melee_slots = True
     uses_ranged_spacing = False

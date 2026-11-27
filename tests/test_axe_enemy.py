@@ -429,7 +429,7 @@ class AxeEnemyTests(unittest.TestCase):
             self.assertEqual(enemy.facing, facing)
         self.assertEqual((enemy.hp, enemy.state), (400, "IDLE"))
 
-    def test_lethal_hit_uses_actual_remaining_hp_death_fade_and_no_metal_club_drop(self):
+    def test_lethal_hit_uses_actual_remaining_hp_death_fade_and_drops_held_axe(self):
         world, enemy = encounter(hp=25)
         items = list(world.stage.drop_items)
         strike(world, enemy, "combat_f")
@@ -439,7 +439,8 @@ class AxeEnemyTests(unittest.TestCase):
         self.assertEqual((enemy.state, enemy.animation.row, enemy.animation.frame), ("DEAD", 6, 7))
         self.assertFalse(enemy.blocks_movement)
         self.assertFalse(enemy.take_damage(10))
-        self.assertEqual(world.stage.drop_items, items)
+        self.assertEqual(world.stage.drop_items[:-1], items)
+        self.assertEqual(world.stage.drop_items[-1].kind, "axe")
         enemy.corpse_elapsed = 3.5
         self.assertAlmostEqual(enemy.opacity, 0.5)
         advance(world, 0.5)

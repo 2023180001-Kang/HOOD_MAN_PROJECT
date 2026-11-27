@@ -272,7 +272,7 @@ class ShieldSoldierTests(unittest.TestCase):
         self.assertTrue(enemy.has_hit and second.has_hit)
         self.assertEqual([effect.image_name for effect in world.effects], [config.CLUB_HIT_IMAGE] * 2)
 
-    def test_lethal_guard_and_strong_hits_use_own_death_fade_and_never_drop_a_club(self):
+    def test_lethal_guard_and_strong_hits_use_own_death_fade_and_drop_the_shield(self):
         for strong in (False, True):
             world, enemy = encounter(guarded=True)
             enemy.hp = 15
@@ -285,7 +285,8 @@ class ShieldSoldierTests(unittest.TestCase):
             self.assertFalse(enemy.take_damage(10))
             advance(world, 2)
             self.assertEqual((enemy.state, enemy.animation.row, enemy.animation.frame), ("DEAD", 7, 7))
-            self.assertEqual(len(world.stage.drop_items), 15)
+            self.assertEqual(len(world.stage.drop_items), 16)
+            self.assertEqual(world.stage.drop_items[-1].kind, "shield_item")
             enemy.corpse_elapsed = 3.5
             self.assertAlmostEqual(enemy.opacity, 0.5)
             advance(world, 0.5)

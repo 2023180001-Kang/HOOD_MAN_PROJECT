@@ -9,6 +9,7 @@ from researcher import Researcher
 
 
 class Sniper(Researcher):
+    death_drop_kind = None
     image_name = config.SNIPER_IMAGE
     animations = config.SNIPER_ANIMATIONS
     max_hp = config.SNIPER_MAX_HP

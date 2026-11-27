@@ -5,6 +5,7 @@ from enemy02 import Enemy02
 
 
 class SwordEnemy(Enemy02):
+    death_drop_kind = "sword"
     image_name = config.SWORD_ENEMY_IMAGE
     attacks = config.SWORD_ENEMY_ATTACKS
     basic_attack = "slash"

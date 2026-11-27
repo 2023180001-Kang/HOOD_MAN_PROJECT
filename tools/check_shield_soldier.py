@@ -15,13 +15,12 @@ import pico2d
 
 import config
 from combat import STRONG_MOVES
-from tests.helpers import enter_kick_wait
+from tests.helpers import ManualSpawnWorld as World, enter_kick_wait
 from game import Game
 from shield_soldier import ShieldSoldier
 from tools.check_damage_numbers import capture_number
 from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, release, tick
-from world import World
 
 
 def encounter(game, side=1, *, index=8, hp=400, weapon=None, guarded=False):
@@ -273,14 +272,14 @@ def check_shield_attack(game):
 
 
 def check_death_and_pause(game):
-    world, enemy = encounter(game, hp=20, guarded=True)
+    world, enemy = encounter(game, hp=10, guarded=True)
     press_attack(game, "f", enemy)
-    assert enemy.hp == 0 and [value.damage for value in world.damage_numbers] == [20]
+    assert enemy.hp == 0 and [value.damage for value in world.damage_numbers] == [10]
     capture_number(game, "shield_guard_lethal")
     tick(game, 60)
     assert (enemy.state, enemy.animation.row, enemy.animation.frame) == ("DEAD", 7, 7)
-    assert len(world.stage.drop_items) == 15
-    assert not any(item.kind == "metal_club" for item in world.stage.drop_items)
+    assert len(world.stage.drop_items) == 16
+    assert world.stage.drop_items[-1].kind == "shield_item"
     enemy.corpse_elapsed = 3.5
     texture = game.assets.images[config.SHIELD_SOLDIER_IMAGE]
     with patch.object(texture, "opacify", wraps=texture.opacify) as opacity:
@@ -326,7 +325,7 @@ def check_death_and_pause(game):
     tap(game, pico2d.SDLK_1)
     assert len(world.enemies) == 1 and world.enemies[0].hp == 400
     assert game.assets.images[config.SHIELD_SOLDIER_IMAGE] is texture
-    print("PASS: lethal guard uses actual remaining HP text, row-7 death/fade/no club; "
+    print("PASS: lethal guard uses actual remaining HP text, row-7 death/fade and drops one shield; "
           "SDL R slows guard, inactive/loading pause action/RNG, loading hides soldiers/consumes "
           "numeric input, SDL F5 clears everything and new input restores HP-400 summons.")
 

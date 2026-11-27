@@ -184,6 +184,19 @@ class World:
         self.stage.drop_items.append(item)
         return item
 
+    def drop_enemy_weapon(self, enemy):
+        kind = enemy.death_drop_kind
+        if kind is None:
+            return
+        area = self.stage.area_for(enemy)
+        x, ground_y = area.project(enemy.x, enemy.ground_y, config.DROP_ITEM_HALF_WIDTH)
+        self.stage.drop_items.append(DropItem(
+            kind, x, ground_y, enemy.facing, floor=enemy.floor,
+            jump_height=max(0.0, enemy.y + config.WEAPON_DROP_HAND_HEIGHT - ground_y),
+            pistol_ammo=enemy.ammo if kind == "pistol" else None,
+            rifle_ammo=enemy.ammo if kind == "ar_rifle" else None,
+        ))
+
     def interact_weapon(self):
         player = self.player
         if self.stage_loading or player.staircase is not None or not player.alive:
@@ -218,6 +231,8 @@ class World:
             if self.opening_factory_exit and self.stage_loading_remaining > 0:
                 self.stage.factory_gate.update(dt)
                 self.update_combat_effects(dt)
+                for item in self.stage.drop_items:
+                    item.update(dt)
                 for enemy in self.enemies:
                     enemy.update(dt, self.player, self.stage.area_for(enemy))
                 self.enemies[:] = [enemy for enemy in self.enemies if not enemy.faded_out]
@@ -355,6 +370,7 @@ class World:
             self.stage.constrain_actor(enemy)
             if not enemy.alive and not enemy.defeat_counted:
                 enemy.defeat_counted = True
+                self.drop_enemy_weapon(enemy)
                 self.stage.defeated_count += 1
                 if self.stage.factory_gate is None and self.stage.defeated_count == config.STAGE_ENCOUNTER_SIZE:
                     self.stage.arrows_visible = True

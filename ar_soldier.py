@@ -7,6 +7,7 @@ from researcher import Researcher
 
 
 class ARSoldier(Researcher):
+    death_drop_kind = "ar_rifle"
     uses_ranged_spacing = True
     peer_spacing_depth = config.AR_SOLDIER_SPACING_DEPTH
     max_hp = config.AR_SOLDIER_MAX_HP

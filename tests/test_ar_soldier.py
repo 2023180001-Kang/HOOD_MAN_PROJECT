@@ -638,7 +638,7 @@ class ARSoldierTests(unittest.TestCase):
                 else:
                     draw.assert_not_called()
 
-    def test_lethal_hit_stops_shooting_uses_seventh_row_and_fades_without_drops(self):
+    def test_lethal_hit_stops_shooting_uses_seventh_row_and_drops_rifle(self):
         world, enemy = encounter(gap=80)
         items = list(world.stage.drop_items)
         enemy.hp = 25
@@ -652,7 +652,8 @@ class ARSoldierTests(unittest.TestCase):
         self.assertAlmostEqual(enemy.opacity, 0.5)
         advance(world, 0.5)
         self.assertNotIn(enemy, world.enemies)
-        self.assertEqual(world.stage.drop_items, items)
+        self.assertEqual(world.stage.drop_items[:-1], items)
+        self.assertEqual(world.stage.drop_items[-1].kind, "ar_rifle")
 
     def test_red_dots_follow_world_camera_and_real_bullet_lane_in_both_facings(self):
         for facing in (-1, 1):

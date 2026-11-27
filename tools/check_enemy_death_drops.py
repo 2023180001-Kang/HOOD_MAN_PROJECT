@@ -1,4 +1,4 @@
-"""Verify removal of enemy death drops and preserve existing G interactions in SDL."""
+"""Verify enemy weapon drops and G interactions through SDL."""
 
 from pathlib import Path
 import random
@@ -15,6 +15,7 @@ from drop_items import DropItem
 from enemy import Enemy
 from enemy02 import Enemy02
 from game import Game
+from sniper import Sniper
 from tools.check_render import capture
 from tools.check_runtime import push_key, release, tick
 from world import World
@@ -55,29 +56,31 @@ def kill_with_s(game, enemy_type=Enemy, *, selected=False):
             break
     release(game, pico2d.SDLK_s)
     assert not enemy.alive and enemy.state == "DYING"
-    assert world.stage.drop_items == items
+    assert world.stage.drop_items[:len(items)] == items
     assert [number.damage for number in world.damage_numbers] == [15]
     return world, enemy, items
 
 
-def check_death_without_drops(game):
+def check_death_drops(game):
     assert "HoodMan_MetalClub_Item_6frames_1536x256.png" not in game.assets.images
-    for enemy_type, selected, name in (
-        (Enemy, False, "single_club"),
-        (Enemy02, False, "dual_club"),
-        (Enemy, True, "m_selected"),
+    for enemy_type, selected, name, expected in (
+        (Enemy, False, "single_club", ["steel_club"]),
+        (Enemy02, False, "dual_club", []),
+        (Sniper, False, "sniper", []),
+        (Enemy, True, "m_selected", ["steel_club"]),
     ):
         world, enemy, items = kill_with_s(game, enemy_type, selected=selected)
+        drops = world.stage.drop_items[len(items):]
+        assert [drop.kind for drop in drops] == expected
         with patch.object(game.assets, "draw_drop_item",
                           wraps=game.assets.draw_drop_item) as draw:
-            capture(game, f"no_enemy_drop_{name}_death")
-        assert all(call.args[0].kind in config.DROP_ITEM_IMAGES
-                   for call in draw.call_args_list)
+            capture(game, f"enemy_drop_{name}_death")
+        assert all(any(call.args[0] is drop for call in draw.call_args_list) for drop in drops)
         tick(game, 360)
-        assert enemy not in world.enemies and world.stage.drop_items == items
-        capture(game, f"no_enemy_drop_{name}_faded")
-    print("PASS: SDL S kills single/dual-club and M-selected thugs with damage/death/fade intact; "
-          "no items added, initial 15 weapons preserved, unused club texture not loaded.")
+        assert enemy not in world.enemies and world.stage.drop_items == items + drops
+        assert all(drop.grounded for drop in drops)
+        capture(game, f"enemy_drop_{name}_faded")
+    print("PASS: clubs drop once and land. Dual-club enemies and snipers leave no item.")
 
 
 def check_existing_weapons_and_restart(game):
@@ -103,7 +106,7 @@ def check_existing_weapons_and_restart(game):
     capture(game, "no_enemy_drop_existing_weapons")
     textures = dict(game.assets.images)
     tap(game, pico2d.SDLK_F5)
-    assert not world.enemies and world.player.weapon is None
+    assert len(world.enemies) == config.STAGE_ENCOUNTER_SIZE and world.player.weapon is None
     for stage in world.stages:
         assert len(stage.drop_items) == 15
         assert {item.kind for item in stage.drop_items} == set(config.DROP_ITEM_IMAGES)
@@ -120,7 +123,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
-        check_death_without_drops(game)
+        check_death_drops(game)
         check_existing_weapons_and_restart(game)
     finally:
         if game is not None:

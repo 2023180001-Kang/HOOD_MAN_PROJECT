@@ -9,6 +9,7 @@ from projectiles import ResearcherBullet
 
 
 class Researcher(Enemy):
+    death_drop_kind = "pistol"
     uses_melee_slots = False
     max_hp = config.RESEARCHER_MAX_HP
     image_name = config.RESEARCHER_IMAGE

@@ -27,6 +27,10 @@ class AxeEnemy(Enemy):
         self.throw_retry = 0.0
 
     @property
+    def death_drop_kind(self):
+        return "axe" if self.armed else None
+
+    @property
     def sprite_image(self):
         if self.armed or (self.state == "ATTACK" and self.attack_kind == "throw"):
             return self.image_name

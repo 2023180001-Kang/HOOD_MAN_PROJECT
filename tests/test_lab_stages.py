@@ -7,6 +7,7 @@ from PIL import Image
 
 import config
 from assets import Assets
+from researcher import Researcher
 from shield_soldier import ShieldSoldier
 from tests.helpers import advance, tap
 from tests.helpers import ManualSpawnWorld as World
@@ -117,8 +118,8 @@ class LabStageTests(unittest.TestCase):
             tap(world.controls, "spawn_9")
             world.step(config.FIXED_DT)
             self.assertEqual(len(stage.enemies), 9)
-            self.assertTrue(all(type(enemy) is ShieldSoldier and enemy.hp == 400
-                                and stage.walkable.contains(enemy.x, enemy.ground_y, 88)
+            self.assertEqual([type(enemy) for enemy in stage.enemies], [ShieldSoldier, Researcher] * 4 + [ShieldSoldier])
+            self.assertTrue(all(stage.walkable.contains(enemy.x, enemy.ground_y, enemy.boundary_padding)
                                 for enemy in stage.enemies))
             enemy, items = stage.enemies[0], stage.drop_items
             enemy.start_guard()

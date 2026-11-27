@@ -3,19 +3,14 @@ import unittest
 from unittest.mock import Mock
 
 import config
-from ar_soldier import ARSoldier
-from axe_enemy import AxeEnemy
 from collision import bodies_overlap
 from combat import STRONG_MOVES
-from enemy import Enemy
 from enemy02 import Enemy02
 from player import Player
-from researcher import Researcher
-from shield_soldier import ShieldSoldier
 from tests.helpers import advance, spawn_encounter
 from tests.test_strong_attacks import strike
 from traffic import Car, Traffic
-from tests.helpers import ManualSpawnWorld as World
+from tests.helpers import ManualSpawnWorld as World, expected_numeric_summons
 
 
 def at_frame(kind, frame, *, side=1):
@@ -50,22 +45,12 @@ class Enemy02Tests(unittest.TestCase):
                 world.controls.press("spawn_4")
                 world.update(config.FIXED_DT)
                 world.controls.release("spawn_4")
-                expected, hp = Enemy, 200
-                if stage.image_name in config.AXE_ENEMY_STAGE_IMAGES:
-                    expected, hp = AxeEnemy, 400
-                elif stage.image_name in config.ENEMY02_STAGE_IMAGES:
-                    expected = Enemy02
-                elif stage.image_name in config.FACTORY_INSIDE_IMAGES:
-                    expected = Researcher
-                elif stage.image_name in config.LAB_STAGE_IMAGES:
-                    expected, hp = ShieldSoldier, 400
-                elif stage.image_name in config.BOSS_STAGE_IMAGES:
-                    expected, hp = ARSoldier, 300
+                expected_types = expected_numeric_summons(index, 4)
                 self.assertEqual(len(stage.enemies), 4)
                 self.assertEqual(stage.spawner.spawned_count, 4)
-                self.assertTrue(all(type(enemy) is expected for enemy in stage.enemies))
+                self.assertEqual([type(enemy) for enemy in stage.enemies], expected_types)
                 for enemy in stage.enemies:
-                    self.assertEqual(enemy.hp, hp)
+                    self.assertEqual(enemy.hp, type(enemy).max_hp)
                     self.assertTrue(stage.spawn_area.contains(enemy.x, enemy.ground_y,
                                                               enemy.boundary_padding))
                     self.assertEqual(enemy.facing, 1 if enemy.x < config.START_X else -1)

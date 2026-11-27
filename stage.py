@@ -1,5 +1,6 @@
 """Independent street scenes and world-space backgrounds/exit markers."""
 
+from itertools import cycle
 from math import ceil, floor, sin, sqrt, tau
 import random
 
@@ -49,6 +50,7 @@ class Stage:
                              if self.image_name == config.FACTORY_EXTERIOR_IMAGE else None)
         self.opening_gate_x = None
         self.spawn_cycle_index = None  # None preserves this map's native default.
+        self.lab_summons = cycle((ShieldSoldier, Researcher)) if self.image_name in config.LAB_STAGE_IMAGES else None
         self.enemies = []
         self.effects = []
         self.afterimages = []
@@ -82,6 +84,10 @@ class Stage:
     @property
     def spawn_enemy_stage_index(self):
         return self.index if self.spawn_cycle_index is None else self.spawn_cycle_index
+
+    @property
+    def mixes_lab_summons(self):
+        return self.lab_summons is not None and self.spawn_cycle_index is None
 
     def cycle_spawn_enemy_type(self):
         """M selects stage 1 first, then follows the full route; it never spawns."""

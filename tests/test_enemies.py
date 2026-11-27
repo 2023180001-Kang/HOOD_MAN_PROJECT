@@ -174,10 +174,7 @@ class EnemyTests(unittest.TestCase):
                             enemy.boundary_padding + max(config.ENEMY_RUN_SPEEDS) * config.FIXED_DT)
                     self.assertTrue(stage.spawn_area.contains(enemy.x, enemy.ground_y,
                                                               enemy.boundary_padding))
-                    hp = (400 if stage.image_name in config.AXE_ENEMY_STAGE_IMAGES
-                          or stage.image_name in config.LAB_STAGE_IMAGES else
-                          300 if stage.image_name in config.BOSS_STAGE_IMAGES else 200)
-                    self.assertEqual((enemy.hp, enemy.spawned_at), (hp, world.elapsed))
+                    self.assertEqual((enemy.hp, enemy.spawned_at), (type(enemy).max_hp, world.elapsed))
                 all_enemies.extend(stage.enemies[4:])
             total = 9 * len(world.stages)
             self.assertEqual(len({id(enemy) for enemy in all_enemies}), total)

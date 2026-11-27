@@ -142,19 +142,19 @@ def check_repeat_and_numbers(game):
 def check_preservation_and_lifecycle(game):
     world = fresh(game)
     tap(game, pico2d.SDLK_2)
-    shields = tuple(world.enemies)
-    shields[0].take_damage(40)
+    original = tuple(world.enemies)
+    original[0].take_damage(40)
     tap(game, pico2d.SDLK_m)
     tap(game, pico2d.SDLK_1)
-    assert tuple(world.enemies[:2]) == shields and [enemy.hp for enemy in shields] == [360, 400]
-    assert all(type(enemy) is ShieldSoldier for enemy in shields)
+    assert tuple(world.enemies[:2]) == original and [enemy.hp for enemy in original] == [360, 200]
+    assert [type(enemy) for enemy in original] == [ShieldSoldier, Researcher]
     assert type(world.enemies[-1]) is Enemy and world.enemies[-1].hp == 200
-    capture(game, "spawn_cycle_existing_shields_and_new_thug")
+    capture(game, "spawn_cycle_existing_lab_enemies_and_new_thug")
     world.select_stage(6)
     assert world.stage.spawn_cycle_index is None and world.spawner.enemy_type is Researcher
     tap(game, pico2d.SDLK_m)
     world.select_stage(8)
-    assert world.stage.spawn_enemy_stage_index == 0 and world.enemies[:2] == list(shields)
+    assert world.stage.spawn_enemy_stage_index == 0 and world.enemies[:2] == list(original)
     tap(game, pico2d.SDLK_m)
     assert world.stage.spawn_enemy_stage_index == 1
 
@@ -203,7 +203,7 @@ def check_preservation_and_lifecycle(game):
     assert all(stage.spawn_cycle_index is None and stage.spawn_enemy_stage_index == stage.index
                and stage.spawner.enemy_type is TYPES[stage.index]
                and not stage.enemies and stage.spawner.spawned_count == 0 for stage in world.stages)
-    print("PASS: M leaves old shields/HP intact while new numbers create thugs; selections are "
+    print("PASS: M preserves both lab enemies and their HP while new numbers create thugs; selections are "
           "independent per map and survive revisits; focus loss/menu/death/loading consume M without "
           "reservation, held loading input does not replay, F5 restores all native selections.")
 

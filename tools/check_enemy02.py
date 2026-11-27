@@ -21,6 +21,7 @@ from enemy02 import Enemy02, leap_height
 from game import Game
 from researcher import Researcher
 from shield_soldier import ShieldSoldier
+from tests.helpers import expected_numeric_summons
 from tools.check_render import capture
 from tools.check_runtime import push_key, release, tick
 from world import World
@@ -67,14 +68,9 @@ def check_city_summons(game):
         tick(game)
         release(game, pico2d.SDLK_4)
         world = game.world
-        expected = (AxeEnemy if world.stage.image_name in config.AXE_ENEMY_STAGE_IMAGES else
-                    Researcher if world.stage.image_name in config.FACTORY_INSIDE_IMAGES else
-                    ShieldSoldier if world.stage.image_name in config.LAB_STAGE_IMAGES else
-                    ARSoldier if world.stage.image_name in config.BOSS_STAGE_IMAGES else
-                    Enemy02 if world.stage.image_name in config.ENEMY02_STAGE_IMAGES else Enemy)
         assert world.stage_index == number - 1
         assert len(world.enemies) == world.spawner.spawned_count == 4
-        assert all(type(enemy) is expected for enemy in world.enemies)
+        assert [type(enemy) for enemy in world.enemies] == expected_numeric_summons(number - 1, 4)
         assert all(world.stage.spawn_area.contains(enemy.x, enemy.ground_y, enemy.boundary_padding)
                    for enemy in world.enemies)
         if number in (3, 4):
@@ -84,7 +80,7 @@ def check_city_summons(game):
                     capture(game, f"enemy02_city_{number - 2}_{side}")
                 assert any("몽둥이 30 / 착지 50" in call.args[2] for call in draw.call_args_list)
         assert all(game.assets.images[name] is image for name, image in textures.items())
-    print("PASS: SDL 4 summons city enemy02, dock axes, interior researchers, lab shields and thugs elsewhere; "
+    print("PASS: SDL 4 summons each map's default lineup, including shields and researchers in both labs; "
           "spawn floors/texture reuse and the real 30/50 HUD text verified.")
 
 

@@ -15,7 +15,7 @@ import pico2d
 
 import config
 from combat import STRONG_MOVES
-from tests.helpers import ManualSpawnWorld as World, enter_kick_wait
+from tests.helpers import ManualSpawnWorld as World, enter_kick_wait, expected_numeric_summons
 from game import Game
 from shield_soldier import ShieldSoldier
 from tools.check_damage_numbers import capture_number
@@ -62,9 +62,10 @@ def check_summons(game):
                 push_key(key)
                 tick(game)
                 assert len(world.enemies) == world.spawner.spawned_count == count
-                assert all(type(enemy) is ShieldSoldier and enemy.hp == enemy.max_hp == 400
-                           and enemy.attack_damage == 40 for enemy in world.enemies)
-                assert all(world.stage.walkable.contains(enemy.x, enemy.ground_y, 88)
+                assert [type(enemy) for enemy in world.enemies] == expected_numeric_summons(index, count)
+                assert all(enemy.hp == enemy.max_hp == type(enemy).max_hp and enemy.attack_damage == 40
+                           for enemy in world.enemies)
+                assert all(world.stage.walkable.contains(enemy.x, enemy.ground_y, enemy.boundary_padding)
                            for enemy in world.enemies)
                 push_key(key, repeat=True)
                 tick(game, 6)
@@ -72,6 +73,7 @@ def check_summons(game):
                 release(game, key)
                 tap(game, key)
                 assert len(world.enemies) == count * 2
+                assert [type(enemy) for enemy in world.enemies] == expected_numeric_summons(index, count * 2)
                 assert len({enemy.attack_speed for enemy in world.enemies}) == count * 2
                 assert game.assets.images[config.SHIELD_SOLDIER_IMAGE] is texture
         for label, camera_x in (("left", 0), ("right", 1280)):
@@ -85,7 +87,7 @@ def check_summons(game):
         tap(game, pico2d.SDLK_1)
         assert len(game.world.enemies) == 1
         assert type(game.world.enemies[0]) is not ShieldSoldier
-    print("PASS: both labs, all 36 digit/keypad cases summon HP-400/damage-40 shields; "
+    print("PASS: both labs, all 36 digit/keypad cases alternate shield soldiers and researchers; "
           "no automatic/repeated summons, fresh input adds, unique speeds/bounds/texture reuse; "
           "all ten other maps keep their enemy types.")
 
@@ -336,7 +338,7 @@ def check_natural_combat(game):
         world = game.world
         world.select_stage(index)
         tap(game, pico2d.SDLK_p)
-        tap(game, pico2d.SDLK_4)
+        world.spawn_enemies(4, ShieldSoldier)
         spawn_state = world.spawner.rng.getstate()
         actions = {enemy: set() for enemy in world.enemies}
         for _ in range(960):

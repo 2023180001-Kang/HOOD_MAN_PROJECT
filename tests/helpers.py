@@ -3,9 +3,22 @@ import unittest
 from unittest.mock import patch
 
 import config
+from ar_soldier import ARSoldier
+from axe_enemy import AxeEnemy
+from enemy import Enemy
+from enemy02 import Enemy02
+from researcher import Researcher
+from shield_soldier import ShieldSoldier
 from combat import STRONG_MOVES
 from walkable import default_area
 from world import World
+
+
+def expected_numeric_summons(stage_index, count):
+    """Expected default lineup for the first numeric request on a fresh map."""
+    groups = ((Enemy,), (Enemy02,), (AxeEnemy,), (Researcher,), (ShieldSoldier, Researcher), (ARSoldier,))
+    group = groups[stage_index // 2]
+    return [group[i % len(group)] for i in range(count)]
 
 
 class ManualSpawnWorld(World):

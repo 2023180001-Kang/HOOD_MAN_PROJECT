@@ -11,6 +11,7 @@ import config
 from assets import Assets
 from combat import STRONG_MOVES
 from player import Player
+from researcher import Researcher
 from shield_soldier import ShieldSoldier
 from tests.helpers import advance, enter_kick_wait, tap
 from tests.test_strong_attacks import strike
@@ -45,8 +46,10 @@ class ShieldSoldierTests(unittest.TestCase):
             tap(world.controls, "spawn_4")
             world.step(config.FIXED_DT)
             if stage.image_name in config.LAB_STAGE_IMAGES:
-                self.assertTrue(all(type(enemy) is ShieldSoldier and enemy.hp == enemy.max_hp == 400
-                                    and enemy.attack_damage == 40 for enemy in world.enemies))
+                self.assertEqual([type(enemy) for enemy in world.enemies], [ShieldSoldier, Researcher] * 2)
+                self.assertEqual([enemy.hp for enemy in world.enemies], [400, 200] * 2)
+                self.assertTrue(all(enemy.hp == enemy.max_hp and enemy.attack_damage == 40
+                                    for enemy in world.enemies))
             else:
                 self.assertFalse(any(isinstance(enemy, ShieldSoldier) for enemy in world.enemies))
             self.assertEqual(len(world.enemies), 4)
@@ -66,7 +69,7 @@ class ShieldSoldierTests(unittest.TestCase):
                 world.step(config.FIXED_DT)
                 self.assertEqual((len(world.enemies), world.spawner.spawned_count), (count * 2, count * 2))
                 self.assertEqual(len({enemy.attack_speed for enemy in world.enemies}), count * 2)
-                self.assertTrue(all(enemy.hp == 400 for enemy in world.enemies))
+                self.assertEqual([type(enemy) for enemy in world.enemies], [ShieldSoldier, Researcher] * count)
 
     def test_source_sheet_and_all_seven_rows_preserve_original_pixels_and_feet(self):
         path = config.ROOT / config.SHIELD_SOLDIER_IMAGE

@@ -23,6 +23,7 @@ from combat import MOVES
 from effects import DamageNumber
 from enemy import Enemy
 from game import Game
+from tests.helpers import expected_numeric_summons
 from tools.check_render import capture, render_image
 from world import World
 
@@ -141,12 +142,10 @@ def check_numeric_spawns(game):
             assert world.player is player and player.x == config.START_X and player.hp == 420
             enemies = tuple(world.enemies)
             assert len(enemies) == world.spawner.spawned_count == number
-            for enemy in enemies:
+            for enemy, expected_type in zip(enemies, expected_numeric_summons(source, number)):
                 sides.add(enemy.facing)
-                assert type(enemy) is world.spawner.enemy_type
-                hp = (400 if world.stage.image_name in config.AXE_ENEMY_STAGE_IMAGES
-                      or world.stage.image_name in config.LAB_STAGE_IMAGES else 200)
-                assert enemy.hp == hp and enemy.spawned_at == config.FIXED_DT
+                assert type(enemy) is expected_type
+                assert enemy.hp == expected_type.max_hp and enemy.spawned_at == config.FIXED_DT
                 assert min(enemy.x, config.WORLD_WIDTH - enemy.x) <= (
                     enemy.boundary_padding + max(config.ENEMY_RUN_SPEEDS) / 60 + 1e-6)
                 assert world.stage.spawn_area.contains(enemy.x, enemy.ground_y, enemy.boundary_padding)

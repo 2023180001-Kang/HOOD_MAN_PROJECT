@@ -5,20 +5,15 @@ import unittest
 from unittest.mock import Mock, patch
 
 import config
-from ar_soldier import ARSoldier
 from assets import Assets
-from axe_enemy import AxeEnemy
 from combat import MOVES, STRONG_MOVES
-from enemy import Enemy
-from enemy02 import Enemy02
 from player import Player
 from projectiles import ResearcherBullet
 from researcher import Researcher
-from shield_soldier import ShieldSoldier
 from tests.helpers import advance, enter_kick_wait, tap
 from tests.test_strong_attacks import strike
 from ui import UI
-from tests.helpers import ManualSpawnWorld as World
+from tests.helpers import ManualSpawnWorld as World, expected_numeric_summons
 
 
 def encounter(side=1, *, index=6, gap=300, invincible=False):
@@ -48,30 +43,21 @@ def until(world, predicate, steps=2400):
 
 
 class ResearcherTests(unittest.TestCase):
-    def test_only_both_factory_interiors_summon_researchers_and_other_types_stay_unchanged(self):
+    def test_factory_interiors_and_labs_summon_full_health_researchers(self):
         world = World(rng=random.Random(42))
         for index, stage in enumerate(world.stages):
             world.select_stage(index)
             self.assertEqual(world.enemies, [])
             tap(world.controls, "spawn_4")
             world.update(config.FIXED_DT)
-            expected, hp = Enemy, 200
-            if stage.image_name in config.FACTORY_INSIDE_IMAGES:
-                expected = Researcher
-            elif stage.image_name in config.AXE_ENEMY_STAGE_IMAGES:
-                expected, hp = AxeEnemy, 400
-            elif stage.image_name in config.ENEMY02_STAGE_IMAGES:
-                expected = Enemy02
-            elif stage.image_name in config.LAB_STAGE_IMAGES:
-                expected, hp = ShieldSoldier, 400
-            elif stage.image_name in config.BOSS_STAGE_IMAGES:
-                expected, hp = ARSoldier, 300
+            expected_types = expected_numeric_summons(index, 4)
             self.assertEqual(len(world.enemies), 4)
-            self.assertTrue(all(type(enemy) is expected and enemy.hp == enemy.max_hp == hp
-                                for enemy in world.enemies))
-            if expected is Researcher:
-                self.assertTrue(all(enemy.ammo == 7 and enemy.attack_damage == 40
-                                    for enemy in world.enemies))
+            self.assertEqual([type(enemy) for enemy in world.enemies], expected_types)
+            for enemy in world.enemies:
+                self.assertEqual(enemy.hp, type(enemy).max_hp)
+                self.assertEqual(enemy.hp, enemy.max_hp)
+                if type(enemy) is Researcher:
+                    self.assertEqual((enemy.ammo, enemy.attack_damage), (7, 40))
             self.assertTrue(all(stage.walkable.contains(enemy.x, enemy.ground_y,
                                                         enemy.boundary_padding)
                                 for enemy in world.enemies))

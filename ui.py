@@ -403,7 +403,7 @@ class UI:
                 enemy_help = (f"적 권총 {config.RESEARCHER_DAMAGE} · "
                               f"{config.RESEARCHER_MAGAZINE_SIZE}발 후 재장전")
             elif source_image in config.LAB_STAGE_IMAGES:
-                enemy_name = "방패 병사"
+                enemy_name = "방패 병사 · 연구원" if world.stage.mixes_lab_summons else "방패 병사"
                 enemy_help = (f"적 공격: 방패 {config.SHIELD_SOLDIER_DAMAGE} · "
                                f"HP {spawn_hp} · 방어 중 받는 피해 50%")
             elif source_image in config.BOSS_STAGE_IMAGES:

@@ -8,21 +8,17 @@ from unittest.mock import Mock, patch
 from PIL import Image
 
 import config
-from ar_soldier import ARSoldier
 from assets import Assets
 from axe_enemy import AxeEnemy
 from combat import STRONG_MOVES
 from drop_items import DropItem
 from enemy import Enemy
-from enemy02 import Enemy02
 from player import Player
 from projectiles import EnemyAxeProjectile
-from researcher import Researcher
-from shield_soldier import ShieldSoldier
 from tests.helpers import advance, spawn_encounter, tap
 from tests.test_strong_attacks import strike
 from ui import UI
-from tests.helpers import ManualSpawnWorld as World
+from tests.helpers import ManualSpawnWorld as World, expected_numeric_summons
 
 
 def encounter(side=1, *, hp=400, weapon=None, index=4):
@@ -335,20 +331,11 @@ class AxeEnemyTests(unittest.TestCase):
             world.select_stage(index)
             tap(world.controls, "spawn_4")
             world.update(config.FIXED_DT)
-            expected, hp = Enemy, 200
-            if stage.image_name in config.AXE_ENEMY_STAGE_IMAGES:
-                expected, hp = AxeEnemy, 400
-            elif stage.image_name in config.ENEMY02_STAGE_IMAGES:
-                expected = Enemy02
-            elif stage.image_name in config.FACTORY_INSIDE_IMAGES:
-                expected = Researcher
-            elif stage.image_name in config.LAB_STAGE_IMAGES:
-                expected, hp = ShieldSoldier, 400
-            elif stage.image_name in config.BOSS_STAGE_IMAGES:
-                expected, hp = ARSoldier, 300
+            expected_types = expected_numeric_summons(index, 4)
             self.assertEqual(len(world.enemies), 4)
-            for enemy in world.enemies:
+            for enemy, expected in zip(world.enemies, expected_types):
                 self.assertIs(type(enemy), expected)
+                hp = expected.max_hp
                 self.assertEqual((enemy.hp, enemy.max_hp), (hp, hp))
                 self.assertTrue(stage.walkable.contains(enemy.x, enemy.ground_y,
                                                         enemy.boundary_padding))

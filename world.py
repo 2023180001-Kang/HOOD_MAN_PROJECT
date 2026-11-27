@@ -324,7 +324,11 @@ class World:
                 count, enemy_type = SPAWN_REQUESTS[request]
                 if enemy_type is Sniper and not self.sniper_stage:
                     continue
-                self.spawn_enemies(count, enemy_type)
+                if enemy_type is None and self.stage.mixes_lab_summons:
+                    for _ in range(count):
+                        self.spawn_enemies(1, next(self.stage.lab_summons))
+                else:
+                    self.spawn_enemies(count, enemy_type)
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         stair_moved = self.stage.update_navigation(dt, self.player, self.controls)

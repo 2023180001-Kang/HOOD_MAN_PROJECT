@@ -203,11 +203,9 @@ PLAYER_IMAGE = "HoodMan_Sprite.png"
 PLAYER_PISTOL_IMAGE = "HoodMan_Pistol_MovingReload_2048x3072.png"
 PLAYER_RIFLE_IMAGE = "HoodMan_AR_2048x3072.png"
 PLAYER_STEEL_CLUB_IMAGE = "HoodMan_SteelClub_newChanged_version_8x8.png"
-PLAYER_DUAL_BATONS_IMAGE = "HoodMan_DualBatons_2048x2048(1).png"
 PLAYER_SWORD_IMAGE = "HoodMan_Sword_Spin_Walk_Run_8x10_2048x2560.png"
 SWORD_PARRY_FPS = 24.0
 SWORD_PARRY_MOVING_ROWS = {"WALK": 9, "RUN": 10}
-DUAL_BATON_PROJECTILE_IMAGE = "HoodMan_DualBaton_Projectiles_1024x256.png"
 PLAYER_SHIELD_IMAGE = "HoodMan_Shield_2048x2304.png"
 SHIELD_PROJECTILE_IMAGE = "HoodMan_Shield_Projectile_256x256.png"
 SHIELD_THROW_DAMAGE = 50
@@ -230,7 +228,6 @@ CLIPPED_THROW_SPRITES = {
     "combat_knife": (KNIFE_PROJECTILE_IMAGE, KNIFE_PROJECTILE_CLIP, KNIFE_PROJECTILE_SCALE),
     "steel_pipe": (PIPE_PROJECTILE_IMAGE, PIPE_PROJECTILE_CLIP, PIPE_PROJECTILE_SCALE),
 }
-DUAL_BATONS_THROW_DAMAGE = 60
 AXE_THROW_DAMAGE = 60
 THROWN_WEAPON_RELEASE_FRAME = 4  # Fifth cell of row six, counted from zero.
 THROWN_WEAPON_TURNS_PER_SECOND = 8.0
@@ -249,8 +246,6 @@ class ThrownWeaponSprite(NamedTuple):
 THROWN_WEAPON_SPRITES = {
     # The upright shield is 90 px wide, so it rests 90 px tall on its side.
     "shield_item": ThrownWeaponSprite(SHIELD_PROJECTILE_IMAGE, SPRITE_SCALE, 90.0, 90 * SPRITE_SCALE),
-    # Two horizontal 20px-tall batons with their centers 24 source pixels apart vertically.
-    "dual_black_batons": ThrownWeaponSprite(DUAL_BATON_PROJECTILE_IMAGE, SPRITE_SCALE, 0, 44 * SPRITE_SCALE),
     "steel_club": ThrownWeaponSprite(STEEL_CLUB_PROJECTILE_IMAGE, STEEL_CLUB_DRAW_SCALE,
                                      63.4, 25 * STEEL_CLUB_DRAW_SCALE),
     # Both axe images use the same source size. At 90 degrees the loose blade is 64 px tall.
@@ -258,8 +253,7 @@ THROWN_WEAPON_SPRITES = {
 }
 PLAYER_EQUIPPED_SHEETS = {"pistol": PLAYER_PISTOL_IMAGE, "ar_rifle": PLAYER_RIFLE_IMAGE,
                           "steel_club": PLAYER_STEEL_CLUB_IMAGE, "axe": PLAYER_AXE_IMAGE,
-                          "dual_black_batons": PLAYER_DUAL_BATONS_IMAGE, "shield_item": PLAYER_SHIELD_IMAGE,
-                          "sword": PLAYER_SWORD_IMAGE}
+                          "shield_item": PLAYER_SHIELD_IMAGE, "sword": PLAYER_SWORD_IMAGE}
 PLAYER_PISTOL_DAMAGE = 50
 PLAYER_PISTOL_MAGAZINE_SIZE = 7
 PLAYER_RIFLE_DAMAGE = 20
@@ -346,7 +340,7 @@ COMBAT_MOVE_SPECS = (
 )
 WEAPON_NAMES = {"combat_knife": "단검", "steel_pipe": "쇠파이프", "pistol": "권총",
                 "steel_club": "쇠몽둥이", "axe": "도끼", "ar_rifle": "AR 소총",
-                "dual_black_batons": "검정 쌍몽둥이", "shield_item": "방패", "sword": "검"}
+                "shield_item": "방패", "sword": "검"}
 WEAPON_HIT_IMAGES = {"combat_knife": PUNCH_KICK_HIT_IMAGE, "steel_pipe": CLUB_HIT_IMAGE}
 # Impact windows follow the source strike poses; jump attacks hit on their downswing.
 WEAPON_MOVE_SPECS = {
@@ -687,7 +681,6 @@ EQUIPPED_ANIMATIONS = {"steel_club": ARMED_PLAYER_POSES, "axe": ARMED_PLAYER_POS
                        "shield_item": {**PLAYER_ANIMATIONS, "GUARD": (6, 12.0, False),
                                        "HIT": (8, 12.0, False), "DYING": (9, 10.0, False),
                                        "DEAD": (9, 10.0, False)},
-                       "dual_black_batons": ARMED_PLAYER_POSES,
                        "pistol": PLAYER_PISTOL_ANIMATIONS, "ar_rifle": PLAYER_RIFLE_ANIMATIONS}
 ENEMY_ANIMATIONS = {
     "IDLE": (1, 7.0, True),

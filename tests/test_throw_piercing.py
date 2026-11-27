@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import config
 from assets import Assets
 from enemy import Enemy
-from projectiles import AxeProjectile, DualBatonProjectile, ShieldProjectile, SteelClubProjectile, SteelPipeProjectile
+from projectiles import AxeProjectile, ShieldProjectile, SteelClubProjectile, SteelPipeProjectile
 from shield_soldier import ShieldSoldier
 from tests.helpers import advance, tap
 from tests.test_weapon_combat import equipped_world
@@ -56,7 +56,7 @@ class ThrowPiercingTests(unittest.TestCase):
 
     def test_each_enemy_is_hit_once_in_order_through_straight_flight_and_fall(self):
         for weapon, damage in ((SteelClubProjectile, 50), (SteelPipeProjectile, 50), (AxeProjectile, 60),
-                               (DualBatonProjectile, 60), (ShieldProjectile, 50)):
+                               (ShieldProjectile, 50)):
             for facing in (-1, 1):
                 for dt, steps in ((2.0, 1), (config.FIXED_DT, 240)):
                     with self.subTest(weapon=weapon, facing=facing, dt=dt):
@@ -100,7 +100,7 @@ class ThrowPiercingTests(unittest.TestCase):
                         self.assertGreater((drop.x - in_fall.x) * facing, 0)
 
     def test_overlapping_targets_at_release_can_be_hit_again_by_a_new_throw(self):
-        for weapon in (SteelClubProjectile, SteelPipeProjectile, AxeProjectile, DualBatonProjectile, ShieldProjectile):
+        for weapon in (SteelClubProjectile, SteelPipeProjectile, AxeProjectile, ShieldProjectile):
             world = World()
             x, y = world.player.x, world.player.ground_y
             world.enemies = [Enemy(x, ground_y=y) for _ in range(3)]

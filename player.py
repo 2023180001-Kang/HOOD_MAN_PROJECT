@@ -5,10 +5,10 @@ from math import hypot
 import config
 from animation import Animation
 from collision import Rect, attack_hits_body
-from combat import (ALL_MOVES, COMBAT_INPUTS, AXE_THROW, DUAL_BATONS_THROW, KNIFE_THROW, PIPE_THROW, SHIELD_THROW,
+from combat import (ALL_MOVES, COMBAT_INPUTS, AXE_THROW, KNIFE_THROW, PIPE_THROW, SHIELD_THROW,
                     STEEL_CLUB_THROW, STRONG_MOVES, CrowdEscape, moves_for_weapon)
 from physics import approach_vector
-from projectiles import (AxeProjectile, DualBatonProjectile, KnifeProjectile, PlayerPistolBullet, PlayerRifleBullet,
+from projectiles import (AxeProjectile, KnifeProjectile, PlayerPistolBullet, PlayerRifleBullet,
                          ShieldProjectile, SteelClubProjectile, SteelPipeProjectile)
 from traffic import start_car_hit, update_car_hit
 from walkable import default_area
@@ -16,7 +16,7 @@ from walkable import default_area
 
 THROW_PROJECTILES = {KNIFE_THROW: KnifeProjectile, PIPE_THROW: SteelPipeProjectile,
                      STEEL_CLUB_THROW: SteelClubProjectile, AXE_THROW: AxeProjectile,
-                     DUAL_BATONS_THROW: DualBatonProjectile, SHIELD_THROW: ShieldProjectile}
+                     SHIELD_THROW: ShieldProjectile}
 
 
 class Player:
@@ -169,7 +169,7 @@ class Player:
         self.animation.set_state("IDLE" if self.grounded else "JUMP")
 
     def equip_weapon(self, weapon):
-        if weapon == self.weapon:
+        if weapon == self.weapon or (weapon is not None and weapon not in config.WEAPON_NAMES):
             return
         self.weapon = weapon
         self.firearm_facing_locked = False

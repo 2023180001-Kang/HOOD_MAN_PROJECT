@@ -171,17 +171,6 @@ class Assets:
             return
         sprite = config.THROWN_WEAPON_SPRITES[kind]
         image = self.images[sprite.image]
-        if kind == "dual_black_batons":
-            # Each row animates one baton spinning in the opposite direction to its partner.
-            cell = image.h // 2
-            columns = image.w // cell
-            frame = 0 if grounded else int(elapsed * config.THROWN_WEAPON_TURNS_PER_SECOND * columns) % columns
-            for row, side in enumerate((1, -1)):
-                image.clip_composite_draw(frame * cell, (1 - row) * cell, cell, cell,
-                                          0, "h" if facing < 0 else "",
-                                          x + facing * side * 20 * sprite.scale, y + side * 12 * sprite.scale,
-                                          cell * sprite.scale, cell * sprite.scale)
-            return
         angle = facing * radians(sprite.rest_angle) if grounded else spin
         image.clip_composite_draw(0, 0, image.w, image.h, angle,
                                   "h" if facing < 0 else "", x, y,

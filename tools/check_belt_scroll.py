@@ -114,7 +114,7 @@ def check_full_floor(game, index=0):
         assert config.SECOND_STAGE_IMAGE in game.assets.images
         assert config.ARCHIVED_SECOND_STAGE_IMAGE not in game.assets.images
         assert "newStage-2.png" not in game.assets.images
-    elif index == 5:
+    elif index == 4:
         assert config.FACTORY_EXTERIOR_IMAGE in game.assets.images
         assert config.ARCHIVED_FACTORY_EXTERIOR_IMAGE not in game.assets.images
         assert "HOOD_MAN_Factory_Exterior_1672x941.png" not in game.assets.images
@@ -129,7 +129,7 @@ def check_full_floor(game, index=0):
     bottom, top, source_top, source_bottom, prefix = {
         0: (-3, 277, 620, 900, "first_floor_full"),
         1: (-44, 239, 658, 941, "second_alley_floor300"),
-        5: (0, 284, 657, 941, "factory_floor300"),
+        4: (0, 284, 657, 941, "factory_exterior"),
         6: (-3, 172, 725, 900, "factory_inside_1_full_floor"),
         8: (-109, 178, 583, 870, "lab_1_floor300"),
         9: (-48, 239, 522, 809, "lab_2_floor300"),
@@ -344,7 +344,7 @@ def check_depth_and_order(game):
 
 
 def check_crowds(game):
-    for stage_index in (0, 1, 5):
+    for stage_index in (0, 1, 4):
         for count in (2, 5, 10):
             for sx, sy in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
                 game.world = World()
@@ -442,7 +442,7 @@ def main():
         check_floor_toggle(game)
         check_full_floor(game)
         check_full_floor(game, index=1)
-        check_full_floor(game, index=5)
+        check_full_floor(game, index=4)
         check_full_floor(game, index=6)
         check_full_floor(game, index=8)
         check_full_floor(game, index=9)
@@ -454,7 +454,7 @@ def main():
         check_crowds(game)
         check_travel(game)
         game.world = World(rng=random.Random(10))
-        game.world.select_stage(5)
+        game.world.select_stage(4)
         game.world.enemies.extend(game.world.spawner.spawn(9, game.world.elapsed))
         push_key(pico2d.SDLK_p)
         tick(game)
@@ -466,7 +466,7 @@ def main():
         seconds = perf_counter() - start
         assert frames == 180 and len(game.world.enemies) == 10
         inside(game.world)
-        print(f"BENCHMARK: factory floor300, 10 enemies, 2D AI/Separation/bounds/depth sorting: "
+        print(f"BENCHMARK: factory exterior, 10 enemies, 2D AI/Separation/bounds/depth sorting: "
               f"{frames} frames / {seconds:.3f}s = {frames / seconds:.2f} FPS.")
         push_key(pico2d.SDLK_F5)
         tick(game)

@@ -33,13 +33,16 @@ class CityStageTests(unittest.TestCase):
         self.assertEqual([stage.image_name for stage in world.stages],
                          ["changed_first_map_no_door.png", "newStage-2_floor300_1672x941.png",
                           *config.CITY_STAGE_IMAGES,
-                          config.FACTORY_OUTSIDE_IMAGE, config.FACTORY_EXTERIOR_IMAGE,
+                          config.FACTORY_EXTERIOR_IMAGE, config.FACTORY_OUTSIDE_IMAGE,
                           "factoryInside-1.png", "factoryStage-2.png",
                           "labStage-1_floor300_1672x941.png", "labStage-2_floor300_1672x941.png",
                            "bossStage_floor300_1672x941.png", "bossStage-2_floor300_1672x941.png"])
         for index, stage in enumerate(world.stages):
             stage.arrows_visible = True
             self.assertEqual(stage.destination(-1), index - 1 if index else None)
+            if stage.factory_gate is not None:
+                self.assertIsNone(stage.destination(1))
+                stage.factory_gate.update(config.FACTORY_GATE_DURATION)
             self.assertEqual(stage.destination(1), index + 1 if index < len(world.stages) - 1 else None)
 
     def test_replacement_cities_load_in_order_and_old_pngs_are_archived_without_changes(self):
@@ -172,6 +175,8 @@ class CityStageTests(unittest.TestCase):
                     player.jump_height, player.vy, player.jump_count = 150, 300, 2
                     player.animation.set_state("JUMP")
                     player.animation.elapsed = 0.2
+                    if world.stage.factory_gate is not None:
+                        world.stage.factory_gate.update(config.FACTORY_GATE_DURATION)
                     self.assertTrue(world.try_stage_transition())
                     self.assertFalse(world.stage_loading)
                     self.assertEqual(world.stage_index, first + 1 if side > 0 else first)

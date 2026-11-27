@@ -13,7 +13,7 @@ from tests.test_menu_return import click_event, key_event, scene
 REGIONS = (
     ("WHO", 129, config.STAGE_IMAGE),
     ("WHEN", 336, config.CITY_STAGE_IMAGES[0]),
-    ("WHERE", 540, config.FACTORY_OUTSIDE_IMAGE),
+    ("WHERE", 540, config.FACTORY_EXTERIOR_IMAGE),
     ("WHAT", 745, config.FACTORY_INSIDE_IMAGES[0]),
     ("HOW", 950, config.LAB_STAGE_IMAGES[0]),
     ("WHY", 1157, config.BOSS_STAGE_IMAGES[0]),

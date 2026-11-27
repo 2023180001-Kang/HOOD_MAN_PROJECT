@@ -30,7 +30,7 @@ def at_factory_boundary(side=1, first=3):
 class FactoryStageTests(unittest.TestCase):
     def test_stair_free_dock_loads_new_art_and_archives_the_old_png_byte_identically(self):
         self.assertEqual(config.FACTORY_OUTSIDE_IMAGE, "factory_loading_dock_no_stairs_1672x941.png")
-        self.assertEqual(config.STAGE_IMAGES[4], config.FACTORY_OUTSIDE_IMAGE)
+        self.assertEqual(config.STAGE_IMAGES[5], config.FACTORY_OUTSIDE_IMAGE)
         expected = {
             config.FACTORY_OUTSIDE_IMAGE: "be43a67389ada502c862880b4a73f28406de01f537bf07e8819af6c22bddadbf",
             config.ARCHIVED_FACTORY_OUTSIDE_IMAGE: "a2884d63b029bad7f92331015edb183a1023d09b0824e8cca0accb7f69059514",
@@ -48,7 +48,7 @@ class FactoryStageTests(unittest.TestCase):
         self.assertNotIn("hood_man_factory_loading_dock_1672x941.png", assets.images)
 
     def test_stair_free_dock_uses_all_concrete_between_the_fascia_and_drain(self):
-        stage = World().stages[4]
+        stage = World().stages[5]
         self.assertEqual(stage.walkable.bounds, (0, 45, 2560, 258))
         anchor = config.STAGE_GROUND_ANCHORS[stage.image_name]
         source_world_top = config.GROUND_Y - anchor + config.STAGE_IMAGE_HEIGHT
@@ -69,7 +69,7 @@ class FactoryStageTests(unittest.TestCase):
                     for depth in (-1, 1):
                         with self.subTest(weapon=weapon, running=running, side=side, depth=depth):
                             world = World()
-                            world.select_stage(4)
+                            world.select_stage(5)
                             player = world.player
                             player.equip_weapon(weapon)
                             player.x = player.previous_x = 300 if side < 0 else 2260
@@ -86,7 +86,7 @@ class FactoryStageTests(unittest.TestCase):
 
     def test_new_dock_retains_axe_spawns_items_revisit_state_and_restart(self):
         world = World(rng=random.Random(41), item_rng=random.Random(23))
-        world.select_stage(4)
+        world.select_stage(5)
         stage = world.stage
         self.assertEqual(len(stage.drop_items), 15)
         self.assertTrue(all(item.floor == 0 and stage.walkable.contains(item.x, item.ground_y)
@@ -99,15 +99,15 @@ class FactoryStageTests(unittest.TestCase):
                             for enemy in world.enemies))
         first, items = world.enemies[0], stage.drop_items
         first.take_damage(40)
-        world.select_stage(5)
-        advance(world, 1)
         world.select_stage(4)
+        advance(world, 1)
+        world.select_stage(5)
         self.assertIs(world.stage, stage)
         self.assertIs(world.stage.drop_items, items)
         self.assertEqual(first.hp, 360)
         world.controls.press("restart")
         world.update(config.FIXED_DT)
-        world.select_stage(4)
+        world.select_stage(5)
         self.assertEqual(world.stage.image_name, "factory_loading_dock_no_stairs_1672x941.png")
         self.assertEqual(world.stage.walkable.bounds, (0, 45, 2560, 258))
         self.assertEqual(world.enemies, [])
@@ -190,7 +190,7 @@ class FactoryStageTests(unittest.TestCase):
             self.assertEqual(world.stage_index, 0)
 
     def test_factory_background_covers_the_viewport_at_both_edges_and_during_vertical_shake(self):
-        stage = World().stages[4]
+        stage = World().stages[5]
         image = SimpleNamespace(w=1672, h=941, composite_draw=Mock())
         assets = SimpleNamespace(images={config.FACTORY_OUTSIDE_IMAGE: image}, draw_drop_item=Mock())
         for camera_x in (0, 640, 1280):
@@ -224,7 +224,7 @@ class FactoryStageTests(unittest.TestCase):
 
     def test_factory_exterior_round_trip_preserves_objects_and_projects_only_the_ground(self):
         world = World()
-        world.stage_index = 4
+        world.stage_index = 5
         source = world.stage
         source.arrows_visible = True
         enemy = source.spawner.spawn(1, world.elapsed)[0]
@@ -235,8 +235,8 @@ class FactoryStageTests(unittest.TestCase):
         player.hp, player.invincible = 420, True
         player.ground_y = 258
         player.jump_height, player.vy, player.jump_count = 140, 300, 2
-        player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
-        world.controls.press("right")
+        player.x, player.vx = config.STAGE_EXIT_MARGIN, -config.RUN_SPEED
+        world.controls.press("left")
         world.controls.press("left_shift")
         self.assertTrue(world.try_stage_transition())
         self.assertFalse(world.stage_loading)
@@ -244,13 +244,14 @@ class FactoryStageTests(unittest.TestCase):
         self.assertIs(world.player, player)
         self.assertEqual((player.hp, player.invincible, player.ground_y, player.jump_height,
                           player.vy, player.jump_count, player.vx),
-                         (420, True, 258, 140, 300, 2, config.RUN_SPEED))
+                         (420, True, 258, 140, 300, 2, -config.RUN_SPEED))
         exterior = world.stage
         exterior.arrows_visible = True
-        self.assertEqual(exterior.destination(1), 6)
-        world.controls.release("right")
-        world.controls.press("left")
-        player.x, player.vx = config.STAGE_EXIT_MARGIN, -config.RUN_SPEED
+        exterior.factory_gate.update(config.FACTORY_GATE_DURATION)  # Previously cleared for the return trip.
+        self.assertEqual(exterior.destination(1), 5)
+        world.controls.release("left")
+        world.controls.press("right")
+        player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
         self.assertTrue(world.try_stage_transition())
         self.assertFalse(world.stage_loading)
         self.assertIs(world.stage, source)

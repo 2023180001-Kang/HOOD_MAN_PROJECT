@@ -6,6 +6,7 @@ from time import perf_counter, sleep
 import pico2d
 from pico2d import pico2d as backend
 from sdl2 import (
+    SDL_BLENDMODE_BLEND, SDL_GetRenderDrawBlendMode, SDL_SetRenderDrawBlendMode,
     SDL_BUTTON_LEFT, SDL_Event, SDL_PollEvent,
     SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST, SDL_WINDOWEVENT_LEAVE,
 )
@@ -198,12 +199,21 @@ class Game:
             pico2d.update_canvas()
 
     def draw(self, present=True):
-        if self.world.stage_loading:
+        factory_exit = self.world.opening_factory_exit
+        if self.world.stage_loading and not factory_exit:
             self.draw_stage_loading_screen(present)
             return
         pico2d.clear_canvas()
         camera_x = self.world.camera.render_x
         camera_y = self.world.camera.render_y
+        if factory_exit:
+            # Pan to the doorway even if the final enemy fell at the far edge.
+            left, _, width, _ = config.FACTORY_GATE_RECT
+            target_x = (left + width / 2) * config.STAGE_SCALE - config.SCREEN_WIDTH / 2
+            pan = min(1.0, self.world.stage.factory_gate.elapsed / 0.75)
+            pan = pan * pan * (3 - 2 * pan)
+            camera_x += (target_x - camera_x) * pan
+            camera_y *= 1 - pan
         self.world.stage.draw(self.assets, camera_x, camera_y, elapsed=self.world.elapsed)
         self.ui.draw_floor_bounds(self.world, camera_x, camera_y)
         player = self.world.player
@@ -252,6 +262,16 @@ class Game:
         self.ui.draw(self.assets, self.world)
         if self.world.training:
             self.menu.draw_button(self.assets, self.menu.bag_back_button)
+        if factory_exit and self.world.stage_loading_remaining < config.FACTORY_FADE_DURATION:
+            alpha = round(255 * (1 - self.world.stage_loading_remaining / config.FACTORY_FADE_DURATION))
+            previous_mode = ctypes.c_int()
+            SDL_GetRenderDrawBlendMode(backend.renderer, ctypes.byref(previous_mode))
+            SDL_SetRenderDrawBlendMode(backend.renderer, SDL_BLENDMODE_BLEND)
+            try:
+                pico2d.draw_rectangle(0, 0, config.SCREEN_WIDTH - 1, config.SCREEN_HEIGHT - 1,
+                                      0, 0, 0, alpha, filled=True)
+            finally:
+                SDL_SetRenderDrawBlendMode(backend.renderer, previous_mode.value)
         if present:
             pico2d.update_canvas()
 

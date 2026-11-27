@@ -141,7 +141,7 @@ class FactoryInsideFloorTests(unittest.TestCase):
             self.assertEqual(enemy.floor, 0)
 
     def test_neighbor_transitions_preserve_common_depth_and_only_project_outside_values(self):
-        cases = ((5, 6, 0, 0), (5, 6, 284, 172), (6, 5, -3, 0), (6, 5, 172, 172),
+        cases = ((5, 6, 45, 45), (5, 6, 258, 172), (6, 5, -3, 45), (6, 5, 172, 172),
                  (6, 7, -3, 16), (6, 7, 172, 172), (7, 6, 16, 16), (7, 6, 200, 172))
         for source, destination, depth, projected in cases:
             with self.subTest(source=source, destination=destination, depth=depth):

@@ -4,6 +4,7 @@ from math import ceil, floor, sin, sqrt, tau
 import random
 
 import config
+from animation import Animation
 from ar_soldier import ARSoldier
 from axe_enemy import AxeEnemy
 from doors import StageDoor
@@ -43,6 +44,8 @@ class Stage:
         self.arrows_visible = False
         self.encounter_started = False
         self.defeated_count = 0
+        self.factory_gate = (Animation({"OPENING": (1, config.FACTORY_GATE_FPS, False)}, "OPENING")
+                             if self.image_name == config.FACTORY_EXTERIOR_IMAGE else None)
         self.spawn_cycle_index = None  # None preserves this map's native default.
         self.enemies = []
         self.effects = []
@@ -351,6 +354,8 @@ class Stage:
     def arrow_sides(self):
         if not self.arrows_visible:
             return ()
+        if self.factory_gate is not None and not self.factory_gate.finished:
+            return (-1,)
         return tuple(side for side in (-1, 1) if 0 <= self.index + side < len(config.STAGE_IMAGES))
 
     def destination(self, side):
@@ -395,6 +400,17 @@ class Stage:
                     0, image.h - 1, image.w, 1, 0, "h" if index % 2 else "",
                     index * width + width / 2 - camera_x, roof + headroom / 2,
                     width, headroom,
+                )
+            if self.factory_gate is not None:
+                left, top, gate_w, gate_h = config.FACTORY_GATE_RECT
+                center = left + gate_w / 2
+                source_x = image.w - center if index % 2 else center
+                gate = assets.images[config.FACTORY_GATE_IMAGE]
+                # The opening row is on top. Each 512×384 cell has transparent margins.
+                gate.clip_composite_draw(
+                    self.factory_gate.frame * 512 + 10, gate.h - 368, 492, 352,
+                    0, "h" if index % 2 else "", index * width + source_x * scale - camera_x,
+                    bottom + (image.h - top - gate_h / 2) * scale, gate_w * scale, gate_h * scale,
                 )
             for door in self.doors:
                 assets.draw_stage_door(door, image, index * width - camera_x, bottom,

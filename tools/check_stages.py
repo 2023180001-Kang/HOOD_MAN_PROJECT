@@ -42,7 +42,10 @@ def check_markers(game):
         backgrounds.append(baseline[1])
         push_key(pico2d.SDLK_n)
         tick(game)
-        assert game.world.stage.arrow_sides == ((1,) if index == 0 else (-1, 1))
+        exits = [side for side in (-1, 1) if 0 <= index + side < len(config.STAGE_IMAGES)]
+        if game.world.stage.factory_gate is not None:
+            exits.remove(1)
+        assert game.world.stage.arrow_sides == tuple(exits)
         for side in (-1, 1):
             view_edge(game, side)
             image = capture(game, f"stage_{index + 1}_{'left' if side < 0 else 'right'}_markers")
@@ -51,7 +54,7 @@ def check_markers(game):
             region = (0, top, 190, bottom) if side < 0 else (1090, top, 1280, bottom)
             before = baseline[side].crop(region)
             after = image.crop(region)
-            if index == 0 and side < 0:
+            if side not in exits:
                 assert after.tobytes() == before.tobytes()
             else:
                 gold = lambda pixels: sum(r > 120 and g > 80 and r > b * 1.5
@@ -70,7 +73,7 @@ def check_markers(game):
     assert all(game.assets.images[name] is image for name, image in textures.items())
     push_key(pico2d.SDLK_F5, down=False)
     game.handle_events()
-    print("PASS: SDL N reveals the first stage right / remaining stages left+right arrows; "
+    print("PASS: SDL N reveals the available exits; "
           f"{len(config.STAGE_IMAGES)} distinct backgrounds and shared textures verified.")
 
 
@@ -80,6 +83,8 @@ def check_motion_continuity(game, first=0):
         for mode in ("walk", "run", "jump_up", "jump_down"):
             game.world = World()
             game.world.stage_index = first if side > 0 else first + 1
+            if game.world.stage.factory_gate is not None:
+                game.world.stage.factory_gate.update(config.FACTORY_GATE_DURATION)
             direction_key = pico2d.SDLK_RIGHT if side > 0 else pico2d.SDLK_LEFT
             push_key(direction_key)
             if mode != "walk":
@@ -417,44 +422,58 @@ def check_factory_loading(game, first=3):
 
 
 def check_factory_exterior(game):
-    check_stage_background(game, 5, "factory_floor300")
-    game.world = World()
-    game.world.stage_index = 4
-    player = game.world.player
-    source = game.world.stage
-    enemy = source.spawner.spawn(1, game.world.elapsed)[0]
-    enemy.x = enemy.previous_x = 1400
-    source.enemies.append(enemy)
-    source.enemies[0].take_damage(40)
-    player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
-    player.ground_y = 258
-    player.hp, player.invincible = 420, True
-    for key in (pico2d.SDLK_n, pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT):
-        push_key(key)
-    tick(game)
-    assert game.world.stage_index == 5 and not game.world.stage_loading
-    assert game.world.player is player and player.hp == 420 and player.ground_y == 258
-    capture(game, "factory_exterior_entered")
-    game.world.enemies.extend(game.world.spawner.spawn(2, game.world.elapsed))
-    tick(game)
-    exterior = game.world.stage
-    assert len(exterior.enemies) == 2
-    push_key(pico2d.SDLK_RIGHT, down=False)
-    push_key(pico2d.SDLK_LEFT)
-    push_key(pico2d.SDLK_n, down=False)
-    push_key(pico2d.SDLK_n)
-    player.x, player.vx = config.STAGE_EXIT_MARGIN, -config.RUN_SPEED
-    tick(game)
-    assert game.world.stage is source and not game.world.stage_loading
-    assert source.enemies[0].hp == 360 and exterior.spawner.spawned_count == 2
-    assert player.hp == 420 and player.invincible
-    capture(game, "factory_outside_returned_from_exterior")
-    for key in (pico2d.SDLK_n, pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT, pico2d.SDLK_2):
-        push_key(key, down=False)
+    world = game.world = World(rng=random.Random(13))
+    world.reset(stage_index=config.STAGE_IMAGES.index(config.FACTORY_EXTERIOR_IMAGE))
+    player = world.player
+    player.x = config.FACTORY_GATE_RECT[0] + config.FACTORY_GATE_RECT[2] / 2
+    world.update_camera(0)
+    closed = capture(game, "factory_gate_closed").convert("RGB")
+
+    # A last hit at the far edge must still bring the doorway into view.
+    player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
+    world.update_camera(0)
+    world.spawn_enemies(1)
+    for enemy in world.enemies[:-1]:
+        enemy.take_damage(enemy.hp)
+    game.update(config.FIXED_DT)
+    assert not world.stage_loading and world.stage.factory_gate.frame == 0
+    last = world.enemies[-1]
+    last.hp, last.cooldown = 1, 10
+    last.x, last.ground_y = player.x - 80, player.ground_y
+    player.facing = -1
+    push_key(pico2d.SDLK_a)
+    for _ in range(60):
+        tick(game)
+        if world.opening_factory_exit:
+            break
+    push_key(pico2d.SDLK_a, down=False)
     game.handle_events()
-    print(f"PASS: {config.FACTORY_EXTERIOR_IMAGE} original-size pixels/tiling/shake, SDL "
-          "factory-to-factory travel, shared depth and saved enemy HP/spawn objects survive "
-          "the round trip.")
+    assert not last.alive
+    assert world.opening_factory_exit
+    game.update(config.FACTORY_GATE_DURATION / 2)
+    middle = capture(game, "factory_gate_opening").convert("RGB")
+    game.update(config.FACTORY_GATE_DURATION / 2)
+    opened = capture(game, "factory_gate_open").convert("RGB")
+
+    # Check the shutter face itself, above the actors and away from the HUD.
+    panel = (480, 140, 800, 390)
+    for first, second in ((closed, middle), (middle, opened)):
+        changed = ImageChops.difference(first.crop(panel), second.crop(panel)).convert("L")
+        assert sum(changed.histogram()[4:]) > 12000
+    game.update(config.FACTORY_FADE_DURATION / 2)
+    fading = capture(game, "factory_gate_fading").convert("RGB")
+    for region in (panel, (0, 0, 350, 95)):
+        expected = opened.crop(region).point(lambda value: value // 2)
+        error = ImageChops.difference(expected, fading.crop(region))
+        assert max(high for _, high in error.getextrema()) <= 2
+    game.update(config.FACTORY_FADE_DURATION / 2 + 1e-9)
+    assert world.opening_factory_exit
+    assert capture(game, "factory_gate_black").convert("RGB").getbbox() is None
+    game.update(config.FIXED_DT)
+    assert world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE
+    assert world.player is player and len(world.enemies) == config.STAGE_ENCOUNTER_SIZE
+    assert capture(game, "factory_gate_dock").convert("RGB").getbbox()
+    print("PASS: closed gate, opening frames, full-screen fade including HUD, black frame and dock entry.")
 
 
 def check_indoor_backgrounds(game, first=6):
@@ -519,7 +538,7 @@ def main():
         check_motion_continuity(game, first=10)
         check_round_trip_and_last_exit(game)
         check_city_loading(game)
-        check_stage_background(game, 4, "factory_loading_dock_no_stairs")
+        check_stage_background(game, 5, "factory_loading_dock_no_stairs")
         check_factory_loading(game)
         check_factory_exterior(game)
         check_factory_loading(game, first=5)

@@ -224,6 +224,11 @@ class EnemyTests(unittest.TestCase):
             if index == len(world.stages) - 1:
                 self.assertEqual(stage.arrow_sides, (-1,))
                 break
+            if stage.factory_gate is not None:
+                self.assertTrue(world.opening_factory_exit)
+                world.update(config.FACTORY_GATE_DURATION + config.FACTORY_FADE_DURATION)
+                world.update(config.FIXED_DT)
+                continue
             self.assertEqual(stage.destination(1), index + 1)
             world.player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
             world.controls.press("right")

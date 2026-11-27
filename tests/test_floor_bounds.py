@@ -140,9 +140,9 @@ class FloorBoundsTests(unittest.TestCase):
                 ys = [y + camera_y for _, ay, _, by in enemy_lines for y in (ay, by)]
                 self.assertEqual((min(xs), max(xs), min(ys), max(ys)), (88, 2472, -44, 239))
 
-    def test_floor300_factory_exterior_outline_matches_full_asphalt_and_both_actor_paddings(self):
+    def test_factory_exterior_outline_matches_full_asphalt_and_both_actor_paddings(self):
         game = scene()
-        game.world.select_stage(5)
+        game.world.select_stage(config.STAGE_IMAGES.index(config.FACTORY_EXTERIOR_IMAGE))
         game.ui.floor_bounds_visible = True
         for camera_x, camera_y in ((0, 0), (640, 8), (1280, 120)):
             for height in (0, 240):
@@ -194,7 +194,7 @@ class FloorBoundsTests(unittest.TestCase):
 
     def test_stair_free_loading_dock_outline_matches_the_full_concrete_floor(self):
         game = scene()
-        game.world.select_stage(4)
+        game.world.select_stage(config.STAGE_IMAGES.index(config.FACTORY_OUTSIDE_IMAGE))
         game.ui.floor_bounds_visible = True
         camera_x, camera_y = 640, 8
         with patch("pico2d.draw_line") as draw:

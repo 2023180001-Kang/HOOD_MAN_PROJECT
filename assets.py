@@ -18,7 +18,7 @@ class Assets:
             for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE,
                          *config.STAGE_STATUS_IMAGES.values(),
                          *(label for _, label, _ in config.STAGE_PROGRESS_LEGEND),
-                         config.STAGE_LOADING_IMAGE, config.TRAINING_ROOM_IMAGE,
+                         config.STAGE_LOADING_IMAGE, config.FACTORY_GATE_IMAGE, config.TRAINING_ROOM_IMAGE,
                          *(image for _, image in config.MAIN_MENU_BUTTONS),
                          config.BAG_UI_IMAGE, config.BAG_BUTTON_IMAGE,
                          *(image for _, image, _ in config.BAG_ITEM_SPECS),

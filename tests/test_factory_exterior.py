@@ -10,16 +10,81 @@ from assets import Assets
 from axe_enemy import AxeEnemy
 from tests.helpers import advance, tap
 from tests.helpers import ManualSpawnWorld as World
+from world import World as CampaignWorld
 
 
 class FactoryExteriorTests(unittest.TestCase):
-    def test_floor300_background_loads_and_previous_exterior_is_archived_unchanged(self):
-        self.assertEqual(config.FACTORY_EXTERIOR_IMAGE, "factoryOutside_floor300.px.png")
+    def test_last_enemy_starts_slow_gate_then_fade_and_automatic_dock_entry(self):
+        for fps in (30, 60, 144):
+            with self.subTest(fps=fps):
+                world = CampaignWorld(rng=random.Random(13))
+                world.reset(stage_index=4)
+                exterior = world.stage
+                player = world.player
+                player.equip_weapon("sword")
+                player.hp = 275
+                for key in ("stage_exits", "toggle_doors", "spawn_1"):
+                    tap(world.controls, key)
+                world.step(config.FIXED_DT)
+                player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
+                world.controls.press("right")
+                self.assertIsNone(exterior.destination(1))
+                self.assertFalse(world.try_stage_transition())
+                self.assertEqual(len(world.enemies), 5)
+                for enemy in world.enemies[:4]:
+                    enemy.take_damage(enemy.hp)
+                world.step(config.FIXED_DT)
+                self.assertNotIn(4, world.cleared_stages)
+                self.assertFalse(world.stage_loading)
+                self.assertEqual(exterior.factory_gate.frame, 0)
+                world.enemies[-1].take_damage(world.enemies[-1].hp)
+                world.step(config.FIXED_DT)
+                self.assertTrue(world.opening_factory_exit)
+                self.assertIn(4, world.cleared_stages)
+                frames = set()
+                while world.stage_loading_remaining > 0:
+                    frames.add(exterior.factory_gate.frame)
+                    if world.stage_loading_remaining < config.FACTORY_FADE_DURATION - 1e-8:
+                        self.assertTrue(exterior.factory_gate.finished)
+                    self.assertIs(world.stage, exterior)
+                    world.update(1 / fps)
+                self.assertEqual(frames, set(range(8)))
+                self.assertIs(world.stage, exterior)  # A fully black frame precedes entry.
+                world.update(1 / fps)
+                self.assertEqual(world.stage.image_name, config.FACTORY_OUTSIDE_IMAGE)
+                self.assertEqual(len(world.enemies), 4)
+                self.assertIs(world.player, player)
+                self.assertEqual((player.hp, player.weapon), (275, "sword"))
+                world.select_stage(4)
+                world.controls.release("right")
+                world.step(config.FIXED_DT)
+                self.assertFalse(world.opening_factory_exit)
+                self.assertEqual(exterior.destination(1), 5)
+
+    def test_restart_during_gate_or_fade_restores_closed_gate(self):
+        for elapsed in (1.0, config.FACTORY_GATE_DURATION + 0.5):
+            world = CampaignWorld()
+            world.reset(stage_index=4)
+            for enemy in world.enemies:
+                enemy.take_damage(enemy.hp)
+            world.step(config.FIXED_DT)
+            world.update(elapsed)
+            tap(world.controls, "restart")
+            world.update(config.FIXED_DT)
+            self.assertEqual(world.stage_index, 0)
+            world.select_stage(4)
+            self.assertFalse(world.stage_loading)
+            self.assertEqual(world.stage.factory_gate.frame, 0)
+            self.assertEqual(len(world.enemies), 4)
+
+    def test_doorless_background_loads_and_previous_exteriors_are_archived_unchanged(self):
+        self.assertEqual(config.FACTORY_EXTERIOR_IMAGE, "factoryOutside_no_door.png")
         self.assertEqual(config.ARCHIVED_FACTORY_EXTERIOR_IMAGE,
                          "before_sheets/HOOD_MAN_Factory_Exterior_1672x941.png")
-        self.assertEqual(config.STAGE_IMAGES[5], config.FACTORY_EXTERIOR_IMAGE)
+        self.assertEqual(config.STAGE_IMAGES[4], config.FACTORY_EXTERIOR_IMAGE)
         hashes = {
-            config.FACTORY_EXTERIOR_IMAGE: "28c6f90843cf69f88fb35139baded5dac89980a0ace28166110114b80cd5bccf",
+            config.FACTORY_EXTERIOR_IMAGE: "03d04bbfe9a72ab4cfe627edadd730959dddc5ea69c7e854d087ea745a671821",
+            "before_sheets/factoryOutside_floor300.px.png": "28c6f90843cf69f88fb35139baded5dac89980a0ace28166110114b80cd5bccf",
             config.ARCHIVED_FACTORY_EXTERIOR_IMAGE: "e23679ae1e7ec071c9a16b97381e9739488df390dcda7c229974b1e5f784297e",
         }
         for name, digest in hashes.items():
@@ -30,12 +95,14 @@ class FactoryExteriorTests(unittest.TestCase):
         self.assertFalse((config.ROOT / "HOOD_MAN_Factory_Exterior_1672x941.png").exists())
         with patch("pico2d.load_image", return_value=Mock()), patch("pico2d.load_font"):
             assets = Assets()
+        self.assertFalse((config.ROOT / "factoryOutside_floor300.px.png").exists())
+        self.assertIn(config.FACTORY_GATE_IMAGE, assets.images)
         self.assertIn(config.FACTORY_EXTERIOR_IMAGE, assets.images)
         self.assertNotIn(config.ARCHIVED_FACTORY_EXTERIOR_IMAGE, assets.images)
         self.assertNotIn("HOOD_MAN_Factory_Exterior_1672x941.png", assets.images)
 
     def test_full_asphalt_floor_runs_from_below_wall_and_prop_bases_to_image_bottom(self):
-        stage = World().stages[5]
+        stage = World().stages[4]
         self.assertEqual(stage.walkable.bounds, (0, 0, 2560, 284))
         anchor = config.STAGE_GROUND_ANCHORS[stage.image_name]
         source_world_top = config.GROUND_Y - anchor + config.STAGE_IMAGE_HEIGHT
@@ -61,7 +128,7 @@ class FactoryExteriorTests(unittest.TestCase):
                     for depth in (-1, 1):
                         with self.subTest(weapon=weapon, running=running, side=side, depth=depth):
                             world = World()
-                            world.select_stage(5)
+                            world.select_stage(4)
                             player = world.player
                             player.equip_weapon(weapon)
                             player.x = player.previous_x = 300 if side < 0 else 2260
@@ -81,7 +148,7 @@ class FactoryExteriorTests(unittest.TestCase):
             for weapon in config.WEAPON_POSE_IMAGES:
                 with self.subTest(depth=depth, weapon=weapon):
                     world = World()
-                    world.select_stage(5)
+                    world.select_stage(4)
                     player = world.player
                     player.ground_y = player.previous_ground_y = depth
                     world.controls.press("up" if depth else "down")
@@ -110,7 +177,7 @@ class FactoryExteriorTests(unittest.TestCase):
 
     def test_axe_spawns_items_pursuit_revisit_and_f5_share_the_expanded_exterior_floor(self):
         world = World(rng=random.Random(41), item_rng=random.Random(23))
-        world.select_stage(5)
+        world.select_stage(4)
         stage = world.stage
         self.assertEqual(world.enemies, [])
         self.assertEqual(len(stage.drop_items), 15)
@@ -129,9 +196,9 @@ class FactoryExteriorTests(unittest.TestCase):
         first, items = world.enemies[0], stage.drop_items
         first.take_damage(40)
         snapshot = first.x, first.ground_y, first.animation.elapsed
-        world.select_stage(4)
-        advance(world, 1)
         world.select_stage(5)
+        advance(world, 1)
+        world.select_stage(4)
         self.assertIs(world.stage, stage)
         self.assertIs(world.enemies[0], first)
         self.assertIs(stage.drop_items, items)
@@ -140,13 +207,13 @@ class FactoryExteriorTests(unittest.TestCase):
         tap(world.controls, "restart")
         world.update(config.FIXED_DT)
         self.assertEqual(world.stage_index, 0)
-        self.assertEqual(world.stages[5].image_name, config.FACTORY_EXTERIOR_IMAGE)
-        self.assertEqual(world.stages[5].walkable.bounds, (0, 0, 2560, 284))
-        self.assertEqual((world.stages[5].enemies, world.stages[5].spawner.spawned_count), ([], 0))
-        self.assertEqual(len(world.stages[5].drop_items), 15)
+        self.assertEqual(world.stages[4].image_name, config.FACTORY_EXTERIOR_IMAGE)
+        self.assertEqual(world.stages[4].walkable.bounds, (0, 0, 2560, 284))
+        self.assertEqual((world.stages[4].enemies, world.stages[4].spawner.spawned_count), ([], 0))
+        self.assertEqual(len(world.stages[4].drop_items), 15)
         for depth, opposite in ((0, 284), (284, 0)):
             world = World()
-            world.select_stage(5)
+            world.select_stage(4)
             world.player.invincible = True
             world.player.ground_y = depth
             enemy = AxeEnemy(world.player.x + 150, -1, ground_y=opposite)
@@ -157,9 +224,9 @@ class FactoryExteriorTests(unittest.TestCase):
             self.assertEqual(enemy.floor, 0)
 
     def test_dock_and_interior_travel_preserve_common_depth_and_only_project_outside_values(self):
-        cases = ((4, 5, 45, 45), (4, 5, 258, 258),
-                 (5, 4, 0, 45), (5, 4, 284, 258),
-                 (5, 6, 0, 0), (5, 6, 284, 172),
+        cases = ((5, 4, 45, 45), (5, 4, 258, 258),
+                 (4, 3, 0, 0), (4, 3, 284, 279),
+                 (5, 6, 45, 45), (5, 6, 258, 172),
                  (6, 5, 56, 56), (6, 5, 148, 148))
         for source, destination, depth, projected in cases:
             with self.subTest(source=source, destination=destination, depth=depth):

@@ -557,7 +557,13 @@ STAIR_REGRAB_DELAY = 0.2
 ENEMY_DROP_DELAY_RANGE = (0.0, 0.35)
 FACTORY_OUTSIDE_IMAGE = "factory_loading_dock_no_stairs_1672x941.png"
 ARCHIVED_FACTORY_OUTSIDE_IMAGE = "before_sheets/hood_man_factory_loading_dock_1672x941.png"
-FACTORY_EXTERIOR_IMAGE = "factoryOutside_floor300.px.png"
+FACTORY_EXTERIOR_IMAGE = "factoryOutside_no_door.png"
+FACTORY_GATE_IMAGE = "factory_gate_8x2_compatible.png"
+# Opening in the background (left, top, width, height), in source pixels.
+FACTORY_GATE_RECT = (532, 222, 606, 434)
+FACTORY_GATE_FPS = 3.0
+FACTORY_GATE_DURATION = DOOR_FRAMES / FACTORY_GATE_FPS
+FACTORY_FADE_DURATION = 1.0
 ARCHIVED_FACTORY_EXTERIOR_IMAGE = "before_sheets/HOOD_MAN_Factory_Exterior_1672x941.png"
 AXE_ENEMY_STAGE_IMAGES = (FACTORY_OUTSIDE_IMAGE, FACTORY_EXTERIOR_IMAGE)
 FACTORY_INSIDE_IMAGES = ("factoryInside-1.png", "factoryStage-2.png")
@@ -567,7 +573,7 @@ ARCHIVED_LAB_STAGE_IMAGES = ("before_sheets/labStage-1_new_1672x941.png",
 BOSS_STAGE_IMAGES = ("bossStage_floor300_1672x941.png", "bossStage-2_floor300_1672x941.png")
 ARCHIVED_BOSS_STAGE_IMAGES = ("before_sheets/bossStage-1.png", "before_sheets/bossStage-2.png")
 STAGE_IMAGES = (STAGE_IMAGE, SECOND_STAGE_IMAGE, *CITY_STAGE_IMAGES,
-                FACTORY_OUTSIDE_IMAGE, FACTORY_EXTERIOR_IMAGE, *FACTORY_INSIDE_IMAGES,
+                FACTORY_EXTERIOR_IMAGE, FACTORY_OUTSIDE_IMAGE, *FACTORY_INSIDE_IMAGES,
                 *LAB_STAGE_IMAGES, *BOSS_STAGE_IMAGES)
 STAGE_LOADING_IMAGE = "HOOD_MAN_STAGE_LOADING_1280x720.png"
 STAGE_LOADING_DURATION = 2.0
@@ -604,12 +610,12 @@ STAGE_WALKABLE_BOUNDS = (
     # World y = 100 - 144 + 941 - source_y; building feet are at rows 650 / 618.
     (0.0, -44.0, WORLD_WIDTH, 247.0),
     (0.0, -44.0, WORLD_WIDTH, 279.0),
-    # Stair-free loading dock: full concrete floor, source rows 683..896.
-    # The raised loading platform/fascia and foreground drainage grate are not floor.
-    (0.0, 45.0, WORLD_WIDTH, 258.0),
     # Expanded factory exterior: source rows 657..941, below wall/prop bases.
     # Keep the original 100px ground anchor: world y = 941 - source_y.
     (0.0, 0.0, WORLD_WIDTH, 284.0),
+    # Stair-free loading dock: full concrete floor, source rows 683..896.
+    # The raised loading platform/fascia and foreground drainage grate are not floor.
+    (0.0, 45.0, WORLD_WIDTH, 258.0),
     # factoryInside-1: full tiled floor below equipment/chair feet, before the front fascia.
     # Keep the 144px ground anchor: world y = 897 - source_y; source rows 725..900.
     (0.0, -3.0, WORLD_WIDTH, 172.0),

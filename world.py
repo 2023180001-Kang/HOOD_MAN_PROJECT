@@ -97,6 +97,11 @@ class World:
         return self.pending_stage_index is not None
 
     @property
+    def opening_factory_exit(self):
+        return (self.stage.factory_gate is not None
+                and self.pending_stage_index == self.stage_index + 1)
+
+    @property
     def time_scale(self):
         return self.player.time_scale
 
@@ -208,8 +213,20 @@ class World:
         if self.stage_loading:
             # Loading uses real elapsed time, independent of the physics dt cap.
             self.controls.pressed.clear()
-            self.stage_loading_remaining = max(0.0, self.stage_loading_remaining - max(0.0, dt))
+            dt = max(0.0, dt)
+            if self.opening_factory_exit and self.stage_loading_remaining > 0:
+                self.stage.factory_gate.update(dt)
+                self.update_combat_effects(dt)
+                for enemy in self.enemies:
+                    enemy.update(dt, self.player, self.stage.area_for(enemy))
+                self.enemies[:] = [enemy for enemy in self.enemies if not enemy.faded_out]
+                self.stage_loading_remaining = max(0.0, self.stage_loading_remaining - dt)
+                # Present the fully black exterior before swapping to the dock on the next update.
+                return
+            self.stage_loading_remaining = max(0.0, self.stage_loading_remaining - dt)
             if self.stage_loading_remaining <= 1e-9:
+                if self.opening_factory_exit:
+                    self.stage.arrows_visible = True
                 self._enter_stage(self.pending_stage_index)
                 self.pending_stage_index = None
                 self.stage_loading_remaining = 0.0
@@ -251,15 +268,10 @@ class World:
         dt *= self.time_scale
         self.elapsed += dt
         self.stage.update_doors(dt)
-        self.update_afterimages(dt)
+        self.update_combat_effects(dt)
+        self.spawn_dive_afterimage(dt)
         for item in self.stage.drop_items:
             item.update(dt)
-        for effect in self.effects:
-            effect.update(dt)
-        self.effects = [effect for effect in self.effects if not effect.finished]
-        for number in self.damage_numbers:
-            number.update(dt)
-        self.damage_numbers = [number for number in self.damage_numbers if not number.finished]
         if self.training:
             self.stage.handle_target_input(self.controls, self.player)
         else:
@@ -338,10 +350,18 @@ class World:
             if not enemy.alive and not enemy.defeat_counted:
                 enemy.defeat_counted = True
                 self.stage.defeated_count += 1
-                if self.stage.defeated_count == config.STAGE_ENCOUNTER_SIZE:
+                if self.stage.factory_gate is None and self.stage.defeated_count == config.STAGE_ENCOUNTER_SIZE:
                     self.stage.arrows_visible = True
                     if not self.training:
                         self.cleared_stages.add(self.stage_index)
+        if (self.stage.factory_gate is not None and not self.stage.factory_gate.finished
+                and self.stage.encounter_started and self.stage.defeated_count > 0 and self.player.alive
+                and not any(enemy.alive for enemy in self.enemies)):
+            self.cleared_stages.add(self.stage_index)
+            self.stage.arrows_visible = False
+            self.pending_stage_index = self.stage_index + 1
+            self.stage_loading_remaining = config.FACTORY_GATE_DURATION + config.FACTORY_FADE_DURATION
+            self.controls.pressed.clear()
         self.update_camera(dt)
 
     def update_projectiles(self, dt):
@@ -392,10 +412,13 @@ class World:
         else:
             self.camera.shake(strength=config.PLAYER_HIT_SHAKE_STRENGTH)
 
-    def update_afterimages(self, dt):
-        for afterimage in self.afterimages:
-            afterimage.update(dt)
-        self.afterimages[:] = [image for image in self.afterimages if not image.finished]
+    def update_combat_effects(self, dt):
+        for group in (self.effects, self.damage_numbers, self.afterimages):
+            for effect in group:
+                effect.update(dt)
+            group[:] = [effect for effect in group if not effect.finished]
+
+    def spawn_dive_afterimage(self, dt):
         if self.player.weapon_leap_phase != "DIVE" or not self.player.alive:
             self._dive_afterimage_remaining = 0.0
             return

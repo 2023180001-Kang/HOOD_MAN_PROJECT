@@ -4,6 +4,7 @@ from math import ceil, floor, hypot
 
 import config
 from combat import STRONG_MOVES, moves_for_weapon
+from death_screen import DeathScreen
 from physics import clamp
 from training_room import OPPONENTS
 
@@ -28,6 +29,7 @@ def firearm_controls(player):
 
 class UI:
     def __init__(self):
+        self.death_screen = DeathScreen()
         self.details_visible = True
         self.floor_bounds_visible = False
         self._hp_player = None
@@ -38,6 +40,7 @@ class UI:
 
     def update(self, dt, player):
         """Keep the blue fill immediate while a red damage trail catches up."""
+        self.death_screen.update(dt, player.alive)
         hp = clamp(player.hp, 0, player.max_hp)
         if player is not self._hp_player or hp > self._hp:
             # A new player (F5) or healing must not retain an old damage trail.
@@ -429,9 +432,3 @@ class UI:
                              (205, 218, 231))
             if world.stage.traffic is not None:
                 assets.font.draw(22, 107, "도로 주의! 차량에 부딪히면 즉사합니다.", (255, 183, 100))
-            if world.player.state in ("CAR_HIT", "DYING", "DEAD"):
-                center = config.SCREEN_WIDTH / 2
-                pico2d.draw_rectangle(center - 240, 322, center + 240, 400,
-                                      12, 21, 33, filled=True)
-                assets.font.draw(center - 175, 365, "쓰러졌습니다. F5 키로 다시 시작하세요.",
-                                 (240, 211, 194))

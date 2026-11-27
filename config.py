@@ -89,6 +89,8 @@ STAGE_ENCOUNTER_DELAY = 1.0
 
 ARCHIVED_TITLE_IMAGE = "before_sheets/HOOD_MAN_TITLE_SCREEN_1280x720.png"
 MAIN_MENU_IMAGE = "HOOD_MAN_main_menu_background_1280x720.png"
+DEATH_TITLE_IMAGE = "HoodMan_YOU_DIED_sprite_8frames.png"
+DEATH_BUTTONS_IMAGE = "HoodMan_Retry_MainMenu_8x2.png"
 STAGE_PROGRESS_IMAGE = "stage_progress_background_1280x720.png"
 STAGE_LOCK_IMAGE = "stage_lock.png"
 STAGE_STATUS_IMAGES = {

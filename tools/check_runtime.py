@@ -811,14 +811,16 @@ def check_hud_toggle(game):
         capture(game, "hud_hidden_city")
     assert [call.args[2] for call in text.call_args_list] == ["250 / 500", "P 무적 OFF"]
     world.player.take_damage(500)
+    tick(game, 72)  # Let both death buttons appear on the presentation clock.
     with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
         capture(game, "hud_hidden_death")
     assert [call.args[2] for call in text.call_args_list] == ["0 / 500", "P 무적 OFF"]
     u()
     u(False)
-    with patch.object(game.assets.font, "draw", wraps=game.assets.font.draw) as text:
+    buttons = game.assets.images[config.DEATH_BUTTONS_IMAGE]
+    with patch.object(buttons, "clip_draw", wraps=buttons.clip_draw) as draw:
         capture(game, "hud_death_details_restored")
-    assert any("쓰러졌습니다" in call.args[2] for call in text.call_args_list)
+    assert draw.call_count == 2
     u()
     u(False)
     textures = dict(game.assets.images)

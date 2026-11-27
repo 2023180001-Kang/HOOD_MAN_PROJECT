@@ -6,7 +6,6 @@ from time import perf_counter, sleep
 import pico2d
 from pico2d import pico2d as backend
 from sdl2 import (
-    SDL_BLENDMODE_BLEND, SDL_GetRenderDrawBlendMode, SDL_SetRenderDrawBlendMode,
     SDL_BUTTON_LEFT, SDL_Event, SDL_PollEvent,
     SDL_WINDOWEVENT, SDL_WINDOWEVENT_FOCUS_LOST, SDL_WINDOWEVENT_LEAVE,
 )
@@ -14,6 +13,7 @@ from sdl2 import (
 import config
 from physics import clamp
 from assets import Assets
+from death_screen import draw_black_overlay
 from drop_items import DropItem
 from effects import SpriteAfterimage
 from main_menu import MainMenu
@@ -75,6 +75,7 @@ class Game:
         # directly to prevent stuck keys after Alt+Tab or clicking another window.
         event = SDL_Event()
         start_requested = False
+        retry_requested = False
         while SDL_PollEvent(ctypes.byref(event)):
             if event.type == pico2d.SDL_QUIT:
                 self.running = False
@@ -84,11 +85,16 @@ class Game:
                 self.world.controls.pressed.clear()
                 self.menu.cancel_drag()
                 self.menu.clear_hover()
+                if not menu_screen and not self.world.player.alive:
+                    self.ui.death_screen.pointer = None
                 self._escape_held = False
                 start_requested = False
+                retry_requested = False
             elif event.type == SDL_WINDOWEVENT and event.window.event == SDL_WINDOWEVENT_LEAVE:
                 self.menu.cancel_drag()
                 self.menu.clear_hover()
+                if not menu_screen and not self.world.player.alive:
+                    self.ui.death_screen.pointer = None
             elif (event.type in (pico2d.SDL_KEYDOWN, pico2d.SDL_KEYUP)
                   and event.key.keysym.sym == pico2d.SDLK_ESCAPE):
                 if event.type == pico2d.SDL_KEYUP:
@@ -118,6 +124,18 @@ class Game:
                     self.menu.release_pointer(
                         event.button.x, config.SCREEN_HEIGHT - 1 - event.button.y,
                     )
+            elif not self.world.player.alive and event.type in (pico2d.SDL_MOUSEMOTION, pico2d.SDL_MOUSEBUTTONDOWN):
+                pointer = event.motion if event.type == pico2d.SDL_MOUSEMOTION else event.button
+                screen = self.ui.death_screen
+                screen.pointer = (pointer.x, config.SCREEN_HEIGHT - 1 - pointer.y)
+                if (event.type == pico2d.SDL_MOUSEBUTTONDOWN and event.button.button == SDL_BUTTON_LEFT
+                        and not self._menu_requested and not retry_requested):
+                    button = screen.button_at(*screen.pointer)
+                    if button is not None:
+                        if button.action == "retry":
+                            retry_requested = True
+                        else:
+                            self.request_main_menu()
             elif self.world.training and event.type in (pico2d.SDL_MOUSEMOTION, pico2d.SDL_MOUSEBUTTONDOWN):
                 pointer = event.motion if event.type == pico2d.SDL_MOUSEMOTION else event.button
                 back = self.menu.bag_back_button
@@ -148,6 +166,9 @@ class Game:
                         self.world.controls.release(key)
         # Drain the entire menu batch so click/keyboard input cannot leak into play.
         # A quit in the same batch must win over a game-start click.
+        if retry_requested and self.running and not self._menu_requested:
+            self.world.retry_current_map()
+            self.ui.update(0, self.world.player)
         return start_requested and self.running
 
     def draw_main_menu(self, present=True):
@@ -222,14 +243,9 @@ class Game:
             self.menu.draw_button(self.assets, self.menu.bag_back_button)
         if entering and self.world.stage_loading_remaining < config.FACTORY_FADE_DURATION:
             alpha = round(255 * (1 - self.world.stage_loading_remaining / config.FACTORY_FADE_DURATION))
-            previous_mode = ctypes.c_int()
-            SDL_GetRenderDrawBlendMode(backend.renderer, ctypes.byref(previous_mode))
-            SDL_SetRenderDrawBlendMode(backend.renderer, SDL_BLENDMODE_BLEND)
-            try:
-                pico2d.draw_rectangle(0, 0, config.SCREEN_WIDTH - 1, config.SCREEN_HEIGHT - 1,
-                                      0, 0, 0, alpha, filled=True)
-            finally:
-                SDL_SetRenderDrawBlendMode(backend.renderer, previous_mode.value)
+            draw_black_overlay(alpha)
+        if not self.world.player.alive:
+            self.ui.death_screen.draw(self.assets)
         if present:
             pico2d.update_canvas()
 

@@ -43,30 +43,45 @@ class World:
                 for actor in tuple(stair.occupants):
                     stair.release(actor)
                 stair.queue.clear()
+        if self.training:
+            self.stages = [TrainingRoom(enemy_starting_hp=self.enemy_starting_hp)]
+        else:
+            attack_sequence = count()
+            self.stages = [self._new_stage(index, attack_sequence) for index in range(len(config.STAGE_IMAGES))]
+        self._map_clears_pending_heal = set()
+        self.elapsed = 0.0
+        self._start_attempt(stage_index)
+
+    def _new_stage(self, index, attack_sequence):
+        return Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,
+                     traffic_rng=self.traffic_rng, item_rng=self.item_rng,
+                     enemy_starting_hp=self.enemy_starting_hp)
+
+    def retry_current_map(self):
+        if self.training:
+            self.reset()
+            return
+        self.stage.release_actor(self.player)
+        self.stages[self.stage_index] = self._new_stage(self.stage_index, self.spawner.attack_sequence)
+        self._map_clears_pending_heal.discard(self.stage_index)
+        self._start_attempt(self.stage_index)
+
+    def _start_attempt(self, stage_index):
+        self.stage_index = stage_index
         self.controls.reset_for_restart()
         if self.training:
-            room = TrainingRoom(enemy_starting_hp=self.enemy_starting_hp)
-            self.stages = [room]
-            self.player = TrainingPlayer(room)
+            self.player = TrainingPlayer(self.stage)
             self.player.x = self.player.previous_x = config.SCREEN_WIDTH / 2
         else:
             self.player = Player()
             self.player.hp = self.starting_hp
             self.player.max_hp = self.starting_max_hp
             self.player.equip_weapon(self.starting_weapon)
-            attack_sequence = count()
-            self.stages = [Stage(index, rng=self.spawn_rng, attack_sequence=attack_sequence,
-                                 traffic_rng=self.traffic_rng, item_rng=self.item_rng,
-                                 enemy_starting_hp=self.enemy_starting_hp)
-                           for index in range(len(config.STAGE_IMAGES))]
-        self.stage_index = stage_index
-        self._map_clears_pending_heal = set()
         self.stage.constrain_actor(self.player)
         self.camera = Camera(self.player.x, self.stage.width)
         self.pending_stage_index = None
         self.stage_loading_remaining = 0.0
         self.death_handled = False
-        self.elapsed = 0.0
         self.accumulator = 0.0
         self._dive_afterimage_remaining = 0.0
         self._encounter_delay_remaining = 0.0

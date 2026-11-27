@@ -1,6 +1,6 @@
 import unittest
-from math import cos, radians, sin
-from unittest.mock import Mock, call, patch
+from math import hypot
+from unittest.mock import Mock
 
 import config
 from axe_enemy import AxeEnemy
@@ -167,13 +167,9 @@ class PlayerSwordTests(unittest.TestCase):
         self.assertEqual((player.state, player.sprite_row, player.vx, player.ground_vy), ("SWORD_PARRY", 6, 0, 0))
         self.assertIn(player.animation.frame, range(1, 6))
 
-    @patch("projectiles.uniform")
-    def test_parried_volley_spreads_immediately_while_enlarging_then_falls(self, roll_angle):
-        angles = [radians(degrees) for degrees in (-72, -20, 8, 43, 76)]
-        for kind in (ResearcherBullet, RifleBullet):
+    def test_parried_horizontal_volley_reverses_in_its_lane_and_keeps_the_visual_flash(self):
+        for kind in (ResearcherBullet, RifleBullet, SniperBullet):
             for facing in (-1, 1):
-                roll_angle.reset_mock()
-                roll_angle.side_effect = angles
                 world = equipped_world("sword")
                 player = world.player
                 player.invincible = False
@@ -181,15 +177,14 @@ class PlayerSwordTests(unittest.TestCase):
                 world.step(config.FIXED_DT)
                 contact_x = (player.body.left - kind.half_width if facing == 1
                              else player.body.right + kind.half_width)
-                shots = [kind(contact_x, player.ground_y, 80, facing) for _ in angles]
+                shots = [kind(contact_x, player.ground_y, 80, facing) for _ in range(3)]
                 world.projectiles.extend(shots)
                 dt = config.FIXED_DT
                 world.step(dt)
-                for shot, angle in zip(shots, angles):
+                for shot in shots:
                     self.assertEqual(shot.facing, -facing)
-                    self.assertAlmostEqual(shot.x, contact_x - facing * kind.ricochet_speed * cos(angle) * dt)
-                    self.assertAlmostEqual(shot.height, 80 + kind.ricochet_speed * sin(angle) * dt
-                                           - kind.gravity * dt**2 / 2)
+                    self.assertAlmostEqual(shot.x, contact_x - facing * kind.ricochet_speed * dt)
+                    self.assertEqual((shot.height, shot.ground_y), (80, player.ground_y))
                     self.assertGreater(shot.display_scale, kind.scale)
                 self.assertEqual(player.hp, player.max_hp)
                 first_scale = shots[0].display_scale
@@ -207,17 +202,14 @@ class PlayerSwordTests(unittest.TestCase):
                 world.step(dt)
                 self.assertFalse(next_shot.deflected)
                 self.assertEqual(player.hp, player.max_hp - next_shot.damage)
-                advance(world, 1.5)
+                advance(world, 4)
                 for shot in shots:
-                    self.assertLess(shot.vy, 0)
-                    self.assertEqual(shot.height, shot.half_height)
+                    self.assertTrue(shot.finished)
+                    self.assertEqual((shot.height, shot.ground_y), (80, player.ground_y))
                 self.assertEqual(shots[-1].display_scale, kind.scale)
                 self.assertFalse(world.projectiles)
-                self.assertEqual(roll_angle.call_args_list,
-                                 [call(-kind.ricochet_max_angle, kind.ricochet_max_angle)] * len(shots))
 
-    @patch("projectiles.uniform", return_value=0.0)
-    def test_returning_volley_hits_first_enemy_in_lane_once_with_each_rounds_damage(self, _angle):
+    def test_returning_volley_hits_first_enemy_in_lane_once_with_each_rounds_damage(self):
         for side in (-1, 1):
             for steps in (1, 60):
                 with self.subTest(side=side, steps=steps):
@@ -261,26 +253,49 @@ class PlayerSwordTests(unittest.TestCase):
         self.assertEqual([number.damage for number in world.damage_numbers], [30])
         self.assertFalse(world.projectiles)
 
-    @patch("projectiles.uniform", return_value=radians(64))
-    def test_airborne_parry_falls_to_the_same_landing_point_across_update_sizes(self, _roll_angle):
+    def test_falling_bullet_reverses_its_contact_velocity_across_update_sizes(self):
         world = equipped_world("sword")
         player = world.player
         world.controls.press("combat_s")
         world.step(config.FIXED_DT)
-        player.jump_height = player.previous_jump_height = 240
-        for kind in (ResearcherBullet, RifleBullet):
-            shot = kind(player.x - 100, player.ground_y, 320, 1)
-            stepped = kind(shot.x, shot.ground_y, shot.height, shot.facing)
-            shot.update(0.3, player)
+        player.jump_height = player.previous_jump_height = 120
+        for steps in (1, 24):
+            contact_time = 0.12
+            edge = player.body.left - ResearcherBullet.half_width
+            shot = ResearcherBullet(edge - ResearcherBullet.speed * contact_time, player.ground_y, 220, 1)
+            shot.elapsed = shot.straight_duration + 0.16
+            incoming_vy = shot.vy - shot.gravity * contact_time
+            contact_height = shot.height + shot.vy * contact_time - shot.gravity * contact_time**2 / 2
+            scale = shot.ricochet_speed / hypot(shot.speed, incoming_vy)
+            for _ in range(steps):
+                shot.update(0.2 / steps, player)
             self.assertTrue(shot.deflected)
-            self.assertFalse(shot.finished)
-            self.assertGreater(shot.height, shot.half_height)
-            shot.update(2, player)
-            for _ in range(240):
-                stepped.update(config.FIXED_DT, player)
-            self.assertTrue(shot.finished and stepped.finished)
-            self.assertEqual((shot.height, stepped.height), (shot.half_height, shot.half_height))
-            self.assertAlmostEqual(shot.x, stepped.x)
+            self.assertAlmostEqual(shot.vy, -incoming_vy * scale)
+            self.assertAlmostEqual(shot.x, edge - ResearcherBullet.speed * scale * (0.2 - contact_time))
+            self.assertAlmostEqual(shot.height, contact_height + shot.vy * (0.2 - contact_time))
+
+    def test_angled_sniper_round_retraces_depth_and_height_to_its_shooter(self):
+        for side in (-1, 1):
+            for steps in (1, 240):
+                world = equipped_world("sword")
+                player = world.player
+                player.invincible = False
+                world.controls.press("combat_s")
+                world.step(config.FIXED_DT)
+                shooter = Enemy(player.x + side * 600, ground_y=player.ground_y + side * 80)
+                world.enemies = [shooter]
+                shot = SniperBullet(shooter.x, shooter.ground_y, 100 + side * 40, -side, shooter=shooter)
+                shot.aim_at(player.x, player.ground_y, 95)
+                scale = shot.ricochet_speed / shot.speed
+                expected = tuple(-v * scale for v in (shot.facing * shot.horizontal_speed, shot.depth_speed, shot.vy))
+                world.projectiles.append(shot)
+                for _ in range(steps):
+                    world.update_projectiles(2 / steps)
+                self.assertTrue(shot.deflected)
+                for actual, velocity in zip((shot.facing * shot.horizontal_speed, shot.depth_speed, shot.vy), expected):
+                    self.assertAlmostEqual(actual, velocity)
+                self.assertIs(shot.impact_target, shooter)
+                self.assertEqual((shooter.hp, player.hp), (shooter.max_hp - 90, player.max_hp))
 
     def test_parried_axe_flies_level_then_drops_at_its_range_or_the_map_edge(self):
         for direction in (-1, 1):

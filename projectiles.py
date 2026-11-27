@@ -1,9 +1,8 @@
 """Ranged rounds with continuous collision and per-weapon flight/render profiles."""
 
 from dataclasses import dataclass, field
-from math import cos, hypot, radians, sin, sqrt
+from math import hypot, sqrt
 from operator import itemgetter
-from random import uniform
 
 import config
 from collision import same_floor
@@ -21,7 +20,7 @@ class ResearcherBullet:
     shooter: object = field(default=None, kw_only=True, repr=False, compare=False)
     impact_target: object = field(default=None, init=False, repr=False)
     impact_damage: int = field(default=0, init=False)
-    ricochet_angle: float | None = field(default=None, init=False)
+    deflected: bool = field(default=False, init=False)
 
     image_name = config.RESEARCHER_BULLET_IMAGE
     damage = config.RESEARCHER_DAMAGE
@@ -34,7 +33,9 @@ class ResearcherBullet:
     scale = config.RESEARCHER_BULLET_SCALE
     anchor_y = config.RESEARCHER_BULLET_ANCHOR_Y
     range_limited = False
+    flight_x = None  # Straight rounds use their full speed along the facing direction.
     depth_speed = 0.0
+    flight_height = 0.0
     hit_depth = config.ATTACK_DEPTH_TOLERANCE
     world_width = config.WORLD_WIDTH
     hit_targets = None  # Piercing projectiles keep a set for the lifetime of the throw.
@@ -44,11 +45,6 @@ class ResearcherBullet:
     ricochet_shrink_time = 0.12
     ricochet_magnification = 2.5
     ricochet_speed = 480.0
-    ricochet_max_angle = radians(80)
-
-    @property
-    def deflected(self):
-        return self.ricochet_angle is not None
 
     @property
     def display_scale(self):
@@ -79,20 +75,16 @@ class ResearcherBullet:
 
     @property
     def falling(self):
-        return not self.range_limited and (self.deflected or self.elapsed + 1e-12 >= self.straight_duration)
+        return not self.range_limited and self.elapsed + 1e-12 >= self.straight_duration
 
     @property
     def horizontal_speed(self):
-        if self.ricochet_angle is not None:
-            return self.ricochet_speed * cos(self.ricochet_angle)
-        return self.speed
+        return self.speed if self.flight_x is None else self.flight_x
 
     @property
     def vy(self):
         if not self.falling:
-            return 0.0
-        if self.ricochet_angle is not None:
-            return self.ricochet_speed * sin(self.ricochet_angle) - self.gravity * self.elapsed
+            return self.flight_height
         return -self.gravity * max(0.0, self.elapsed - self.straight_duration)
 
     @property
@@ -107,8 +99,15 @@ class ResearcherBullet:
                 or (self.range_limited and self.elapsed + 1e-12 >= self.straight_duration))
 
     def _start_return_flight(self):
-        self.range_limited = False
-        self.ricochet_angle = uniform(-self.ricochet_max_angle, self.ricochet_max_angle)
+        # Facing supplies the horizontal sign. Reverse depth and height at contact too.
+        vx, depth, vy = self.horizontal_speed, self.depth_speed, self.vy
+        scale = self.ricochet_speed / hypot(vx, depth, vy)
+        self.flight_x = vx * scale
+        self.depth_speed = -depth * scale
+        self.flight_height = -vy * scale
+        self.speed = self.ricochet_speed
+        self.range_limited = True
+        self.deflected = True
 
     def update(self, dt, targets, *, return_targets=(), on_impact=None,
                stop_at=float("inf"), on_travel=None):
@@ -169,13 +168,13 @@ class ResearcherBullet:
             self.x += speed_x * travel
             self.ground_y += self.depth_speed * travel
             self.height += vy * travel - gravity * travel * travel / 2
+            self.elapsed += travel
             if parried:
                 self.facing *= -1
-                self.elapsed = 0.0
                 self._start_return_flight()
+                self.elapsed = 0.0
                 offset += travel
                 continue
-            self.elapsed += travel
             if self.spent:
                 return dealt_damage
             if terminal:
@@ -371,7 +370,7 @@ class EnemyAxeProjectile(ThrownAxe):
     release_offset = (108, 123)  # Extended hand in row seven, cell five.
 
     def _start_return_flight(self):
-        self.ricochet_angle = 0.0
+        self.deflected = True
         self.speed = self.ricochet_speed
         self.straight_range = config.AXE_RETURN_RANGE
         self.hit_depth = config.AXE_RETURN_HIT_DEPTH
@@ -406,26 +405,13 @@ class SniperBullet(RifleBullet):
     scale = 0.02
     # Single supplied sprite; exclude transparent padding around the round.
     clip = (331, 218, 1510, 272)
-    flight_x, flight_depth, flight_height = speed, 0.0, 0.0
 
     def aim_at(self, x, ground_y, height):
         dx, depth, rise = x - self.x, ground_y - self.ground_y, height - self.height
         length = hypot(dx, depth, rise)
         if length:
             self.flight_x = self.speed * abs(dx) / length
-            self.flight_depth = self.speed * depth / length
+            self.depth_speed = self.speed * depth / length
             self.flight_height = self.speed * rise / length
             if dx:
                 self.facing = 1 if dx > 0 else -1
-
-    @property
-    def horizontal_speed(self):
-        return super().horizontal_speed if self.deflected else self.flight_x
-
-    @property
-    def depth_speed(self):
-        return 0.0 if self.deflected else self.flight_depth
-
-    @property
-    def vy(self):
-        return super().vy if self.deflected else self.flight_height

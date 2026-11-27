@@ -416,7 +416,7 @@ class World:
                     self.advance_projectiles([axe for axe in self.projectiles
                                               if isinstance(axe, EnemyAxeProjectile)], 0)
                 else:
-                    bullet.update(0, self.player, on_impact=self.projectile_impact)
+                    bullet.update(0, self.player, return_targets=self.enemies, on_impact=self.projectile_impact)
                 if not self.player.alive:
                     break
         for bullet in self.projectiles:

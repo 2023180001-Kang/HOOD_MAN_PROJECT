@@ -6,7 +6,8 @@ import config
 from axe_enemy import AxeEnemy
 from enemy import Enemy
 from main_menu import MainMenu
-from projectiles import EnemyAxeProjectile, ResearcherBullet, RifleBullet
+from projectiles import EnemyAxeProjectile, ResearcherBullet, RifleBullet, SniperBullet
+from researcher import Researcher
 from tests.helpers import advance, tap
 from tests.test_bag_drag import slot_center
 from tests.test_combat import attacking_enemy
@@ -214,6 +215,51 @@ class PlayerSwordTests(unittest.TestCase):
                 self.assertFalse(world.projectiles)
                 self.assertEqual(roll_angle.call_args_list,
                                  [call(-kind.ricochet_max_angle, kind.ricochet_max_angle)] * len(shots))
+
+    @patch("projectiles.uniform", return_value=0.0)
+    def test_returning_volley_hits_first_enemy_in_lane_once_with_each_rounds_damage(self, _angle):
+        for side in (-1, 1):
+            for steps in (1, 60):
+                with self.subTest(side=side, steps=steps):
+                    world = equipped_world("sword")
+                    player = world.player
+                    player.invincible = False
+                    world.controls.press("combat_s")
+                    world.step(config.FIXED_DT)
+                    x, y = player.x, player.ground_y
+                    shooter = Enemy(x + side * 100, ground_y=y)
+                    far = Enemy(x + side * 170, ground_y=y)
+                    off_lane = Enemy(x + side * 70, ground_y=y + config.ATTACK_DEPTH_TOLERANCE + 1)
+                    world.enemies = [far, off_lane, shooter]
+                    rounds = [kind(x + side * 190, y, 80, -side, shooter=shooter)
+                              for kind in (ResearcherBullet, RifleBullet, SniperBullet)]
+                    world.projectiles.extend(rounds)
+                    for _ in range(steps):
+                        world.update_projectiles(0.6 / steps)
+                    self.assertTrue(all(shot.deflected and shot.impact_target is shooter for shot in rounds))
+                    self.assertEqual([shot.impact_damage for shot in rounds], [30, 5, 90])
+                    self.assertCountEqual([number.damage for number in world.damage_numbers], [30, 5, 90])
+                    self.assertEqual(shooter.hp, shooter.max_hp - 125)
+                    self.assertEqual((far.hp, off_lane.hp, player.hp), (far.max_hp, off_lane.max_hp, player.max_hp))
+                    self.assertFalse(world.projectiles)
+
+    def test_point_blank_parry_hits_an_overlapping_enemy_on_the_emission_tick(self):
+        world = equipped_world("sword")
+        player = world.player
+        player.invincible = False
+        world.controls.press("combat_s")
+        world.step(config.FIXED_DT)
+        shooter = Researcher(player.x - Researcher.muzzle_x - ResearcherBullet.half_width,
+                             1, ground_y=player.ground_y)
+        victim = Enemy(player.x, ground_y=player.ground_y)
+        world.enemies = [shooter, victim]
+        shooter.start_attack()
+        shooter.update_attack(shooter.aim_duration)
+        world.update_projectiles(0)
+        self.assertEqual(shooter.ammo, shooter.magazine_size - 1)
+        self.assertEqual((victim.hp, player.hp), (victim.max_hp - 30, player.max_hp))
+        self.assertEqual([number.damage for number in world.damage_numbers], [30])
+        self.assertFalse(world.projectiles)
 
     @patch("projectiles.uniform", return_value=radians(64))
     def test_airborne_parry_falls_to_the_same_landing_point_across_update_sizes(self, _roll_angle):

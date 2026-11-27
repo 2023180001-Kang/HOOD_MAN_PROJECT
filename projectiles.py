@@ -39,6 +39,7 @@ class ResearcherBullet:
     world_width = config.WORLD_WIDTH
     hit_targets = None  # Piercing projectiles keep a set for the lifetime of the throw.
     deflectable = True
+    staggers_player = False
     ricochet_peak_time = 0.04
     ricochet_shrink_time = 0.12
     ricochet_magnification = 2.5
@@ -196,11 +197,13 @@ class ResearcherBullet:
         self.impact_damage = target.last_hit_damage if applied else 0
         return applied
 
-    def _deal_damage(self, player):
-        return player.take_damage(self.damage, attacker=self.shooter, stagger=False)
+    def _deal_damage(self, target):
+        if self.deflected:
+            return target.take_damage(self.damage)
+        return target.take_damage(self.damage, attacker=self.shooter, stagger=self.staggers_player)
 
     def _flight_targets(self, player, return_targets):
-        return () if self.deflected else (player,)
+        return return_targets if self.deflected else (player,)
 
     def _contacts(self, targets, duration, offset, tick_duration, gravity):
         contacts = []
@@ -363,6 +366,7 @@ class AxeProjectile(ThrownAxe, PlayerProjectile):
 
 class EnemyAxeProjectile(ThrownAxe):
     deflectable = True
+    staggers_player = True
     damage = config.AXE_ENEMY_THROW_DAMAGE
     release_offset = (108, 123)  # Extended hand in row seven, cell five.
 
@@ -372,14 +376,6 @@ class EnemyAxeProjectile(ThrownAxe):
         self.straight_range = config.AXE_RETURN_RANGE
         self.hit_depth = config.AXE_RETURN_HIT_DEPTH
         self.range_limited = True
-
-    def _flight_targets(self, player, return_targets):
-        return return_targets if self.deflected else (player,)
-
-    def _deal_damage(self, target):
-        if self.deflected:
-            return target.take_damage(self.damage)
-        return target.take_damage(self.damage, attacker=self.shooter)
 
 
 class RifleBullet(ResearcherBullet):

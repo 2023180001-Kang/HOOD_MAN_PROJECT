@@ -70,7 +70,7 @@ class ResearcherTests(unittest.TestCase):
             self.assertTrue(all(type(enemy) is expected and enemy.hp == enemy.max_hp == hp
                                 for enemy in world.enemies))
             if expected is Researcher:
-                self.assertTrue(all(enemy.ammo == 7 and enemy.attack_damage == 30
+                self.assertTrue(all(enemy.ammo == 7 and enemy.attack_damage == 40
                                     for enemy in world.enemies))
             self.assertTrue(all(stage.walkable.contains(enemy.x, enemy.ground_y,
                                                         enemy.boundary_padding)
@@ -102,7 +102,7 @@ class ResearcherTests(unittest.TestCase):
             enemy.animation.elapsed = 3.05 / enemy.attack_fps
             bullet = enemy.take_projectile()
             self.assertIsInstance(bullet, ResearcherBullet)
-            self.assertEqual((enemy.ammo, bullet.damage, bullet.facing), (6, 30, 1))
+            self.assertEqual((enemy.ammo, bullet.damage, bullet.facing), (6, 40, 1))
             self.assertIsNone(enemy.take_projectile())
             enemy.animation.elapsed = 6.05 / enemy.attack_fps
             self.assertIsNone(enemy.take_projectile())
@@ -159,21 +159,21 @@ class ResearcherTests(unittest.TestCase):
         enemy.update(1, player)
         self.assertEqual(enemy.ammo, 7)
 
-    def test_a_bullet_hit_deals_thirty_and_spawns_an_impact_while_player_stays_idle(self):
+    def test_a_bullet_hit_deals_forty_and_spawns_an_impact_while_player_stays_idle(self):
         for side in (-1, 1):
             for index in (6, 7):
                 for weapon in (None, *config.WEAPON_POSE_IMAGES):
                     world, enemy = encounter(side, index=index)
                     world.player.equip_weapon(weapon)
                     until(world, lambda: world.player.hp < 500)
-                    self.assertEqual((world.player.hp, world.player.state), (470, "IDLE"))
+                    self.assertEqual((world.player.hp, world.player.state), (460, "IDLE"))
                     self.assertEqual(enemy.ammo, 6)
                     self.assertEqual(len(world.effects), 1)
                     self.assertEqual(world.effects[0].image_name, config.CLUB_HIT_IMAGE)
                     self.assertFalse(world.damage_numbers)
                     self.assertGreater(world.camera.shake_remaining, 0)
                     advance(world, 0.1)
-                    self.assertEqual(world.player.hp, 470)
+                    self.assertEqual(world.player.hp, 460)
 
     def test_researchers_take_player_damage_with_their_own_hit_art_numbers_and_effects(self):
         for weapon in (None, *config.WEAPON_POSE_IMAGES):
@@ -214,10 +214,10 @@ class ResearcherTests(unittest.TestCase):
             player = Player()
             bullet = bullet_at(player, x=player.x - facing * 300, facing=facing)
             self.assertTrue(bullet.update(0.7, player))
-            self.assertEqual(player.hp, 470)
+            self.assertEqual(player.hp, 460)
             self.assertTrue(bullet.finished)
             self.assertFalse(bullet.update(0.01, player))
-            self.assertEqual(player.hp, 470)
+            self.assertEqual(player.hp, 460)
 
     def test_bullets_check_depth_height_floor_and_do_not_damage_a_dead_player(self):
         for situation in ("depth_edge", "deep", "high_jump", "other_floor", "dead", "stair"):
@@ -232,7 +232,7 @@ class ResearcherTests(unittest.TestCase):
                                32.01 if situation == "deep" else 0,
                                floor=1 if situation == "other_floor" else 0)
             self.assertEqual(bullet.update(0.2, player), situation == "depth_edge")
-            self.assertEqual(player.hp, 470 if situation == "depth_edge" else
+            self.assertEqual(player.hp, 460 if situation == "depth_edge" else
                              0 if situation == "dead" else 500)
 
     def test_swept_axes_must_intersect_at_one_common_instant(self):
@@ -245,7 +245,7 @@ class ResearcherTests(unittest.TestCase):
         player.ground_y = 150
         bullet = ResearcherBullet(player.x - 70, 100, 83.25, 1)
         self.assertTrue(bullet.update(0.5, player))
-        self.assertEqual(player.hp, 470)
+        self.assertEqual(player.hp, 460)
 
     def test_new_bullet_does_not_collide_with_the_players_pre_birth_position(self):
         player = Player()
@@ -272,12 +272,12 @@ class ResearcherTests(unittest.TestCase):
         for _ in range(2):
             world.projectiles.append(bullet_at(world.player, x=world.player.x - 40))
         world.step(config.FIXED_DT)
-        self.assertEqual((world.player.hp, world.player.state), (420, "HIT"))
+        self.assertEqual((world.player.hp, world.player.state), (400, "HIT"))
         advance(world, 0.1)
         elapsed = world.player.animation.elapsed
         world.projectiles.append(bullet_at(world.player, x=world.player.x - 35))
         world.step(config.FIXED_DT)
-        self.assertEqual((world.player.hp, world.player.state), (390, "HIT"))
+        self.assertEqual((world.player.hp, world.player.state), (360, "HIT"))
         self.assertGreater(world.player.animation.elapsed, elapsed)
         self.assertEqual(len(world.effects), 3)
 
@@ -297,7 +297,7 @@ class ResearcherTests(unittest.TestCase):
         until(world, lambda: bool(world.projectiles))
         enemy.take_damage(200)
         until(world, lambda: world.player.hp < 500)
-        self.assertEqual((enemy.hp, world.player.hp), (0, 470))
+        self.assertEqual((enemy.hp, world.player.hp), (0, 460))
         self.assertEqual((enemy.sprite_image, enemy.animation.row), (config.RESEARCHER_IMAGE, 7))
         self.assertFalse(any(item.kind == "metal_club" for item in world.stage.drop_items))
 
@@ -376,7 +376,7 @@ class ResearcherTests(unittest.TestCase):
         ui.details_visible = True
         with patch("pico2d.draw_rectangle"):
             ui.draw(assets, world)
-        self.assertTrue(any("권총" in call.args[2] and "30" in call.args[2] and "7" in call.args[2]
+        self.assertTrue(any("권총" in call.args[2] and "40" in call.args[2] and "7" in call.args[2]
                             for call in assets.font.draw.call_args_list))
 
     def test_slow_motion_and_loading_pause_or_scale_bullets_and_reload_together(self):

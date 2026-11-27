@@ -163,8 +163,8 @@ class TrainingRoomTests(unittest.TestCase):
     def test_number_then_plus_summons_the_matching_enemy_and_it_attacks_only_nearby(self):
         cases = (
             (config.ENEMY_IMAGE, 20, 200, 5), (config.ENEMY02_IMAGE, 30, 200, 6),
-            (config.AXE_ENEMY_IMAGE, 40, 400, 5), (config.RESEARCHER_IMAGE, 30, 200, 6),
-            (config.SHIELD_SOLDIER_IMAGE, 40, 400, 6), (config.AR_SOLDIER_IMAGE, 5, 300, 5),
+            (config.AXE_ENEMY_IMAGE, 40, 400, 5), (config.RESEARCHER_IMAGE, 40, 200, 6),
+            (config.SHIELD_SOLDIER_IMAGE, 40, 400, 6), (config.AR_SOLDIER_IMAGE, 50, 300, 5),
             (config.SWORD_ENEMY_IMAGE, 30, 200, 6),
         )
         for number, (image, damage, hp, hit_row) in enumerate(cases, 1):
@@ -247,7 +247,7 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertEqual((player.hp, player.state), (1, "GUARD"))
         hits = [n.damage for n in self.world.damage_numbers if n.on_player]
         self.assertGreater(len(hits), 1)
-        self.assertTrue(all(damage == 2.5 for damage in hits))
+        self.assertTrue(all(damage == 25 for damage in hits))
         self.launch("game_start")
         self.assertTrue(self.world.player.take_damage(config.MAX_HP))
         self.assertEqual(self.world.player.state, "DYING")

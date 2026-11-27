@@ -288,8 +288,10 @@ def check_magazines_and_hits(game):
     for index in (6, 7):
         for side in (-1, 1):
             world, enemy = encounter(game, index=index, side=side)
+            world.stage.encounter_started = True  # Only the selected shooter fires in this check.
+            world.player.max_hp = world.player.hp = 600  # Survive two full magazines.
             shots, reloads, impacts = 0, 0, 0
-            previous_ammo, previous_hp = 7, 500
+            previous_ammo, previous_hp = 7, world.player.hp
             reload_frames = set()
             reload_captured = False
             warning_started = None
@@ -322,7 +324,7 @@ def check_magazines_and_hits(game):
                     reload_frames.clear()
                     capture(game, f"researcher_refilled_{index}_{side}_{reloads}")
                 if world.player.hp < previous_hp:
-                    assert previous_hp - world.player.hp == 30 and world.player.state == "IDLE"
+                    assert previous_hp - world.player.hp == 40 and world.player.state == "IDLE"
                     assert world.effects[-1].image_name == config.CLUB_HIT_IMAGE
                     assert world.camera.shake_remaining > 0
                     impacts += 1
@@ -336,11 +338,11 @@ def check_magazines_and_hits(game):
                 previous_ammo, previous_hp = enemy.ammo, world.player.hp
                 if reloads == 2:
                     break
-            assert (shots, reloads, impacts, enemy.ammo, world.player.hp) == (14, 2, 14, 7, 80)
+            assert (shots, reloads, impacts, enemy.ammo, world.player.hp) == (14, 2, 14, 7, 40)
             assert warning_count == 14
     print("PASS: both maps x both directions naturally fire exactly 7, play every row-5 reload "
           "frame with zero ammo, refill 7, and repeat; every shot has a half-second warning, "
-          "and 14 real hits deal 420 total with impact effects while the player stays idle.")
+          "and 14 real hits deal 560 total with impact effects while the player stays idle.")
 
 
 def check_dodges_and_invincibility(game):
@@ -473,7 +475,7 @@ def check_ballistic_hits_and_pause(game):
                     release(game, pico2d.SDLK_p)
                 wait(game, lambda: not world.projectiles)
                 assert bullet.falling and bullet.spent
-                assert player.hp == (500 if invincible else 470)
+                assert player.hp == (500 if invincible else 460)
                 assert len(world.effects) == (0 if invincible else 1)
                 if not invincible:
                     assert player.state == "IDLE" and world.effects[0].image_name == config.CLUB_HIT_IMAGE
@@ -508,7 +510,7 @@ def check_ballistic_hits_and_pause(game):
         tick(game)
         release(game, pico2d.SDLK_F5)
         assert world.stage_index == 0 and all(not stage.projectiles for stage in world.stages)
-    print("PASS: curved rounds in both interiors/directions deal 30 with one impact effect "
+    print("PASS: curved rounds in both interiors/directions deal 40 with one impact effect "
           "at the real height; SDL P consumes them harmlessly. Actual SDL R scales the fall, "
           "inactive/loading frames freeze height/velocity/time, loading hides it, and F5 clears it.")
 

@@ -103,7 +103,7 @@ class FactoryInsideFloorTests(unittest.TestCase):
         world.step(config.FIXED_DT)
         self.assertEqual((len(world.enemies), stage.spawner.spawned_count), (9, 9))
         self.assertTrue(all(type(enemy) is Researcher and enemy.hp == 200 and enemy.ammo == 7
-                            and enemy.attack_damage == 30
+                            and enemy.attack_damage == 40
                             and stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                             for enemy in world.enemies))
         self.assertTrue(any(enemy.ground_y < 56 for enemy in world.enemies))

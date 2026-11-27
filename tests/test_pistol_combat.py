@@ -549,7 +549,7 @@ class PistolBulletTests(unittest.TestCase):
             RifleBullet(1200, 100, 80, 1),
         ))
         world.update_projectiles(0.3)
-        self.assertEqual((enemy.hp, world.player.hp), (150, 465))
+        self.assertEqual((enemy.hp, world.player.hp), (150, 410))
         self.assertEqual(world.player.pistol_ammo, 7)
 
     def test_player_bullets_keep_researcher_flight_and_survive_player_death(self):

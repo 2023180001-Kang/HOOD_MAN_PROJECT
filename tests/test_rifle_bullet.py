@@ -22,8 +22,8 @@ def stationary_player(x=1280, *, height=0, depth=100):
 class RifleBulletTests(unittest.TestCase):
     def test_rifle_profile_does_not_change_the_researcher_profile(self):
         rifle, pistol = RifleBullet(100, 100, 81, 1), ResearcherBullet(100, 100, 81, 1)
-        self.assertEqual((rifle.damage, rifle.speed, rifle.half_width, rifle.half_height), (5, 1200, 7.5, 2.5))
-        self.assertEqual((pistol.damage, pistol.speed, pistol.half_width, pistol.half_height), (30, 900, 5, 2.5))
+        self.assertEqual((rifle.damage, rifle.speed, rifle.half_width, rifle.half_height), (50, 1200, 7.5, 2.5))
+        self.assertEqual((pistol.damage, pistol.speed, pistol.half_width, pistol.half_height), (40, 900, 5, 2.5))
         self.assertEqual((rifle.scale, pistol.scale), (0.0625, 0.125))
 
     def test_level_flight_expires_at_exactly_1200_pixels_even_with_a_large_update(self):
@@ -41,15 +41,15 @@ class RifleBulletTests(unittest.TestCase):
                     bullet.update(2, player)
                     self.assertEqual((bullet.x, bullet.height), snapshot)
 
-    def test_swept_round_hits_once_for_five_in_both_facings(self):
+    def test_swept_round_hits_once_for_fifty_in_both_facings(self):
         for facing in (-1, 1):
             player = stationary_player()
             bullet = RifleBullet(player.x - facing * 300, 100, 81, facing)
             self.assertTrue(bullet.update(0.5, player))
-            self.assertEqual((player.hp, player.state), (495, "IDLE"))
+            self.assertEqual((player.hp, player.state), (450, "IDLE"))
             self.assertTrue(bullet.spent)
             self.assertFalse(bullet.update(1, player))
-            self.assertEqual(player.hp, 495)
+            self.assertEqual(player.hp, 450)
 
     def test_p_invincibility_consumes_the_round_without_damage_and_multiple_rounds_are_independent(self):
         player = stationary_player()
@@ -62,7 +62,7 @@ class RifleBulletTests(unittest.TestCase):
         for _ in range(2):
             bullet = RifleBullet(player.x - 100, 100, 81, 1)
             self.assertTrue(bullet.update(0.2, player))
-        self.assertEqual(player.hp, 490)
+        self.assertEqual(player.hp, 400)
 
     def test_depth_height_floor_and_dead_player_reject_contact(self):
         for reason in ("depth", "jump", "floor", "dead"):
@@ -88,7 +88,7 @@ class RifleBulletTests(unittest.TestCase):
         player.previous_ground_y, player.ground_y = 40, 0
         bullet = RifleBullet(400, 0, 81, 1)
         self.assertTrue(bullet.update(0.5, player))
-        self.assertEqual(player.hp, 495)
+        self.assertEqual(player.hp, 450)
 
     def test_new_round_does_not_sweep_back_through_the_players_old_position(self):
         player = stationary_player(x=900)

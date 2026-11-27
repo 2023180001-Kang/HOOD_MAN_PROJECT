@@ -168,7 +168,7 @@ class PlayerSwordTests(unittest.TestCase):
         self.assertIn(player.animation.frame, range(1, 6))
 
     def test_parried_horizontal_volley_reverses_in_its_lane_and_keeps_the_visual_flash(self):
-        for kind in (ResearcherBullet, RifleBullet, SniperBullet):
+        for kind, return_speed in ((ResearcherBullet, 900), (RifleBullet, 1200), (SniperBullet, 1500)):
             for facing in (-1, 1):
                 world = equipped_world("sword")
                 player = world.player
@@ -183,7 +183,7 @@ class PlayerSwordTests(unittest.TestCase):
                 world.step(dt)
                 for shot in shots:
                     self.assertEqual(shot.facing, -facing)
-                    self.assertAlmostEqual(shot.x, contact_x - facing * kind.ricochet_speed * dt)
+                    self.assertAlmostEqual(shot.x, contact_x - facing * return_speed * dt)
                     self.assertEqual((shot.height, shot.ground_y), (80, player.ground_y))
                     self.assertGreater(shot.display_scale, kind.scale)
                 self.assertEqual(player.hp, player.max_hp)
@@ -229,9 +229,9 @@ class PlayerSwordTests(unittest.TestCase):
                     for _ in range(steps):
                         world.update_projectiles(0.6 / steps)
                     self.assertTrue(all(shot.deflected and shot.impact_target is shooter for shot in rounds))
-                    self.assertEqual([shot.impact_damage for shot in rounds], [30, 5, 90])
-                    self.assertCountEqual([number.damage for number in world.damage_numbers], [30, 5, 90])
-                    self.assertEqual(shooter.hp, shooter.max_hp - 125)
+                    self.assertEqual([shot.impact_damage for shot in rounds], [40, 50, 90])
+                    self.assertCountEqual([number.damage for number in world.damage_numbers], [40, 50, 90])
+                    self.assertEqual(shooter.hp, shooter.max_hp - 180)
                     self.assertEqual((far.hp, off_lane.hp, player.hp), (far.max_hp, off_lane.max_hp, player.max_hp))
                     self.assertFalse(world.projectiles)
 
@@ -249,8 +249,8 @@ class PlayerSwordTests(unittest.TestCase):
         shooter.update_attack(shooter.aim_duration)
         world.update_projectiles(0)
         self.assertEqual(shooter.ammo, shooter.magazine_size - 1)
-        self.assertEqual((victim.hp, player.hp), (victim.max_hp - 30, player.max_hp))
-        self.assertEqual([number.damage for number in world.damage_numbers], [30])
+        self.assertEqual((victim.hp, player.hp), (victim.max_hp - 40, player.max_hp))
+        self.assertEqual([number.damage for number in world.damage_numbers], [40])
         self.assertFalse(world.projectiles)
 
     def test_falling_bullet_reverses_its_contact_velocity_across_update_sizes(self):
@@ -266,7 +266,7 @@ class PlayerSwordTests(unittest.TestCase):
             shot.elapsed = shot.straight_duration + 0.16
             incoming_vy = shot.vy - shot.gravity * contact_time
             contact_height = shot.height + shot.vy * contact_time - shot.gravity * contact_time**2 / 2
-            scale = shot.ricochet_speed / hypot(shot.speed, incoming_vy)
+            scale = ResearcherBullet.speed / hypot(shot.speed, incoming_vy)
             for _ in range(steps):
                 shot.update(0.2 / steps, player)
             self.assertTrue(shot.deflected)
@@ -286,8 +286,8 @@ class PlayerSwordTests(unittest.TestCase):
                 world.enemies = [shooter]
                 shot = SniperBullet(shooter.x, shooter.ground_y, 100 + side * 40, -side, shooter=shooter)
                 shot.aim_at(player.x, player.ground_y, 95)
-                scale = shot.ricochet_speed / shot.speed
-                expected = tuple(-v * scale for v in (shot.facing * shot.horizontal_speed, shot.depth_speed, shot.vy))
+                # A sniper round returns at its original speed, including depth and height.
+                expected = tuple(-v for v in (shot.facing * shot.horizontal_speed, shot.depth_speed, shot.vy))
                 world.projectiles.append(shot)
                 for _ in range(steps):
                     world.update_projectiles(2 / steps)

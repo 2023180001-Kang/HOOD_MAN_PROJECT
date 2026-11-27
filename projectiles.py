@@ -44,7 +44,6 @@ class ResearcherBullet:
     ricochet_peak_time = 0.04
     ricochet_shrink_time = 0.12
     ricochet_magnification = 2.5
-    ricochet_speed = 480.0
 
     @property
     def display_scale(self):
@@ -101,11 +100,10 @@ class ResearcherBullet:
     def _start_return_flight(self):
         # Facing supplies the horizontal sign. Reverse depth and height at contact too.
         vx, depth, vy = self.horizontal_speed, self.depth_speed, self.vy
-        scale = self.ricochet_speed / hypot(vx, depth, vy)
+        scale = self.speed / hypot(vx, depth, vy)
         self.flight_x = vx * scale
         self.depth_speed = -depth * scale
         self.flight_height = -vy * scale
-        self.speed = self.ricochet_speed
         self.range_limited = True
         self.deflected = True
 
@@ -366,6 +364,7 @@ class AxeProjectile(ThrownAxe, PlayerProjectile):
 class EnemyAxeProjectile(ThrownAxe):
     deflectable = True
     staggers_player = True
+    ricochet_speed = 480.0
     damage = config.AXE_ENEMY_THROW_DAMAGE
     release_offset = (108, 123)  # Extended hand in row seven, cell five.
 

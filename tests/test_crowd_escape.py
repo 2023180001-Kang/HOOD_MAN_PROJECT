@@ -70,7 +70,7 @@ class CrowdEscapeTests(unittest.TestCase):
             shooter.take_damage(shooter.hp)  # The emitted round keeps its source.
         self.assertFalse(world.player.crowd_escape.ready)
         tick(world, 45)
-        self.assertEqual(world.player.hp, 425)
+        self.assertEqual(world.player.hp, 370)
         tap_keys(world, *RIGHT_FIRST)  # Four distinct keydown edges in a single event batch.
         self.assertTrue(world.player.crowd_escape.active)
 
@@ -82,7 +82,7 @@ class CrowdEscapeTests(unittest.TestCase):
             fire_at_player(world, rifleman)
         world.enemies.append(Enemy(world.player.x + 600))
         tick(world, 30)
-        self.assertEqual(world.player.hp, 440)
+        self.assertEqual(world.player.hp, 260)
         tap_keys(world, *LEFT_FIRST)
         self.assertFalse(world.player.crowd_escape.active)
 
@@ -101,7 +101,7 @@ class CrowdEscapeTests(unittest.TestCase):
         for shooter in shooters:
             fire_at_player(world, shooter)
         tick(world, 45)
-        self.assertEqual(player.hp, 410)
+        self.assertEqual(player.hp, 380)
         self.assertFalse(player.crowd_escape.ready)
         shooters[-1].ground_y = player.ground_y
         fire_at_player(world, shooters[-1])

@@ -63,7 +63,7 @@ def check_spawning(game):
                 tick(game)
                 assert len(world.enemies) == world.spawner.spawned_count == count
                 assert all(type(enemy) is ARSoldier and enemy.hp == 300 and enemy.ammo == 20
-                           and enemy.attack_damage == 5
+                           and enemy.attack_damage == 50
                            and world.stage.walkable.contains(enemy.x, enemy.ground_y, 88)
                            for enemy in world.enemies)
                 push_key(key, repeat=True)
@@ -280,11 +280,11 @@ def check_hits(game):
         for side in (-1, 1):
             world, enemy = encounter(game, index, side, protected=False)
             wait(game, lambda: world.player.hp < 500)
-            assert world.player.hp == 495 and world.player.state == "IDLE"
+            assert world.player.hp == 450 and world.player.state == "IDLE"
             assert len(world.effects) == 1 and world.effects[0].image_name == config.CLUB_HIT_IMAGE
             assert world.camera.shake_remaining > 0
             capture(game, f"ar_impact_{index}_{side}")
-    print("PASS: real S hit uses own row 5; rifle deals 5 once with impact and shake while the player stays idle.")
+    print("PASS: real S hit uses own row 5; rifle deals 50 once with impact and shake while the player stays idle.")
 
 
 def check_bullet_pixels(game):

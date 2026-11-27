@@ -57,8 +57,8 @@ class PlayerShieldTests(unittest.TestCase):
         rounds = [fire_at_player(world, Researcher(player.x - 230, 1)),
                   fire_at_player(world, ARSoldier(player.x + 230, -1))]
         advance(world, 0.45)
-        self.assertEqual([bullet.impact_damage for bullet in rounds], [15, 2.5])
-        self.assertEqual(player.hp, config.MAX_HP - 37.5)
+        self.assertEqual([bullet.impact_damage for bullet in rounds], [20, 25])
+        self.assertEqual(player.hp, config.MAX_HP - 65)
         self.assertTrue(player.crowd_escape.ready)
         world.enemies.clear()
         advance(world, 1)

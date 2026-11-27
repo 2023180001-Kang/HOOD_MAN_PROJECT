@@ -140,7 +140,7 @@ class ResearcherBallisticsTests(unittest.TestCase):
                                                 * (1125 + config.RESEARCHER_BULLET_SPEED * 0.6))
                 world.projectiles.append(bullet)
                 world.update_projectiles(straight_time() + 0.62)
-                self.assertEqual((player.hp, player.state), (470, "IDLE"))
+                self.assertEqual((player.hp, player.state), (460, "IDLE"))
                 self.assertFalse(world.projectiles)
                 self.assertTrue(bullet.falling)
                 self.assertTrue(bullet.spent)
@@ -151,7 +151,7 @@ class ResearcherBallisticsTests(unittest.TestCase):
                 self.assertAlmostEqual(world.effects[0].y, bullet.y)
                 self.assertGreater(world.camera.shake_remaining, 0)
                 self.assertFalse(bullet.update(1, player))
-                self.assertEqual(player.hp, 470)
+                self.assertEqual(player.hp, 460)
 
     def test_falling_rounds_keep_depth_floor_jump_stair_death_and_p_filters(self):
         for facing in (-1, 1):
@@ -172,7 +172,7 @@ class ResearcherBallisticsTests(unittest.TestCase):
                     bullet = ResearcherBullet(player.x - facing * 100, player.ground_y + depth,
                                               100, facing, elapsed=straight_time())
                     self.assertEqual(bullet.update(0.2, player), situation == "depth_edge")
-                    self.assertEqual(player.hp, 470 if situation == "depth_edge"
+                    self.assertEqual(player.hp, 460 if situation == "depth_edge"
                                      else 0 if situation == "dead" else 500)
                     self.assertEqual(bullet.spent, situation in ("depth_edge", "invincible"))
 
@@ -194,7 +194,7 @@ class ResearcherBallisticsTests(unittest.TestCase):
             bullet = ResearcherBullet(player.x - facing * 180, 100, 400, facing,
                                       elapsed=straight_time())
             self.assertTrue(bullet.update(0.4, player))
-            self.assertEqual(player.hp, 470)
+            self.assertEqual(player.hp, 460)
             self.assertGreater(bullet.height, 375)
 
     def test_range_split_keeps_one_shared_clock_for_the_players_depth_sweep(self):
@@ -204,7 +204,7 @@ class ResearcherBallisticsTests(unittest.TestCase):
             player.previous_ground_y, player.ground_y = (300, 100) if toward else (100, 300)
             bullet = ResearcherBullet(300, 100, 83.25, 1)
             self.assertEqual(bullet.update(1.5, player), toward)
-            self.assertEqual(player.hp, 470 if toward else 500)
+            self.assertEqual(player.hp, 460 if toward else 500)
 
     def test_zero_or_negative_time_never_advances_fall_or_sweeps_a_prebirth_position(self):
         player = Player()

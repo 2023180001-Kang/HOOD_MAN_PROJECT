@@ -11,7 +11,7 @@ from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from player import Player
 from tests.helpers import advance, tap
 from walkable import WalkableArea
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def ready(enemies):

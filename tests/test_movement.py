@@ -1,7 +1,7 @@
 import unittest
 
 import config
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 from tests.helpers import advance
 
 

@@ -8,7 +8,7 @@ from game import Game, KEYS
 from tests.helpers import tap
 from ui import ENEMY_BOUNDS_COLOR, PLAYER_BOUNDS_COLOR, UI
 from walkable import WalkableArea
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def scene():

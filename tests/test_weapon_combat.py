@@ -7,7 +7,7 @@ from drop_items import DropItem
 from enemy import Enemy
 from enemy02 import Enemy02
 from tests.helpers import advance, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def equipped_world(kind):

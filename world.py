@@ -66,7 +66,18 @@ class World:
         self.elapsed = 0.0
         self.accumulator = 0.0
         self._dive_afterimage_remaining = 0.0
+        self.start_stage_encounter()
         self.update_camera(0)
+
+    def start_stage_encounter(self):
+        if not self.training and not self.stage.encounter_started:
+            self.spawn_enemies(config.STAGE_ENCOUNTER_SIZE)
+            self.stage.encounter_started = True
+
+    def spawn_enemies(self, count, enemy_type=None):
+        spawned = self.spawner.spawn(count, self.elapsed, enemy_type=enemy_type)
+        place_ranged_spawns(self.player, self.enemies, spawned)
+        self.enemies.extend(spawned)
 
     def update_camera(self, dt):
         self.camera.update(dt, self.player.x, player_y=self.player.y,
@@ -259,9 +270,7 @@ class World:
                 count, enemy_type = SPAWN_REQUESTS[request]
                 if enemy_type is Sniper and not self.sniper_stage:
                     continue
-                spawned = self.spawner.spawn(count, self.elapsed, enemy_type=enemy_type)
-                place_ranged_spawns(self.player, self.enemies, spawned)
-                self.enemies.extend(spawned)
+                self.spawn_enemies(count, enemy_type)
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
         stair_moved = self.stage.update_navigation(dt, self.player, self.controls)
@@ -325,6 +334,11 @@ class World:
         self.stage.constrain_actor(self.player)
         for enemy in self.enemies:
             self.stage.constrain_actor(enemy)
+            if not enemy.alive and not enemy.defeat_counted:
+                enemy.defeat_counted = True
+                self.stage.defeated_count += 1
+                if self.stage.defeated_count == config.STAGE_ENCOUNTER_SIZE:
+                    self.stage.arrows_visible = True
         self.update_camera(dt)
 
     def update_projectiles(self, dt):
@@ -472,6 +486,7 @@ class World:
         self.stage.constrain_actor(player)
         player.previous_x = player.x
         player.previous_ground_y = player.ground_y
+        self.start_stage_encounter()
         self.camera = Camera(player.x, self.stage.width)
         self.update_camera(0)
 

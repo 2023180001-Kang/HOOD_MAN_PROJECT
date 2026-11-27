@@ -18,7 +18,7 @@ from player import Player
 from researcher import Researcher
 from tests.helpers import advance, enter_kick_wait
 from ui import UI
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def scene():

@@ -41,6 +41,8 @@ class Stage:
                  walkable=None, drop_items=None, enemy_starting_hp=None):
         self.index = index
         self.arrows_visible = False
+        self.encounter_started = False
+        self.defeated_count = 0
         self.spawn_cycle_index = None  # None preserves this map's native default.
         self.enemies = []
         self.effects = []
@@ -349,11 +351,11 @@ class Stage:
     def arrow_sides(self):
         if not self.arrows_visible:
             return ()
-        return (1,) if self.index == 0 else (-1, 1)
+        return tuple(side for side in (-1, 1) if 0 <= self.index + side < len(config.STAGE_IMAGES))
 
     def destination(self, side):
         target = self.index + side
-        if side in self.arrow_sides and 0 <= target < len(config.STAGE_IMAGES):
+        if side in self.arrow_sides:
             return target
         return None
 

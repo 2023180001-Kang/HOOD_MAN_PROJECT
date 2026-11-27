@@ -8,7 +8,7 @@ import config
 from combat import MOVES
 from effects import HitEffect
 from tests.helpers import advance, clear_encounters, spawn_encounter, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 class StageTests(unittest.TestCase):

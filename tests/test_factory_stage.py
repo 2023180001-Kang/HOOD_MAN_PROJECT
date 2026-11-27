@@ -12,7 +12,7 @@ from axe_enemy import AxeEnemy
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
 from tests.helpers import advance, clear_encounters
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def at_factory_boundary(side=1, first=3):

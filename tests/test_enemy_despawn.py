@@ -2,7 +2,7 @@ import unittest
 
 import config
 from tests.helpers import advance
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def fallen_enemy(world):

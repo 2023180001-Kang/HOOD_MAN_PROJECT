@@ -9,7 +9,7 @@ import config
 from assets import Assets
 from shield_soldier import ShieldSoldier
 from tests.helpers import advance, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 class LabStageTests(unittest.TestCase):

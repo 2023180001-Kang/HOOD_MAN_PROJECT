@@ -5,7 +5,7 @@ import config
 from collision import bodies_overlap
 from enemy import Enemy
 from tests.helpers import advance, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 class CombatIntegrationTests(unittest.TestCase):

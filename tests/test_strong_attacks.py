@@ -7,7 +7,7 @@ from enemy import Enemy
 from enemy02 import Enemy02
 from tests.helpers import advance, tap
 from tests.test_weapon_leap import aim
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def encounter(enemy_type=Enemy, side=1, weapon=None):

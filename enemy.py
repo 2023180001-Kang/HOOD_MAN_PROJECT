@@ -51,6 +51,7 @@ class Enemy:
         self.hp = self.max_hp
         self.last_hit_damage = 0
         self.corpse_elapsed = 0.0
+        self.defeat_counted = False
         self.car_hit = False
         self.attack_speed = attack_speed
         self.attack_interval = config.ENEMY_ATTACK_INTERVAL / attack_speed

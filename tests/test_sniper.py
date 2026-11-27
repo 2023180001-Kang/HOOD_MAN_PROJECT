@@ -10,7 +10,7 @@ from sniper import Sniper
 from sword_enemy import SwordEnemy
 from tests.test_main_menu import process_menu_events
 from tests.test_menu_return import key_event, scene
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def encounter(stage_index=0):
@@ -42,11 +42,11 @@ class SniperTests(unittest.TestCase):
                 key(pico2d.SDLK_v)
                 key(pico2d.SDLK_KP_2)
                 key(pico2d.SDLK_1)
-                self.assertEqual([type(e) for e in world.enemies], [Sniper, Sniper, world.spawner.enemy_type])
+                self.assertEqual([type(e) for e in world.enemies[4:]], [Sniper, Sniper, world.spawner.enemy_type])
         world.select_stage(len(world.stages) - 2)
         key(pico2d.SDLK_v)
         key(pico2d.SDLK_1)
-        self.assertEqual([type(e) for e in world.enemies], [ARSoldier])
+        self.assertEqual([type(e) for e in world.enemies], [ARSoldier] * 5)
         world.select_stage(len(world.stages) - 1)
         key(pico2d.SDLK_v)
         key(pico2d.SDLK_KP_3)
@@ -55,7 +55,7 @@ class SniperTests(unittest.TestCase):
         key(pico2d.SDLK_1)
         key(pico2d.SDLK_v)
         key(pico2d.SDLK_2)
-        self.assertEqual([type(e) for e in world.enemies], [Sniper] * 3 + [ARSoldier, SwordEnemy] + [Sniper] * 2)
+        self.assertEqual([type(e) for e in world.enemies[4:]], [Sniper] * 3 + [ARSoldier, SwordEnemy] + [Sniper] * 2)
         self.assertTrue(all(e.hp == e.max_hp == 250 for e in world.enemies if isinstance(e, Sniper)))
         process_menu_events(game, key_event(pico2d.SDLK_c), key_event(pico2d.SDLK_v), menu_screen=False)
         key(pico2d.SDLK_1)

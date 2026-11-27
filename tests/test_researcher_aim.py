@@ -11,7 +11,7 @@ from combat import STRONG_MOVES
 from game import Game
 from researcher import Researcher
 from tests.helpers import advance, enter_kick_wait, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def encounter(index=6, side=1, speed=1.0):

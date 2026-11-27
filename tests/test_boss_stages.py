@@ -9,7 +9,7 @@ import config
 from assets import Assets
 from ar_soldier import ARSoldier
 from tests.helpers import advance, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 BOSS_FLOORS = ((10, -28, 247, 650, 925), (11, -20, 242, 655, 917))

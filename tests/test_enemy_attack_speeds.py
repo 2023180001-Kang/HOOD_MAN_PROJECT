@@ -4,7 +4,7 @@ import unittest
 import config
 from enemy import Enemy
 from tests.helpers import advance
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 class EnemyAttackSpeedTests(unittest.TestCase):

@@ -281,7 +281,9 @@ class MainMenuFlowTests(unittest.TestCase):
         self.assertIsNot(world.player, player)
         self.assertEqual((world.stage_index, world.player.hp, world.player.state), (0, 500, "IDLE"))
         self.assertFalse(world.stage_loading)
-        self.assertTrue(all(not stage.enemies and len(stage.drop_items) == 15 for stage in world.stages))
+        self.assertEqual(len(world.enemies), 4)
+        self.assertTrue(all(not stage.enemies for stage in world.stages[1:]))
+        self.assertTrue(all(len(stage.drop_items) == 15 for stage in world.stages))
 
     def test_closed_game_does_not_display_or_wait_in_menu(self):
         self.game.running = False

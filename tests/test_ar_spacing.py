@@ -12,7 +12,7 @@ from enemy_spacing import place_ranged_spawns, ranged_half_width, resolve_ranged
 from researcher import Researcher
 from tests.helpers import advance, tap
 from walkable import WalkableArea
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def crowd(count=9, side=1, *, index=10, distance=500, depth=None):

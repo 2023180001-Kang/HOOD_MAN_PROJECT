@@ -6,7 +6,7 @@ from collision import bodies_overlap, resolve_bodies
 from enemy import Enemy
 from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing, sprite_extents
 from tests.helpers import advance
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def crowd(count, side, *, distance=500, world=None):

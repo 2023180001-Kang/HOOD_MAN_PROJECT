@@ -8,7 +8,7 @@ from enemy02 import Enemy02
 from tests.helpers import advance
 from tests.test_enemy02 import at_frame
 from traffic import Car, Traffic
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def striker(world, side=1):

@@ -7,7 +7,7 @@ from PIL import Image
 import config
 from researcher import Researcher
 from tests.helpers import advance, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 class FactoryInsideFloorTests(unittest.TestCase):

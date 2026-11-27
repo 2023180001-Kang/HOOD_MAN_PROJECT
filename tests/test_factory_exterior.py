@@ -9,7 +9,7 @@ import config
 from assets import Assets
 from axe_enemy import AxeEnemy
 from tests.helpers import advance, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 class FactoryExteriorTests(unittest.TestCase):

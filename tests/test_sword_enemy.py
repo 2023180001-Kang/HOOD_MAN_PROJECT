@@ -22,13 +22,13 @@ class SwordEnemyTests(unittest.TestCase):
 
         c, one, two = pico2d.SDLK_c, pico2d.SDLK_1, pico2d.SDLK_KP_2
         keys(key_event(c), key_event(c, down=False))
-        self.assertFalse(world.enemies)
+        self.assertEqual(len(world.enemies), 4)
         keys(key_event(two), key_event(two, repeat=True), key_event(two), key_event(two, down=False),
              key_event(one), key_event(one, down=False))
-        self.assertEqual([type(e) for e in world.enemies], [SwordEnemy, SwordEnemy, Enemy])
+        self.assertEqual([type(e) for e in world.enemies[4:]], [SwordEnemy, SwordEnemy, Enemy])
         keys(key_event(c), key_event(one), key_event(one, down=False),
              key_event(two), key_event(two, down=False), key_event(c, down=False))
-        self.assertEqual([type(e) for e in world.enemies[3:]], [SwordEnemy] * 3)
+        self.assertEqual([type(e) for e in world.enemies[7:]], [SwordEnemy] * 3)
         self.assertIs(world.spawner.enemy_type, Enemy)
 
     def test_prefix_is_cleared_on_restart_and_training_still_selects_opponents(self):
@@ -40,7 +40,7 @@ class SwordEnemyTests(unittest.TestCase):
 
         keys(key_event(pico2d.SDLK_c), key_event(pico2d.SDLK_F5))
         keys(key_event(pico2d.SDLK_1))
-        self.assertEqual([type(e) for e in game.world.enemies], [Enemy])
+        self.assertEqual([type(e) for e in game.world.enemies], [Enemy] * 5)
         game.world.training = True
         game.world.reset()
         keys(key_event(pico2d.SDLK_c), key_event(pico2d.SDLK_2), key_event(pico2d.SDLK_KP_PLUS))

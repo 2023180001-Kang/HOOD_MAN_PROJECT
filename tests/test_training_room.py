@@ -69,7 +69,8 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertTrue(self.game._menu_requested)
         self.launch("game_start")
         self.press("training_target")
-        self.assertFalse(self.world.training or self.world.enemies)
+        self.assertFalse(self.world.training)
+        self.assertEqual(len(self.world.enemies), 4)
         self.assertEqual(self.world.stage.image_name, config.STAGE_IMAGE)
         self.assertEqual(len(self.world.stages), len(config.STAGE_IMAGES))
 
@@ -405,7 +406,7 @@ class TrainingRoomTests(unittest.TestCase):
         for index, hp_pair in enumerate(expected[:6]):
             self.world.select_stage(index * 2)
             self.press("spawn_2")
-            self.assertEqual([(e.hp, e.max_hp) for e in self.world.enemies], [hp_pair] * 2)
+            self.assertEqual([(e.hp, e.max_hp) for e in self.world.enemies], [hp_pair] * 6)
 
         self.press("cycle_spawn_enemy")  # Summon the first map's thug on the AR map.
         self.press("spawn_1")
@@ -417,7 +418,7 @@ class TrainingRoomTests(unittest.TestCase):
         thug.take_damage(30)
         self.press("restart")
         self.press("spawn_1")
-        fresh, = self.world.enemies
+        fresh = self.world.enemies[-1]
         self.assertEqual((fresh.hp, fresh.max_hp), expected[0])
 
     def test_enemy_hp_apply_is_explicit_and_restore_can_revert_the_campaign_setting(self):
@@ -454,7 +455,7 @@ class TrainingRoomTests(unittest.TestCase):
         click(1190, 368)
         self.launch("game_start")
         self.press("spawn_1")
-        fresh, = self.world.enemies
+        fresh = self.world.enemies[-1]
         self.assertEqual((fresh.hp, fresh.max_hp), (200, 200))
 
     def test_left_attack_values_follow_weapon_pickup_and_return(self):

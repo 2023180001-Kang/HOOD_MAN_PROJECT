@@ -15,7 +15,7 @@ from shield_soldier import ShieldSoldier
 from tests.helpers import advance, enter_kick_wait, tap
 from tests.test_strong_attacks import strike
 from ui import UI
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def encounter(side=1, *, index=8, weapon=None, guarded=False):

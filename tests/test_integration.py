@@ -11,7 +11,6 @@ from world import World
 class IntegrationTests(unittest.TestCase):
     def test_normal_spawn_chase_attack_death_and_restart_cycle(self):
         world = World(rng=random.Random(1))
-        world.controls.press("spawn_4")
         world.update(config.FIXED_DT)
         advance(world, 8)
         self.assertEqual(len(world.enemies), 4)
@@ -25,10 +24,10 @@ class IntegrationTests(unittest.TestCase):
         tap(world.controls, "restart")
         world.update(1 / 60)
         self.assertEqual(world.player.hp, 500)
-        self.assertEqual(world.enemies, [])
+        self.assertEqual(len(world.enemies), 4)
         world.controls.press("spawn_4")
         world.update(config.FIXED_DT)
-        self.assertEqual(len(world.enemies), 4)
+        self.assertEqual(len(world.enemies), 8)
 
     def test_combat_and_spawning_are_identical_at_different_render_rates(self):
         results = []
@@ -81,11 +80,11 @@ class IntegrationTests(unittest.TestCase):
         world.update(5)
         self.assertEqual(world.stage_index, 0)
         self.assertAlmostEqual(world.elapsed, config.MAX_FRAME_DT)
-        self.assertEqual(world.spawner.spawned_count, 9)
+        self.assertEqual(world.spawner.spawned_count, 13)
         self.assertLess(world.player.x - config.START_X, 20)
-        self.assertTrue(all(enemy.spawned_at == config.FIXED_DT for enemy in world.enemies))
+        self.assertTrue(all(enemy.spawned_at == config.FIXED_DT for enemy in world.enemies[4:]))
         advance(world, 0.1)
-        self.assertEqual(world.spawner.spawned_count, 9)
+        self.assertEqual(world.spawner.spawned_count, 13)
 
     def test_generated_clips_stay_inside_original_sprite_sheets(self):
         with (config.ROOT / "assets" / "frames.json").open(encoding="utf-8") as file:

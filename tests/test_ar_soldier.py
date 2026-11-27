@@ -20,7 +20,7 @@ from researcher import Researcher
 from tests.helpers import advance, enter_kick_wait, tap
 from tests.test_strong_attacks import strike
 from ui import UI
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def encounter(index=10, side=1, gap=300, speed=1.0, invincible=True):

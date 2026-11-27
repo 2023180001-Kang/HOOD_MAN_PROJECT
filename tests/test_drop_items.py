@@ -9,7 +9,7 @@ import config
 from assets import Assets
 from drop_items import DropItem
 from tests.helpers import advance, archived_two_floor_map, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def layout(stage):

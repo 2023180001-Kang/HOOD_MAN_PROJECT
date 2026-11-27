@@ -209,7 +209,9 @@ class MenuReturnLoopTests(unittest.TestCase):
         self.assertEqual(world.elapsed, 0)
         self.assertFalse(world.controls.held)
         self.assertFalse(world.controls.pressed)
-        self.assertTrue(all(not stage.enemies and len(stage.drop_items) == 15 for stage in world.stages))
+        self.assertEqual(len(world.enemies), 4)
+        self.assertTrue(all(not stage.enemies for stage in world.stages[1:]))
+        self.assertTrue(all(len(stage.drop_items) == 15 for stage in world.stages))
         self.assertFalse(self.game._menu_requested)
 
     def test_multiple_start_escape_cycles_stay_in_one_game_loop(self):

@@ -15,7 +15,7 @@ from shield_soldier import ShieldSoldier
 from tests.helpers import advance, spawn_encounter
 from tests.test_strong_attacks import strike
 from traffic import Car, Traffic
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def at_frame(kind, frame, *, side=1):

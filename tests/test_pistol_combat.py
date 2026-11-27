@@ -22,7 +22,7 @@ from shield_soldier import ShieldSoldier
 from tests.helpers import advance, tap
 from tests.test_main_menu import mouse_event, process_menu_events
 from tests.test_menu_return import key_event
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def armed_world():

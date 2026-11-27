@@ -10,7 +10,7 @@ from enemy_spacing import prepare_enemy_spacing, resolve_enemy_spacing
 from player import Player
 from tests.helpers import advance, spawn_encounter, tap
 from traffic import Car
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def flying_enemy(*, side=-1, gap=400, ground_y=100):

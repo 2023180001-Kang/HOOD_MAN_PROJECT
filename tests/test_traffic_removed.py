@@ -11,7 +11,7 @@ import config
 from assets import Assets
 from tests.helpers import advance, tap
 from tools.check_traffic import city
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 CAR_SHEET = "HOOD_MAN_car_attached_wheels_8f_pico2d.png"

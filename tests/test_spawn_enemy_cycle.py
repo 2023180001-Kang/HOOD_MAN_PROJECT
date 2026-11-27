@@ -16,7 +16,7 @@ from shield_soldier import ShieldSoldier
 from stage import enemy_type_for_stage
 from tests.helpers import advance, enter_kick_wait, tap
 from ui import ENEMY_BOUNDS_COLOR, UI
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 NATIVE_TYPES = (Enemy, Enemy, Enemy02, Enemy02, AxeEnemy, AxeEnemy,

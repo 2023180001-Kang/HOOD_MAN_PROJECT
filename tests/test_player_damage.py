@@ -5,7 +5,7 @@ from combat import MOVES
 from enemy import Enemy
 from projectiles import ResearcherBullet, RifleBullet
 from tests.helpers import advance, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def target(world, offset=80):

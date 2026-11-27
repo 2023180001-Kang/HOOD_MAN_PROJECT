@@ -13,7 +13,7 @@ from enemy import Enemy
 from enemy02 import Enemy02
 from tests.helpers import advance, clear_encounters, spawn_encounter, tap
 from traffic import Car, Traffic
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 class CityStageTests(unittest.TestCase):

@@ -12,7 +12,7 @@ from tests.test_strong_attacks import encounter, strike
 from tests.test_two_floors import place
 from tests.test_weapon_combat import target
 from tests.test_weapon_leap import aim
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 def drop_world():

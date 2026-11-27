@@ -5,6 +5,14 @@ from unittest.mock import patch
 import config
 from combat import STRONG_MOVES
 from walkable import default_area
+from world import World
+
+
+class ManualSpawnWorld(World):
+    """Use explicitly arranged opponents for isolated movement and combat scenarios."""
+
+    def start_stage_encounter(self):
+        pass
 
 
 @contextmanager
@@ -14,6 +22,7 @@ def archived_two_floor_map():
     try:
         with patch.multiple(
             config,
+            STAGE_ENCOUNTER_SIZE=0,
             STAGE_IMAGE=config.ARCHIVED_TWO_FLOOR_IMAGE,
             STAGE_IMAGES=(config.ARCHIVED_TWO_FLOOR_IMAGE, *config.STAGE_IMAGES[1:]),
             STAGE_WALKABLE_BOUNDS=(config.ARCHIVED_TWO_FLOOR_WALKABLE_BOUNDS,

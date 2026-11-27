@@ -9,7 +9,7 @@ from assets import Assets
 from doors import StageDoor
 from spawn_manager import SpawnManager
 from tests.helpers import advance, tap
-from world import World
+from tests.helpers import ManualSpawnWorld as World
 
 
 class StageDoorTests(unittest.TestCase):

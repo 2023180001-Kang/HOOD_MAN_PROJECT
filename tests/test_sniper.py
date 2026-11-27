@@ -10,7 +10,7 @@ from sniper import Sniper
 from sword_enemy import SwordEnemy
 from tests.test_main_menu import process_menu_events
 from tests.test_menu_return import key_event, scene
-from tests.helpers import ManualSpawnWorld as World
+from tests.helpers import ManualSpawnWorld as World, advance
 
 
 def encounter(stage_index=0):
@@ -39,15 +39,18 @@ class SniperTests(unittest.TestCase):
                 continue
             with self.subTest(stage=index + 1):
                 world.select_stage(index)
+                advance(world, 1)
                 key(pico2d.SDLK_v)
                 key(pico2d.SDLK_KP_2)
                 key(pico2d.SDLK_1)
                 self.assertEqual([type(e) for e in world.enemies[4:]], [Sniper, Sniper, world.spawner.enemy_type])
         world.select_stage(len(world.stages) - 2)
+        advance(world, 1)
         key(pico2d.SDLK_v)
         key(pico2d.SDLK_1)
         self.assertEqual([type(e) for e in world.enemies], [ARSoldier] * 5)
         world.select_stage(len(world.stages) - 1)
+        advance(world, 1)
         key(pico2d.SDLK_v)
         key(pico2d.SDLK_KP_3)
         key(pico2d.SDLK_1)

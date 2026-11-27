@@ -12,7 +12,7 @@ from enemy_spacing import place_ranged_spawns, prepare_enemy_spacing, resolve_en
 from physics import clamp
 from player import Player
 from projectiles import EnemyAxeProjectile, PlayerProjectile, ThrownWeaponProjectile
-from stage import Stage
+from stage import Stage, enemy_type_for_stage
 from sword_enemy import SwordEnemy
 from sniper import Sniper
 from training_room import TrainingPlayer, TrainingRoom
@@ -67,12 +67,13 @@ class World:
         self.elapsed = 0.0
         self.accumulator = 0.0
         self._dive_afterimage_remaining = 0.0
+        self._encounter_delay_remaining = 0.0
         self.start_stage_encounter()
         self.update_camera(0)
 
     def start_stage_encounter(self):
         if not self.training and not self.stage.encounter_started:
-            self.spawn_enemies(config.STAGE_ENCOUNTER_SIZE)
+            self.spawn_enemies(config.STAGE_ENCOUNTER_SIZE, enemy_type_for_stage(self.stage_index))
             self.stage.encounter_started = True
 
     def spawn_enemies(self, count, enemy_type=None):
@@ -254,7 +255,7 @@ class World:
         self.stage.constrain_actor(self.player)
         if self.controls.take_press("weapon_interact"):
             self.interact_weapon()
-        self.try_stage_transition()
+        entered_stage = self.try_stage_transition()
         if self.stage_loading:
             self.elapsed += dt
             return
@@ -263,10 +264,15 @@ class World:
         self.player.handle_input(self.controls)
         if previous_jump_count == 1 and self.player.jump_count == 2:
             self.stage.prepare_player_double_jump(self.player)
-        # Input stays on the real fixed-step clock, so D can enter/leave slow
-        # motion immediately. Every gameplay clock advances by the same dt.
+        # Stage entry uses real play time even while combat is in slow motion.
+        real_dt = dt
         dt *= self.time_scale
         self.elapsed += dt
+        if self._encounter_delay_remaining > 0 and not entered_stage:
+            self._encounter_delay_remaining -= real_dt
+            if self._encounter_delay_remaining <= 1e-9:
+                self._encounter_delay_remaining = 0.0
+                self.start_stage_encounter()
         self.stage.update_doors(dt)
         self.update_combat_effects(dt)
         self.spawn_dive_afterimage(dt)
@@ -512,7 +518,8 @@ class World:
         self.stage.constrain_actor(player)
         player.previous_x = player.x
         player.previous_ground_y = player.ground_y
-        self.start_stage_encounter()
+        self._encounter_delay_remaining = (0.0 if self.stage.encounter_started
+                                           else config.STAGE_ENCOUNTER_DELAY)
         self.camera = Camera(player.x, self.stage.width)
         self.update_camera(0)
 

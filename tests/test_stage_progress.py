@@ -5,6 +5,7 @@ import pico2d
 from sdl2 import SDL_BUTTON_RIGHT
 
 import config
+from tests.helpers import advance
 from tests.test_main_menu import mouse_event, process_menu_events
 from tests.test_menu_return import click_event, key_event, scene
 
@@ -60,6 +61,7 @@ class StageProgressTests(unittest.TestCase):
             self.assertTrue(menu.click(x, 360))
             for index in (first, first + 1):
                 world.select_stage(index)
+                advance(world, 1)
                 for enemy in world.enemies[:3]:
                     enemy.take_damage(enemy.hp)
                 world.step(config.FIXED_DT)
@@ -87,6 +89,7 @@ class StageProgressTests(unittest.TestCase):
         self.assertFalse(world.cleared_stages)
         for index in (1, 0):
             world.select_stage(index)
+            advance(world, 1)
             for enemy in world.enemies:
                 enemy.take_damage(enemy.hp)
             world.step(config.FIXED_DT)

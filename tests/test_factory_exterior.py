@@ -52,9 +52,11 @@ class FactoryExteriorTests(unittest.TestCase):
                 self.assertIs(world.stage, exterior)  # A fully black frame precedes entry.
                 world.update(1 / fps)
                 self.assertEqual(world.stage.image_name, config.FACTORY_OUTSIDE_IMAGE)
-                self.assertEqual(len(world.enemies), 4)
+                self.assertEqual(len(world.enemies), 0)
                 self.assertIs(world.player, player)
                 self.assertEqual((player.hp, player.weapon), (275, "sword"))
+                advance(world, 1, fps=fps)
+                self.assertEqual(len(world.enemies), 4)
                 world.select_stage(4)
                 world.controls.release("right")
                 world.step(config.FIXED_DT)
@@ -75,6 +77,7 @@ class FactoryExteriorTests(unittest.TestCase):
             world.select_stage(4)
             self.assertFalse(world.stage_loading)
             self.assertEqual(world.stage.factory_gate.frame, 0)
+            advance(world, 1)
             self.assertEqual(len(world.enemies), 4)
 
     def test_doorless_background_loads_and_previous_exteriors_are_archived_unchanged(self):

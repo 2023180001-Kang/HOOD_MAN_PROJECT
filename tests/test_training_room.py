@@ -405,6 +405,7 @@ class TrainingRoomTests(unittest.TestCase):
         self.assertEqual((self.world.player.hp, self.world.player.max_hp), (500, 500))
         for index, hp_pair in enumerate(expected[:6]):
             self.world.select_stage(index * 2)
+            advance(self.world, 1)
             self.press("spawn_2")
             self.assertEqual([(e.hp, e.max_hp) for e in self.world.enemies], [hp_pair] * 6)
 

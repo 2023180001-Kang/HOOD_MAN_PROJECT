@@ -471,8 +471,11 @@ def check_factory_exterior(game):
     assert capture(game, "factory_gate_black").convert("RGB").getbbox() is None
     game.update(config.FIXED_DT)
     assert world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE
-    assert world.player is player and len(world.enemies) == config.STAGE_ENCOUNTER_SIZE
+    assert world.player is player and not world.enemies
     assert capture(game, "factory_gate_dock").convert("RGB").getbbox()
+    for _ in range(round(config.STAGE_ENCOUNTER_DELAY / config.FIXED_DT)):
+        game.update(config.FIXED_DT)
+    assert len(world.enemies) == config.STAGE_ENCOUNTER_SIZE
     print("PASS: closed gate, opening frames, full-screen fade including HUD, black frame and dock entry.")
 
 

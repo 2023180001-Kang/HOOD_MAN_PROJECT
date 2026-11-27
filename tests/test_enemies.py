@@ -5,6 +5,7 @@ import config
 from collision import bodies_overlap, resolve_bodies
 from combat import MOVES
 from enemy import Enemy
+from enemy02 import Enemy02
 from projectiles import PlayerPistolBullet
 from spawn_manager import SpawnManager
 from tests.helpers import advance, tap
@@ -32,11 +33,16 @@ class EnemyTests(unittest.TestCase):
         world = World()
         for index in range(len(world.stages)):
             world.select_stage(index)
+            if index:
+                advance(world, 1 - config.FIXED_DT, fps=120)
+                self.assertEqual(world.enemies, [])
+                world.update(config.FIXED_DT)
             wave = list(world.enemies)
             self.assertEqual(len(wave), 4)
             self.assertTrue(all(type(enemy) is world.spawner.enemy_type for enemy in wave))
             advance(world, 0.2)
             world.select_stage(index)
+            advance(world, 1)
             self.assertEqual(world.enemies, wave)
             self.assertEqual(world.spawner.spawned_count, 4)
         world.controls.press("restart")
@@ -143,6 +149,8 @@ class EnemyTests(unittest.TestCase):
             all_enemies = []
             for index, stage in enumerate(world.stages):
                 world.select_stage(index)
+                if index:
+                    advance(world, 1)
                 tap(world.controls, "spawn_9")
                 world.update(config.FIXED_DT)
                 self.assertEqual(len(stage.enemies), 13)
@@ -211,12 +219,20 @@ class EnemyTests(unittest.TestCase):
         world.player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
         world.controls.press("right")
         world.step(config.FIXED_DT)
-        self.assertEqual((world.stage_index, len(world.enemies), world.stage.arrow_sides), (1, 4, ()))
+        self.assertEqual((world.stage_index, len(world.enemies), world.stage.arrow_sides), (1, 0, ()))
+        advance(world, 1 - config.FIXED_DT, fps=120)
+        self.assertEqual(world.enemies, [])
+        world.update(config.FIXED_DT)
+        self.assertEqual(len(world.enemies), 4)
 
     def test_auto_exits_connect_the_full_route_and_restart_resets_progress(self):
         world = World(rng=random.Random(17))
         for index, stage in enumerate(world.stages):
             self.assertIs(world.stage, stage)
+            if index:
+                advance(world, 1 - config.FIXED_DT, fps=120)
+                self.assertEqual(stage.spawner.spawned_count, 0)
+                world.update(config.FIXED_DT)
             self.assertEqual((len(world.enemies), stage.arrow_sides), (4, ()))
             for enemy in world.enemies:
                 enemy.take_damage(enemy.hp)
@@ -268,10 +284,15 @@ class EnemyTests(unittest.TestCase):
                          (420, True, config.RUN_SPEED, 140, 300, 2, 0.2))
         world.controls.press("spawn_9")  # Still held: do not replay the discarded input.
         world.update(config.FIXED_DT)
-        self.assertEqual(len(world.enemies), 4)
+        self.assertEqual(len(world.enemies), 0)
+        tap(world.controls, "cycle_spawn_enemy")
         tap(world.controls, "spawn_9")
         world.update(config.FIXED_DT)
+        self.assertEqual(len(world.enemies), 9)
+        advance(world, 1 - 2 * config.FIXED_DT, fps=120)
         self.assertEqual((world.stage_index, len(world.enemies)), (2, 13))
+        self.assertTrue(all(type(enemy) is Enemy for enemy in world.enemies[:9]))
+        self.assertTrue(all(type(enemy) is Enemy02 for enemy in world.enemies[9:]))
 
     def test_distant_enemies_keep_independent_ai_before_melee_spacing(self):
         world = World()

@@ -28,6 +28,13 @@ class ManualSpawnWorld(World):
         pass
 
 
+def archived_first_map():
+    """Select the old single-floor alley for its animated-door diagnostics."""
+    return patch.multiple(config, STAGE_IMAGE=config.ARCHIVED_FIRST_STAGE_IMAGE,
+                          STAGE_IMAGES=(config.ARCHIVED_FIRST_STAGE_IMAGE, *config.STAGE_IMAGES[1:]),
+                          STAGE_ENCOUNTER_SIZE=0)
+
+
 @contextmanager
 def archived_two_floor_map():
     """Opt legacy regressions into the archived scene for their entire lifetime."""

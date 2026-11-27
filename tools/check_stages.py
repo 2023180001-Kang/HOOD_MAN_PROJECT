@@ -292,7 +292,7 @@ def check_city_loading(game):
         push_key(key, down=False)
     game.handle_events()
     print(f"PASS: supplied loading image stays visible for {duration:.3f}s with gameplay frozen; "
-          f"changed_first_map_no_door -> {config.SECOND_STAGE_IMAGE} -> {config.CITY_STAGE_IMAGES}, "
+          f"changed_first_map -> {config.SECOND_STAGE_IMAGE} -> {config.CITY_STAGE_IMAGES}, "
           "ignored loading actions, "
           "HP/motion/resource reuse, city return and F5 cancellation verified.")
 
@@ -547,7 +547,7 @@ def main():
     try:
         game = Game()
         game.handle_events()
-        check_stage_background(game, 0, "changed_first_map_no_door")
+        check_stage_background(game, 0, "changed_first_map")
         check_stage_background(game, 1, "second_alley_floor300")
         check_stage_background(game, 2, "city_ground_300_1")
         check_stage_background(game, 3, "city_ground_300_2")

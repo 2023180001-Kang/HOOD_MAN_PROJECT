@@ -14,6 +14,7 @@ import pico2d
 
 import config
 from game import Game
+from tests.helpers import archived_first_map
 from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, tick
 from world import World
@@ -178,8 +179,8 @@ def check_numeric_spawns(game):
             spawn = world.spawner.spawn
             samples = []
 
-            def record(batch, elapsed):
-                enemies = spawn(batch, elapsed)
+            def record(batch, elapsed, **kwargs):
+                enemies = spawn(batch, elapsed, **kwargs)
                 samples.extend((enemy.spawn_source, enemy.x, enemy.ground_y, enemy.floor)
                                for enemy in enemies)
                 return enemies
@@ -264,6 +265,7 @@ def check_single_floor_and_revisit(game):
           "15 floor-0 items, inactive door-clock pause and identical door objects on revisit.")
 
 
+@archived_first_map()
 def main():
     pico2d.open_canvas(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     pico2d.hide_lattice()
@@ -272,7 +274,7 @@ def main():
         game = Game()
         game.handle_events()
         game.world = World(item_rng=random.Random(23))
-        assert game.world.stage.image_name == "changed_first_map_no_door.png"
+        assert game.world.stage.image_name == config.ARCHIVED_FIRST_STAGE_IMAGE
         assert [door.kind for door in game.world.stage.doors] == ["door", "warehouse_shutter"]
         assert game.world.stage.stairs == [] and game.world.stage.upper_walkable is None
         assert all(item.floor == 0 for item in game.world.stage.drop_items)
@@ -280,7 +282,7 @@ def main():
         assert config.ARCHIVED_TWO_FLOOR_IMAGE not in game.assets.images
         assert all(door.state == "CLOSED" for door in game.world.stage.doors)
         assert (config.ROOT / "changed_first_map.png").is_file()
-        assert (config.ROOT / "newStage.png").is_file()
+        assert (config.ROOT / "before_sheets/newStage.png").is_file()
         check_air_conditioner_foreground(game)
         capture(game, "doors_gameplay_start")
         closed = check_endpoints(game, False, "initial_closed")

@@ -22,7 +22,7 @@ def main():
         "club_hit_effect_4x2.png",
         "punch_kick_hit_effect_4x2.png",
         "HoodMan_HP_pico2d.png",
-        "newStage.png",
+        "changed_first_map.png",
     ):
         with Image.open(ROOT / name) as source:
             image = source.convert("RGBA")

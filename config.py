@@ -502,14 +502,15 @@ WEAPON_PICKUP_DEPTH = 32.0
 WEAPON_DROP_HAND_HEIGHT = 70.0
 WEAPON_PROMPT_GAP = 14.0
 HP_IMAGE = "HoodMan_HP_pico2d.png"
-STAGE_IMAGE = "changed_first_map_no_door.png"
+STAGE_IMAGE = "changed_first_map.png"
+ARCHIVED_FIRST_STAGE_IMAGE = "before_sheets/changed_first_map_no_door.png"
 SECOND_STAGE_IMAGE = "newStage-2_floor300_1672x941.png"
 ARCHIVED_SECOND_STAGE_IMAGE = "before_sheets/newStage-2.png"
 ARCHIVED_TWO_FLOOR_IMAGE = "before_sheets/HoodMan_2F_Map_1672x941.png"
 ARCHIVED_TWO_FLOOR_WALKABLE_BOUNDS = (0.0, 56.0, WORLD_WIDTH, 136.0)
 DOOR_IMAGES = {
-    "door": "HoodMan_Door_pico2d.png",
-    "warehouse_shutter": "HoodMan_Warehouse_Shutter_pico2d.png",
+    "door": "before_sheets/HoodMan_Door_pico2d.png",
+    "warehouse_shutter": "before_sheets/HoodMan_Warehouse_Shutter_pico2d.png",
 }
 DOOR_CELL_SIZE = 256
 DOOR_FRAMES = 8
@@ -522,7 +523,7 @@ DOOR_CLOSED_BOUNDS = {
 }
 # Opening rectangles measured in the background's top-left source coordinates.
 STAGE_DOOR_SPECS = {
-    STAGE_IMAGE: (
+    ARCHIVED_FIRST_STAGE_IMAGE: (
         ("door", (250, 400, 83, 173)),
         ("warehouse_shutter", (1333, 417, 211, 202)),
     ),
@@ -533,11 +534,11 @@ STAGE_DOOR_SPECS = {
         ("warehouse_shutter", (1334, 544, 214, 201)),
     ),
 }
-STAGE_DOOR_FLOORS = {STAGE_IMAGE: (0, 0), ARCHIVED_TWO_FLOOR_IMAGE: (0, 1, 1, 0)}
+STAGE_DOOR_FLOORS = {ARCHIVED_FIRST_STAGE_IMAGE: (0, 0), ARCHIVED_TWO_FLOOR_IMAGE: (0, 1, 1, 0)}
 STAGE_DOOR_MAP_SIZE = (1672, 941)
 # Source-background foreground props that must stay in front of animated doors.
 # Preserve the warehouse air conditioner, its lower edge and mounting shadow.
-STAGE_DOOR_FOREGROUND_RECTS = {STAGE_IMAGE: ((1482, 375, 78, 60),)}
+STAGE_DOOR_FOREGROUND_RECTS = {ARCHIVED_FIRST_STAGE_IMAGE: ((1482, 375, 78, 60),)}
 # Archived map only: source rows 395..445, above the metal fascia.
 STAGE_UPPER_FLOOR_BOUNDS = {ARCHIVED_TWO_FLOOR_IMAGE: (0.0, 452.0, WORLD_WIDTH, 502.0)}
 UPPER_PLATFORM_JUMP_CLEARANCE = 24.0

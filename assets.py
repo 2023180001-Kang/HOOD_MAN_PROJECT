@@ -13,6 +13,8 @@ from projectiles import SniperBullet, ThrownWeaponProjectile
 
 class Assets:
     def __init__(self):
+        door_images = {config.DOOR_IMAGES[kind] for stage in config.STAGE_IMAGES
+                       for kind, _ in config.STAGE_DOOR_SPECS.get(stage, ())}
         self.images = {
             name: pico2d.load_image(str(config.ROOT / name))
             for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE,
@@ -38,7 +40,7 @@ class Assets:
                          *config.HIT_EFFECT_IMAGES,
                          *config.DROP_ITEM_IMAGES.values(),
                          *config.WEAPON_POSE_IMAGES.values(),
-                         *config.DOOR_IMAGES.values(),
+                         *door_images,
                          *config.STAGE_IMAGES, *config.STAGE_ARROW_IMAGES.values())
         }
         # Archived car-hit clips remain for opt-in diagnostics, without textures.

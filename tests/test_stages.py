@@ -20,7 +20,7 @@ class StageTests(unittest.TestCase):
 
     def test_first_stage_uses_flat_background_on_start_and_restart_and_archives_old_art(self):
         world = World()
-        self.assertEqual(world.stage.image_name, "changed_first_map_no_door.png")
+        self.assertEqual(world.stage.image_name, "changed_first_map.png")
         self.assertEqual(world.stage.walkable.bounds, (0, -3, config.WORLD_WIDTH, 277))
         with Image.open(config.ROOT / world.stage.image_name) as image:
             self.assertEqual(image.size, (1672, 941))
@@ -28,12 +28,12 @@ class StageTests(unittest.TestCase):
         self.assertFalse((config.ROOT / "HoodMan_2F_Map_1672x941.png").exists())
         self.assertEqual(hashlib.sha256((config.ROOT / config.ARCHIVED_TWO_FLOOR_IMAGE).read_bytes()).hexdigest(),
                          "85a213244657f914cda2c5c46f82f7fb4e41cce9b9f62c4e9876c66e7a5de049")
-        self.assertTrue((config.ROOT / "newStage.png").is_file())
+        self.assertTrue((config.ROOT / "before_sheets/newStage.png").is_file())
         self.assertTrue((config.ROOT / "changed_first_map.png").is_file())
         world.select_stage(1)
         tap(world.controls, "restart")
         world.update(config.FIXED_DT)
-        self.assertEqual((world.stage_index, world.stage.image_name), (0, "changed_first_map_no_door.png"))
+        self.assertEqual((world.stage_index, world.stage.image_name), (0, "changed_first_map.png"))
         self.assertEqual(len(world.stage.drop_items), 15)
 
     def test_first_floor_keeps_walking_spawns_and_items_below_the_new_storefronts(self):
@@ -130,7 +130,7 @@ class StageTests(unittest.TestCase):
     def test_n_reveals_only_the_first_stage_right_arrow_and_is_not_a_toggle(self):
         world = World()
         self.assertEqual(world.stage_index, 0)
-        self.assertEqual(world.stage.image_name, "changed_first_map_no_door.png")
+        self.assertEqual(world.stage.image_name, "changed_first_map.png")
         self.assertEqual(world.stage.arrow_sides, ())
         world.controls.press("stage_exits")
         advance(world, 0.1)

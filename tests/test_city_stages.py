@@ -31,7 +31,7 @@ class CityStageTests(unittest.TestCase):
     def test_twelve_backgrounds_form_one_bidirectional_route_with_a_final_boundary(self):
         world = World()
         self.assertEqual([stage.image_name for stage in world.stages],
-                         ["changed_first_map_no_door.png", "newStage-2_floor300_1672x941.png",
+                         ["changed_first_map.png", "newStage-2_floor300_1672x941.png",
                           *config.CITY_STAGE_IMAGES,
                           config.FACTORY_EXTERIOR_IMAGE, config.FACTORY_OUTSIDE_IMAGE,
                           "factoryInside-1.png", "factoryStage-2.png",

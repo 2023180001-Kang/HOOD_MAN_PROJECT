@@ -1,6 +1,6 @@
 import random
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from PIL import Image
 
@@ -8,14 +8,39 @@ import config
 from assets import Assets
 from doors import StageDoor
 from spawn_manager import SpawnManager
-from tests.helpers import advance, tap
+from tests.helpers import advance, archived_first_map, tap
 from tests.helpers import ManualSpawnWorld as World
 
 
-class StageDoorTests(unittest.TestCase):
+class FirstMapTests(unittest.TestCase):
+    def test_current_first_map_uses_the_supplied_background_without_door_layers_or_spawns(self):
+        world = World()
+        self.assertEqual(world.stage.image_name, "changed_first_map.png")
+        tap(world.controls, "toggle_doors")
+        advance(world, 1)
+        self.assertEqual(world.stage.doors, [])
+        self.assertFalse(world.stage.open_door_spawns())
+        with patch("pico2d.load_image", side_effect=lambda path: Mock(w=1672, h=941)), patch("pico2d.load_font"):
+            assets = Assets()
+        self.assertIn("changed_first_map.png", assets.images)
+        self.assertIn(config.FACTORY_GATE_IMAGE, assets.images)
+        for name in (config.ARCHIVED_FIRST_STAGE_IMAGE, "before_sheets/newStage.png", *config.DOOR_IMAGES.values()):
+            self.assertTrue((config.ROOT / name).is_file())
+            self.assertFalse((config.ROOT / name.removeprefix("before_sheets/")).exists())
+            self.assertNotIn(name, assets.images)
+        with patch.object(assets, "draw_stage_door") as draw_door:
+            world.stage.draw(assets, 640, 0)
+        draw_door.assert_not_called()
+        assets.images[world.stage.image_name].clip_composite_draw.assert_not_called()
+
+
+class ArchivedStageDoorTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(archived_first_map())
+
     def test_first_map_has_one_closed_door_and_one_closed_shutter_on_a_single_floor(self):
         world = World()
-        self.assertEqual(world.stage.image_name, "changed_first_map_no_door.png")
+        self.assertEqual(world.stage.image_name, config.ARCHIVED_FIRST_STAGE_IMAGE)
         self.assertEqual([door.kind for door in world.stage.doors],
                          ["door", "warehouse_shutter"])
         self.assertEqual([door.source_rect for door in world.stage.doors],
@@ -27,8 +52,6 @@ class StageDoorTests(unittest.TestCase):
         self.assertTrue(all((door.state, door.row, door.frame) == ("CLOSED", 1, 0)
                             for door in world.stage.doors))
         self.assertTrue(all(not stage.doors for stage in world.stages[1:]))
-        for name in ("changed_first_map.png", "newStage.png"):
-            self.assertTrue((config.ROOT / name).is_file())
         advance(world, 3)
         self.assertTrue(all(door.state == "CLOSED" for door in world.stage.doors))
 
@@ -307,9 +330,9 @@ class StageDoorTests(unittest.TestCase):
                     self.assertEqual(destination_left, int(index * 1672 - camera_x) + source_left)
                     self.assertEqual(destination_top, int(config.SCREEN_HEIGHT - bottom - 941) + 375)
 
-    def test_air_conditioner_foreground_is_only_applied_to_the_current_first_map(self):
+    def test_air_conditioner_foreground_is_only_applied_to_the_archived_first_map(self):
         self.assertEqual(config.STAGE_DOOR_FOREGROUND_RECTS,
-                         {"changed_first_map_no_door.png": ((1482, 375, 78, 60),)})
+                         {config.ARCHIVED_FIRST_STAGE_IMAGE: ((1482, 375, 78, 60),)})
         world = World()
         world.select_stage(1)
         background = Mock(w=1672, h=941)

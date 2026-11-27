@@ -130,19 +130,25 @@ class AxeEnemyTests(unittest.TestCase):
                 axe = self.swing_then_throw(world, enemy)
                 hp = player.hp
                 world.controls.press("combat_s")
-                with patch("projectiles.uniform", return_value=side * 0.6):
-                    self.advance_until(world, lambda: axe.deflected)
+                self.advance_until(world, lambda: axe.deflected)
                 self.assertEqual((player.hp, player.state, axe.facing), (hp, "SWORD_PARRY", side))
                 contact_x = axe.x
                 world.controls.release("combat_s")
                 self.advance_until(world, lambda: bool(world.stage.drop_items))
                 item, = world.stage.drop_items
-                self.assertGreater((item.x - contact_x) * side, 0)
+                # Contact can occur within one fixed step before we observe the reversal.
+                self.assertAlmostEqual((item.x - contact_x) * side, 96,
+                                       delta=axe.ricochet_speed * config.FIXED_DT + 1e-9)
+                self.assertFalse(item.grounded)
+                if side == 1:
+                    # Arrange for the player to reach the falling axe first.
+                    player.x, player.ground_y = item.x, item.ground_y
+                    enemy.x = item.x + 400
+                self.advance_until(world, lambda: item.grounded)
                 self.assertEqual((item.kind, item.grounded, player.hp), ("axe", True, hp))
                 self.assertIs(item.axe_owner, enemy)
                 self.assertFalse(world.projectiles)
                 if side == 1:
-                    player.x, player.ground_y = item.x, item.ground_y
                     tap(world.controls, "weapon_interact")
                     world.step(config.FIXED_DT)
                     self.assertEqual(player.weapon, "axe")

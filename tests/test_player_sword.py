@@ -203,6 +203,35 @@ class PlayerSwordTests(unittest.TestCase):
             self.assertEqual((shot.height, stepped.height), (shot.half_height, shot.half_height))
             self.assertAlmostEqual(shot.x, stepped.x)
 
+    def test_parried_axe_flies_level_then_drops_at_its_range_or_the_map_edge(self):
+        for direction in (-1, 1):
+            for near_edge in (False, True):
+                with self.subTest(direction=direction, near_edge=near_edge):
+                    world = equipped_world("sword")
+                    player = world.player
+                    if near_edge:
+                        player.x = player.previous_x = 140 if direction > 0 else world.stage.width - 140
+                    world.controls.press("combat_s")
+                    world.step(config.FIXED_DT)
+                    contact_x = (player.body.left - EnemyAxeProjectile.half_width if direction > 0
+                                 else player.body.right + EnemyAxeProjectile.half_width)
+                    axe = EnemyAxeProjectile(contact_x, player.ground_y, 90, direction)
+                    world.projectiles.append(axe)
+                    world.update_projectiles(0.05)
+                    self.assertEqual((axe.deflected, axe.facing, axe.height), (True, -direction, 90))
+                    self.assertAlmostEqual(axe.x, contact_x - direction * 24)
+                    world.update_projectiles(0.5)
+                    self.assertEqual(world.projectiles, [])
+                    item, = world.stage.drop_items
+                    left, right = axe.horizontal_limits
+                    landing_x = max(left, min(right, contact_x - direction * 96))
+                    self.assertAlmostEqual(item.x, landing_x)
+                    self.assertFalse(item.grounded)
+                    self.assertEqual(item.vy, 0)
+                    advance(world, 1)
+                    self.assertTrue(item.grounded)
+                    self.assertAlmostEqual(item.x, landing_x)
+
     def test_melee_hits_during_parry(self):
         world = equipped_world("sword")
         player = world.player

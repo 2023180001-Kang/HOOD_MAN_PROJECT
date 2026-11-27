@@ -77,7 +77,7 @@ class ResearcherBullet:
 
     @property
     def falling(self):
-        return self.deflected or (not self.range_limited and self.elapsed + 1e-12 >= self.straight_duration)
+        return not self.range_limited and (self.deflected or self.elapsed + 1e-12 >= self.straight_duration)
 
     @property
     def horizontal_speed(self):
@@ -87,9 +87,11 @@ class ResearcherBullet:
 
     @property
     def vy(self):
+        if not self.falling:
+            return 0.0
         if self.ricochet_angle is not None:
             return self.ricochet_speed * sin(self.ricochet_angle) - self.gravity * self.elapsed
-        return -self.gravity * max(0.0, self.elapsed - self.straight_duration) if self.falling else 0.0
+        return -self.gravity * max(0.0, self.elapsed - self.straight_duration)
 
     @property
     def horizontal_limits(self):
@@ -100,7 +102,11 @@ class ResearcherBullet:
         left, right = self.horizontal_limits
         return (self.spent or self.height <= self.half_height
                 or self.x < left or self.x > right
-                or (self.range_limited and not self.deflected and self.elapsed + 1e-12 >= self.straight_duration))
+                or (self.range_limited and self.elapsed + 1e-12 >= self.straight_duration))
+
+    def _start_return_flight(self):
+        self.range_limited = False
+        self.ricochet_angle = uniform(-self.ricochet_max_angle, self.ricochet_max_angle)
 
     def update(self, dt, targets, *, on_impact=None):
         if self.finished:
@@ -158,8 +164,8 @@ class ResearcherBullet:
             self.height += vy * travel - gravity * travel * travel / 2
             if parried:
                 self.facing *= -1
-                self.ricochet_angle = uniform(-self.ricochet_max_angle, self.ricochet_max_angle)
                 self.elapsed = 0.0
+                self._start_return_flight()
                 offset += travel
                 continue
             self.elapsed += travel
@@ -353,6 +359,12 @@ class EnemyAxeProjectile(ThrownAxe):
     deflectable = True
     damage = config.AXE_ENEMY_THROW_DAMAGE
     release_offset = (108, 123)  # Extended hand in row seven, cell five.
+
+    def _start_return_flight(self):
+        self.ricochet_angle = 0.0
+        self.speed = self.ricochet_speed
+        self.straight_range = 96.0
+        self.range_limited = True
 
     def _deal_damage(self, player):
         return player.take_damage(self.damage, attacker=self.shooter)

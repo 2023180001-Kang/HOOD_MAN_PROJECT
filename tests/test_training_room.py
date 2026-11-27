@@ -214,6 +214,18 @@ class TrainingRoomTests(unittest.TestCase):
                 advance(self.world, 2)
                 self.assertEqual(target.state, "IDLE")
 
+    def test_practice_shield_guards_a_strong_attack_and_keeps_its_training_hp_floor(self):
+        self.press("spawn_5")
+        self.press("training_target")
+        target = self.world.stage.target
+        target.hp = 2
+        player = self.world.player
+        player.x, player.ground_y, player.facing = target.x - 80, target.ground_y, 1
+        self.press("combat_q")
+        self.assertTrue(target.guarding)
+        advance(self.world, 0.25)
+        self.assertEqual((target.hp, target.last_hit_damage, target.state), (1, 17.5, "HIT"))
+
     def test_practice_axe_throws_after_retreat_and_shows_unarmed_damage_until_recovery(self):
         self.press("spawn_3")
         self.press("training_target")

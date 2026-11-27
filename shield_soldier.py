@@ -1,6 +1,8 @@
-"""Lab shield soldier: committed random guard/swing actions and half guard damage."""
+"""Lab shield soldier with a close-range swing and reactive guard."""
 
 import config
+from collision import same_floor
+from combat import STRONG_MOVES
 from enemy import Enemy
 
 
@@ -41,17 +43,10 @@ class ShieldSoldier(Enemy):
         self.animation.set_state("GUARD")
         self.animation.elapsed = 0.0
 
-    def start_swing(self):
+    def start_attack(self):
         self.vx = self.ground_vy = 0.0
         self.running = False
         super().start_attack()
-
-    def start_attack(self):
-        # Called once by the inherited melee AI when an action is due, not per hit/frame.
-        if self.rng.random() < config.SHIELD_SOLDIER_GUARD_CHANCE:
-            self.start_guard()
-        else:
-            self.start_swing()
 
     def take_damage(self, damage):
         guarded = self.guarding
@@ -68,17 +63,38 @@ class ShieldSoldier(Enemy):
         return True
 
     def _update_ai(self, dt, player):
-        if (self.state == "GUARD" and self.alive and player.alive
-                and not self.knockback_started and not self.falling_from_upper
-                and self.staircase is None):
+        if (not self.alive or not player.alive or self.knockback_started or self.falling_from_upper
+                or self.staircase is not None or self.state not in ("IDLE", "WALK", "RUN", "ATTACK", "GUARD")):
+            super()._update_ai(dt, player)
+            return
+
+        dx = player.x - self.x
+        in_lane = (same_floor(self, player)
+                   and abs(self.ground_y - player.ground_y) <= config.ATTACK_DEPTH_TOLERANCE)
+        move = player.active_move
+        threat = (in_lane and move is not None and (move.jump_attack or move in STRONG_MOVES.values())
+                  and abs(dx) < move.reach + config.ENEMY_HALF_WIDTH
+                  and player.air_kick_phase not in ("WAIT", "RECOVERY") and self not in player.hit_enemies)
+        if threat and self.state != "GUARD":
+            if dx:
+                self.facing = 1 if dx > 0 else -1
+            self.start_guard()
+        if self.state == "GUARD":
             self.cooldown = max(0.0, self.cooldown - dt)
-            self.vx = self.ground_vy = 0.0
-            self.running = False
             self.animation.update(dt)
             if self.animation.finished:
-                self.animation.set_state("IDLE")
-            return
-        super()._update_ai(dt, player)
+                if threat:
+                    self.animation.elapsed = 0.0
+                else:
+                    self.animation.set_state("IDLE")
+        elif (in_lane and self.state != "ATTACK" and self.cooldown <= dt
+              and abs(dx) < config.ENEMY_ATTACK_REACH + config.PLAYER_HALF_WIDTH):
+            if dx:
+                self.facing = 1 if dx > 0 else -1
+            self.start_attack()
+            self.animation.update(dt)
+        else:
+            super()._update_ai(dt, player)
 
     def take_strong_hit(self, move, direction):
         if not super().take_strong_hit(move, direction):

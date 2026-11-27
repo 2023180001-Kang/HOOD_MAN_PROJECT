@@ -98,42 +98,39 @@ class ShieldSoldierTests(unittest.TestCase):
             assets = Assets()
         self.assertIn(config.SHIELD_SOLDIER_IMAGE, assets.images)
 
-    def test_guard_or_swing_is_selected_once_with_a_half_probability_boundary(self):
-        for roll, state, row in ((0, "GUARD", 4), (0.49999, "GUARD", 4),
-                                 (0.5, "ATTACK", 5), (0.99999, "ATTACK", 5)):
-            enemy = ShieldSoldier(1000)
-            with patch.object(enemy.rng, "random", return_value=roll) as choice:
-                enemy.start_attack()
-                for _ in range(10):
-                    enemy.update(config.FIXED_DT, Player())
-            choice.assert_called_once_with()
-            self.assertEqual((enemy.state, enemy.animation.row), (state, row))
-            self.assertEqual((enemy.vx, enemy.ground_vy), (0, 0))
-
-    def test_natural_ai_randomly_guards_and_attacks_but_does_not_choose_outside_reach(self):
-        world, enemy = encounter()
-        enemy.cooldown = 0
-        with patch.object(enemy.rng, "random", side_effect=(0.1, 0.9, 0.1, 0.9)) as choice:
-            observed = set()
-            for _ in range(370):
-                world.step(config.FIXED_DT)
-                observed.add(enemy.state)
-            self.assertEqual(choice.call_count, 4)
-        self.assertTrue({"GUARD", "ATTACK"} <= observed)
-        for situation in ("far", "deep", "floor", "cooldown"):
-            world, enemy = encounter()
-            enemy.cooldown = 0
-            if situation == "far":
-                enemy.x += 500
-            elif situation == "deep":
-                enemy.ground_y = world.player.ground_y - 40
-            elif situation == "floor":
-                enemy.floor = 1
-            else:
-                enemy.cooldown = 2
-            with patch.object(enemy.rng, "random") as choice:
+    def test_nearby_player_triggers_a_swing_unless_out_of_reach_or_on_cooldown(self):
+        for situation in ("near", "far", "deep", "floor", "cooldown"):
+            with self.subTest(situation=situation):
+                world, enemy = encounter()
+                enemy.cooldown = 2 if situation == "cooldown" else 0
+                if situation == "far":
+                    enemy.x += 500
+                elif situation == "deep":
+                    enemy.ground_y = world.player.ground_y - 40
+                elif situation == "floor":
+                    enemy.floor = 1
                 enemy.update(config.FIXED_DT, world.player)
-            choice.assert_not_called()
+                self.assertEqual(enemy.state == "ATTACK", situation == "near")
+                self.assertFalse(enemy.guarding)
+
+    def test_strong_attack_interrupts_a_swing_but_only_shields_in_its_lane_react(self):
+        world, first = encounter()
+        player = world.player
+        second = ShieldSoldier(first.x + 10, ground_y=first.ground_y)
+        world.enemies.append(second)
+        for enemy in world.enemies:
+            enemy.start_attack()
+            enemy.animation.elapsed = 2.9 / enemy.attack_fps
+        tap(world.controls, "combat_q")
+        world.step(config.FIXED_DT)
+        for enemy in world.enemies:
+            self.assertTrue(enemy.guarding)
+            self.assertIsNone(enemy.attack_box)
+        for gap, depth, floor in ((400, 0, 0), (80, 50, 0), (80, 0, 1)):
+            enemy = ShieldSoldier(player.x + gap, ground_y=player.ground_y + depth)
+            enemy.floor = floor
+            enemy.update(config.FIXED_DT, player)
+            self.assertFalse(enemy.guarding)
 
     def test_guard_halves_damage_without_restarting_or_replacing_the_guard_pose(self):
         for damage in (1, 7, 10, 40, 50, 60):
@@ -194,42 +191,41 @@ class ShieldSoldierTests(unittest.TestCase):
                             self.assertEqual(enemy.hp, 400 - damage)
 
     def test_all_strong_attacks_halve_guard_damage_and_keep_own_hit_row(self):
-        for guarded in (False, True):
-            for action in STRONG_MOVES:
-                for side in (-1, 1):
-                    world, enemy = encounter(side, guarded=guarded)
-                    strike(world, enemy, action)
-                    damage = STRONG_MOVES[action].damage * (0.5 if guarded else 1)
-                    self.assertEqual(enemy.hp, 400 - damage)
-                    self.assertEqual([number.damage for number in world.damage_numbers], [damage])
-                    self.assertEqual((enemy.sprite_image, enemy.animation.row), (config.SHIELD_SOLDIER_IMAGE, 6))
-                    self.assertFalse(enemy.guarding)
-                    advance(world, 1.5)
-                    self.assertEqual(enemy.sprite_image, config.SHIELD_SOLDIER_IMAGE)
+        for action, move in STRONG_MOVES.items():
+            for side in (-1, 1):
+                world, enemy = encounter(side)
+                strike(world, enemy, action)
+                self.assertEqual(enemy.hp, 400 - move.damage / 2)
+                self.assertEqual([number.damage for number in world.damage_numbers], [move.damage / 2])
+                self.assertEqual((enemy.sprite_image, enemy.animation.row), (config.SHIELD_SOLDIER_IMAGE, 6))
+                self.assertFalse(enemy.guarding)
 
-    def test_both_weapon_dive_landings_respect_guard_and_use_existing_feedback(self):
-        for guarded in (False, True):
-            for weapon in config.WEAPON_AIRBORNE_ROWS:
+    def test_double_jump_guard_covers_aim_dive_and_impact_for_each_weapon(self):
+        for weapon, damage in (("steel_pipe", 60), ("steel_club", 50), ("axe", 40), ("sword", 70)):
+            with self.subTest(weapon=weapon):
                 world, enemy = encounter(weapon=weapon)
-                for action in ("jump", "jump", "combat_d", "combat_d"):
+                for action in ("jump", "jump"):
                     tap(world.controls, action)
                     world.step(config.FIXED_DT)
-                if guarded:
-                    enemy.start_guard()
+                    self.assertFalse(enemy.guarding)
+                for _ in range(2):
+                    tap(world.controls, "combat_d")
+                    world.step(config.FIXED_DT)
+                    self.assertTrue(enemy.guarding)
                 for _ in range(180):
                     world.step(config.FIXED_DT)
                     if enemy.hp < 400:
                         break
-                self.assertEqual(enemy.hp, 370 if guarded else 340)
-                self.assertEqual([number.damage for number in world.damage_numbers], [30 if guarded else 60])
-                self.assertEqual(world.effects[-1].image_name, config.WEAPON_HIT_IMAGES[weapon])
+                self.assertEqual(enemy.hp, 400 - damage / 2)
+                self.assertEqual([number.damage for number in world.damage_numbers], [damage / 2])
+                self.assertEqual(world.effects[-1].image_name, world.player.active_move.hit_image)
 
     def test_fifth_row_swing_deals_forty_once_at_active_frames_on_both_sides(self):
         for facing in (-1, 1):
             for speed in (0.8, 1, 1.4):
                 player = Player()
                 enemy = ShieldSoldier(player.x - facing * 80, facing, attack_speed=speed)
-                enemy.start_swing()
+                enemy.start_attack()
                 for frame in range(8):
                     enemy.animation.elapsed = (frame + 0.05) / enemy.attack_fps
                     self.assertEqual(enemy.try_hit(player), frame == 3)
@@ -240,7 +236,7 @@ class ShieldSoldierTests(unittest.TestCase):
         for situation in ("guard", "far", "behind", "deep", "jump", "floor", "invincible", "edge"):
             player = Player()
             enemy = ShieldSoldier(player.x + 80, -1)
-            enemy.start_swing()
+            enemy.start_attack()
             enemy.animation.elapsed = 3.05 / enemy.attack_fps
             if situation == "guard":
                 enemy.start_guard()
@@ -268,7 +264,7 @@ class ShieldSoldierTests(unittest.TestCase):
         second = ShieldSoldier(world.player.x - 80, 1, ground_y=world.player.ground_y)
         world.enemies.append(second)
         for actor in world.enemies:
-            actor.start_swing()
+            actor.start_attack()
             actor.animation.elapsed = 3.05 / actor.attack_fps
         world.step(config.FIXED_DT)
         self.assertEqual(world.player.hp, 420)
@@ -334,7 +330,7 @@ class ShieldSoldierTests(unittest.TestCase):
         self.assertAlmostEqual(enemy.animation.elapsed, config.FIXED_DT * 0.2)
         self.assertTrue(enemy.guarding)
 
-    def test_natural_guard_and_attack_randomness_is_fps_independent_and_spawn_rng_is_unchanged(self):
+    def test_melee_attacks_are_fps_independent_and_leave_spawn_rng_unchanged(self):
         outcomes = []
         for fps in (30, 60, 120, 144):
             world, enemy = encounter()

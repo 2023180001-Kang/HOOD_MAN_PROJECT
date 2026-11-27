@@ -378,7 +378,6 @@ SHIELD_SOLDIER_IMAGE = "hoodman_shield_soldier.png"
 SHIELD_SOLDIER_MAX_HP = 400
 SHIELD_SOLDIER_DAMAGE = 40
 SHIELD_SOLDIER_ACTIVE_FRAMES = (3, 4)  # Fifth-row shield swing, zero-based columns.
-SHIELD_SOLDIER_GUARD_CHANCE = 0.5
 SHIELD_SOLDIER_GUARD_DAMAGE_SCALE = 0.5
 RESEARCHER_IMAGE = "hoodman_researcher_.png"  # Preserve the supplied filename.
 RESEARCHER_MAX_HP = 200

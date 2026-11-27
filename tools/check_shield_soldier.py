@@ -1,4 +1,4 @@
-"""Verify lab shield summons, random guard/swing, combat and pixels through SDL."""
+"""Verify lab shield summons, reactive guard/swing, combat and pixels through SDL."""
 
 from pathlib import Path
 import random
@@ -118,28 +118,17 @@ def check_source_frames(game):
           "row 4 guards, row 5 swings, row 6 reacts, row 7 dies.")
 
 
-def check_random_actions(game):
-    for roll, state, row in ((0.49999, "GUARD", 4), (0.5, "ATTACK", 5)):
-        world, enemy = encounter(game)
-        enemy.cooldown = 0
-        with patch.object(enemy.rng, "random", return_value=roll) as choice:
-            tick(game, 10)
-        choice.assert_called_once_with()
-        assert (enemy.state, enemy.animation.row) == (state, row)
-        assert enemy.vx == enemy.ground_vy == 0
-        if state == "GUARD":
-            assert enemy.guarding and enemy.attack_box is None
-            elapsed = enemy.animation.elapsed
-            for _ in range(3):
-                render_image(game)
-            assert enemy.animation.elapsed == elapsed
-            enemy.take_damage(40)
-            assert enemy.hp == 380 and enemy.animation.elapsed == elapsed
-            enemy.cooldown = 100  # Inspect this guard's end, not a later random action.
-            tick(game, 60)
-            assert not enemy.guarding
-    print("PASS: melee AI commits to one 50/50 random choice per due action, not per frame/hit; "
-          "normal blocks and render-only calls cannot restart or extend guard.")
+def check_reactive_actions(game):
+    world, enemy = encounter(game)
+    enemy.cooldown = 0
+    tick(game)
+    assert (enemy.state, enemy.animation.row) == ("ATTACK", 5)
+    tap(game, pico2d.SDLK_q)
+    assert enemy.guarding and enemy.animation.row == 4 and enemy.attack_box is None
+    elapsed = enemy.animation.elapsed
+    render_image(game)
+    assert enemy.animation.elapsed == elapsed
+    print("PASS: a close shield swing switches to guard when a strong attack starts.")
 
 
 def check_health_pixels(game):
@@ -214,33 +203,29 @@ def check_player_damage(game):
 
 
 def check_strong_and_dives(game):
-    for guarded in (False, True):
-        for move in STRONG_MOVES.values():
-            world, enemy = encounter(game, guarded=guarded)
-            press_attack(game, move.key, enemy)
-            damage = move.damage * 0.5 if guarded else move.damage
-            assert enemy.hp == 400 - damage and enemy.animation.row == 6
-            assert [value.damage for value in world.damage_numbers] == [damage]
-            assert not enemy.guarding
-            capture(game, f"shield_strong_{move.key}_{'guard' if guarded else 'full'}")
-            tick(game, 120)
-            assert enemy.sprite_image == config.SHIELD_SOLDIER_IMAGE
-        for weapon in config.WEAPON_AIRBORNE_ROWS:
-            world, enemy = encounter(game, weapon=weapon)
-            for key in (pico2d.SDLK_SPACE, pico2d.SDLK_SPACE, pico2d.SDLK_d, pico2d.SDLK_d):
-                tap(game, key)
-            if guarded:
-                enemy.start_guard()
-            for _ in range(180):
-                tick(game)
-                if enemy.hp < 400:
-                    break
-            assert enemy.hp == (370 if guarded else 340)
-            assert [effect.image_name for effect in world.effects] == [config.WEAPON_HIT_IMAGES[weapon]]
-            assert world.camera.shake_strength == 16
-            capture_number(game, f"shield_dive_{weapon}_{'guard' if guarded else 'full'}")
-    print("PASS: SDL Q/W/E deal half/full damage once then own row-6 reactions; "
-          "both weapon D landings respect guard and preserve the 16px impact shake.")
+    for move in STRONG_MOVES.values():
+        world, enemy = encounter(game)
+        press_attack(game, move.key, enemy)
+        damage = move.damage / 2
+        assert enemy.hp == 400 - damage and enemy.animation.row == 6
+        assert [value.damage for value in world.damage_numbers] == [damage]
+        capture(game, f"shield_strong_{move.key}_guard")
+    for weapon in ("steel_pipe", "steel_club", "axe", "sword"):
+        world, enemy = encounter(game, weapon=weapon)
+        for key in (pico2d.SDLK_SPACE, pico2d.SDLK_SPACE, pico2d.SDLK_d):
+            tap(game, key)
+        assert enemy.guarding and world.player.weapon_leap_phase == "AIM"
+        move = world.player.active_move
+        tap(game, pico2d.SDLK_d)
+        for _ in range(180):
+            tick(game)
+            if enemy.hp < 400:
+                break
+        assert enemy.hp == 400 - move.damage / 2
+        assert [effect.image_name for effect in world.effects] == [move.hit_image]
+        assert world.camera.shake_strength == config.WEAPON_DIVE_SHAKE_STRENGTH
+        capture_number(game, f"shield_dive_{weapon}_guard")
+    print("PASS: SDL Q/W/E and all four double-jump weapon dives trigger guard and deal half damage.")
 
 
 def check_shield_attack(game):
@@ -251,7 +236,7 @@ def check_shield_attack(game):
                 world.player.invincible = False
                 if protected:
                     tap(game, pico2d.SDLK_p)
-                enemy.start_swing()
+                enemy.start_attack()
                 for _ in range(60):
                     tick(game)
                     if enemy.has_hit:
@@ -346,7 +331,7 @@ def check_natural_combat(game):
             for enemy in world.enemies:
                 actions[enemy].add(enemy.state)
                 assert world.stage.walkable.contains(enemy.x, enemy.ground_y, 88)
-        assert all({"GUARD", "ATTACK"} <= states for states in actions.values()), actions
+        assert all("ATTACK" in states and "GUARD" not in states for states in actions.values()), actions
         assert all(enemy.hp == 400 for enemy in world.enemies) and world.player.hp == 500
         assert world.spawner.rng.getstate() == spawn_state
         capture(game, f"shield_lab_{index - 7}_natural_combat")
@@ -354,9 +339,9 @@ def check_natural_combat(game):
     frames = game.run(max_frames=180)
     seconds = perf_counter() - start
     assert frames == 180
-    print(f"BENCHMARK: four shield soldiers + random defense/swing/pursuit/HP/UI: "
+    print(f"BENCHMARK: four shield soldiers + melee attacks/pursuit/HP/UI: "
           f"{frames} frames / {seconds:.3f}s = {frames / seconds:.2f} FPS.")
-    print("PASS: four natural soldiers on each lab all guard and attack independently, "
+    print("PASS: four natural soldiers on each lab all attack an idle player, "
           "stay in floor bounds, never alter spawn RNG and preserve own HP/art.")
 
 
@@ -369,7 +354,7 @@ def main():
         game.handle_events()
         check_summons(game)
         check_source_frames(game)
-        check_random_actions(game)
+        check_reactive_actions(game)
         check_health_pixels(game)
         check_player_damage(game)
         check_strong_and_dives(game)

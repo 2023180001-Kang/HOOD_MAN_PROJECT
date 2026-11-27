@@ -47,7 +47,7 @@ class TrainingPlayer(Player):
         self.hp = self.max_hp
 
 
-class TrainingTarget:
+class TrainingTarget(Enemy):
     """Keep each opponent in place and use its native close-range attack."""
 
     uses_melee_slots = False
@@ -76,7 +76,9 @@ class TrainingTarget:
         return True
 
     def take_strong_hit(self, move, direction):
-        return self.take_damage(move.damage)
+        self.take_damage(move.damage)
+        self.animation.set_state("HIT")
+        return True
 
     def _update_ai(self, dt, player):
         dx = player.x - self.x
@@ -96,7 +98,7 @@ class TrainingTarget:
             self.animation.update(dt)
 
 
-class TrainingThug(TrainingTarget, Enemy):
+class TrainingThug(TrainingTarget):
     pass
 
 
@@ -126,8 +128,8 @@ class TrainingAxe(TrainingTarget, AxeEnemy):
             super()._update_ai(dt, player)
 
 
-class TrainingShield(TrainingTarget, ShieldSoldier):
-    start_attack = ShieldSoldier.start_swing
+class TrainingShield(ShieldSoldier, TrainingTarget):
+    pass
 
 
 class TrainingGunner(TrainingTarget):

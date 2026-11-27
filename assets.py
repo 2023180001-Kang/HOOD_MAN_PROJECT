@@ -193,11 +193,12 @@ class Assets:
             return
         image = self.images[item.image_name]
         if item.kind in config.STATIC_DROP_SPRITES:
-            _, (left, bottom, width, height), scale = config.STATIC_DROP_SPRITES[item.kind]
+            sprite = config.STATIC_DROP_SPRITES[item.kind]
+            angle = item.facing * radians(sprite.rest_angle) if item.grounded else 0
             image.clip_composite_draw(
-                left, bottom, width, height, 0, "h" if item.facing < 0 else "",
+                *sprite.clip, angle, "h" if item.facing < 0 else "",
                 x, ground_y + item.jump_height + item.display_height / 2,
-                width * scale, height * scale,
+                *sprite.display_size(grounded=False),
             )
             return
         width = image.w // config.DROP_ITEM_FRAMES

@@ -18,6 +18,22 @@ def layout(stage):
 
 
 class DropItemTests(unittest.TestCase):
+    def test_sword_lies_flat_on_landing_in_both_directions(self):
+        assets = Assets.__new__(Assets)
+        texture = Mock()
+        assets.images = {config.SWORD_ITEM_IMAGE: texture}
+        for facing in (-1, 1):
+            with self.subTest(facing=facing):
+                item = DropItem("sword", 500, 100, facing, jump_height=40)
+                assets.draw_drop_item(item, 0, 0)
+                self.assertEqual(texture.clip_composite_draw.call_args.args[4], 0)
+                item.update(1)
+                assets.draw_drop_item(item, 0, 0)
+                angle, flip, _, center_y = texture.clip_composite_draw.call_args.args[4:8]
+                self.assertAlmostEqual(degrees(angle), -69 * facing)
+                self.assertEqual(flip, "h" if facing < 0 else "")
+                self.assertAlmostEqual(center_y - 10 * config.SPRITE_SCALE, item.surface_y)
+
     def test_dropped_weapon_lengths_match_the_equipped_sprites(self):
         assets = Assets.__new__(Assets)
         for kind, held_length in (("steel_club", 108), ("pistol", 57), ("ar_rifle", 136)):

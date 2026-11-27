@@ -138,10 +138,25 @@ SWORD_ITEM_CLIP = (100, 61, 56, 134)
 # Grip to muzzle (pistol) and stock to muzzle (rifle), measured on the player's 256px cells.
 PISTOL_DROP_SCALE = 57 * SPRITE_SCALE / PISTOL_ITEM_CLIP[2]
 RIFLE_DROP_SCALE = 136 * SPRITE_SCALE / RIFLE_ITEM_CLIP[2]
+
+
+class StaticDropSprite(NamedTuple):
+    image: str
+    clip: tuple[int, int, int, int]
+    scale: float
+    rest_angle: float = 0.0  # Degrees counterclockwise when facing right.
+    rest_size: tuple[int, int] | None = None  # Visible source pixels after rotation.
+
+    def display_size(self, *, grounded):
+        width, height = self.rest_size if grounded and self.rest_size else self.clip[2:]
+        return width * self.scale, height * self.scale
+
+
 STATIC_DROP_SPRITES = {
-    "pistol": (PISTOL_ITEM_IMAGE, PISTOL_ITEM_CLIP, PISTOL_DROP_SCALE),
-    "ar_rifle": (RIFLE_ITEM_IMAGE, RIFLE_ITEM_CLIP, RIFLE_DROP_SCALE),
-    "sword": (SWORD_ITEM_IMAGE, SWORD_ITEM_CLIP, SPRITE_SCALE),
+    "pistol": StaticDropSprite(PISTOL_ITEM_IMAGE, PISTOL_ITEM_CLIP, PISTOL_DROP_SCALE),
+    "ar_rifle": StaticDropSprite(RIFLE_ITEM_IMAGE, RIFLE_ITEM_CLIP, RIFLE_DROP_SCALE),
+    "sword": StaticDropSprite(SWORD_ITEM_IMAGE, SWORD_ITEM_CLIP, SPRITE_SCALE,
+                              rest_angle=-69, rest_size=(142, 20)),
 }
 # Item order and visible source clips (pico2d bottom-left coordinates).
 # Alpha > 8 ignores almost-invisible stray pixels in the club/axe originals.

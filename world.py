@@ -146,9 +146,8 @@ class World:
         left, bottom, right, top = area.bounds
         half_width, height = config.DROP_ITEM_HALF_WIDTH, config.DROP_ITEM_HEIGHT
         if kind in config.STATIC_DROP_SPRITES:
-            _, clip, scale = config.STATIC_DROP_SPRITES[kind]
-            half_width = max(half_width, clip[2] * scale / 2)
-            height = clip[3] * scale
+            width, height = config.STATIC_DROP_SPRITES[kind].display_size(grounded=True)
+            half_width = max(half_width, width / 2)
         else:
             bottom += config.DROP_ITEM_SHADOW_HALF_DEPTH
             if kind in config.THROWN_WEAPON_SPRITES:

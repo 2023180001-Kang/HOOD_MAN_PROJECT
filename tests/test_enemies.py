@@ -242,7 +242,12 @@ class EnemyTests(unittest.TestCase):
                 break
             if stage.factory_gate is not None:
                 self.assertTrue(world.opening_factory_exit)
-                world.update(config.FACTORY_GATE_DURATION + config.FACTORY_FADE_DURATION)
+                advance(world, config.FACTORY_GATE_DURATION + config.FIXED_DT, fps=120)
+                self.assertFalse(world.stage_loading)
+                world.player.x = stage.factory_doorway(world.player.x)[0]
+                world.player.ground_y = stage.walkable.bounds[3]
+                self.assertTrue(world.try_stage_transition())
+                world.update(config.FACTORY_FADE_DURATION)
                 world.update(config.FIXED_DT)
                 continue
             self.assertEqual(stage.destination(1), index + 1)

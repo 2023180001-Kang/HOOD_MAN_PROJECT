@@ -14,7 +14,7 @@ from world import World as CampaignWorld
 
 
 class FactoryExteriorTests(unittest.TestCase):
-    def test_last_enemy_starts_slow_gate_then_fade_and_automatic_dock_entry(self):
+    def test_last_enemy_opens_gate_and_walking_to_it_starts_one_second_fade_to_dock(self):
         for fps in (30, 60, 144):
             with self.subTest(fps=fps):
                 world = CampaignWorld(rng=random.Random(13))
@@ -42,13 +42,28 @@ class FactoryExteriorTests(unittest.TestCase):
                 self.assertTrue(world.opening_factory_exit)
                 self.assertIn(4, world.cleared_stages)
                 frames = set()
-                while world.stage_loading_remaining > 0:
+                while world.opening_factory_exit:
                     frames.add(exterior.factory_gate.frame)
-                    if world.stage_loading_remaining < config.FACTORY_FADE_DURATION - 1e-8:
-                        self.assertTrue(exterior.factory_gate.finished)
+                    self.assertIsNone(world.pending_stage_index)
                     self.assertIs(world.stage, exterior)
                     world.update(1 / fps)
                 self.assertEqual(frames, set(range(8)))
+                self.assertTrue(exterior.factory_gate.finished)
+                advance(world, 3, fps=fps)  # Walking against the right edge cannot enter the dock.
+                self.assertIs(world.stage, exterior)
+                self.assertFalse(world.stage_loading)
+                world.controls.release("right")
+                world.controls.press("up")
+                for _ in range(2 * fps):
+                    world.update(1 / fps)
+                    if world.entering_factory_gate:
+                        break
+                world.controls.release("up")
+                self.assertTrue(world.entering_factory_gate)
+                self.assertTrue(exterior.at_open_factory_gate(player))
+                self.assertEqual(world.stage_loading_remaining, 1.0)
+                while world.stage_loading_remaining > 0:
+                    world.update(1 / fps)
                 self.assertIs(world.stage, exterior)  # A fully black frame precedes entry.
                 world.update(1 / fps)
                 self.assertEqual(world.stage.image_name, config.FACTORY_OUTSIDE_IMAGE)
@@ -58,19 +73,52 @@ class FactoryExteriorTests(unittest.TestCase):
                 advance(world, 1, fps=fps)
                 self.assertEqual(len(world.enemies), 4)
                 world.select_stage(4)
-                world.controls.release("right")
                 world.step(config.FIXED_DT)
                 self.assertFalse(world.opening_factory_exit)
-                self.assertEqual(exterior.destination(1), 5)
+                self.assertIsNone(exterior.destination(1))
+                self.assertTrue(exterior.factory_gate.finished)
 
-    def test_restart_during_gate_or_fade_restores_closed_gate(self):
-        for elapsed in (1.0, config.FACTORY_GATE_DURATION + 0.5):
+    def test_held_movement_and_new_jump_work_while_gate_is_still_opening(self):
+        world = CampaignWorld()
+        world.reset(stage_index=4)
+        player = world.player
+        center, sill = world.stage.factory_doorway(player.x)
+        player.x, player.ground_y = center, sill - 60
+        world.controls.press("up")
+        for enemy in world.enemies:
+            enemy.take_damage(enemy.hp)
+        world.step(config.FIXED_DT)
+        self.assertTrue(world.opening_factory_exit)
+        depth = player.ground_y
+        advance(world, 0.5)
+        self.assertGreater(player.ground_y, depth)
+        self.assertLessEqual(abs(player.ground_y - sill), config.FACTORY_GATE_ENTRY_DEPTH)
+        self.assertFalse(world.stage_loading)
+        self.assertFalse(world.try_stage_transition())
+        world.controls.release("up")
+        world.controls.press("left")
+        tap(world.controls, "jump")
+        advance(world, 0.15)
+        self.assertTrue(world.opening_factory_exit)
+        self.assertLess(player.x, center)
+        self.assertGreater(player.jump_height, 0)
+        self.assertGreater(world.stage.factory_gate.frame, 0)
+
+    def test_restart_during_opening_wait_or_fade_restores_closed_gate(self):
+        for phase in ("opening", "waiting", "fade"):
             world = CampaignWorld()
             world.reset(stage_index=4)
             for enemy in world.enemies:
                 enemy.take_damage(enemy.hp)
             world.step(config.FIXED_DT)
-            world.update(elapsed)
+            advance(world, 1.0 if phase == "opening" else config.FACTORY_GATE_DURATION + config.FIXED_DT,
+                    fps=120)
+            if phase == "fade":
+                world.player.x = world.stage.factory_doorway(world.player.x)[0]
+                world.player.ground_y = world.stage.walkable.bounds[3]
+                world.step(config.FIXED_DT)
+                self.assertTrue(world.entering_factory_gate)
+                world.update(0.5)
             tap(world.controls, "restart")
             world.update(config.FIXED_DT)
             self.assertEqual(world.stage_index, 0)

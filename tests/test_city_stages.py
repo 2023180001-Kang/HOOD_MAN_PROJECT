@@ -42,7 +42,7 @@ class CityStageTests(unittest.TestCase):
             self.assertEqual(stage.destination(-1), index - 1 if index else None)
             if stage.factory_gate is not None:
                 self.assertIsNone(stage.destination(1))
-                stage.factory_gate.update(config.FACTORY_GATE_DURATION)
+                continue  # The exterior uses its doorway instead of a right-edge arrow.
             self.assertEqual(stage.destination(1), index + 1 if index < len(world.stages) - 1 else None)
 
     def test_replacement_cities_load_in_order_and_old_pngs_are_archived_without_changes(self):
@@ -176,7 +176,8 @@ class CityStageTests(unittest.TestCase):
                     player.animation.set_state("JUMP")
                     player.animation.elapsed = 0.2
                     if world.stage.factory_gate is not None:
-                        world.stage.factory_gate.update(config.FACTORY_GATE_DURATION)
+                        self.assertFalse(world.try_stage_transition())
+                        continue
                     self.assertTrue(world.try_stage_transition())
                     self.assertFalse(world.stage_loading)
                     self.assertEqual(world.stage_index, first + 1 if side > 0 else first)

@@ -247,12 +247,21 @@ class FactoryStageTests(unittest.TestCase):
                          (420, True, 258, 140, 300, 2, -config.RUN_SPEED))
         exterior = world.stage
         exterior.arrows_visible = True
-        exterior.factory_gate.update(config.FACTORY_GATE_DURATION)  # Previously cleared for the return trip.
-        self.assertEqual(exterior.destination(1), 5)
+        exterior.factory_gate.set_state("OPENING")
+        exterior.factory_gate.update(config.FACTORY_GATE_DURATION)
+        self.assertIsNone(exterior.destination(1))
         world.controls.release("left")
         world.controls.press("right")
         player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
+        self.assertFalse(world.try_stage_transition())
+        player.x, player.ground_y = exterior.factory_doorway(800)
+        exterior.constrain_actor(player)
+        self.assertFalse(world.try_stage_transition())  # Airborne above the threshold.
+        player.jump_height, player.vy, player.jump_count = 0, 0, 0
         self.assertTrue(world.try_stage_transition())
+        self.assertTrue(world.entering_factory_gate)
+        world.update(config.FACTORY_FADE_DURATION)
+        world.update(config.FIXED_DT)
         self.assertFalse(world.stage_loading)
         self.assertIs(world.stage, source)
         self.assertIs(source.enemies[0], enemy)
@@ -260,7 +269,7 @@ class FactoryStageTests(unittest.TestCase):
         self.assertEqual(exterior.spawner.spawned_count, 0)
         self.assertEqual(exterior.enemies, [])
         self.assertEqual((player.ground_y, player.jump_height, player.vy, player.jump_count),
-                         (258, 140, 300, 2))
+                         (258, 0, 0, 0))
 
 
 if __name__ == "__main__":

@@ -100,6 +100,11 @@ class World:
 
     @property
     def opening_factory_exit(self):
+        gate = self.stage.factory_gate
+        return gate is not None and gate.state == "OPENING" and not gate.finished
+
+    @property
+    def entering_factory_gate(self):
         return (self.stage.factory_gate is not None
                 and self.pending_stage_index == self.stage_index + 1)
 
@@ -231,21 +236,12 @@ class World:
             # Loading uses real elapsed time, independent of the physics dt cap.
             self.controls.pressed.clear()
             dt = max(0.0, dt)
-            if self.opening_factory_exit and self.stage_loading_remaining > 0:
-                self.stage.factory_gate.update(dt)
-                self.update_combat_effects(dt)
-                for item in self.stage.drop_items:
-                    item.update(dt)
-                for enemy in self.enemies:
-                    enemy.update(dt, self.player, self.stage.area_for(enemy))
-                self.enemies[:] = [enemy for enemy in self.enemies if not enemy.faded_out]
-                self.stage_loading_remaining = max(0.0, self.stage_loading_remaining - dt)
-                # Present the fully black exterior before swapping to the dock on the next update.
-                return
+            fading = self.entering_factory_gate and self.stage_loading_remaining > 0
             self.stage_loading_remaining = max(0.0, self.stage_loading_remaining - dt)
+            if fading:
+                # Draw the fully black exterior once before entering the dock.
+                return
             if self.stage_loading_remaining <= 1e-9:
-                if self.opening_factory_exit:
-                    self.stage.arrows_visible = True
                 self._enter_stage(self.pending_stage_index)
                 self.pending_stage_index = None
                 self.stage_loading_remaining = 0.0
@@ -379,14 +375,17 @@ class World:
                     self.stage.arrows_visible = True
                     if not self.training:
                         self.cleared_stages.add(self.stage_index)
-        if (self.stage.factory_gate is not None and not self.stage.factory_gate.finished
+        if (self.stage.factory_gate is not None and self.stage.factory_gate.state == "CLOSED"
                 and self.stage.encounter_started and self.stage.defeated_count > 0 and self.player.alive
                 and not any(enemy.alive for enemy in self.enemies)):
             self.cleared_stages.add(self.stage_index)
             self.stage.arrows_visible = False
-            self.pending_stage_index = self.stage_index + 1
-            self.stage_loading_remaining = config.FACTORY_GATE_DURATION + config.FACTORY_FADE_DURATION
-            self.controls.pressed.clear()
+            self.stage.opening_gate_x, _ = self.stage.factory_doorway(self.player.x)
+            self.stage.factory_gate.set_state("OPENING")
+        elif self.opening_factory_exit:
+            self.stage.factory_gate.update(real_dt)
+            if self.stage.factory_gate.finished:
+                self.stage.arrows_visible = True
         self.update_camera(dt)
 
     def advance_projectiles(self, projectiles, dt):
@@ -492,6 +491,11 @@ class World:
                 or not player.alive or player.active_move is not None
                 or player.state in ("SHOOT", "RELOAD", "HIT", "DYING", "DEAD")):
             return False
+        if self.stage.at_open_factory_gate(player):
+            self.pending_stage_index = self.stage_index + 1
+            self.stage_loading_remaining = config.FACTORY_FADE_DURATION
+            self.controls.pressed.clear()
+            return True
         for side in self.stage.arrow_sides:
             destination = self.stage.destination(side)
             at_exit = (player.x <= config.STAGE_EXIT_MARGIN if side < 0 else

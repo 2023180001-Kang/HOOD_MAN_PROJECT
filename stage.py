@@ -44,8 +44,10 @@ class Stage:
         self.arrows_visible = False
         self.encounter_started = False
         self.defeated_count = 0
-        self.factory_gate = (Animation({"OPENING": (1, config.FACTORY_GATE_FPS, False)}, "OPENING")
+        self.factory_gate = (Animation(dict.fromkeys(("CLOSED", "OPENING"), (1, config.FACTORY_GATE_FPS, False)),
+                                       "CLOSED")
                              if self.image_name == config.FACTORY_EXTERIOR_IMAGE else None)
+        self.opening_gate_x = None
         self.spawn_cycle_index = None  # None preserves this map's native default.
         self.enemies = []
         self.effects = []
@@ -354,7 +356,7 @@ class Stage:
     def arrow_sides(self):
         if not self.arrows_visible:
             return ()
-        if self.factory_gate is not None and not self.factory_gate.finished:
+        if self.factory_gate is not None:
             return (-1,)
         return tuple(side for side in (-1, 1) if 0 <= self.index + side < len(config.STAGE_IMAGES))
 
@@ -363,6 +365,25 @@ class Stage:
         if side in self.arrow_sides:
             return target
         return None
+
+    def factory_doorway(self, world_x):
+        """World-space center x and sill y of the gate in this background tile."""
+        tile_width, tile_height = config.STAGE_DOOR_MAP_SIZE
+        scale = config.STAGE_SCALE
+        tile = floor(world_x / (tile_width * scale))
+        left, top, width, height = config.FACTORY_GATE_RECT
+        center = left + width / 2
+        x = (tile * tile_width + (tile_width - center if tile % 2 else center)) * scale
+        anchor = config.STAGE_GROUND_ANCHORS[self.image_name]
+        sill = config.GROUND_Y + (tile_height - anchor - top - height) * scale
+        return x, sill
+
+    def at_open_factory_gate(self, player):
+        if self.factory_gate is None or not self.factory_gate.finished or not player.grounded:
+            return False
+        center, sill = self.factory_doorway(player.x)
+        half_opening = config.FACTORY_GATE_RECT[2] * config.STAGE_SCALE / 2 - config.PLAYER_HALF_WIDTH
+        return abs(player.x - center) <= half_opening and abs(player.ground_y - sill) <= config.FACTORY_GATE_ENTRY_DEPTH
 
     def toggle_doors(self):
         for door in self.doors:
@@ -402,14 +423,13 @@ class Stage:
                     width, headroom,
                 )
             if self.factory_gate is not None:
-                left, top, gate_w, gate_h = config.FACTORY_GATE_RECT
-                center = left + gate_w / 2
-                source_x = image.w - center if index % 2 else center
+                _, top, gate_w, gate_h = config.FACTORY_GATE_RECT
+                gate_x, _ = self.factory_doorway(index * width)
                 gate = assets.images[config.FACTORY_GATE_IMAGE]
                 # The opening row is on top. Each 512×384 cell has transparent margins.
                 gate.clip_composite_draw(
                     self.factory_gate.frame * 512 + 10, gate.h - 368, 492, 352,
-                    0, "h" if index % 2 else "", index * width + source_x * scale - camera_x,
+                    0, "h" if index % 2 else "", gate_x - camera_x,
                     bottom + (image.h - top - gate_h / 2) * scale, gate_w * scale, gate_h * scale,
                 )
             for door in self.doors:

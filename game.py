@@ -12,6 +12,7 @@ from sdl2 import (
 )
 
 import config
+from physics import clamp
 from assets import Assets
 from drop_items import DropItem
 from effects import SpriteAfterimage
@@ -199,21 +200,40 @@ class Game:
             pico2d.update_canvas()
 
     def draw(self, present=True):
-        factory_exit = self.world.opening_factory_exit
-        if self.world.stage_loading and not factory_exit:
+        entering = self.world.entering_factory_gate
+        if self.world.stage_loading and not entering:
             self.draw_stage_loading_screen(present)
             return
         pico2d.clear_canvas()
         camera_x = self.world.camera.render_x
-        camera_y = self.world.camera.render_y
-        if factory_exit:
-            # Pan to the doorway even if the final enemy fell at the far edge.
-            left, _, width, _ = config.FACTORY_GATE_RECT
-            target_x = (left + width / 2) * config.STAGE_SCALE - config.SCREEN_WIDTH / 2
-            pan = min(1.0, self.world.stage.factory_gate.elapsed / 0.75)
+        if self.world.opening_factory_exit:
+            # Show the opening gate while keeping the moving player in view.
+            width = config.SCREEN_WIDTH
+            player_x = self.world.player.x
+            target = clamp(self.world.stage.opening_gate_x - width / 2,
+                           player_x - 3 * width / 4, player_x - width / 4)
+            elapsed = self.world.stage.factory_gate.elapsed
+            pan = min(1.0, elapsed / 0.75, (config.FACTORY_GATE_DURATION - elapsed) / 0.75)
             pan = pan * pan * (3 - 2 * pan)
-            camera_x += (target_x - camera_x) * pan
-            camera_y *= 1 - pan
+            camera_x += (clamp(target, 0, self.world.camera.max_x) - camera_x) * pan
+        self.draw_world(camera_x, self.world.camera.render_y)
+        self.ui.draw(self.assets, self.world)
+        if self.world.training:
+            self.menu.draw_button(self.assets, self.menu.bag_back_button)
+        if entering and self.world.stage_loading_remaining < config.FACTORY_FADE_DURATION:
+            alpha = round(255 * (1 - self.world.stage_loading_remaining / config.FACTORY_FADE_DURATION))
+            previous_mode = ctypes.c_int()
+            SDL_GetRenderDrawBlendMode(backend.renderer, ctypes.byref(previous_mode))
+            SDL_SetRenderDrawBlendMode(backend.renderer, SDL_BLENDMODE_BLEND)
+            try:
+                pico2d.draw_rectangle(0, 0, config.SCREEN_WIDTH - 1, config.SCREEN_HEIGHT - 1,
+                                      0, 0, 0, alpha, filled=True)
+            finally:
+                SDL_SetRenderDrawBlendMode(backend.renderer, previous_mode.value)
+        if present:
+            pico2d.update_canvas()
+
+    def draw_world(self, camera_x, camera_y):
         self.world.stage.draw(self.assets, camera_x, camera_y, elapsed=self.world.elapsed)
         self.ui.draw_floor_bounds(self.world, camera_x, camera_y)
         player = self.world.player
@@ -259,21 +279,6 @@ class Game:
             self.assets.draw_hit_effect(effect, camera_x, camera_y)
         self.ui.draw_enemy_health(self.assets, self.world, camera_x, camera_y)
         self.ui.draw_pickup_prompt(self.assets, self.world, camera_x, camera_y)
-        self.ui.draw(self.assets, self.world)
-        if self.world.training:
-            self.menu.draw_button(self.assets, self.menu.bag_back_button)
-        if factory_exit and self.world.stage_loading_remaining < config.FACTORY_FADE_DURATION:
-            alpha = round(255 * (1 - self.world.stage_loading_remaining / config.FACTORY_FADE_DURATION))
-            previous_mode = ctypes.c_int()
-            SDL_GetRenderDrawBlendMode(backend.renderer, ctypes.byref(previous_mode))
-            SDL_SetRenderDrawBlendMode(backend.renderer, SDL_BLENDMODE_BLEND)
-            try:
-                pico2d.draw_rectangle(0, 0, config.SCREEN_WIDTH - 1, config.SCREEN_HEIGHT - 1,
-                                      0, 0, 0, alpha, filled=True)
-            finally:
-                SDL_SetRenderDrawBlendMode(backend.renderer, previous_mode.value)
-        if present:
-            pico2d.update_canvas()
 
     def run(self, max_frames=None):
         previous = perf_counter()

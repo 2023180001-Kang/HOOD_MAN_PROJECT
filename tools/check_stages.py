@@ -84,7 +84,7 @@ def check_motion_continuity(game, first=0):
             game.world = World()
             game.world.stage_index = first if side > 0 else first + 1
             if game.world.stage.factory_gate is not None:
-                game.world.stage.factory_gate.update(config.FACTORY_GATE_DURATION)
+                continue  # Doorway travel is exercised by check_factory_exterior.
             direction_key = pico2d.SDLK_RIGHT if side > 0 else pico2d.SDLK_LEFT
             push_key(direction_key)
             if mode != "walk":
@@ -429,9 +429,7 @@ def check_factory_exterior(game):
     world.update_camera(0)
     closed = capture(game, "factory_gate_closed").convert("RGB")
 
-    # A last hit at the far edge must still bring the doorway into view.
-    player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
-    world.update_camera(0)
+    # Stand in line with the door, but well out on the pavement.
     world.spawn_enemies(1)
     for enemy in world.enemies[:-1]:
         enemy.take_damage(enemy.hp)
@@ -449,10 +447,20 @@ def check_factory_exterior(game):
     push_key(pico2d.SDLK_a, down=False)
     game.handle_events()
     assert not last.alive
-    assert world.opening_factory_exit
-    game.update(config.FACTORY_GATE_DURATION / 2)
+    assert world.opening_factory_exit and not world.stage_loading
+    x = player.x
+    push_key(pico2d.SDLK_RIGHT)
+    tick(game, 40)
+    assert player.x > x and world.opening_factory_exit
+    push_key(pico2d.SDLK_RIGHT, down=False)
+    push_key(pico2d.SDLK_SPACE)
+    tick(game)
+    assert player.jump_height > 0
+    push_key(pico2d.SDLK_SPACE, down=False)
+    tick(game, 39)
     middle = capture(game, "factory_gate_opening").convert("RGB")
-    game.update(config.FACTORY_GATE_DURATION / 2)
+    tick(game, 81)
+    assert world.stage.factory_gate.finished and not world.stage_loading
     opened = capture(game, "factory_gate_open").convert("RGB")
 
     # Check the shutter face itself, above the actors and away from the HUD.
@@ -460,14 +468,25 @@ def check_factory_exterior(game):
     for first, second in ((closed, middle), (middle, opened)):
         changed = ImageChops.difference(first.crop(panel), second.crop(panel)).convert("L")
         assert sum(changed.histogram()[4:]) > 12000
-    game.update(config.FACTORY_FADE_DURATION / 2)
+    tick(game, 300)
+    assert world.stage.image_name == config.FACTORY_EXTERIOR_IMAGE and not world.stage_loading
+    push_key(pico2d.SDLK_UP)
+    for _ in range(120):
+        tick(game)
+        if world.entering_factory_gate:
+            break
+    push_key(pico2d.SDLK_UP, down=False)
+    game.handle_events()
+    assert world.entering_factory_gate
+    threshold = capture(game, "factory_gate_threshold").convert("RGB")
+    game.update(0.5)
     fading = capture(game, "factory_gate_fading").convert("RGB")
-    for region in (panel, (0, 0, 350, 95)):
-        expected = opened.crop(region).point(lambda value: value // 2)
-        error = ImageChops.difference(expected, fading.crop(region))
-        assert max(high for _, high in error.getextrema()) <= 2
-    game.update(config.FACTORY_FADE_DURATION / 2 + 1e-9)
-    assert world.opening_factory_exit
+    # Halfway through the fade, the entire original frame (including HUD) is half as bright.
+    expected = threshold.point(lambda value: value // 2)
+    error = ImageChops.difference(expected, fading)
+    assert max(high for _, high in error.getextrema()) <= 2
+    game.update(0.5)
+    assert world.entering_factory_gate
     assert capture(game, "factory_gate_black").convert("RGB").getbbox() is None
     game.update(config.FIXED_DT)
     assert world.stage.image_name == config.FACTORY_OUTSIDE_IMAGE
@@ -476,7 +495,7 @@ def check_factory_exterior(game):
     for _ in range(round(config.STAGE_ENCOUNTER_DELAY / config.FIXED_DT)):
         game.update(config.FIXED_DT)
     assert len(world.enemies) == config.STAGE_ENCOUNTER_SIZE
-    print("PASS: closed gate, opening frames, full-screen fade including HUD, black frame and dock entry.")
+    print("PASS: movement and jumping during gate opening, then a one-second fade at the doorway.")
 
 
 def check_indoor_backgrounds(game, first=6):

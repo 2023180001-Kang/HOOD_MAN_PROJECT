@@ -311,7 +311,7 @@ def check_city_loading(game):
                 pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_9, pico2d.SDLK_p, pico2d.SDLK_1):
         push_key(key, down=False)
     game.handle_events()
-    print(f"PASS: WHERE intro and fade took {duration:.3f}s with gameplay frozen; "
+    print(f"PASS: WHEN intro and fade took {duration:.3f}s with gameplay frozen; "
           f"changed_first_map -> {config.SECOND_STAGE_IMAGE} -> {config.CITY_STAGE_IMAGES}, "
           "ignored loading actions, "
           "HP/motion/resource reuse, city return and F5 cancellation verified.")

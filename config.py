@@ -99,8 +99,8 @@ class StageIntroArt(NamedTuple):
 
 
 FIRST_STAGE_INTRO = StageIntroArt("FirstStage-WHO-BackGround.png", "FirstStage-WHO.png")
-# WHERE is centered about 21 pixels below the midpoint of each 384x512 source cell.
-DARK_CITY_INTRO = StageIntroArt("DarkCity_BackGround.png", "DarkCity-Where_pico2d_aligned.png", 21)
+# WHEN is centered about 17 pixels below the midpoint of each 384x512 source cell.
+DARK_CITY_INTRO = StageIntroArt("DarkCity_BackGround.png", "WHEN_pico2d_aligned_8frames.png", 17)
 STAGE_INTRO_HOLD = 2.5
 STAGE_INTRO_FADE = 2.0
 STAGE_INTRO_DURATION = STAGE_INTRO_HOLD + STAGE_INTRO_FADE

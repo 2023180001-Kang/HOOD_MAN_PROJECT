@@ -329,7 +329,7 @@ class MainMenuFlowTests(unittest.TestCase):
         game.update(config.FIXED_DT)
         self.assertEqual(game.world.player.jump_count, 1)
 
-    def test_city_entry_draws_where_then_full_black_before_switching_maps(self):
+    def test_city_entry_draws_when_then_full_black_before_switching_maps(self):
         game = self.game
         world = game.world
         world.select_stage(1)
@@ -339,12 +339,12 @@ class MainMenuFlowTests(unittest.TestCase):
         self.assertTrue(world.try_stage_transition())
         background, title = Mock(), Mock(w=1536, h=1024)
         game.assets = SimpleNamespace(images={config.DARK_CITY_INTRO.background: background,
-                                             config.DARK_CITY_INTRO.title: title})
+                                             "WHEN_pico2d_aligned_8frames.png": title})
         with patch("game.pico2d.clear_canvas"), patch("game.draw_black_overlay") as overlay:
             for frame in range(8):
                 game.draw(present=False)
                 title.clip_draw.assert_called_with(frame % 4 * 384, (1 - frame // 4) * 512,
-                                                   384, 512, 640, 381)
+                                                   384, 512, 640, 377)
                 background.draw.assert_called_with(640, 360, 1280, 720)
                 game.update(2.5 / 8)
             game.draw(present=False)

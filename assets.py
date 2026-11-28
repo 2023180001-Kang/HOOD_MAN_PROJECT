@@ -18,6 +18,7 @@ class Assets:
         self.images = {
             name: pico2d.load_image(str(config.ROOT / name))
             for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE,
+                         config.FIRST_STAGE_INTRO_BACKGROUND, config.FIRST_STAGE_INTRO_TITLE,
                          config.DEATH_TITLE_IMAGE, config.DEATH_BUTTONS_IMAGE,
                          *config.STAGE_STATUS_IMAGES.values(),
                          *(label for _, label, _ in config.STAGE_PROGRESS_LEGEND),

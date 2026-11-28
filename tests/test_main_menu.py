@@ -157,6 +157,7 @@ class MainMenuTests(unittest.TestCase):
             assets = Assets()
         loaded = [call.args[0] for call in load.call_args_list]
         for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE, *config.STAGE_STATUS_IMAGES.values(),
+                     config.FIRST_STAGE_INTRO_BACKGROUND, config.FIRST_STAGE_INTRO_TITLE,
                      *(label for _, label, _ in config.STAGE_PROGRESS_LEGEND),
                      *(image for _, image in config.MAIN_MENU_BUTTONS)):
             self.assertIn(name, assets.images)
@@ -285,6 +286,47 @@ class MainMenuFlowTests(unittest.TestCase):
         self.assertEqual(len(world.enemies), 4)
         self.assertTrue(all(not stage.enemies for stage in world.stages[1:]))
         self.assertTrue(all(len(stage.drop_items) == 15 for stage in world.stages))
+
+    def test_start_plays_centered_title_and_fades_before_enabling_play(self):
+        game = self.game
+        button = game.menu.buttons[0]
+        click = mouse_event(pico2d.SDL_MOUSEBUTTONDOWN, button.x, button.y)
+        with patch.object(game, "draw_main_menu"), patch.object(
+            game, "handle_events", side_effect=lambda **kw: process_menu_events(game, click, **kw)
+        ):
+            game.show_main_menu()
+        background, title = Mock(), Mock(w=1774, h=887)
+        game.assets = SimpleNamespace(images={config.FIRST_STAGE_INTRO_BACKGROUND: background,
+                                             config.FIRST_STAGE_INTRO_TITLE: title})
+        jump = SDL_Event()
+        jump.type, jump.key.keysym.sym = pico2d.SDL_KEYDOWN, pico2d.SDLK_SPACE
+        with patch("game.pico2d.clear_canvas"), patch("game.draw_black_overlay") as overlay:
+            for frame in range(8):
+                game.draw(present=False)
+                left, bottom, width, height, x, y = title.clip_draw.call_args.args
+                self.assertEqual((left, bottom), (frame % 4 * 1774 // 4, 444 if frame < 4 else 0))
+                self.assertIn(width, (443, 444))
+                self.assertIn(height, (443, 444))
+                self.assertEqual((x, y), (640, 360))
+                background.draw.assert_called_with(640, 360, 1280, 720)
+                game.update(1.5 / 8)
+            game.draw(present=False)
+            overlay.assert_not_called()
+            process_menu_events(game, jump, menu_screen=False)
+            game.update(0.5)
+            game.draw(present=False)
+            overlay.assert_called_once_with(128)
+            game.update(0.5)
+            game.draw(present=False)
+            overlay.assert_called_with(255)
+        self.assertEqual(game.world.elapsed, 0)
+        self.assertFalse(game.world.controls.held or game.world.controls.pressed)
+        game.update(config.FIXED_DT)
+        self.assertIsNone(game.intro_elapsed)
+        self.assertGreater(game.world.elapsed, 0)
+        process_menu_events(game, jump, menu_screen=False)
+        game.update(config.FIXED_DT)
+        self.assertEqual(game.world.player.jump_count, 1)
 
     def test_closed_game_does_not_display_or_wait_in_menu(self):
         self.game.running = False

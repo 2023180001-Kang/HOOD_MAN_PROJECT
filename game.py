@@ -58,6 +58,8 @@ KEYS.update({getattr(pico2d, f"SDLK_{prefix}{count}"): f"spawn_{count}"
 
 
 class Game:
+    intro_elapsed: float | None = None
+
     def __init__(self):
         self.assets = Assets()
         self.ui = UI()
@@ -127,6 +129,8 @@ class Game:
                     self.menu.release_pointer(
                         event.button.x, config.SCREEN_HEIGHT - 1 - event.button.y,
                     )
+            elif self.intro_elapsed is not None:
+                continue
             elif not self.world.player.alive and event.type in (pico2d.SDL_MOUSEMOTION, pico2d.SDL_MOUSEBUTTONDOWN):
                 pointer = event.motion if event.type == pico2d.SDL_MOUSEMOTION else event.button
                 screen = self.ui.death_screen
@@ -184,6 +188,7 @@ class Game:
         if not self.running:
             return
         self._menu_requested = False
+        self.intro_elapsed = None
         self.menu.show_main()
         self.world.controls.held.clear()
         self.world.controls.pressed.clear()
@@ -198,12 +203,21 @@ class Game:
                 self.world.starting_weapon = self.menu.equipped_weapon
                 self.world.reset(stage_index=self.menu.launch_stage)
                 self.ui.update(0, self.world.player)
+                if self.menu.launch_action == "game_start":
+                    self.intro_elapsed = 0.0
                 return
             if self.running:
                 self.draw_main_menu()
                 sleep(1 / config.TARGET_FPS)
 
     def update(self, dt):
+        if self.intro_elapsed is not None:
+            duration = config.FIRST_STAGE_INTRO_HOLD + config.FIRST_STAGE_INTRO_FADE
+            if self.intro_elapsed < duration:
+                self.intro_elapsed = min(duration, self.intro_elapsed + dt)
+                return
+            # The preceding frame presented the fully black screen.
+            self.intro_elapsed = None
         # Presentation remains toggleable while gameplay is loading or dead.
         if self.world.controls.take_press("toggle_details") and not self.world.training:
             self.ui.details_visible = not self.ui.details_visible
@@ -223,7 +237,27 @@ class Game:
         if present:
             pico2d.update_canvas()
 
+    def draw_first_stage_intro(self, present=True):
+        pico2d.clear_canvas()
+        width, height = config.SCREEN_WIDTH, config.SCREEN_HEIGHT
+        x, y = width / 2, height / 2
+        self.assets.images[config.FIRST_STAGE_INTRO_BACKGROUND].draw(x, y, width, height)
+        title = self.assets.images[config.FIRST_STAGE_INTRO_TITLE]
+        frame = min(7, int(8 * self.intro_elapsed / config.FIRST_STAGE_INTRO_HOLD))
+        row, column = divmod(frame, 4)
+        left, right = column * title.w // 4, (column + 1) * title.w // 4
+        top, bottom = row * title.h // 2, (row + 1) * title.h // 2
+        title.clip_draw(left, title.h - bottom, right - left, bottom - top, x, y)
+        if self.intro_elapsed > config.FIRST_STAGE_INTRO_HOLD:
+            fade = (self.intro_elapsed - config.FIRST_STAGE_INTRO_HOLD) / config.FIRST_STAGE_INTRO_FADE
+            draw_black_overlay(round(255 * fade))
+        if present:
+            pico2d.update_canvas()
+
     def draw(self, present=True):
+        if self.intro_elapsed is not None:
+            self.draw_first_stage_intro(present)
+            return
         entering = self.world.entering_factory_gate
         if self.world.stage_loading and not entering:
             self.draw_stage_loading_screen(present)

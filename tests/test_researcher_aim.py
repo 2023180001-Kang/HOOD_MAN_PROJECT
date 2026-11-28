@@ -226,9 +226,14 @@ class ResearcherAimTests(unittest.TestCase):
                 game.assets.draw_researcher_aim.assert_called_once_with(
                     enemy, game.world.camera.render_x, game.world.camera.render_y)
                 self.assertEqual(enemy.aim_remaining, remaining)
-            game.world.pending_stage_index = 5
-            game.world.stage_loading_remaining = 2
             game.assets.reset_mock()
+            game.world.pending_stage_index = 5
+            game.world.stage_loading_remaining = config.STAGE_INTRO_DURATION
+            with patch.object(game, "draw_stage_intro") as intro:
+                game.draw(present=False)
+            intro.assert_called_once_with(config.FACTORY_EXTERIOR_INTRO, 0, False)
+            game.world.pending_stage_index = 8
+            game.world.stage_loading_remaining = config.STAGE_LOADING_DURATION
             with patch.object(game, "draw_stage_loading_screen") as loading:
                 game.draw(present=False)
             loading.assert_called_once_with(False)

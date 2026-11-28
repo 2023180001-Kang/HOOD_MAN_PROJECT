@@ -205,7 +205,7 @@ class Game:
                 self.world.reset(stage_index=self.menu.launch_stage)
                 self.ui.update(0, self.world.player)
                 if (self.menu.launch_action == "game_start"
-                        or self.world.stage.image_name in config.CITY_STAGE_IMAGES):
+                        or self.world.stage.image_name in config.REGION_ENTRY_INTROS):
                     self.intro_elapsed = 0.0
                 return
             if self.running:
@@ -257,13 +257,13 @@ class Game:
 
     def draw(self, present=True):
         if self.intro_elapsed is not None:
-            art = (config.DARK_CITY_INTRO if self.world.stage.image_name in config.CITY_STAGE_IMAGES
-                   else config.FIRST_STAGE_INTRO)
+            art = config.REGION_ENTRY_INTROS.get(self.world.stage.image_name, config.FIRST_STAGE_INTRO)
             self.draw_stage_intro(art, self.intro_elapsed, present)
             return
-        if self.world.entering_dark_city:
+        art = self.world.pending_region_intro
+        if art is not None:
             elapsed = config.STAGE_INTRO_DURATION - self.world.stage_loading_remaining
-            self.draw_stage_intro(config.DARK_CITY_INTRO, elapsed, present)
+            self.draw_stage_intro(art, elapsed, present)
             return
         entering = self.world.entering_factory_gate
         if self.world.stage_loading and not entering:

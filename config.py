@@ -99,8 +99,11 @@ class StageIntroArt(NamedTuple):
 
 
 FIRST_STAGE_INTRO = StageIntroArt("FirstStage-WHO-BackGround.png", "FirstStage-WHO.png")
-# WHEN is centered about 17 pixels below the midpoint of each 384x512 source cell.
+# The WHEN and WHERE lettering sits below the midpoint of each 384x512 source cell.
 DARK_CITY_INTRO = StageIntroArt("DarkCity_BackGround.png", "WHEN_pico2d_aligned_8frames.png", 17)
+FACTORY_EXTERIOR_INTRO = StageIntroArt(
+    "Factory_Exterior_1280x720_pico2d.png", "DarkCity-Where_pico2d_aligned.png", 21,
+)
 STAGE_INTRO_HOLD = 2.5
 STAGE_INTRO_FADE = 2.0
 STAGE_INTRO_DURATION = STAGE_INTRO_HOLD + STAGE_INTRO_FADE
@@ -594,6 +597,11 @@ ARCHIVED_BOSS_STAGE_IMAGES = ("before_sheets/bossStage-1.png", "before_sheets/bo
 STAGE_IMAGES = (STAGE_IMAGE, SECOND_STAGE_IMAGE, *CITY_STAGE_IMAGES,
                 FACTORY_EXTERIOR_IMAGE, FACTORY_OUTSIDE_IMAGE, *FACTORY_INSIDE_IMAGES,
                 *LAB_STAGE_IMAGES, *BOSS_STAGE_IMAGES)
+REGION_ENTRY_INTROS = {
+    **dict.fromkeys(CITY_STAGE_IMAGES, DARK_CITY_INTRO),
+    FACTORY_EXTERIOR_IMAGE: FACTORY_EXTERIOR_INTRO,
+    FACTORY_OUTSIDE_IMAGE: FACTORY_EXTERIOR_INTRO,
+}
 STAGE_LOADING_IMAGE = "HOOD_MAN_STAGE_LOADING_1280x720.png"
 STAGE_LOADING_DURATION = 2.0
 STAGE_LOADING_TRANSITIONS = ((1, 2), (2, 1), (3, 4), (4, 3), (5, 6), (6, 5),

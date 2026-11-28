@@ -113,7 +113,7 @@ class FactoryStageTests(unittest.TestCase):
         self.assertEqual(world.enemies, [])
         self.assertEqual(len(world.stage.drop_items), 15)
 
-    def test_factory_zone_boundaries_preserve_the_player_through_loading_or_the_city_intro(self):
+    def test_factory_zone_boundaries_preserve_the_player_through_loading_or_region_intros(self):
         for first, side in ((3, -1), (3, 1), (5, -1), (5, 1),
                             (7, -1), (7, 1), (9, -1), (9, 1)):
             with self.subTest(first=first, side=side):
@@ -126,13 +126,13 @@ class FactoryStageTests(unittest.TestCase):
                 player.animation.elapsed = 0.2
                 self.assertTrue(world.try_stage_transition())
                 self.assertEqual(world.pending_stage_index, source + side)
-                entering_city = source + side == 3
-                duration = 4.5 if entering_city else 2.0
+                has_intro = source + side in (3, 4, 5)
+                duration = 4.5 if has_intro else 2.0
                 world.update(duration - 0.001)
                 self.assertTrue(world.stage_loading)
                 self.assertEqual(world.stage_index, source)
                 world.update(0.001)
-                if entering_city:
+                if has_intro:
                     self.assertEqual(world.stage_index, source)
                     world.update(0)
                 self.assertFalse(world.stage_loading)
@@ -157,7 +157,7 @@ class FactoryStageTests(unittest.TestCase):
                 self.assertTrue(world.try_stage_transition())
                 for action in ("jump", "combat_a", "invincibility", "stage_exits"):
                     world.controls.press(action)
-                advance(world, 1.9)
+                advance(world, world.stage_loading_remaining - 0.1)
                 self.assertEqual(world.elapsed, 0)
                 for stage in (source, target):
                     self.assertEqual(stage.enemies[0].x, 1500)
@@ -166,6 +166,9 @@ class FactoryStageTests(unittest.TestCase):
                     self.assertEqual(stage.damage_numbers[0].elapsed, 0)
                 self.assertFalse(world.controls.pressed)
                 world.update(0.1)
+                if first == 3:
+                    self.assertIs(world.stage, source)
+                    world.update(0)
                 self.assertIs(world.stage, target)
                 self.assertIn("right", world.controls.held)
                 self.assertIn("left_shift", world.controls.held)
@@ -218,10 +221,14 @@ class FactoryStageTests(unittest.TestCase):
                 for fps in (30, 60, 120, 144):
                     world = at_factory_boundary(first=first)
                     world.try_stage_transition()
-                    for _ in range(2 * fps - 1):
+                    duration = 4.5 if first == 3 else 2.0
+                    for _ in range(round(duration * fps) - 1):
                         world.update(1 / fps)
                     self.assertTrue(world.stage_loading)
                     world.update(1 / fps)
+                    if first == 3:
+                        self.assertEqual(world.stage_loading_remaining, 0)
+                        world.update(1 / fps)
                     self.assertFalse(world.stage_loading)
                     results.append((world.stage_index, world.player.x, world.player.vx,
                                     world.player.ground_y, world.elapsed, world.accumulator))

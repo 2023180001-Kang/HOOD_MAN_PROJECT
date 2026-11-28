@@ -120,7 +120,7 @@ class StageProgressTests(unittest.TestCase):
                     game.show_main_menu()
                 world = game.world
                 self.assertEqual((world.stage.image_name, world.player.weapon), (image, "sword"))
-                self.assertEqual(game.intro_elapsed, 0.0 if image in config.CITY_STAGE_IMAGES else None)
+                self.assertEqual(game.intro_elapsed, 0.0 if label in ("WHEN", "WHERE") else None)
                 self.assertEqual(len(world.enemies), 4)
                 self.assertTrue(all(not stage.encounter_started for stage in world.stages if stage is not world.stage))
         process_menu_events(game, key_event(pico2d.SDLK_p), menu_screen=False)
@@ -188,8 +188,8 @@ class StageClearHealthTests(unittest.TestCase):
                 game.update(world.stage_loading_remaining - 0.25)
                 self.assertEqual((world.stage_index, player.hp), (first + 1, 73))
                 game.update(0.25)
-                if first == 0:
-                    self.assertEqual((world.stage_index, player.hp), (1, 73))
+                if first in (0, 2):
+                    self.assertEqual((world.stage_index, player.hp), (first + 1, 73))
                     game.update(0)
                 self.assertEqual((world.stage_index, player.hp, game.ui.damage_hp), (first + 2, 725, 725))
                 self.assertEqual((player.weapon, player.pistol_ammo), ("pistol", 3))

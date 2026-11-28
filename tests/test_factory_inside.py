@@ -162,10 +162,12 @@ class FactoryInsideFloorTests(unittest.TestCase):
                 loading = (source, destination) in config.STAGE_LOADING_TRANSITIONS
                 self.assertEqual(world.stage_loading, loading)
                 if loading:
-                    world.update(1.999)
+                    world.update(world.stage_loading_remaining - 0.001)
                     self.assertEqual(world.stage_index, source)
                     self.assertEqual(player.ground_y, depth)
                     world.update(0.001)
+                    if destination == 5:
+                        world.update(0)
                 self.assertEqual(world.stage_index, destination)
                 self.assertIs(world.player, player)
                 self.assertEqual((player.ground_y, player.previous_ground_y), (projected, projected))

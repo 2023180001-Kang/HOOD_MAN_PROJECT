@@ -239,7 +239,7 @@ class CityStageTests(unittest.TestCase):
         self.assertEqual(source.damage_numbers[0].elapsed, 0)
         self.assertFalse(world.controls.pressed)
         world.update(0.1)
-        self.assertTrue(world.entering_dark_city)
+        self.assertEqual(world.pending_region_intro, config.DARK_CITY_INTRO)
         world.update(0)
         self.assertFalse(world.stage_loading)
         self.assertEqual(world.stage_index, 2)
@@ -453,7 +453,7 @@ class CityStageTests(unittest.TestCase):
             self.assertEqual(world.stage_index, 1)
             world.update(1 / fps)
             self.assertAlmostEqual(world.stage_loading_remaining, 0.0)
-            self.assertTrue(world.entering_dark_city)
+            self.assertEqual(world.pending_region_intro, config.DARK_CITY_INTRO)
             world.update(1 / fps)
             self.assertFalse(world.stage_loading)
             results.append((world.stage_index, world.player.x, world.player.vx,

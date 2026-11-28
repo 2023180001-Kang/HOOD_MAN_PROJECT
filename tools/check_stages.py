@@ -198,13 +198,12 @@ def check_round_trip_and_last_exit(game):
           "avoids return loops, bounds the final boss exit, and F5 resets all stages.")
 
 
-def check_transition_art(image, entering_city):
+def check_transition_art(image, art):
     actual = image.convert("RGB")
-    if not entering_city:
+    if art is None:
         with Image.open(config.ROOT / config.STAGE_LOADING_IMAGE) as supplied:
             assert ImageChops.difference(actual, supplied.convert("RGB")).getbbox() is None
         return
-    art = config.DARK_CITY_INTRO
     with Image.open(config.ROOT / art.background) as supplied:
         expected = supplied.convert("RGB").resize(actual.size, Image.Resampling.NEAREST)
     with Image.open(config.ROOT / art.title) as sheet:
@@ -251,7 +250,7 @@ def check_city_loading(game):
                 frozen.append(snapshot)
                 with patch.object(game, "draw", original_draw):
                     image = capture(game, "stage_loading_to_city")
-                check_transition_art(image, entering_city=True)
+                check_transition_art(image, config.DARK_CITY_INTRO)
                 timing["start"] = perf_counter()
                 for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_p):
                     push_key(key)
@@ -357,8 +356,8 @@ def check_factory_loading(game, first=3):
         world = game.world
         source_index = first if side > 0 else first + 1
         destination = source_index + side
-        entering_city = config.STAGE_IMAGES[destination] in config.CITY_STAGE_IMAGES
-        wait_seconds = config.STAGE_INTRO_DURATION if entering_city else config.STAGE_LOADING_DURATION
+        intro = config.REGION_ENTRY_INTROS.get(config.STAGE_IMAGES[destination])
+        wait_seconds = config.STAGE_INTRO_DURATION if intro else config.STAGE_LOADING_DURATION
         world.stage_index = source_index
         source, target = world.stage, world.stages[destination]
         player = world.player
@@ -395,7 +394,7 @@ def check_factory_loading(game, first=3):
                     with patch.object(game, "draw", original_draw):
                         image = capture(game, f"stage_loading_to_{region}" if side > 0
                                         else f"stage_loading_return_from_{region}")
-                    check_transition_art(image, entering_city)
+                    check_transition_art(image, intro)
                     timing["start"] = perf_counter()
                 for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_p):
                         push_key(key)

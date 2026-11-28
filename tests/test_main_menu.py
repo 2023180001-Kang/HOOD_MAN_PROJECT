@@ -159,6 +159,7 @@ class MainMenuTests(unittest.TestCase):
         for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE, *config.STAGE_STATUS_IMAGES.values(),
                      config.FIRST_STAGE_INTRO.background, config.FIRST_STAGE_INTRO.title,
                      config.DARK_CITY_INTRO.background, config.DARK_CITY_INTRO.title,
+                     config.FACTORY_EXTERIOR_INTRO.background, config.FACTORY_EXTERIOR_INTRO.title,
                      *(label for _, label, _ in config.STAGE_PROGRESS_LEGEND),
                      *(image for _, image in config.MAIN_MENU_BUTTONS)):
             self.assertIn(name, assets.images)
@@ -330,21 +331,27 @@ class MainMenuFlowTests(unittest.TestCase):
         self.assertEqual(game.world.player.jump_count, 1)
 
     def test_city_entry_draws_when_then_full_black_before_switching_maps(self):
+        self.assert_entry_intro(1, "DarkCity_BackGround.png", "WHEN_pico2d_aligned_8frames.png", 377)
+
+    def test_factory_exterior_entry_draws_where_then_full_black_before_switching_maps(self):
+        self.assert_entry_intro(3, "Factory_Exterior_1280x720_pico2d.png",
+                                "DarkCity-Where_pico2d_aligned.png", 381)
+
+    def assert_entry_intro(self, source, background_name, title_name, center_y):
         game = self.game
         world = game.world
-        world.select_stage(1)
+        world.select_stage(source)
         world.stage.arrows_visible = True
         world.player.x = world.stage.width - config.STAGE_EXIT_MARGIN
         world.player.vx = config.RUN_SPEED
         self.assertTrue(world.try_stage_transition())
         background, title = Mock(), Mock(w=1536, h=1024)
-        game.assets = SimpleNamespace(images={config.DARK_CITY_INTRO.background: background,
-                                             "WHEN_pico2d_aligned_8frames.png": title})
+        game.assets = SimpleNamespace(images={background_name: background, title_name: title})
         with patch("game.pico2d.clear_canvas"), patch("game.draw_black_overlay") as overlay:
             for frame in range(8):
                 game.draw(present=False)
                 title.clip_draw.assert_called_with(frame % 4 * 384, (1 - frame // 4) * 512,
-                                                   384, 512, 640, 377)
+                                                   384, 512, 640, center_y)
                 background.draw.assert_called_with(640, 360, 1280, 720)
                 game.update(2.5 / 8)
             game.draw(present=False)
@@ -355,9 +362,9 @@ class MainMenuFlowTests(unittest.TestCase):
             game.update(1)
             game.draw(present=False)
             overlay.assert_called_with(255)
-        self.assertEqual((world.stage_index, world.elapsed), (1, 0))
+        self.assertEqual((world.stage_index, world.elapsed), (source, 0))
         game.update(config.FIXED_DT)
-        self.assertEqual((world.stage_index, world.elapsed), (2, 0))
+        self.assertEqual((world.stage_index, world.elapsed), (source + 1, 0))
         game.update(config.FIXED_DT)
         self.assertGreater(world.elapsed, 0)
 

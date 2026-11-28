@@ -133,9 +133,13 @@ class World:
         return self.pending_stage_index is not None
 
     @property
-    def entering_dark_city(self):
-        return (self.stage_loading and self.stage.image_name not in config.CITY_STAGE_IMAGES
-                and config.STAGE_IMAGES[self.pending_stage_index] in config.CITY_STAGE_IMAGES)
+    def pending_region_intro(self):
+        if self.stage_loading:
+            destination = config.STAGE_IMAGES[self.pending_stage_index]
+            intro = config.REGION_ENTRY_INTROS.get(destination)
+            if intro != config.REGION_ENTRY_INTROS.get(self.stage.image_name):
+                return intro
+        return None
 
     @property
     def opening_factory_exit(self):
@@ -275,7 +279,7 @@ class World:
             # Loading uses real elapsed time, independent of the physics dt cap.
             self.controls.pressed.clear()
             dt = max(0.0, dt)
-            fading = ((self.entering_factory_gate or self.entering_dark_city)
+            fading = ((self.entering_factory_gate or self.pending_region_intro is not None)
                       and self.stage_loading_remaining > 0)
             self.stage_loading_remaining -= dt
             if self.stage_loading_remaining <= 1e-9:
@@ -558,7 +562,7 @@ class World:
                 continue
             if (self.stage_index, destination) in config.STAGE_LOADING_TRANSITIONS:
                 self.pending_stage_index = destination
-                self.stage_loading_remaining = (config.STAGE_INTRO_DURATION if self.entering_dark_city
+                self.stage_loading_remaining = (config.STAGE_INTRO_DURATION if self.pending_region_intro is not None
                                                 else config.STAGE_LOADING_DURATION)
                 self.controls.pressed.clear()
             else:

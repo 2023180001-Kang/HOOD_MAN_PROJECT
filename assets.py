@@ -20,6 +20,7 @@ class Assets:
             for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE,
                          config.FIRST_STAGE_INTRO.background, config.FIRST_STAGE_INTRO.title,
                          config.DARK_CITY_INTRO.background, config.DARK_CITY_INTRO.title,
+                         config.FACTORY_EXTERIOR_INTRO.background, config.FACTORY_EXTERIOR_INTRO.title,
                          config.DEATH_TITLE_IMAGE, config.DEATH_BUTTONS_IMAGE,
                          *config.STAGE_STATUS_IMAGES.values(),
                          *(label for _, label, _ in config.STAGE_PROGRESS_LEGEND),

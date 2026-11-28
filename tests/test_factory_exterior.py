@@ -306,7 +306,7 @@ class FactoryExteriorTests(unittest.TestCase):
                     self.assertEqual(world.stage_index, source)
                     self.assertEqual(player.ground_y, depth)
                     world.update(0.001)
-                    if destination == 3:
+                    if destination in (3, 5):
                         world.update(0)
                 self.assertFalse(world.stage_loading)
                 self.assertEqual(world.stage_index, destination)

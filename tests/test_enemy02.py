@@ -239,7 +239,9 @@ class Enemy02Tests(unittest.TestCase):
         world.stage.arrows_visible = True
         world.player.x, world.player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
         self.assertTrue(world.try_stage_transition())
-        advance(world, 2)
+        advance(world, config.STAGE_INTRO_DURATION)
+        self.assertEqual(world.stage_index, 3)
+        world.update(0)
         self.assertEqual(world.stage_index, 4)
         advance(world, 0.2)
         world.select_stage(3)

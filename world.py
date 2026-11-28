@@ -452,7 +452,7 @@ class World:
                     break
         for bullet in self.projectiles:
             if isinstance(bullet, ThrownWeaponProjectile) and bullet.finished:
-                # Land in the impact lane, even when the city's random loot spawns only on the sidewalk.
+                # Land in the impact lane on the projectile's floor.
                 x, ground_y = self.stage.area_for(bullet).project(bullet.x, bullet.ground_y,
                                                                   config.DROP_ITEM_HALF_WIDTH)
                 item = DropItem(bullet.weapon_kind, x, ground_y, bullet.facing,

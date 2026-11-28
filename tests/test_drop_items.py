@@ -185,13 +185,10 @@ class DropItemTests(unittest.TestCase):
             world = World(item_rng=random.Random(seed))
             for stage in world.stages:
                 self.assertFalse(stage.arrows_visible)
-                if stage.image_name != config.CITY_STAGE_IMAGES[0]:
-                    self.assertIs(stage.drop_spawn_area, stage.walkable)
                 previous_right = {}
                 for item in stage.drop_items:
-                    area = (stage.drop_spawn_area if item.floor == 0
-                            else stage.floor_areas[item.floor])
-                    self.assertTrue(stage.floor_areas[item.floor].contains(item.x, item.ground_y))
+                    area = stage.floor_areas[item.floor]
+                    self.assertTrue(area.contains(item.x, item.ground_y))
                     for parts in bounds[item.kind]:
                         for (left, top, right, bottom), anchor in parts:
                             xs = [(left - 128) * config.DROP_ITEM_SCALE * item.facing,
@@ -202,10 +199,6 @@ class DropItemTests(unittest.TestCase):
                             for x in (visible_left, visible_right):
                                 for y in (visible_bottom, visible_top):
                                     self.assertTrue(area.contains(x, y))
-                            if stage.image_name == config.CITY_STAGE_IMAGES[0]:
-                                # New source pavement rows 656..694 map to y=203..241.
-                                self.assertGreaterEqual(visible_bottom, 203)
-                                self.assertLessEqual(visible_top, 241)
                             self.assertGreaterEqual(visible_left, arrow_edge + config.DROP_ITEM_EXIT_GAP)
                             self.assertLessEqual(visible_right,
                                                  config.WORLD_WIDTH - arrow_edge - config.DROP_ITEM_EXIT_GAP)
@@ -278,13 +271,25 @@ class DropItemTests(unittest.TestCase):
             self.assertFalse(any(item is previous for item in new.drop_items
                                  for previous in old.drop_items))
             self.assertEqual(len(new.drop_items), 15)
-            if new.image_name == config.CITY_STAGE_IMAGES[0]:
-                for item in new.drop_items:
-                    self.assertGreaterEqual(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH,
-                                             203)
-                    self.assertLessEqual(item.ground_y + config.DROP_ITEM_HEIGHT,
-                                          241)
-                    self.assertTrue(new.walkable.contains(item.x, item.ground_y))
+
+    def test_first_city_can_generate_both_weapons_on_the_road_and_sidewalk(self):
+        city_index = config.STAGE_IMAGES.index(config.CITY_STAGE_IMAGES[0])
+        for restart in (False, True):
+            road, sidewalk = set(), set()
+            for seed in range(16):
+                world = World(item_rng=random.Random(seed))
+                if restart:
+                    tap(world.controls, "restart")
+                    world.update(config.FIXED_DT)
+                for item in world.stages[city_index].drop_items:
+                    # The sidewalk ends at source row 694 (world y=203).
+                    if item.ground_y + item.display_height < 180:
+                        road.add(item.kind)
+                    if item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 203:
+                        sidewalk.add(item.kind)
+            with self.subTest(restart=restart):
+                self.assertEqual(road, set(config.DROP_ITEM_IMAGES))
+                self.assertEqual(sidewalk, set(config.DROP_ITEM_IMAGES))
 
     def test_walking_over_and_attacking_items_does_not_collect_move_or_destroy_them(self):
         world = World(item_rng=random.Random(1))

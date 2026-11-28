@@ -638,8 +638,7 @@ STAGE_ENEMY_SPAWN_BOUNDS = {
     CITY_STAGE_IMAGES[0]: (0.0, 200.0, WORLD_WIDTH, 247.0),
     CITY_STAGE_IMAGES[1]: (0.0, 208.0, WORLD_WIDTH, 279.0),
 }
-# City 1's pavement moved upward in the replacement art.
-# Source rows 657..689 keep the whole weapon and shadow clear of the curb/road.
+# Weapons discarded with G land on the first city's sidewalk (source rows 657..689).
 STAGE_DROP_ITEM_SPAWN_BOUNDS = {
     CITY_STAGE_IMAGES[0]: (0.0, 208.0, WORLD_WIDTH, 240.0),
 }

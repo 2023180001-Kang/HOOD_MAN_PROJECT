@@ -54,6 +54,12 @@ def check_city_sidewalk_pixels(game, image, baseline):
                        config.SCREEN_WIDTH, config.SCREEN_HEIGHT)).getbbox() is None
 
 
+def check_city_road_pixels(game, delta):
+    # World y=180 is below the sidewalk and curb in the first city's artwork.
+    road_row = ceil(config.SCREEN_HEIGHT - 180 + game.world.camera.render_y)
+    assert delta.crop((0, road_row, config.SCREEN_WIDTH, config.SCREEN_HEIGHT)).getbbox()
+
+
 def check_sheets(game):
     game.world = World(item_rng=random.Random(1))
     world = game.world
@@ -126,7 +132,7 @@ def check_all_stages(game):
         counts.append(len(stage.drop_items))
         assert counts[-1] == 15
         assert {item.kind for item in stage.drop_items} == {"combat_knife", "steel_pipe"}
-        areas = (stage.drop_spawn_area, *stage.floor_areas[1:])
+        areas = stage.floor_areas
         # Frame the complete foreground too; expanded floors can reach y=-44.
         # Inspect the real camera-transformed pixels, not an assumed camera_y=0.
         world.player.ground_y = world.player.previous_ground_y = min(area.bounds[1] for area in areas)
@@ -155,7 +161,7 @@ def check_all_stages(game):
                 assert box[1] >= floor(config.SCREEN_HEIGHT - top + world.camera.render_y) - 1
                 assert box[3] <= ceil(config.SCREEN_HEIGHT - bottom + world.camera.render_y) + 1
             if stage.image_name == config.CITY_STAGE_IMAGES[0]:
-                check_city_sidewalk_pixels(game, image, baseline)
+                check_city_road_pixels(game, delta)
             exit_box = ((0, 0, arrow_edge + 1, config.SCREEN_HEIGHT) if side < 0 else
                         (config.SCREEN_WIDTH - arrow_edge - 1, 0,
                          config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
@@ -172,8 +178,7 @@ def check_all_stages(game):
     game.ui.details_visible = details_visible
     print(f"PASS: all {len(world.stages)} stage layouts have 15 total drops ({counts}); actual floor pixels "
           "fit each floor (all 15 on the flat first map), the new first city's "
-          "weapons/shadows stay on the sidewalk with no road "
-          "pixels, both exit areas stay clear, and both map halves render correctly.")
+          "road has visible drops, both exit areas stay clear, and both map halves render correctly.")
 
 
 def check_floor_pickup(game, floor=0, index=0):
@@ -229,22 +234,22 @@ def check_restart(game):
     assert [sum(item.floor == floor for item in game.world.stage.drop_items)
             for floor in (0, 1)] == ([8, 7] if game.world.stage.upper_walkable else [15, 0])
     city = game.world.stages[config.STAGE_IMAGES.index(config.CITY_STAGE_IMAGES[0])]
-    assert all(item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH >= 203
-               and item.ground_y + config.DROP_ITEM_HEIGHT <= 241
-               and city.walkable.contains(item.x, item.ground_y)
+    assert all(city.walkable.contains(item.x, item.ground_y - config.DROP_ITEM_SHADOW_HALF_DEPTH)
+               and city.walkable.contains(item.x, item.ground_y + item.display_height)
                for item in city.drop_items)
     assert all(game.assets.images[name] is texture for name, texture in textures.items())
     capture(game, "drop_items_restarted")
     assert game.world.select_stage(config.STAGE_IMAGES.index(city.image_name))
+    road_weapons = {item.kind for item in city.drop_items if item.ground_y + item.display_height < 180}
+    assert road_weapons == set(config.DROP_ITEM_IMAGES)
     for side in (-1, 1):
         game.world.player.x = 80 if side < 0 else config.WORLD_WIDTH - 80
-        game.world.camera.update(0, game.world.player.x)
+        game.world.update_camera(0)
         baseline = without_items(game)
-        image = capture(game, f"city_sidewalk_drops_restarted_{'left' if side < 0 else 'right'}")
-        check_city_sidewalk_pixels(game, image, baseline)
+        image = capture(game, f"city_road_drops_restarted_{'left' if side < 0 else 'right'}")
+        check_city_road_pixels(game, difference(image, baseline))
     print(f"PASS: actual SDL F5 replaces all {len(game.world.stages)} item lists "
-          "and restores every first-map floor with shared textures; city drops stay above "
-          "the curb in both views.")
+          "and restores every first-map floor with shared textures and both weapons on the city road.")
 
 
 def main():

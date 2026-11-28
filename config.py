@@ -90,10 +90,20 @@ REINFORCEMENT_DELAYS = (1.0, 0.5)  # Seconds after the preceding wave in alley a
 
 ARCHIVED_TITLE_IMAGE = "before_sheets/HOOD_MAN_TITLE_SCREEN_1280x720.png"
 MAIN_MENU_IMAGE = "HOOD_MAN_main_menu_background_1280x720.png"
-FIRST_STAGE_INTRO_BACKGROUND = "FirstStage-WHO-BackGround.png"
-FIRST_STAGE_INTRO_TITLE = "FirstStage-WHO.png"
-FIRST_STAGE_INTRO_HOLD = 2.5
-FIRST_STAGE_INTRO_FADE = 2.0
+
+
+class StageIntroArt(NamedTuple):
+    background: str
+    title: str
+    title_offset_y: int = 0
+
+
+FIRST_STAGE_INTRO = StageIntroArt("FirstStage-WHO-BackGround.png", "FirstStage-WHO.png")
+# WHERE is centered about 21 pixels below the midpoint of each 384x512 source cell.
+DARK_CITY_INTRO = StageIntroArt("DarkCity_BackGround.png", "DarkCity-Where_pico2d_aligned.png", 21)
+STAGE_INTRO_HOLD = 2.5
+STAGE_INTRO_FADE = 2.0
+STAGE_INTRO_DURATION = STAGE_INTRO_HOLD + STAGE_INTRO_FADE
 DEATH_TITLE_IMAGE = "HoodMan_YOU_DIED_sprite_8frames.png"
 DEATH_BUTTONS_IMAGE = "HoodMan_Retry_MainMenu_8x2.png"
 STAGE_PROGRESS_IMAGE = "stage_progress_background_1280x720.png"

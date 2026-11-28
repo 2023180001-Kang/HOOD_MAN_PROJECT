@@ -113,7 +113,7 @@ class FactoryStageTests(unittest.TestCase):
         self.assertEqual(world.enemies, [])
         self.assertEqual(len(world.stage.drop_items), 15)
 
-    def test_factory_zone_boundaries_wait_two_seconds_and_preserve_the_same_player_both_ways(self):
+    def test_factory_zone_boundaries_preserve_the_player_through_loading_or_the_city_intro(self):
         for first, side in ((3, -1), (3, 1), (5, -1), (5, 1),
                             (7, -1), (7, 1), (9, -1), (9, 1)):
             with self.subTest(first=first, side=side):
@@ -126,10 +126,15 @@ class FactoryStageTests(unittest.TestCase):
                 player.animation.elapsed = 0.2
                 self.assertTrue(world.try_stage_transition())
                 self.assertEqual(world.pending_stage_index, source + side)
-                world.update(1.999)
+                entering_city = source + side == 3
+                duration = 4.5 if entering_city else 2.0
+                world.update(duration - 0.001)
                 self.assertTrue(world.stage_loading)
                 self.assertEqual(world.stage_index, source)
                 world.update(0.001)
+                if entering_city:
+                    self.assertEqual(world.stage_index, source)
+                    world.update(0)
                 self.assertFalse(world.stage_loading)
                 self.assertEqual(world.stage_index, source + side)
                 self.assertIs(world.player, player)

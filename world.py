@@ -133,6 +133,11 @@ class World:
         return self.pending_stage_index is not None
 
     @property
+    def entering_dark_city(self):
+        return (self.stage_loading and self.stage.image_name not in config.CITY_STAGE_IMAGES
+                and config.STAGE_IMAGES[self.pending_stage_index] in config.CITY_STAGE_IMAGES)
+
+    @property
     def opening_factory_exit(self):
         gate = self.stage.factory_gate
         return gate is not None and gate.state == "OPENING" and not gate.finished
@@ -270,15 +275,17 @@ class World:
             # Loading uses real elapsed time, independent of the physics dt cap.
             self.controls.pressed.clear()
             dt = max(0.0, dt)
-            fading = self.entering_factory_gate and self.stage_loading_remaining > 0
-            self.stage_loading_remaining = max(0.0, self.stage_loading_remaining - dt)
-            if fading:
-                # Draw the fully black exterior once before entering the dock.
-                return
+            fading = ((self.entering_factory_gate or self.entering_dark_city)
+                      and self.stage_loading_remaining > 0)
+            self.stage_loading_remaining -= dt
             if self.stage_loading_remaining <= 1e-9:
+                self.stage_loading_remaining = 0.0
+            if fading:
+                # Present the fully black frame before switching maps.
+                return
+            if self.stage_loading_remaining == 0:
                 self._finish_stage_exit(self.pending_stage_index)
                 self.pending_stage_index = None
-                self.stage_loading_remaining = 0.0
             return
         self.accumulator += min(max(dt, 0.0), config.MAX_FRAME_DT)
         while self.accumulator + 1e-12 >= config.FIXED_DT:
@@ -551,7 +558,8 @@ class World:
                 continue
             if (self.stage_index, destination) in config.STAGE_LOADING_TRANSITIONS:
                 self.pending_stage_index = destination
-                self.stage_loading_remaining = config.STAGE_LOADING_DURATION
+                self.stage_loading_remaining = (config.STAGE_INTRO_DURATION if self.entering_dark_city
+                                                else config.STAGE_LOADING_DURATION)
                 self.controls.pressed.clear()
             else:
                 self._finish_stage_exit(destination)

@@ -214,7 +214,8 @@ def check_numeric_spawns(game):
     assert world.stage_index == 1 and world.stage_loading and world.pending_stage_index == 2
     assert all(not stage.enemies for stage in world.stages)
     capture(game, "numeric_spawn_ignored_loading")
-    game.update(2)
+    game.update(config.STAGE_INTRO_DURATION)
+    game.update(0)
     assert world.stage_index == 2 and not world.stage_loading and not world.enemies
     push_key(pico2d.SDLK_9, repeat=True)
     tick(game)
@@ -800,7 +801,8 @@ def check_hud_toggle(game):
     u()
     u(False)
     assert not game.ui.details_visible
-    game.update(config.STAGE_LOADING_DURATION)
+    game.update(config.STAGE_INTRO_DURATION)
+    game.update(0)
     assert world.stage_index == 2 and not world.stage_loading and not game.ui.details_visible
     world.stage.drop_items.clear()
     push_key(pico2d.SDLK_p)

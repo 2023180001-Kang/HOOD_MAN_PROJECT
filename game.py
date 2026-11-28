@@ -204,7 +204,8 @@ class Game:
                 self.world.starting_weapon = self.menu.equipped_weapon
                 self.world.reset(stage_index=self.menu.launch_stage)
                 self.ui.update(0, self.world.player)
-                if self.menu.launch_action == "game_start":
+                if (self.menu.launch_action == "game_start"
+                        or self.world.stage.image_name in config.CITY_STAGE_IMAGES):
                     self.intro_elapsed = 0.0
                 return
             if self.running:
@@ -213,9 +214,8 @@ class Game:
 
     def update(self, dt):
         if self.intro_elapsed is not None:
-            duration = config.FIRST_STAGE_INTRO_HOLD + config.FIRST_STAGE_INTRO_FADE
-            if self.intro_elapsed < duration:
-                self.intro_elapsed = min(duration, self.intro_elapsed + dt)
+            if self.intro_elapsed < config.STAGE_INTRO_DURATION:
+                self.intro_elapsed = min(config.STAGE_INTRO_DURATION, self.intro_elapsed + dt)
                 return
             # The preceding frame presented the fully black screen.
             self.intro_elapsed = None
@@ -238,26 +238,32 @@ class Game:
         if present:
             pico2d.update_canvas()
 
-    def draw_first_stage_intro(self, present=True):
+    def draw_stage_intro(self, art, elapsed, present=True):
         pico2d.clear_canvas()
         width, height = config.SCREEN_WIDTH, config.SCREEN_HEIGHT
         x, y = width / 2, height / 2
-        self.assets.images[config.FIRST_STAGE_INTRO_BACKGROUND].draw(x, y, width, height)
-        title = self.assets.images[config.FIRST_STAGE_INTRO_TITLE]
-        frame = min(7, int(8 * self.intro_elapsed / config.FIRST_STAGE_INTRO_HOLD))
+        self.assets.images[art.background].draw(x, y, width, height)
+        title = self.assets.images[art.title]
+        frame = min(7, int(8 * elapsed / config.STAGE_INTRO_HOLD))
         row, column = divmod(frame, 4)
         left, right = column * title.w // 4, (column + 1) * title.w // 4
         top, bottom = row * title.h // 2, (row + 1) * title.h // 2
-        title.clip_draw(left, title.h - bottom, right - left, bottom - top, x, y)
-        if self.intro_elapsed > config.FIRST_STAGE_INTRO_HOLD:
-            fade = (self.intro_elapsed - config.FIRST_STAGE_INTRO_HOLD) / config.FIRST_STAGE_INTRO_FADE
+        title.clip_draw(left, title.h - bottom, right - left, bottom - top, x, y + art.title_offset_y)
+        if elapsed > config.STAGE_INTRO_HOLD:
+            fade = (elapsed - config.STAGE_INTRO_HOLD) / config.STAGE_INTRO_FADE
             draw_black_overlay(round(255 * fade))
         if present:
             pico2d.update_canvas()
 
     def draw(self, present=True):
         if self.intro_elapsed is not None:
-            self.draw_first_stage_intro(present)
+            art = (config.DARK_CITY_INTRO if self.world.stage.image_name in config.CITY_STAGE_IMAGES
+                   else config.FIRST_STAGE_INTRO)
+            self.draw_stage_intro(art, self.intro_elapsed, present)
+            return
+        if self.world.entering_dark_city:
+            elapsed = config.STAGE_INTRO_DURATION - self.world.stage_loading_remaining
+            self.draw_stage_intro(config.DARK_CITY_INTRO, elapsed, present)
             return
         entering = self.world.entering_factory_gate
         if self.world.stage_loading and not entering:
@@ -357,7 +363,7 @@ class Game:
             self.update(dt)
             self.draw()
             if self.world.stage_loading and not was_loading:
-                # Start the two-second wait after its first image is presented.
+                # Time the transition from its first presented frame.
                 previous = perf_counter()
             frames += 1
             # Absolute deadlines avoid accumulating Windows sleep overshoot.

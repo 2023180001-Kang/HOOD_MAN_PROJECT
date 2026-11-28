@@ -7,7 +7,7 @@ import sys
 from time import perf_counter
 from unittest.mock import patch
 
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageStat
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -198,6 +198,26 @@ def check_round_trip_and_last_exit(game):
           "avoids return loops, bounds the final boss exit, and F5 resets all stages.")
 
 
+def check_transition_art(image, entering_city):
+    actual = image.convert("RGB")
+    if not entering_city:
+        with Image.open(config.ROOT / config.STAGE_LOADING_IMAGE) as supplied:
+            assert ImageChops.difference(actual, supplied.convert("RGB")).getbbox() is None
+        return
+    art = config.DARK_CITY_INTRO
+    with Image.open(config.ROOT / art.background) as supplied:
+        expected = supplied.convert("RGB").resize(actual.size, Image.Resampling.NEAREST)
+    with Image.open(config.ROOT / art.title) as sheet:
+        first = sheet.crop((0, 0, sheet.width // 4, sheet.height // 2))
+    x = (actual.width - first.width) // 2
+    y = (actual.height - first.height) // 2 - art.title_offset_y
+    expected.paste(first, (x, y), first)
+    # SDL and Pillow round scaling and translucent pixels slightly differently.
+    difference = ImageChops.difference(actual, expected)
+    assert max(ImageStat.Stat(difference).mean) < 2
+    assert max(ImageStat.Stat(difference.crop((x, y, x + first.width, y + first.height))).mean) < 2
+
+
 def check_city_loading(game):
     game.world = World()
     game.world.stages[2].traffic = None  # Isolate saved enemy HP from random road deaths.
@@ -231,9 +251,7 @@ def check_city_loading(game):
                 frozen.append(snapshot)
                 with patch.object(game, "draw", original_draw):
                     image = capture(game, "stage_loading_to_city")
-                with Image.open(config.ROOT / config.STAGE_LOADING_IMAGE) as supplied:
-                    assert ImageChops.difference(image.convert("RGB"),
-                                                supplied.convert("RGB")).getbbox() is None
+                check_transition_art(image, entering_city=True)
                 timing["start"] = perf_counter()
                 for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_p):
                     push_key(key)
@@ -244,9 +262,9 @@ def check_city_loading(game):
             timing.setdefault("end", perf_counter())
 
     with patch.object(game, "draw", side_effect=observe):
-        assert game.run(max_frames=150) == 150
+        assert game.run(max_frames=300) == 300
     duration = timing["end"] - timing["start"]
-    assert 2.0 <= duration < 2.25, duration
+    assert 4.5 <= duration < 4.75, duration
     assert game.world.stage_index == 2 and not game.world.stage_loading
     assert game.world.player is player and player.hp == 420 and player.invincible
     assert player.jump_count == 0 and player.active_move is None
@@ -286,12 +304,14 @@ def check_city_loading(game):
     tick(game)
     assert not game.world.stage_loading and game.world.stage_loading_remaining == 0
     assert game.world.stage_index == 0 and game.world.player.hp == 500
-    assert all(not stage.enemies and not stage.arrows_visible for stage in game.world.stages)
+    assert len(game.world.enemies) == config.STAGE_ENCOUNTER_SIZE
+    assert all(not stage.enemies for stage in game.world.stages[1:])
+    assert all(not stage.arrows_visible for stage in game.world.stages)
     for key in (pico2d.SDLK_F5, pico2d.SDLK_LEFT, pico2d.SDLK_LSHIFT, pico2d.SDLK_n,
                 pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_9, pico2d.SDLK_p, pico2d.SDLK_1):
         push_key(key, down=False)
     game.handle_events()
-    print(f"PASS: supplied loading image stays visible for {duration:.3f}s with gameplay frozen; "
+    print(f"PASS: WHERE intro and fade took {duration:.3f}s with gameplay frozen; "
           f"changed_first_map -> {config.SECOND_STAGE_IMAGE} -> {config.CITY_STAGE_IMAGES}, "
           "ignored loading actions, "
           "HP/motion/resource reuse, city return and F5 cancellation verified.")
@@ -337,6 +357,8 @@ def check_factory_loading(game, first=3):
         world = game.world
         source_index = first if side > 0 else first + 1
         destination = source_index + side
+        entering_city = config.STAGE_IMAGES[destination] in config.CITY_STAGE_IMAGES
+        wait_seconds = config.STAGE_INTRO_DURATION if entering_city else config.STAGE_LOADING_DURATION
         world.stage_index = source_index
         source, target = world.stage, world.stages[destination]
         player = world.player
@@ -373,9 +395,7 @@ def check_factory_loading(game, first=3):
                     with patch.object(game, "draw", original_draw):
                         image = capture(game, f"stage_loading_to_{region}" if side > 0
                                         else f"stage_loading_return_from_{region}")
-                    with Image.open(config.ROOT / config.STAGE_LOADING_IMAGE) as supplied:
-                        assert ImageChops.difference(image.convert("RGB"),
-                                                    supplied.convert("RGB")).getbbox() is None
+                    check_transition_art(image, entering_city)
                     timing["start"] = perf_counter()
                 for key in (pico2d.SDLK_SPACE, pico2d.SDLK_a, pico2d.SDLK_p):
                         push_key(key)
@@ -391,9 +411,10 @@ def check_factory_loading(game, first=3):
                     capture(game, f"{region}_entered" if side > 0 else f"returned_from_{region}")
 
         with patch.object(game, "draw", side_effect=observe):
-            assert game.run(max_frames=150) == 150
+            frames = round((wait_seconds + 0.5) * config.TARGET_FPS)
+            assert game.run(max_frames=frames) == frames
         duration = timing["end"] - timing["start"]
-        assert 2.0 <= duration < 2.25, duration
+        assert wait_seconds <= duration < wait_seconds + 0.25, duration
         assert world.stage_index == destination and len(target.enemies) == 1
         assert player.active_move is None and player.hp == 420 and player.invincible
         assert all(game.assets.images[name] is image for name, image in textures.items())
@@ -402,7 +423,7 @@ def check_factory_loading(game, first=3):
             push_key(key, down=False)
         game.handle_events()
         print(f"PASS: {source.image_name} -> {target.image_name} "
-              f"uses the exact STAGE_LOADING image for {duration:.3f}s; "
+              f"presents the transition for {duration:.3f}s; "
               "player/jump/HP/input and both scenes' objects survive the frozen transition.")
     game.world = World()
     game.world.stage_index = first
@@ -414,7 +435,9 @@ def check_factory_loading(game, first=3):
     push_key(pico2d.SDLK_F5)
     tick(game)
     assert game.world.stage_index == 0 and not game.world.stage_loading
-    assert all(not stage.enemies and not stage.arrows_visible for stage in game.world.stages)
+    assert len(game.world.enemies) == config.STAGE_ENCOUNTER_SIZE
+    assert all(not stage.enemies for stage in game.world.stages[1:])
+    assert all(not stage.arrows_visible for stage in game.world.stages)
     for key in (pico2d.SDLK_n, pico2d.SDLK_F5):
         push_key(key, down=False)
     game.handle_events()

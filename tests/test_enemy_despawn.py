@@ -89,7 +89,8 @@ class EnemyDespawnTests(unittest.TestCase):
         world.update(1.5)
         self.assertEqual(enemy.corpse_elapsed, elapsed)
         self.assertAlmostEqual(enemy.opacity, 0.75)
-        world.update(0.5)
+        world.update(world.stage_loading_remaining)
+        world.update(0)
         self.assertEqual(world.stage_index, 2)
         self.assertEqual(enemy.corpse_elapsed, elapsed)
 

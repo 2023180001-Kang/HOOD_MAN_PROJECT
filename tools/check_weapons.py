@@ -189,7 +189,8 @@ def check_air_drop_and_lifetime(game):
         world.player.x, world.player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED
         assert world.try_stage_transition() and world.stage_loading
         tap(game, pico2d.SDLK_g)
-        game.update(config.STAGE_LOADING_DURATION)
+        game.update(config.STAGE_INTRO_DURATION)
+        game.update(0)
         assert world.stage_index == 2 and world.player.weapon == kind
         tap(game, pico2d.SDLK_F5)
         assert game.world.player.weapon is None

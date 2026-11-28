@@ -157,7 +157,8 @@ class MainMenuTests(unittest.TestCase):
             assets = Assets()
         loaded = [call.args[0] for call in load.call_args_list]
         for name in (config.MAIN_MENU_IMAGE, config.STAGE_PROGRESS_IMAGE, *config.STAGE_STATUS_IMAGES.values(),
-                     config.FIRST_STAGE_INTRO_BACKGROUND, config.FIRST_STAGE_INTRO_TITLE,
+                     config.FIRST_STAGE_INTRO.background, config.FIRST_STAGE_INTRO.title,
+                     config.DARK_CITY_INTRO.background, config.DARK_CITY_INTRO.title,
                      *(label for _, label, _ in config.STAGE_PROGRESS_LEGEND),
                      *(image for _, image in config.MAIN_MENU_BUTTONS)):
             self.assertIn(name, assets.images)
@@ -296,8 +297,8 @@ class MainMenuFlowTests(unittest.TestCase):
         ):
             game.show_main_menu()
         background, title = Mock(), Mock(w=1774, h=887)
-        game.assets = SimpleNamespace(images={config.FIRST_STAGE_INTRO_BACKGROUND: background,
-                                             config.FIRST_STAGE_INTRO_TITLE: title})
+        game.assets = SimpleNamespace(images={config.FIRST_STAGE_INTRO.background: background,
+                                             config.FIRST_STAGE_INTRO.title: title})
         jump = SDL_Event()
         jump.type, jump.key.keysym.sym = pico2d.SDL_KEYDOWN, pico2d.SDLK_SPACE
         with patch("game.pico2d.clear_canvas"), patch("game.draw_black_overlay") as overlay:
@@ -327,6 +328,38 @@ class MainMenuFlowTests(unittest.TestCase):
         process_menu_events(game, jump, menu_screen=False)
         game.update(config.FIXED_DT)
         self.assertEqual(game.world.player.jump_count, 1)
+
+    def test_city_entry_draws_where_then_full_black_before_switching_maps(self):
+        game = self.game
+        world = game.world
+        world.select_stage(1)
+        world.stage.arrows_visible = True
+        world.player.x = world.stage.width - config.STAGE_EXIT_MARGIN
+        world.player.vx = config.RUN_SPEED
+        self.assertTrue(world.try_stage_transition())
+        background, title = Mock(), Mock(w=1536, h=1024)
+        game.assets = SimpleNamespace(images={config.DARK_CITY_INTRO.background: background,
+                                             config.DARK_CITY_INTRO.title: title})
+        with patch("game.pico2d.clear_canvas"), patch("game.draw_black_overlay") as overlay:
+            for frame in range(8):
+                game.draw(present=False)
+                title.clip_draw.assert_called_with(frame % 4 * 384, (1 - frame // 4) * 512,
+                                                   384, 512, 640, 381)
+                background.draw.assert_called_with(640, 360, 1280, 720)
+                game.update(2.5 / 8)
+            game.draw(present=False)
+            overlay.assert_not_called()
+            game.update(1)
+            game.draw(present=False)
+            overlay.assert_called_once_with(128)
+            game.update(1)
+            game.draw(present=False)
+            overlay.assert_called_with(255)
+        self.assertEqual((world.stage_index, world.elapsed), (1, 0))
+        game.update(config.FIXED_DT)
+        self.assertEqual((world.stage_index, world.elapsed), (2, 0))
+        game.update(config.FIXED_DT)
+        self.assertGreater(world.elapsed, 0)
 
     def test_closed_game_does_not_display_or_wait_in_menu(self):
         self.game.running = False

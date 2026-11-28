@@ -227,7 +227,7 @@ class CityStageTests(unittest.TestCase):
         self.assertTrue(world.try_stage_transition())
         for key in ("jump", "combat_f", "invincibility", "stage_exits"):
             world.controls.press(key)
-        advance(world, 1.9)
+        advance(world, 4.4)
         self.assertTrue(world.stage_loading)
         self.assertEqual(world.stage_index, 1)
         self.assertEqual(world.elapsed, 0)
@@ -239,6 +239,8 @@ class CityStageTests(unittest.TestCase):
         self.assertEqual(source.damage_numbers[0].elapsed, 0)
         self.assertFalse(world.controls.pressed)
         world.update(0.1)
+        self.assertTrue(world.entering_dark_city)
+        world.update(0)
         self.assertFalse(world.stage_loading)
         self.assertEqual(world.stage_index, 2)
         self.assertIs(world.player, player)
@@ -253,18 +255,20 @@ class CityStageTests(unittest.TestCase):
         self.assertEqual(player.jump_count, 2)
         self.assertFalse(destination.arrows_visible)
 
-    def test_loading_waits_two_seconds_of_real_dt_without_simulation_catchup(self):
+    def test_city_intro_waits_for_title_and_full_fade_without_simulation_catchup(self):
         world = self.at_exit()
         world.update(config.MAX_FRAME_DT)
         self.assertTrue(world.stage_loading)
         self.assertEqual(world.accumulator, 0)
         self.assertEqual(world.elapsed, config.FIXED_DT)
-        world.update(1.75)
+        world.update(4.25)
         self.assertEqual(world.stage_loading_remaining, 0.25)
         world.update(0.249)
         self.assertEqual(world.stage_index, 1)
         self.assertTrue(world.stage_loading)
         world.update(0.001)
+        self.assertEqual(world.stage_index, 1)
+        world.update(0)
         self.assertEqual(world.stage_index, 2)
         self.assertFalse(world.stage_loading)
         self.assertEqual(world.player.x, config.STAGE_ENTRY_MARGIN)
@@ -284,7 +288,9 @@ class CityStageTests(unittest.TestCase):
                 player.animation.elapsed = 0.25
                 self.assertTrue(world.try_stage_transition())
                 self.assertEqual(world.pending_stage_index, target)
-                world.update(config.STAGE_LOADING_DURATION)
+                world.update(world.stage_loading_remaining)
+                if target == 2:
+                    world.update(0)
                 self.assertEqual(world.stage_index, target)
                 self.assertEqual(player.x, config.STAGE_ENTRY_MARGIN if side > 0 else
                                  config.WORLD_WIDTH - config.STAGE_ENTRY_MARGIN)
@@ -441,10 +447,13 @@ class CityStageTests(unittest.TestCase):
         for fps in (30, 60, 120, 144):
             world = self.at_exit()
             world.try_stage_transition()
-            for _ in range(2 * fps - 1):
+            for _ in range(round(4.5 * fps) - 1):
                 world.update(1 / fps)
             self.assertTrue(world.stage_loading)
             self.assertEqual(world.stage_index, 1)
+            world.update(1 / fps)
+            self.assertAlmostEqual(world.stage_loading_remaining, 0.0)
+            self.assertTrue(world.entering_dark_city)
             world.update(1 / fps)
             self.assertFalse(world.stage_loading)
             results.append((world.stage_index, world.player.x, world.player.vx,

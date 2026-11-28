@@ -51,6 +51,7 @@ class Stage:
         self.index = index
         self.arrows_visible = False
         self.encounter_started = False
+        self.reinforcement_delays = []
         self.defeated_count = 0
         self.factory_gate = (Animation(dict.fromkeys(("CLOSED", "OPENING"), (1, config.FACTORY_GATE_FPS, False)),
                                        "CLOSED")

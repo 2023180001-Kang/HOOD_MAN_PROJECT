@@ -57,10 +57,12 @@ class SniperTests(unittest.TestCase):
             with self.subTest(stage=index + 1):
                 world.select_stage(index)
                 advance(world, 1)
+                initial_count = len(world.enemies)
                 key(pico2d.SDLK_v)
                 key(pico2d.SDLK_KP_2)
                 key(pico2d.SDLK_1)
-                self.assertEqual([type(e) for e in world.enemies[4:]], [Sniper, Sniper, world.spawner.enemy_type])
+                self.assertEqual([type(e) for e in world.enemies[initial_count:]],
+                                 [Sniper, Sniper, world.spawner.enemy_type])
         world.select_stage(len(world.stages) - 2)
         advance(world, 1)
         key(pico2d.SDLK_v)

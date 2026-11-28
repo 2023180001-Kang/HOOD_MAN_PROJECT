@@ -32,7 +32,7 @@ class EnemyTests(unittest.TestCase):
         self.assertEqual([enemy.run_speed for enemy in next_batch], [420, 480])
         self.assertEqual(spawner.spawned_count, 11)
 
-    def test_four_native_enemies_spawn_once_at_start_entry_and_restart(self):
+    def test_first_wave_has_four_native_enemies_at_start_entry_and_restart(self):
         world = World()
         for index in range(len(world.stages)):
             world.select_stage(index)
@@ -50,13 +50,44 @@ class EnemyTests(unittest.TestCase):
             advance(world, 0.2)
             world.select_stage(index)
             advance(world, 1)
-            self.assertEqual(world.enemies, wave)
-            self.assertEqual(world.spawner.spawned_count, 4)
+            self.assertEqual(world.enemies[:4], wave)
+            self.assertEqual(world.spawner.spawned_count, 8 if index < 2 else 4)
         world.controls.press("restart")
         world.update(1 / 60)
         self.assertEqual((world.stage_index, world.player.hp, len(world.enemies)), (0, 500, 4))
         self.assertTrue(all(not stage.enemies and stage.spawner.spawned_count == 0
                             for stage in world.stages[1:]))
+
+    def test_alley_waves_add_four_at_one_second_and_four_more_half_a_second_later(self):
+        world = World(rng=random.Random(42))
+        for index in (0, 1):
+            with self.subTest(stage=index):
+                world.reset(stage_index=index)
+                world.player.invincible = True
+                for delay, before in ((1.0, 4), (0.5, 8)):
+                    advance(world, delay - config.FIXED_DT, fps=120)
+                    self.assertEqual(len(world.enemies), before)
+                    world.update(config.FIXED_DT)
+                    self.assertEqual(len(world.enemies), before + 4)
+                    self.assertTrue(all(type(enemy) is Enemy for enemy in world.enemies[-4:]))
+                advance(world, 2)
+                self.assertEqual(world.spawner.spawned_count, 12)
+
+    def test_alley_reinforcement_timer_pauses_off_map_and_restarts_on_retry(self):
+        world = World()
+        advance(world, 0.75)
+        world.select_stage(2)
+        advance(world, 3)
+        self.assertEqual((world.stages[0].spawner.spawned_count, world.spawner.spawned_count), (4, 4))
+        world.select_stage(0)
+        advance(world, 0.25)
+        self.assertEqual(world.spawner.spawned_count, 8)
+        world.retry_current_map()
+        self.assertEqual(world.spawner.spawned_count, 4)
+        advance(world, 0.5)
+        self.assertEqual(world.spawner.spawned_count, 4)
+        advance(world, 1)
+        self.assertEqual(world.spawner.spawned_count, 12)
 
     def test_requested_encounter_tracks_the_player(self):
         world = World(rng=random.Random(42))
@@ -142,10 +173,10 @@ class EnemyTests(unittest.TestCase):
             self.assertEqual(stage.spawner.spawned_count, 0)
         self.assertFalse(world.controls.pressed)
         advance(world, 1)
-        self.assertEqual(len(world.enemies), 4)
+        self.assertEqual(len(world.enemies), 8)
         tap(world.controls, "spawn_1")
         world.update(1 / 60)
-        self.assertEqual(len(world.enemies), 5)
+        self.assertEqual(len(world.enemies), 9)
         self.assertNotIn(world.enemies[0], old_enemies)
         self.assertEqual((world.enemies[0].hp, world.enemies[0].run_speed), (200, 360))
 
@@ -188,6 +219,7 @@ class EnemyTests(unittest.TestCase):
 
     def test_defeated_encounter_does_not_respawn_when_revisiting_a_stage(self):
         world = World()
+        advance(world, 1.5)
         for enemy in world.enemies:
             enemy.take_damage(200)
         advance(world, 5)
@@ -197,7 +229,7 @@ class EnemyTests(unittest.TestCase):
             advance(world, 0.1)
         self.assertEqual(world.stage_index, 0)
         self.assertEqual(world.enemies, [])
-        self.assertEqual(world.spawner.spawned_count, 4)
+        self.assertEqual(world.spawner.spawned_count, 12)
 
     def test_fourth_defeat_opens_the_exit_even_with_extra_enemies_alive(self):
         world = World(rng=random.Random(42))
@@ -208,7 +240,7 @@ class EnemyTests(unittest.TestCase):
             enemy.take_damage(enemy.hp)
         advance(world, 6)
         self.assertEqual((world.stage.defeated_count, world.stage.arrow_sides), (3, ()))
-        self.assertEqual(len(world.enemies), 2)
+        self.assertEqual(len(world.enemies), 10)
         world.select_stage(1)
         self.assertEqual((world.stage.defeated_count, world.stage.arrow_sides), (0, ()))
         world.select_stage(0)

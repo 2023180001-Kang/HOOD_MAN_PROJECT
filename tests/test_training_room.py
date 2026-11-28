@@ -419,8 +419,9 @@ class TrainingRoomTests(unittest.TestCase):
         for index in range(6):
             self.world.select_stage(index * 2)
             advance(self.world, 1)
+            initial_count = len(self.world.enemies)
             self.press("spawn_2")
-            self.assertEqual(len(self.world.enemies), 6)
+            self.assertEqual(len(self.world.enemies), initial_count + 2)
             for enemy in self.world.enemies:
                 self.assertEqual((enemy.hp, enemy.max_hp), expected[type(enemy)])
 

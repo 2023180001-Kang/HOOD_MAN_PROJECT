@@ -12,8 +12,8 @@ class IntegrationTests(unittest.TestCase):
     def test_normal_spawn_chase_attack_death_and_restart_cycle(self):
         world = World(rng=random.Random(1))
         world.update(config.FIXED_DT)
-        advance(world, 8)
-        self.assertEqual(len(world.enemies), 4)
+        advance(world, 5)
+        self.assertEqual(len(world.enemies), 12)
         self.assertGreater(world.player.hp, 0)
         self.assertLess(world.player.hp, config.MAX_HP)
         advance(world, 50)

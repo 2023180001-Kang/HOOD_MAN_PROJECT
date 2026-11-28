@@ -104,6 +104,8 @@ class World:
         if partner_count:
             self.spawn_enemies(partner_count, partner)
         self.stage.encounter_started = True
+        if self.stage.image_name in (config.STAGE_IMAGE, config.SECOND_STAGE_IMAGE):
+            self.stage.reinforcement_delays.extend(config.ALLEY_REINFORCEMENT_DELAYS)
 
     def spawn_enemies(self, count, enemy_type=None):
         spawned = self.spawner.spawn(count, self.elapsed, enemy_type=enemy_type)
@@ -316,6 +318,12 @@ class World:
             if self._encounter_delay_remaining <= 1e-9:
                 self._encounter_delay_remaining = 0.0
                 self.start_stage_encounter()
+        elif not entered_stage and self.player.alive and self.stage.reinforcement_delays:
+            delays = self.stage.reinforcement_delays
+            delays[0] -= real_dt
+            if delays[0] <= 1e-9:
+                delays.pop(0)
+                self.spawn_enemies(config.STAGE_ENCOUNTER_SIZE, enemy_type_for_stage(self.stage_index))
         self.stage.update_doors(dt)
         self.update_combat_effects(dt)
         self.spawn_dive_afterimage(dt)

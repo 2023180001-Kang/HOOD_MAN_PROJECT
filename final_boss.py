@@ -18,7 +18,7 @@ class FinalBoss(Enemy02):
     formation_ground_min = None
     animations = {
         **config.ENEMY_ANIMATIONS,
-        "AIM": (6, 4, False), "FIRE": (6, 10, False), "RELOAD": (7, 8, False),
+        "AIM": (6, 8, False), "FIRE": (6, 10, False), "RELOAD": (7, 8, False),
         "HIT": (11, 12, False), "KNOCKBACK": (11, 12, False),
         "DYING": (12, 10, False), "DEAD": (12, 10, False), "CAR_HIT": (12, 10, False),
     }
@@ -39,8 +39,10 @@ class FinalBoss(Enemy02):
         self.reserve_magazines = 1
         self.reload_elapsed = 0.0
         self.fire_remaining = 0.0
+        self.aim_remaining = 0.0
         self.shot_origin = None
         self.has_knife = True
+        self.knife_role = None
         self.melee_sequence = cycle(("punch", "kick", "stab", "throw"))
 
     @property
@@ -74,13 +76,17 @@ class FinalBoss(Enemy02):
         self.shot_origin = (self.x + self.facing * muzzle, self.ground_y, 92.0, self.facing)
         self.vx = self.ground_vy = 0.0
         self.running = False
+        self.aim_remaining = self.aim_duration
         self.animation.set_state("AIM")
 
     def _update_rifle(self, dt, player):
         if self.state == "AIM":
-            self.animation.update(dt)
-            if self.animation.elapsed + 1e-9 >= self.aim_duration:
-                self.fire_remaining = self.aim_duration - self.animation.elapsed
+            # Hold the fourth cell with the rifle raised. The muzzle flash starts at cell five.
+            ready_pose = 3 / self.animations["AIM"][1]
+            self.animation.elapsed = min(ready_pose, self.animation.elapsed + dt)
+            self.aim_remaining -= dt
+            if self.aim_remaining <= 1e-9:
+                self.fire_remaining = self.aim_remaining
                 self.animation.set_state("FIRE")
             return
         if self.state == "FIRE":
@@ -116,10 +122,12 @@ class FinalBoss(Enemy02):
         if air_contact:
             self._start_move("air_slam", air_contact=True)
             return
-        kind = next(self.melee_sequence)
-        while not self.has_knife and kind in ("stab", "throw"):
-            kind = next(self.melee_sequence)
-        self._start_move(kind)
+        if self.has_knife:
+            self._start_move(next(self.melee_sequence))
+        elif self.attack_kind == "kick" and self.leap_cooldown <= 0 and self.jump_height == 0:
+            self._begin_leap()
+        else:
+            self._start_move("kick" if self.attack_kind == "punch" else "punch")
 
     def start_leap(self, player):
         if self.navigation_target is not None:
@@ -166,18 +174,57 @@ class FinalBoss(Enemy02):
                                         self.floor, shooter=self)
         return None
 
-    def recover_knife(self, items, player):
-        if (self.has_knife or not self.alive or not player.alive or self.knockback_started
-                or self.navigation_target is not None or self.state not in ("IDLE", "WALK", "RUN")):
-            return
-        knives = (item for item in items if item.kind == "combat_knife" and item.grounded
-                  and not item.support_height and same_floor(self, item))
-        nearest = min(knives, key=lambda item: hypot(item.x - self.x, item.ground_y - self.ground_y), default=None)
-        if nearest is None:
-            return
-        if (abs(nearest.x - self.x) <= config.WEAPON_PICKUP_RANGE
-                and abs(nearest.ground_y - self.ground_y) <= config.WEAPON_PICKUP_DEPTH):
-            items.remove(nearest)
-            self.has_knife = True
+
+def assign_knife_roles(distant, rng):
+    roles = {boss.knife_role for boss in distant}
+    if len(distant) < 2 or roles == {"pursue", "recover"}:
+        return
+    deciding = [boss for boss in distant if boss.knife_role is None]
+    if not deciding:
+        # The remaining group lost everyone in one role.
+        deciding = distant
+        roles.clear()
+    # Existing assignments survive later throwers joining the same retreat.
+    minimum = int("recover" not in roles)
+    maximum = len(deciding) - int("pursue" not in roles)
+    recovering = set(rng.sample(deciding, rng.randint(minimum, maximum)))
+    for boss in deciding:
+        boss.knife_role = "recover" if boss in recovering else "pursue"
+
+
+def update_knife_recovery(enemies, items, player, rng):
+    """Split distant unarmed bosses between pursuit and recovery on the player's floor."""
+    if not player.alive:
+        return
+    bosses = [e for e in enemies if isinstance(e, FinalBoss) and e.alive and same_floor(e, player)]
+    distant = []
+    for boss in bosses:
+        gap = hypot(player.x - boss.x, player.ground_y - boss.ground_y)
+        if boss.has_knife or gap <= config.ENEMY_FORMATION_DISTANCE:
+            boss.knife_role = None
         else:
-            self.navigation_target = weapon_pickup_waypoint(self, nearest, player)
+            distant.append(boss)
+    if not distant:
+        return
+    if len(bosses) == 1:
+        distant[0].knife_role = None
+    else:
+        assign_knife_roles(distant, rng)
+
+    knives = [item for item in items if item.kind == "combat_knife" and item.grounded
+              and not item.support_height and same_floor(item, player)]
+    for boss in distant:
+        if not knives:
+            return
+        if (boss.knife_role == "pursue" or boss.knockback_started or boss.falling_from_upper
+                or boss.navigation_target is not None or boss.state not in ("IDLE", "WALK", "RUN")):
+            continue
+        nearest = min(knives, key=lambda item: hypot(item.x - boss.x, item.ground_y - boss.ground_y))
+        knives.remove(nearest)
+        if (abs(nearest.x - boss.x) <= config.WEAPON_PICKUP_RANGE
+                and abs(nearest.ground_y - boss.ground_y) <= config.WEAPON_PICKUP_DEPTH):
+            items.remove(nearest)
+            boss.has_knife = True
+            boss.knife_role = None
+        else:
+            boss.navigation_target = weapon_pickup_waypoint(boss, nearest, player)

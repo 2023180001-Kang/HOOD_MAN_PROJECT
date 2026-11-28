@@ -82,6 +82,12 @@ class Enemy02(Enemy):
                 or self.cooldown > 0 or self.leap_cooldown > 0
                 or not self.leap_min_distance <= gap <= config.ENEMY02_LEAP_MAX_DISTANCE):
             return False
+        if player.x != self.x:
+            self.facing = 1 if player.x > self.x else -1
+        self._begin_leap()
+        return True
+
+    def _begin_leap(self):
         self.attack_kind = "slam"
         self.leap_blocked = False
         self.air_contact_attack = self.air_contact_pending = False
@@ -90,12 +96,9 @@ class Enemy02(Enemy):
         self.leap_phase = "WINDUP"
         self.running = False
         self.vx = self.ground_vy = self.vy = 0.0
-        if player.x != self.x:
-            self.facing = 1 if player.x > self.x else -1
         self.formation_slot = None
         self.target_x = self.target_ground_y = None
         super().start_attack()
-        return True
 
     def _launch(self, player):
         dx = player.x - self.x

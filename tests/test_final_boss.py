@@ -3,6 +3,7 @@ import unittest
 import pico2d
 
 import config
+from drop_items import DropItem
 from enemy02 import leap_height
 from final_boss import FinalBoss
 from projectiles import EnemyKnifeProjectile, RifleBullet
@@ -72,10 +73,12 @@ class FinalBossTests(unittest.TestCase):
                 # Leave the depth lane and cross behind the shooter during the warning.
                 player.ground_y -= 80
                 player.x = boss.x - 300 * direction
-                for _ in range(119):
+                for tick in range(1, 120):
                     world.step(config.FIXED_DT)
                     self.assertEqual(boss.aim_line, line)
                     self.assertEqual(boss.ammo, 20)
+                    if tick in (16, 31, 46, 119):
+                        self.assertEqual(boss.animation.frame, min(3, tick // 15))
                 for round_number in range(20):
                     world.step(config.FIXED_DT)
                     bullet = world.projectiles[-1]
@@ -145,13 +148,77 @@ class FinalBossTests(unittest.TestCase):
                 self.assertEqual(world.player.weapon, "combat_knife")
                 self.assertFalse(boss.has_knife)
             else:
+                world.player.x = boss.x - 800 * direction
                 for _ in range(720):
                     world.step(config.FIXED_DT)
                     if boss.has_knife:
                         break
                 self.assertTrue(boss.has_knife)
                 self.assertEqual(boss.death_drop_kind, "combat_knife")
+                rows = []
+                for _ in range(4):
+                    boss.start_attack()
+                    rows.append(boss.animation.row)
+                self.assertEqual(set(rows), {4, 5, 8, 9})
             self.assertNotIn(item, world.stage.drop_items)
+
+    def test_unarmed_boss_stays_in_melee_even_with_a_knife_underfoot(self):
+        world, boss = arena(90)
+        world.player.invincible = True
+        boss.ammo = boss.reserve_magazines = 0
+        nearby_knife = DropItem("combat_knife", boss.x, boss.ground_y)
+        world.stage.drop_items.append(nearby_knife)
+        for _ in range(600):
+            world.step(config.FIXED_DT)
+            if not boss.has_knife:
+                break
+        self.assertFalse(boss.has_knife)
+        self.assertEqual((boss.animation.row, boss.animation.frame), (9, 4))
+
+        # Let the original throw finish, then observe complete unarmed attack cycles.
+        advance(world, 0.4)
+        rows = []
+        for _ in range(1200):
+            world.step(config.FIXED_DT)
+            self.assertFalse(boss.has_knife)
+            self.assertIn(nearby_knife, world.stage.drop_items)
+            if boss.state == "ATTACK" and (not rows or rows[-1] != boss.animation.row):
+                rows.append(boss.animation.row)
+        self.assertEqual(set(rows), {4, 5, 10})
+        self.assertGreaterEqual(rows.count(10), 2)
+
+    def test_distant_bosses_split_pursuit_and_recovery_until_player_returns(self):
+        splits = set()
+        for seed in range(6):
+            world, first = arena(800)
+            world.stage.route_rng.seed(seed)
+            for i in range(3):
+                world.enemies.append(FinalBoss(first.x + (i + 1) * 32, ground_y=first.ground_y))
+            for boss in world.enemies:
+                boss.has_knife = False
+                boss.ammo = boss.reserve_magazines = 0
+                world.stage.drop_items.append(DropItem("combat_knife", boss.x - 220, boss.ground_y))
+            origins = [boss.x for boss in world.enemies]
+            world.step(config.FIXED_DT)
+            seekers = tuple(i for i, boss in enumerate(world.enemies) if boss.x < origins[i])
+            pursuers = [boss for i, boss in enumerate(world.enemies) if i not in seekers]
+            self.assertTrue(seekers and pursuers)
+            splits.add(seekers)
+            goals = [world.enemies[i].navigation_target for i in seekers]
+            self.assertEqual(len(set(goals)), len(goals))
+            for _ in range(12):
+                world.step(config.FIXED_DT)
+                for i in seekers:
+                    self.assertLess(world.enemies[i].vx, 0)
+                for boss in pursuers:
+                    self.assertGreater(boss.vx, 0)
+                    self.assertIsNone(boss.navigation_target)
+            seeker = world.enemies[seekers[0]]
+            world.player.x, world.player.ground_y = seeker.x + 100, seeker.ground_y
+            world.step(config.FIXED_DT)
+            self.assertIsNone(seeker.navigation_target)
+            self.assertFalse(seeker.has_knife)
+        self.assertGreater(len(splits), 1)
 
     def test_melee_hits_once_per_move_and_slam_matches_double_jump_apex(self):
         world, boss = arena(90)

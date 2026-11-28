@@ -9,7 +9,7 @@ from collision import resolve_bodies, same_floor, transit_target, world_rect
 from controls import Controls
 from drop_items import DropItem
 from effects import DamageNumber, HitEffect, SpriteAfterimage
-from final_boss import FinalBoss
+from final_boss import FinalBoss, update_knife_recovery
 from enemy_spacing import place_ranged_spawns, prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
 from player import Player
@@ -353,9 +353,7 @@ class World:
                 item.axe_owner = None
             elif owner.seek_axe(item, self.player):
                 self.stage.drop_items.remove(item)
-        for enemy in self.enemies:
-            if isinstance(enemy, FinalBoss):
-                enemy.recover_knife(self.stage.drop_items, self.player)
+        update_knife_recovery(self.enemies, self.stage.drop_items, self.player, self.stage.route_rng)
         prepare_enemy_spacing(self.player, self.enemies, self.stage.area_for(self.player))
         for enemy in self.enemies:
             if enemy not in stair_moved:

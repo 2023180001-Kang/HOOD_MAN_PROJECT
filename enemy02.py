@@ -23,6 +23,7 @@ class Enemy02(Enemy):
     attacks = config.ENEMY02_ATTACKS
     basic_attack = "clubs"
     airborne_frames = (2, 3)
+    leap_min_distance = config.ENEMY02_LEAP_MIN_DISTANCE
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,7 +80,7 @@ class Enemy02(Enemy):
                 or self.jump_height > 0
                 or self.state not in ("IDLE", "WALK", "RUN")
                 or self.cooldown > 0 or self.leap_cooldown > 0
-                or not config.ENEMY02_LEAP_MIN_DISTANCE <= gap <= config.ENEMY02_LEAP_MAX_DISTANCE):
+                or not self.leap_min_distance <= gap <= config.ENEMY02_LEAP_MAX_DISTANCE):
             return False
         self.attack_kind = "slam"
         self.leap_blocked = False

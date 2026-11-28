@@ -5,7 +5,7 @@ from math import hypot
 import config
 
 
-SPAWN_PREFIXES = {"sword_spawn": "sword", "sniper_spawn": "sniper"}
+SPAWN_PREFIXES = {"sword_spawn": "sword", "sniper_spawn": "sniper", "boss_spawn": "boss"}
 
 
 class Controls:

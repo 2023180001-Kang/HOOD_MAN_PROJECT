@@ -153,6 +153,24 @@ def place_ranged_spawns(player, existing, spawned, *, include_snipers=False):
         placed.append(enemy)
 
 
+def weapon_pickup_waypoint(enemy, item, player):
+    goal = enemy.walkable.project(item.x, item.ground_y, enemy.boundary_padding)
+    if not same_floor(enemy, player):
+        return goal
+    # The player can stand on the weapon. Try approaching pickup range from either side.
+    obstacle = (player.x, player.ground_y, config.PLAYER_HALF_WIDTH + config.ENEMY_HALF_WIDTH,
+                config.BODY_DEPTH_TOLERANCE)
+    lane_gap = config.BODY_DEPTH_TOLERANCE + config.ENEMY_SPACING_TOLERANCE
+    lanes = (player.ground_y - lane_gap, player.ground_y + lane_gap)
+    approaches = [goal] + [enemy.walkable.project(item.x, y, enemy.boundary_padding) for y in lanes
+                           if abs(y - item.ground_y) <= config.WEAPON_PICKUP_DEPTH]
+    for approach in approaches:
+        waypoint = clear_route(enemy, approach, [obstacle], config.ENEMY_SPACING_TOLERANCE)
+        if waypoint is not None:
+            return waypoint
+    return goal
+
+
 def clear_route(enemy, goal, obstacles, waypoint_tolerance=1e-8):
     """Find a walkable first waypoint around the rectangles, using either axis for a detour."""
     x, y = enemy.x, enemy.ground_y

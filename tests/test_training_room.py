@@ -323,7 +323,7 @@ class TrainingRoomTests(unittest.TestCase):
             self.game.ui.draw(assets, self.world)
         self.assertEqual(assets.damage_font.draw.call_args.args[2], "-50")
         texts = " ".join(call.args[2] for call in assets.font.draw.call_args_list)
-        for word in ("조작법 익히기", "1~7", "7  검병", "이단 점프", "G", "+", "Esc", "왼손 잽", "주인공 HP  500 / 500",
+        for word in ("조작법 익히기", "1~8", "7  검병", "8  최종 인간 병기", "이단 점프", "G", "+", "Esc", "왼손 잽", "주인공 HP  500 / 500",
                      "소환된 적  ·  쇠몽둥이", "공격력   20", "현재 HP  150", "최대 HP  200", "-10", "+10",
                      "HP 전체 복구", "적용", "시작 HP  500 / 500"):
             self.assertIn(word, texts)

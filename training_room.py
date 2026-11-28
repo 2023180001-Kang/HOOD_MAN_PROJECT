@@ -9,6 +9,7 @@ from drop_items import DropItem
 from effects import DamageNumber
 from enemy import Enemy
 from enemy02 import Enemy02
+from final_boss import FinalBoss
 from physics import clamp
 from player import Player
 from projectiles import PlayerProjectile
@@ -150,6 +151,11 @@ class TrainingARSoldier(TrainingGunner, ARSoldier):
     pass
 
 
+class TrainingFinalBoss(TrainingTarget, FinalBoss):
+    # Exercise the full encounter while keeping the room's HP controls.
+    _update_ai = FinalBoss._update_ai
+
+
 OPPONENTS = (
     PracticeOpponent("쇠몽둥이", Enemy, TrainingThug),
     PracticeOpponent("쌍몽둥이", Enemy02, TrainingDualClub, config.ENEMY02_ATTACKS["slam"][1]),
@@ -158,6 +164,7 @@ OPPONENTS = (
     PracticeOpponent("방패", ShieldSoldier, TrainingShield),
     PracticeOpponent("AR 소총", ARSoldier, TrainingARSoldier),
     PracticeOpponent("검병", SwordEnemy, TrainingSwordEnemy, config.SWORD_ENEMY_ATTACKS["slam"][1]),
+    PracticeOpponent("최종 인간 병기", FinalBoss, TrainingFinalBoss),
 )
 SELECTION_KEYS = {f"spawn_{i}": opponent for i, opponent in enumerate(OPPONENTS, 1)}
 

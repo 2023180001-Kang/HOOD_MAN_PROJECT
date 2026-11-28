@@ -704,8 +704,8 @@ class ARSoldierTests(unittest.TestCase):
                 self.assertNotIn(name, assets.images)
                 self.assertNotIn(name, assets.frames)
         self.assertIn(config.RIFLE_BULLET_IMAGE, assets.images)
-        self.assertEqual(len(assets.frames), 25)
-        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1280)
+        self.assertEqual(len(assets.frames), 26)
+        self.assertEqual(sum(len(row) for rows in assets.frames.values() for row in rows), 1376)
 
     def test_reload_fixed_sheet_and_both_archived_originals_keep_their_supplied_bytes(self):
         self.assertEqual(config.AR_SOLDIER_IMAGE, "AR_soldier_pico2d_reload_fixed_2048x1792.png")

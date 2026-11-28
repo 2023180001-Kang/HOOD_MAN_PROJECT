@@ -3,7 +3,7 @@
 import config
 from collision import same_floor
 from enemy import Enemy
-from enemy_spacing import clear_route
+from enemy_spacing import weapon_pickup_waypoint
 from projectiles import EnemyAxeProjectile
 
 
@@ -114,23 +114,8 @@ class AxeEnemy(Enemy):
                 and abs(self.ground_y - item.ground_y) <= config.WEAPON_PICKUP_DEPTH):
             self._set_armed(True)
             return True
-        goal = self.walkable.project(item.x, item.ground_y, self.boundary_padding)
-        if same_floor(self, player):
-            # The player may be standing on the axe. Approach its pickup area
-            # from either depth lane even when its centre is blocked at a wall.
-            obstacle = (player.x, player.ground_y, config.PLAYER_HALF_WIDTH + config.ENEMY_HALF_WIDTH,
-                        config.BODY_DEPTH_TOLERANCE)
-            lane_gap = config.BODY_DEPTH_TOLERANCE + config.ENEMY_SPACING_TOLERANCE
-            lanes = (player.ground_y - lane_gap, player.ground_y + lane_gap)
-            approaches = [goal] + [self.walkable.project(item.x, y, self.boundary_padding) for y in lanes
-                                    if abs(y - item.ground_y) <= config.WEAPON_PICKUP_DEPTH]
-            for approach in approaches:
-                waypoint = clear_route(self, approach, [obstacle], config.ENEMY_SPACING_TOLERANCE)
-                if waypoint is not None:
-                    goal = waypoint
-                    break
         self.recovery_target = item
-        self.navigation_target = goal
+        self.navigation_target = weapon_pickup_waypoint(self, item, player)
         return False
 
     def abandon_axe_recovery(self):

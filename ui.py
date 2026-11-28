@@ -231,9 +231,10 @@ class UI:
         font.draw(text_left, 515, "다음 소환", heading)
         for index, opponent in enumerate(OPPONENTS):
             selected = opponent == world.stage.selected_opponent
-            x = 222 + index * 104
+            x = 222 + index * 84
             if selected:
-                pico2d.draw_rectangle(x - 7, 502, x + 94, 528, 56, 74, 86, filled=True)
+                right = 951 if index == len(OPPONENTS) - 1 else x + 74
+                pico2d.draw_rectangle(x - 7, 502, right, 528, 56, 74, 86, filled=True)
             font.draw(x, 515, f"{index + 1}  {opponent.name}", heading if selected else body)
 
         pico2d.draw_rectangle(panel_left, 443, 958, 489, 17, 22, 29, filled=True)
@@ -423,6 +424,8 @@ class UI:
                              (205, 218, 231))
             if world.sniper_stage:
                 assets.font.draw(740, 120, "V → 1~9  스나이퍼 소환", (205, 218, 231))
+            if world.boss_stage:
+                assets.font.draw(990, 120, "B → 1~9  최종 인간 병기 소환", (205, 218, 231))
             sources = "좌우/열린 문 무작위" if world.stage.doors else "좌우 무작위"
             assets.font.draw(740, 48, f"1~9: 해당 수만큼 적 소환 ({sources})", (205, 218, 231))
             assets.font.draw(22, 25,

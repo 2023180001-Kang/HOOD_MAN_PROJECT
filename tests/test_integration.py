@@ -96,7 +96,7 @@ class IntegrationTests(unittest.TestCase):
                       config.SHIELD_SOLDIER_IMAGE: 7, config.SWORD_ENEMY_IMAGE: 7,
                       config.RESEARCHER_IMAGE: 7, config.RESEARCHER_BULLET_IMAGE: 1,
                       config.AR_SOLDIER_IMAGE: 7, config.RIFLE_BULLET_IMAGE: 1, config.SNIPER_IMAGE: 7,
-                      config.COMBAT_IMAGE: 4,
+                      config.FINAL_BOSS_IMAGE: 12, config.COMBAT_IMAGE: 4,
                       config.STRONG_ATTACK_IMAGE: 3, config.STRONG_HIT_IMAGE: 5,
                       config.PLAYER_CAR_HIT_IMAGE: 1, config.ENEMY_CAR_HIT_IMAGE: 1,
                       **{name: config.WEAPON_SHEET_ROWS[kind]

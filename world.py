@@ -9,6 +9,7 @@ from collision import resolve_bodies, same_floor, transit_target, world_rect
 from controls import Controls
 from drop_items import DropItem
 from effects import DamageNumber, HitEffect, SpriteAfterimage
+from final_boss import FinalBoss
 from enemy_spacing import place_ranged_spawns, prepare_enemy_spacing, resolve_enemy_spacing
 from physics import clamp
 from player import Player
@@ -22,6 +23,7 @@ from training_room import TrainingPlayer, TrainingRoom
 SPAWN_REQUESTS = {f"spawn_{n}": (n, None) for n in config.SPAWN_COUNTS}
 SPAWN_REQUESTS.update({f"spawn_sword_{n}": (n, SwordEnemy) for n in config.SPAWN_COUNTS})
 SPAWN_REQUESTS.update({f"spawn_sniper_{n}": (n, Sniper) for n in config.SPAWN_COUNTS})
+SPAWN_REQUESTS.update({f"spawn_boss_{n}": (n, FinalBoss) for n in config.SPAWN_COUNTS})
 
 
 class World:
@@ -120,6 +122,10 @@ class World:
     @property
     def sniper_stage(self):
         return not self.training and self.stage.image_name not in config.BOSS_STAGE_IMAGES[:-1]
+
+    @property
+    def boss_stage(self):
+        return self.stage.image_name in config.BOSS_STAGE_IMAGES
 
     @property
     def stage_loading(self):
@@ -330,6 +336,8 @@ class World:
                 count, enemy_type = SPAWN_REQUESTS[request]
                 if enemy_type is Sniper and not self.sniper_stage:
                     continue
+                if enemy_type is FinalBoss and not self.boss_stage:
+                    continue
                 if enemy_type is None and self.stage.mixes_numeric_summons:
                     for _ in range(count):
                         self.spawn_enemies(1, next(self.stage.summon_cycle))
@@ -351,6 +359,9 @@ class World:
                 item.axe_owner = None
             elif owner.seek_axe(item, self.player):
                 self.stage.drop_items.remove(item)
+        for enemy in self.enemies:
+            if isinstance(enemy, FinalBoss):
+                enemy.recover_knife(self.stage.drop_items, self.player)
         prepare_enemy_spacing(self.player, self.enemies, self.stage.area_for(self.player))
         for enemy in self.enemies:
             if enemy not in stair_moved:
@@ -578,8 +589,8 @@ class World:
         side = 1 if destination > self.stage_index else -1
         self._dive_afterimage_remaining = 0.0
         self.stage.release_actor(self.player)
-        self.controls.take_press("sniper_spawn")
-        self.controls.held.discard("sniper_spawn")
+        self.controls.take_presses(("sniper_spawn", "boss_spawn"))
+        self.controls.held.difference_update(("sniper_spawn", "boss_spawn"))
         self.stage_index = destination
         player = self.player
         player.floor = 0

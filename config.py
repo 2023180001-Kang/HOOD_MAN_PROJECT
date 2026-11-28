@@ -403,6 +403,7 @@ RESEARCHER_BULLET_FPS = 16.0
 RESEARCHER_BULLET_STRAIGHT_RANGE = 1125.0  # Preserve the former 1.25s straight flight.
 RESEARCHER_BULLET_GRAVITY = 900.0  # After the straight range, in world px/s².
 AR_SOLDIER_IMAGE = "AR_soldier_pico2d_reload_fixed_2048x1792.png"
+FINAL_BOSS_IMAGE = "HoodMan_FinalBoss_8x12_MuzzleFlash_Pico2D.png"
 ARCHIVED_AR_SOLDIER_IMAGES = (
     "before_sheets/AR_soldier.png",
     "before_sheets/AR_soldier_pico2d_2048x1792.png",

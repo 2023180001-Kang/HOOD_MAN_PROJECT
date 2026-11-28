@@ -32,7 +32,7 @@ class Assets:
                          config.ENEMY_IMAGE, config.ENEMY02_IMAGE, config.AXE_ENEMY_IMAGE,
                          config.AXE_ENEMY_UNARMED_IMAGE,
                          config.RESEARCHER_IMAGE, config.RESEARCHER_BULLET_IMAGE,
-                         config.AR_SOLDIER_IMAGE, config.RIFLE_BULLET_IMAGE,
+                         config.AR_SOLDIER_IMAGE, config.FINAL_BOSS_IMAGE, config.RIFLE_BULLET_IMAGE,
                          config.SNIPER_IMAGE, config.SNIPER_BULLET_IMAGE,
                          config.SNIPER_TARGET_IMAGE, config.SNIPER_LOCKED_IMAGE,
                          config.SHIELD_SOLDIER_IMAGE, config.SWORD_ENEMY_IMAGE,

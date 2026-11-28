@@ -11,11 +11,13 @@ from sdl2 import (
 )
 
 import config
+from controls import SPAWN_PREFIXES
 from physics import clamp
 from assets import Assets
 from death_screen import draw_black_overlay
 from drop_items import DropItem
 from effects import SpriteAfterimage
+from final_boss import FinalBoss
 from main_menu import MainMenu
 from projectiles import ResearcherBullet
 from researcher import Researcher
@@ -43,6 +45,7 @@ KEYS = {
     pico2d.SDLK_m: "cycle_spawn_enemy",
     pico2d.SDLK_c: "sword_spawn",
     pico2d.SDLK_v: "sniper_spawn",
+    pico2d.SDLK_b: "boss_spawn",
     pico2d.SDLK_PLUS: "training_target",
     pico2d.SDLK_KP_PLUS: "training_target",
 }
@@ -156,10 +159,12 @@ class Game:
                     key = "training_target"
                 if key is not None:
                     if event.type == pico2d.SDL_KEYDOWN and not event.key.repeat:
-                        if key in ("sword_spawn", "sniper_spawn") and (
+                        if key in SPAWN_PREFIXES and (
                                 self.world.training or self.world.stage_loading or not self.world.player.alive):
                             continue
                         if key == "sniper_spawn" and not self.world.sniper_stage:
+                            continue
+                        if key == "boss_spawn" and not self.world.boss_stage:
                             continue
                         self.world.controls.press(key)
                     elif event.type == pico2d.SDL_KEYUP:
@@ -256,7 +261,7 @@ class Game:
         if player.weapon == "pistol":
             self.assets.draw_researcher_aim(player, camera_x, camera_y)
         for enemy in self.world.enemies:
-            if isinstance(enemy, Researcher) and not isinstance(enemy, Sniper):
+            if isinstance(enemy, (Researcher, FinalBoss)) and not isinstance(enemy, Sniper):
                 self.assets.draw_researcher_aim(enemy, camera_x, camera_y)
         # Stable depth sorting puts older echoes behind newer ones and the
         # live actors on the same floor, without sorting by airborne height.

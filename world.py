@@ -124,10 +124,6 @@ class World:
         return not self.training and self.stage.image_name not in config.BOSS_STAGE_IMAGES[:-1]
 
     @property
-    def boss_stage(self):
-        return self.stage.image_name in config.BOSS_STAGE_IMAGES
-
-    @property
     def stage_loading(self):
         return self.pending_stage_index is not None
 
@@ -335,8 +331,6 @@ class World:
             if self.player.alive and not self.training:
                 count, enemy_type = SPAWN_REQUESTS[request]
                 if enemy_type is Sniper and not self.sniper_stage:
-                    continue
-                if enemy_type is FinalBoss and not self.boss_stage:
                     continue
                 if enemy_type is None and self.stage.mixes_numeric_summons:
                     for _ in range(count):

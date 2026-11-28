@@ -22,7 +22,7 @@ def arena(gap=300):
 
 
 class FinalBossTests(unittest.TestCase):
-    def test_b_then_number_spawns_only_on_boss_maps_and_training_has_its_own_selection(self):
+    def test_b_then_number_spawns_on_every_campaign_map_and_training_has_its_own_selection(self):
         game = scene()
         world = game.world
 
@@ -30,13 +30,16 @@ class FinalBossTests(unittest.TestCase):
             process_menu_events(game, key_event(key), key_event(key, down=False), menu_screen=False)
             world.step(config.FIXED_DT)
 
-        for index, key in ((0, pico2d.SDLK_2), (10, pico2d.SDLK_2), (11, pico2d.SDLK_KP_2)):
+        for index, stage in enumerate(config.STAGE_IMAGES):
             world.reset(stage_index=index)
-            press(pico2d.SDLK_b)
-            press(key)
-            bosses = [e for e in world.enemies if isinstance(e, FinalBoss)]
-            self.assertEqual(len(bosses), 2 if index in (10, 11) else 0)
-            self.assertTrue(all(e.hp == e.max_hp == 400 for e in bosses))
+            for key, count in ((pico2d.SDLK_2, 2), (pico2d.SDLK_KP_3, 3)):
+                with self.subTest(stage=stage, key=key):
+                    before = len(world.enemies)
+                    press(pico2d.SDLK_b)
+                    press(key)
+                    spawned = world.enemies[before:]
+                    self.assertEqual([type(e) for e in spawned], [FinalBoss] * count)
+                    self.assertTrue(all(e.hp == e.max_hp == 400 for e in spawned))
         world.training = True
         world.reset()
         press(pico2d.SDLK_KP_8)

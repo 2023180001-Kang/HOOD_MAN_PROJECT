@@ -164,8 +164,6 @@ class Game:
                             continue
                         if key == "sniper_spawn" and not self.world.sniper_stage:
                             continue
-                        if key == "boss_spawn" and not self.world.boss_stage:
-                            continue
                         self.world.controls.press(key)
                     elif event.type == pico2d.SDL_KEYUP:
                         self.world.controls.release(key)

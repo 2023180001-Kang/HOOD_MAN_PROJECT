@@ -525,6 +525,7 @@ HP_IMAGE = "HoodMan_HP_pico2d.png"
 STAGE_IMAGE = "changed_first_map.png"
 ARCHIVED_FIRST_STAGE_IMAGE = "before_sheets/changed_first_map_no_door.png"
 SECOND_STAGE_IMAGE = "newStage-2_floor300_1672x941.png"
+STAGE_REINFORCEMENTS = dict.fromkeys((STAGE_IMAGE, SECOND_STAGE_IMAGE, *CITY_STAGE_IMAGES), REINFORCEMENT_DELAYS)
 ARCHIVED_SECOND_STAGE_IMAGE = "before_sheets/newStage-2.png"
 ARCHIVED_TWO_FLOOR_IMAGE = "before_sheets/HoodMan_2F_Map_1672x941.png"
 ARCHIVED_TWO_FLOOR_WALKABLE_BOUNDS = (0.0, 56.0, WORLD_WIDTH, 136.0)

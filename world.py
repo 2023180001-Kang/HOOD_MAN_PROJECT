@@ -95,8 +95,7 @@ class World:
             return
         self._spawn_encounter_wave()
         self.stage.encounter_started = True
-        if self.stage.image_name in (config.STAGE_IMAGE, config.SECOND_STAGE_IMAGE, *config.CITY_STAGE_IMAGES):
-            self.stage.reinforcement_delays.extend(config.REINFORCEMENT_DELAYS)
+        self.stage.reinforcement_delays.extend(self.stage.reinforcement_schedule)
 
     def _spawn_encounter_wave(self):
         total = config.STAGE_ENCOUNTER_SIZE
@@ -106,12 +105,14 @@ class World:
         elif self.stage.image_name == config.BOSS_STAGE_IMAGES[-1]:
             partner = Sniper
         partner_count = total // 2 if partner is not None else 0
-        self.spawn_enemies(total - partner_count, enemy_type_for_stage(self.stage_index))
+        self.spawn_enemies(total - partner_count, enemy_type_for_stage(self.stage_index), encounter=True)
         if partner_count:
-            self.spawn_enemies(partner_count, partner)
+            self.spawn_enemies(partner_count, partner, encounter=True)
 
-    def spawn_enemies(self, count, enemy_type=None):
+    def spawn_enemies(self, count, enemy_type=None, *, encounter=False):
         spawned = self.spawner.spawn(count, self.elapsed, enemy_type=enemy_type)
+        for enemy in spawned:
+            enemy.encounter_member = encounter
         place_ranged_spawns(self.player, self.enemies, spawned,
                             include_snipers=self.stage.image_name == config.BOSS_STAGE_IMAGES[-1])
         self.enemies.extend(spawned)
@@ -308,7 +309,7 @@ class World:
         self.player.stair_regrab_remaining = max(0.0, self.player.stair_regrab_remaining - dt)
         self.stage.exit_player_stairs(self.player, self.controls)
         if self.controls.take_press("stage_exits") and self.player.alive and not self.training:
-            self.stage.arrows_visible = True
+            self.stage.arrows_visible = self.stage_index > 0 or not self.stage.forward_exit_locked
         if self.controls.take_press("toggle_doors"):
             self.stage.toggle_doors()
         self.stage.constrain_actor(self.player)
@@ -426,8 +427,10 @@ class World:
             if not enemy.alive and not enemy.defeat_counted:
                 enemy.defeat_counted = True
                 self.drop_enemy_weapon(enemy)
+                if self.stage.reinforcement_schedule and not enemy.encounter_member:
+                    continue
                 self.stage.defeated_count += 1
-                if self.stage.factory_gate is None and self.stage.defeated_count == config.STAGE_ENCOUNTER_SIZE:
+                if self.stage.factory_gate is None and self.stage.defeated_count == self.stage.defeats_required:
                     self.stage.arrows_visible = True
                     if not self.training:
                         self._record_map_clear()

@@ -91,6 +91,7 @@ class InvincibilityTests(unittest.TestCase):
         world.controls.press("invincibility")
         world.step(config.FIXED_DT)
         player = world.player
+        world.stage.defeated_count = world.stage.defeats_required
         world.stage.arrows_visible = True
         player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
         player.vx = config.RUN_SPEED

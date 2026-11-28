@@ -27,6 +27,11 @@ def expected_numeric_summons(stage_index, count):
 class ManualSpawnWorld(World):
     """Use explicitly arranged opponents for isolated movement and combat scenarios."""
 
+    def _new_stage(self, index, attack_sequence):
+        stage = super()._new_stage(index, attack_sequence)
+        stage.reinforcement_schedule = ()
+        return stage
+
     def start_stage_encounter(self):
         pass
 

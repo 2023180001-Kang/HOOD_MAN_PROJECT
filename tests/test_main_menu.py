@@ -341,6 +341,7 @@ class MainMenuFlowTests(unittest.TestCase):
         game = self.game
         world = game.world
         world.select_stage(source)
+        world.stage.defeated_count = world.stage.defeats_required
         world.stage.arrows_visible = True
         world.player.x = world.stage.width - config.STAGE_EXIT_MARGIN
         world.player.vx = config.RUN_SPEED

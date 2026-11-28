@@ -62,7 +62,9 @@ class StageProgressTests(unittest.TestCase):
             for index in (first, first + 1):
                 world.select_stage(index)
                 advance(world, 1)
-                for enemy in world.enemies[:3]:
+                if index < 4:
+                    advance(world, 1.5)
+                for enemy in world.enemies[:-1]:
                     enemy.take_damage(enemy.hp)
                 world.step(config.FIXED_DT)
                 self.assertEqual(menu.region_status(first), "in_progress")
@@ -85,11 +87,11 @@ class StageProgressTests(unittest.TestCase):
         world, menu = game.world, game.menu
         world.controls.press("stage_exits")
         world.step(config.FIXED_DT)
-        self.assertTrue(world.stage.arrows_visible)
+        self.assertEqual(world.stage.arrow_sides, ())
         self.assertFalse(world.cleared_stages)
         for index in (1, 0):
             world.select_stage(index)
-            advance(world, 1)
+            advance(world, 2.5)
             for enemy in world.enemies:
                 enemy.take_damage(enemy.hp)
             world.step(config.FIXED_DT)
@@ -149,9 +151,13 @@ class StageProgressTests(unittest.TestCase):
 
 class StageClearHealthTests(unittest.TestCase):
     def clear_current_map(self, world):
+        world.player.invincible = True
         if not world.stage.encounter_started:
             advance(world, config.STAGE_ENCOUNTER_DELAY)
         self.assertEqual(len(world.enemies), config.STAGE_ENCOUNTER_SIZE)
+        if world.stage_index < 4:
+            advance(world, 1.5)
+            self.assertEqual(len(world.enemies), 12)
         for enemy in world.enemies:
             enemy.take_damage(enemy.max_hp * 2)  # Also lethal to a guarding shield soldier.
         world.step(config.FIXED_DT)
@@ -218,7 +224,8 @@ class StageClearHealthTests(unittest.TestCase):
         world.player.hp = 35
         world.controls.press("stage_exits")
         world.step(config.FIXED_DT)
-        self.take_arrow(world)
+        self.assertIsNone(world.stage.destination(1))
+        world.select_stage(1)
         self.clear_current_map(world)
         self.take_arrow(world)
         world.update(config.STAGE_INTRO_DURATION)

@@ -18,6 +18,7 @@ import config
 from effects import DamageNumber, HitEffect
 from enemy import Enemy
 from game import Game
+from tests.helpers import ManualSpawnWorld
 from tools.check_render import capture, render_image
 from tools.check_runtime import push_key, tick
 from world import World
@@ -35,15 +36,12 @@ def check_markers(game):
     for index in range(len(config.STAGE_IMAGES)):
         game.world = World()
         game.world.stage_index = index
-        baseline = {}
-        for side in (-1, 1):
-            view_edge(game, side)
-            baseline[side] = render_image(game)
-        backgrounds.append(baseline[1])
+        view_edge(game, 1)
+        backgrounds.append(render_image(game))
         push_key(pico2d.SDLK_n)
         tick(game)
         exits = [side for side in (-1, 1) if 0 <= index + side < len(config.STAGE_IMAGES)]
-        if game.world.stage.factory_gate is not None:
+        if game.world.stage.factory_gate is not None or game.world.stage.forward_exit_locked:
             exits.remove(1)
         assert game.world.stage.arrow_sides == tuple(exits)
         for side in (-1, 1):
@@ -52,7 +50,8 @@ def check_markers(game):
             top = int(config.SCREEN_HEIGHT - config.STAGE_ARROW_Y - 40)
             bottom = int(config.SCREEN_HEIGHT - config.STAGE_ARROW_Y + 40)
             region = (0, top, 190, bottom) if side < 0 else (1090, top, 1280, bottom)
-            before = baseline[side].crop(region)
+            with patch.object(game.world.stage, "arrows_visible", False):
+                before = render_image(game).crop(region)
             after = image.crop(region)
             if side not in exits:
                 assert after.tobytes() == before.tobytes()
@@ -62,7 +61,7 @@ def check_markers(game):
                 assert gold(after.get_flattened_data()) > gold(before.get_flattened_data()) + 50
         push_key(pico2d.SDLK_n, repeat=True)
         tick(game)
-        assert game.world.stage.arrows_visible
+        assert game.world.stage.arrow_sides == tuple(exits)
         push_key(pico2d.SDLK_n, down=False)
         game.handle_events()
     assert len({image.crop((250, 200, 1000, 500)).tobytes() for image in backgrounds}) == len(config.STAGE_IMAGES)
@@ -81,7 +80,7 @@ def check_motion_continuity(game, first=0):
     textures = dict(game.assets.images)
     for side in (-1, 1):
         for mode in ("walk", "run", "jump_up", "jump_down"):
-            game.world = World()
+            game.world = ManualSpawnWorld()
             game.world.stage_index = first if side > 0 else first + 1
             if game.world.stage.factory_gate is not None:
                 continue  # Doorway travel is exercised by check_factory_exterior.
@@ -104,7 +103,7 @@ def check_motion_continuity(game, first=0):
                         if side > 0 else config.STAGE_EXIT_MARGIN)
             push_key(pico2d.SDLK_n)
             game.handle_events()
-            reference = World()
+            reference = ManualSpawnWorld()
             reference.player = deepcopy(player)
             reference.player.x = config.START_X
             reference.controls = deepcopy(game.world.controls)
@@ -132,7 +131,7 @@ def check_motion_continuity(game, first=0):
 
 
 def check_round_trip_and_last_exit(game):
-    game.world = World(rng=random.Random(1))
+    game.world = ManualSpawnWorld(rng=random.Random(1))
     player = game.world.player
     push_key(pico2d.SDLK_n)
     game.world.enemies.extend(game.world.spawner.spawn(1, game.world.elapsed))
@@ -175,7 +174,7 @@ def check_round_trip_and_last_exit(game):
         push_key(key, down=False)
     game.handle_events()
 
-    game.world = World()
+    game.world = ManualSpawnWorld()
     game.world.stage_index = len(config.STAGE_IMAGES) - 1
     player = game.world.player
     player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
@@ -219,6 +218,7 @@ def check_transition_art(image, art):
 
 def check_city_loading(game):
     game.world = World()
+    game.world.stage.defeated_count = game.world.stage.defeats_required
     game.world.stages[2].traffic = None  # Isolate saved enemy HP from random road deaths.
     player = game.world.player
     textures = dict(game.assets.images)
@@ -229,6 +229,7 @@ def check_city_loading(game):
     tick(game)
     assert game.world.stage_index == 1 and not game.world.stage_loading
     source = game.world.stage
+    source.defeated_count = source.defeats_required
     source.enemies.append(Enemy(1200))
     source.effects.append(HitEffect(1200, 180, 1))
     player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
@@ -273,6 +274,7 @@ def check_city_loading(game):
     game.world.enemies.extend(game.world.spawner.spawn(1, game.world.elapsed))
     tick(game)
     city_first = game.world.stage
+    city_first.defeated_count = city_first.defeats_required
     city_enemy = city_first.enemies[0]
     city_enemy.take_damage(40)
     push_key(pico2d.SDLK_n, down=False)
@@ -360,6 +362,7 @@ def check_factory_loading(game, first=3):
         wait_seconds = config.STAGE_INTRO_DURATION if intro else config.STAGE_LOADING_DURATION
         world.stage_index = source_index
         source, target = world.stage, world.stages[destination]
+        source.defeated_count = source.defeats_required
         player = world.player
         player.x = (config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN if side > 0
                     else config.STAGE_EXIT_MARGIN)
@@ -426,6 +429,7 @@ def check_factory_loading(game, first=3):
               "player/jump/HP/input and both scenes' objects survive the frozen transition.")
     game.world = World()
     game.world.stage_index = first
+    game.world.stage.defeated_count = game.world.stage.defeats_required
     game.world.player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
     game.world.player.vx = config.RUN_SPEED
     push_key(pico2d.SDLK_n)

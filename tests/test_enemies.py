@@ -233,8 +233,48 @@ class EnemyTests(unittest.TestCase):
         self.assertEqual(world.enemies, [])
         self.assertEqual(world.spawner.spawned_count, 12)
 
-    def test_fourth_defeat_opens_the_exit_even_with_extra_enemies_alive(self):
+    def test_all_twelve_wave_enemies_are_required_for_the_forward_exit(self):
+        for index in range(4):
+            with self.subTest(stage=index):
+                world = World(rng=random.Random(42))
+                world.reset(stage_index=index)
+                world.player.invincible = True
+                stage = world.stage
+                world.spawn_enemies(9)
+                for enemy in world.enemies:
+                    enemy.take_damage(enemy.hp)
+                world.controls.press("stage_exits")
+                world.step(config.FIXED_DT)
+                self.assertEqual(stage.defeated_count, 4)
+                self.assertEqual(stage.arrow_sides, (-1,) if index else ())
+                self.assertIsNone(stage.destination(1))
+                world.player.x = stage.width - config.STAGE_EXIT_MARGIN
+                world.player.vx = config.RUN_SPEED
+                self.assertFalse(world.try_stage_transition())
+                world.player.x = config.START_X
+                advance(world, 1.5)
+                remaining = [enemy for enemy in world.enemies if enemy.alive]
+                self.assertEqual(len(remaining), 8)
+                for enemy in remaining[:-1]:
+                    enemy.take_damage(enemy.hp)
+                world.step(config.FIXED_DT)
+                self.assertEqual(stage.defeated_count, 11)
+                self.assertIsNone(stage.destination(1))
+                self.assertNotIn(index, world.cleared_stages)
+                world.spawn_enemies(1)
+                remaining[-1].take_damage(remaining[-1].hp)
+                world.step(config.FIXED_DT)
+                self.assertEqual(stage.defeated_count, 12)
+                self.assertEqual(stage.destination(1), index + 1)
+                self.assertIn(index, world.cleared_stages)
+                self.assertTrue(world.enemies[-1].alive)
+                world.retry_current_map()
+                self.assertEqual(world.stage.defeated_count, 0)
+                self.assertIsNone(world.stage.destination(1))
+
+    def test_fourth_defeat_still_opens_an_ordinary_exit_with_extra_enemies_alive(self):
         world = World(rng=random.Random(42))
+        world.reset(stage_index=5)
         world.player.invincible = True
         world.controls.press("spawn_sword_1")
         world.step(config.FIXED_DT)
@@ -242,22 +282,23 @@ class EnemyTests(unittest.TestCase):
             enemy.take_damage(enemy.hp)
         advance(world, 6)
         self.assertEqual((world.stage.defeated_count, world.stage.arrow_sides), (3, ()))
-        self.assertEqual(len(world.enemies), 10)
+        self.assertEqual(len(world.enemies), 2)
         world.select_stage(1)
         self.assertEqual((world.stage.defeated_count, world.stage.arrow_sides), (0, ()))
-        world.select_stage(0)
+        world.select_stage(5)
         target = world.enemies[-1]
         target.x, target.ground_y = world.player.x + 200, world.player.ground_y
         target.hp = 1
         world.projectiles.append(PlayerPistolBullet(target.x, target.ground_y, 50, 1))
         world.step(config.FIXED_DT)
         self.assertFalse(target.alive)
-        self.assertEqual((world.stage.defeated_count, world.stage.arrow_sides), (4, (1,)))
+        self.assertEqual((world.stage.defeated_count, world.stage.arrow_sides), (4, (-1, 1)))
         self.assertTrue(world.enemies[0].alive)
         world.player.x = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN
         world.controls.press("right")
         world.step(config.FIXED_DT)
-        self.assertEqual((world.stage_index, len(world.enemies), world.stage.arrow_sides), (1, 0, ()))
+        world.update(config.STAGE_LOADING_DURATION)
+        self.assertEqual((world.stage_index, len(world.enemies), world.stage.arrow_sides), (6, 0, ()))
         advance(world, 1 - config.FIXED_DT, fps=120)
         self.assertEqual(world.enemies, [])
         world.update(config.FIXED_DT)
@@ -272,6 +313,9 @@ class EnemyTests(unittest.TestCase):
                 self.assertEqual(stage.spawner.spawned_count, 0)
                 world.update(config.FIXED_DT)
             self.assertEqual((len(world.enemies), stage.arrow_sides), (4, ()))
+            if index < 4:
+                advance(world, 1.5)
+                self.assertEqual(len(world.enemies), 12)
             for enemy in world.enemies:
                 enemy.take_damage(enemy.hp)
             world.step(config.FIXED_DT)
@@ -304,6 +348,7 @@ class EnemyTests(unittest.TestCase):
     def test_loading_discards_numeric_spawns_and_preserves_the_pending_destination(self):
         world = World()
         world.select_stage(1)
+        world.stage.defeated_count = world.stage.defeats_required
         world.stage.arrows_visible = True
         player = world.player
         player.x, player.vx = config.WORLD_WIDTH - config.STAGE_EXIT_MARGIN, config.RUN_SPEED

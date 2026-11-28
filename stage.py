@@ -51,6 +51,7 @@ class Stage:
         self.index = index
         self.arrows_visible = False
         self.encounter_started = False
+        self.reinforcement_schedule = config.STAGE_REINFORCEMENTS.get(self.image_name, ())
         self.reinforcement_delays = []
         self.defeated_count = 0
         self.factory_gate = (Animation(dict.fromkeys(("CLOSED", "OPENING"), (1, config.FACTORY_GATE_FPS, False)),
@@ -368,11 +369,19 @@ class Stage:
         return config.STAGE_IMAGES[self.index]
 
     @property
+    def defeats_required(self):
+        return config.STAGE_ENCOUNTER_SIZE * (1 + len(self.reinforcement_schedule))
+
+    @property
+    def forward_exit_locked(self):
+        return bool(self.reinforcement_schedule) and self.defeated_count < self.defeats_required
+
+    @property
     def arrow_sides(self):
         if not self.arrows_visible:
             return ()
-        if self.factory_gate is not None:
-            return (-1,)
+        if self.factory_gate is not None or self.forward_exit_locked:
+            return (-1,) if self.index > 0 else ()
         return tuple(side for side in (-1, 1) if 0 <= self.index + side < len(config.STAGE_IMAGES))
 
     def destination(self, side):

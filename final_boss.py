@@ -114,9 +114,11 @@ class FinalBoss(Enemy02):
     def _start_move(self, kind, *, air_contact=False):
         self.attack_kind = kind
         self.air_contact_attack = self.air_contact_pending = air_contact
-        self.animation.definitions["ATTACK"] = (self.attacks[kind][0], self.attack_fps, False)
+        speed = 1.5 if kind in ("punch", "kick") else 1.0
+        self.animation.definitions["ATTACK"] = (self.attacks[kind][0], self.attack_fps * speed, False)
         self.vx = self.ground_vy = 0.0
         Enemy.start_attack(self)
+        self.cooldown /= speed
 
     def start_attack(self, *, air_contact=False):
         if air_contact:

@@ -96,7 +96,7 @@ class FinalBossTests(unittest.TestCase):
                                  ("RELOAD", 7) if magazine == 0 else ("IDLE", 1))
             self.assertEqual((boss.reserve_magazines, player.hp), (0, config.MAX_HP))
             player.x, player.ground_y = boss.x + 85, boss.ground_y
-            advance(world, 0.6)
+            advance(world, 0.3)
             self.assertEqual((boss.animation.row, player.hp), (4, config.MAX_HP - 40))
 
     def test_hit_stun_resumes_the_single_reload_without_extra_ammo(self):
@@ -224,10 +224,13 @@ class FinalBossTests(unittest.TestCase):
         world, boss = arena(90)
         boss.ammo = boss.reserve_magazines = 0
         player = world.player
-        for row, damage in ((4, 40), (5, 50), (8, 30)):
+        for row, damage, speed in ((4, 40, 1.5), (5, 50, 1.5), (8, 30, 1.0)):
             boss.start_attack()
             self.assertEqual((boss.animation.row, boss.attack_damage), (row, damage))
-            boss.animation.elapsed = (4 + 0.1) / boss.attack_fps
+            self.assertAlmostEqual(boss.cooldown, boss.attack_interval / speed)
+            boss.animation.update(4 / (boss.attack_fps * speed) - config.FIXED_DT)
+            self.assertFalse(boss.try_hit(player))
+            boss.animation.update(config.FIXED_DT)
             hp = player.hp
             self.assertTrue(boss.try_hit(player))
             self.assertFalse(boss.try_hit(player))

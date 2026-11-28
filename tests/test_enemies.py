@@ -51,25 +51,27 @@ class EnemyTests(unittest.TestCase):
             world.select_stage(index)
             advance(world, 1)
             self.assertEqual(world.enemies[:4], wave)
-            self.assertEqual(world.spawner.spawned_count, 8 if index < 2 else 4)
+            self.assertEqual(world.spawner.spawned_count, 8 if index < 4 else 4)
         world.controls.press("restart")
         world.update(1 / 60)
         self.assertEqual((world.stage_index, world.player.hp, len(world.enemies)), (0, 500, 4))
         self.assertTrue(all(not stage.enemies and stage.spawner.spawned_count == 0
                             for stage in world.stages[1:]))
 
-    def test_alley_waves_add_four_at_one_second_and_four_more_half_a_second_later(self):
+    def test_alley_and_city_repeat_their_first_wave_after_one_second_then_half_a_second(self):
         world = World(rng=random.Random(42))
-        for index in (0, 1):
+        for index in (0, 1, 2, 3):
             with self.subTest(stage=index):
                 world.reset(stage_index=index)
                 world.player.invincible = True
+                expected = [Enemy] * 4 if index < 2 else [Enemy02, Enemy02, SwordEnemy, SwordEnemy]
+                self.assertCountEqual([type(enemy) for enemy in world.enemies], expected)
                 for delay, before in ((1.0, 4), (0.5, 8)):
                     advance(world, delay - config.FIXED_DT, fps=120)
                     self.assertEqual(len(world.enemies), before)
                     world.update(config.FIXED_DT)
                     self.assertEqual(len(world.enemies), before + 4)
-                    self.assertTrue(all(type(enemy) is Enemy for enemy in world.enemies[-4:]))
+                    self.assertCountEqual([type(enemy) for enemy in world.enemies[-4:]], expected)
                 advance(world, 2)
                 self.assertEqual(world.spawner.spawned_count, 12)
 
@@ -78,7 +80,7 @@ class EnemyTests(unittest.TestCase):
         advance(world, 0.75)
         world.select_stage(2)
         advance(world, 3)
-        self.assertEqual((world.stages[0].spawner.spawned_count, world.spawner.spawned_count), (4, 4))
+        self.assertEqual((world.stages[0].spawner.spawned_count, world.spawner.spawned_count), (4, 12))
         world.select_stage(0)
         advance(world, 0.25)
         self.assertEqual(world.spawner.spawned_count, 8)

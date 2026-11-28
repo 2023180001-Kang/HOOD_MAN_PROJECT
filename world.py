@@ -93,6 +93,12 @@ class World:
     def start_stage_encounter(self):
         if self.training or self.stage.encounter_started:
             return
+        self._spawn_encounter_wave()
+        self.stage.encounter_started = True
+        if self.stage.image_name in (config.STAGE_IMAGE, config.SECOND_STAGE_IMAGE, *config.CITY_STAGE_IMAGES):
+            self.stage.reinforcement_delays.extend(config.REINFORCEMENT_DELAYS)
+
+    def _spawn_encounter_wave(self):
         total = config.STAGE_ENCOUNTER_SIZE
         partner = None
         if self.stage.image_name in config.CITY_STAGE_IMAGES:
@@ -103,9 +109,6 @@ class World:
         self.spawn_enemies(total - partner_count, enemy_type_for_stage(self.stage_index))
         if partner_count:
             self.spawn_enemies(partner_count, partner)
-        self.stage.encounter_started = True
-        if self.stage.image_name in (config.STAGE_IMAGE, config.SECOND_STAGE_IMAGE):
-            self.stage.reinforcement_delays.extend(config.ALLEY_REINFORCEMENT_DELAYS)
 
     def spawn_enemies(self, count, enemy_type=None):
         spawned = self.spawner.spawn(count, self.elapsed, enemy_type=enemy_type)
@@ -323,7 +326,7 @@ class World:
             delays[0] -= real_dt
             if delays[0] <= 1e-9:
                 delays.pop(0)
-                self.spawn_enemies(config.STAGE_ENCOUNTER_SIZE, enemy_type_for_stage(self.stage_index))
+                self._spawn_encounter_wave()
         self.stage.update_doors(dt)
         self.update_combat_effects(dt)
         self.spawn_dive_afterimage(dt)

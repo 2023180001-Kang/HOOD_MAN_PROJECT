@@ -86,7 +86,7 @@ KNOCKBACK_RADIUS = 160.0
 SPAWN_COUNTS = tuple(range(1, 10))
 STAGE_ENCOUNTER_SIZE = 4
 STAGE_ENCOUNTER_DELAY = 1.0
-ALLEY_REINFORCEMENT_DELAYS = (1.0, 0.5)  # Seconds after the preceding wave.
+REINFORCEMENT_DELAYS = (1.0, 0.5)  # Seconds after the preceding wave in alley and city maps.
 
 ARCHIVED_TITLE_IMAGE = "before_sheets/HOOD_MAN_TITLE_SCREEN_1280x720.png"
 MAIN_MENU_IMAGE = "HOOD_MAN_main_menu_background_1280x720.png"

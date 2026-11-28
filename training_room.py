@@ -124,7 +124,6 @@ class TrainingAxe(TrainingTarget, AxeEnemy):
             if self.state in ("WALK", "RUN"):
                 self.stop()
             if self.state == "IDLE" and self.try_start_throw(dt, player):
-                self.animation.update(dt)
                 return
             super()._update_ai(dt, player)
 

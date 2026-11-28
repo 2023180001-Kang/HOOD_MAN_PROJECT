@@ -45,9 +45,16 @@ class AxeEnemy(Enemy):
     def attack_box(self):
         return None if self.attack_kind == "throw" else super().attack_box
 
+    @property
+    def preparing_throw(self):
+        return (self.armed and self.alive and self.state == "ATTACK" and self.attack_kind == "throw"
+                and self.staircase is None and not self.falling_from_upper)
+
     def _start_move(self, kind):
         self.attack_kind = kind
-        self.animation.definitions["ATTACK"] = (self.attacks[kind][0], self.attack_fps, False)
+        fps = (EnemyAxeProjectile.release_frame / config.AXE_ENEMY_THROW_WARNING
+               if kind == "throw" else self.attack_fps)
+        self.animation.definitions["ATTACK"] = (self.attacks[kind][0], fps, False)
         self.vx = self.ground_vy = 0.0
         super().start_attack()
 
@@ -73,7 +80,6 @@ class AxeEnemy(Enemy):
 
     def _update_ai(self, dt, player):
         if self.state in ("IDLE", "WALK", "RUN") and self.try_start_throw(dt, player):
-            self.animation.update(dt)
             return
         super()._update_ai(dt, player)
         if (self.state == "ATTACK" and self.attack_kind == "swing"
@@ -93,15 +99,31 @@ class AxeEnemy(Enemy):
             self.attack_kind = "swing"
             self.animation.definitions["ATTACK"] = (self.attacks["swing"][0], self.attack_fps, False)
 
-    def take_projectile(self):
-        if (not self.armed or not self.alive or self.state != "ATTACK" or self.attack_kind != "throw"
-                or self.animation.frame < EnemyAxeProjectile.release_frame):
-            return None
-        self._set_armed(False)
+    def _new_thrown_axe(self):
         forward, height = EnemyAxeProjectile.release_offset
         return EnemyAxeProjectile(self.x + self.facing * forward * config.SPRITE_SCALE,
                                   self.ground_y, self.jump_height + height * config.SPRITE_SCALE,
                                   self.facing, self.floor, shooter=self)
+
+    def throw_warning_points(self, world_width):
+        if not self.preparing_throw:
+            return
+        axe = self._new_thrown_axe()
+        axe.world_width = world_width
+        interval = config.RESEARCHER_AIM_DOT_SPACING / axe.speed
+        while not axe.finished:
+            yield axe.x, axe.y
+            axe.update(interval, None)
+
+    def take_projectile(self):
+        if not self.preparing_throw or self.animation.elapsed + 1e-9 < config.AXE_ENEMY_THROW_WARNING:
+            return None
+        # Resume the fighter's normal speed at the empty-handed release frame.
+        overshoot = max(0.0, self.animation.elapsed - config.AXE_ENEMY_THROW_WARNING)
+        self.animation.definitions["ATTACK"] = (self.attacks["throw"][0], self.attack_fps, False)
+        self.animation.elapsed = (EnemyAxeProjectile.release_frame + 1e-9) / self.attack_fps + overshoot
+        self._set_armed(False)
+        return self._new_thrown_axe()
 
     def seek_axe(self, item, player):
         """Claim a reachable axe, or set this tick's movement waypoint toward it."""

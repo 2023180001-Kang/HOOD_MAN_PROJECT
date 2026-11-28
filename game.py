@@ -14,6 +14,7 @@ import config
 from controls import SPAWN_PREFIXES
 from physics import clamp
 from assets import Assets
+from axe_enemy import AxeEnemy
 from death_screen import draw_black_overlay
 from drop_items import DropItem
 from effects import SpriteAfterimage
@@ -295,6 +296,8 @@ class Game:
         for enemy in self.world.enemies:
             if isinstance(enemy, (Researcher, FinalBoss)) and not isinstance(enemy, Sniper):
                 self.assets.draw_researcher_aim(enemy, camera_x, camera_y)
+            elif isinstance(enemy, AxeEnemy):
+                self.assets.draw_axe_throw_warning(enemy, camera_x, camera_y, self.world.stage.width)
         # Stable depth sorting puts older echoes behind newer ones and the
         # live actors on the same floor, without sorting by airborne height.
         sprites = [(image.ground_y, image, image.image_name, image.opacity)

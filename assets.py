@@ -148,6 +148,14 @@ class Assets:
             if -radius <= x < config.SCREEN_WIDTH + radius:
                 pico2d.draw_circle(x, y, radius, *config.RESEARCHER_AIM_COLOR, filled=True)
 
+    def draw_axe_throw_warning(self, enemy, camera_x, camera_y, world_width):
+        radius = config.RESEARCHER_AIM_DOT_RADIUS
+        for world_x, world_y in enemy.throw_warning_points(world_width):
+            x, y = world_x - camera_x, world_y - camera_y
+            if (-radius <= x < config.SCREEN_WIDTH + radius
+                    and -radius <= y < config.SCREEN_HEIGHT + radius):
+                pico2d.draw_circle(x, y, radius, *config.RESEARCHER_AIM_COLOR, filled=True)
+
     def draw_stage_door(self, door, background, tile_x, bottom, scale, *, mirrored=False):
         image = self.images[door.image_name]
         cell = config.DOOR_CELL_SIZE

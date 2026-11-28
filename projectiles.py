@@ -200,7 +200,9 @@ class ResearcherBullet:
         return target.take_damage(self.damage, attacker=self.shooter, stagger=self.staggers_player)
 
     def _flight_targets(self, player, return_targets):
-        return return_targets if self.deflected else (player,)
+        if self.deflected:
+            return return_targets
+        return (player,) if player is not None else ()
 
     def _contacts(self, targets, duration, offset, tick_duration, gravity):
         contacts = []

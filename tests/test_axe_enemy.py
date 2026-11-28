@@ -83,11 +83,40 @@ class AxeEnemyTests(unittest.TestCase):
             self.assertTrue(enemy.try_start_throw(config.AXE_ENEMY_THROW_RETRY, player))
             self.assertEqual(roll.call_count, 2)
             self.assertEqual((enemy.animation.row, enemy.facing), (7, -1))
-            enemy.animation.elapsed = 3.99 / enemy.attack_fps
+            enemy.animation.elapsed = config.AXE_ENEMY_THROW_WARNING - config.FIXED_DT
             self.assertIsNone(enemy.take_projectile())
             enemy.take_damage(10)
+            self.assertFalse(list(enemy.throw_warning_points(world.stage.width)))
             self.assertIsNone(enemy.take_projectile())
             self.assertTrue(enemy.armed)
+
+    def test_throw_warns_for_one_second_then_follows_the_dots_in_either_direction(self):
+        for facing, speed in ((-1, 0.9), (1, 1.3)):
+            with self.subTest(facing=facing):
+                world, _ = encounter()
+                enemy = AxeEnemy(config.START_X, facing, ground_y=world.player.ground_y, attack_speed=speed)
+                world.enemies = [enemy]
+                player = world.player
+                player.x = enemy.x + facing * 400
+                enemy.has_swung = True
+                with patch.object(enemy.rng, "random", return_value=0):
+                    world.step(config.FIXED_DT)
+                points = list(enemy.throw_warning_points(world.stage.width))
+                self.assertTrue(points)
+                self.assertLess(points[-1][1], points[0][1])
+                player.ground_y += 100
+                advance(world, 1 - config.FIXED_DT, fps=120)
+                self.assertFalse(world.projectiles)
+                self.assertEqual(list(enemy.throw_warning_points(world.stage.width)), points)
+                world.step(config.FIXED_DT)
+                axe, = world.projectiles
+                self.assertEqual((enemy.animation.row, enemy.animation.frame), (7, 4))
+                self.assertFalse(list(enemy.throw_warning_points(world.stage.width)))
+                for x, y in points:
+                    self.assertAlmostEqual(axe.x, x)
+                    self.assertAlmostEqual(axe.y, y)
+                    axe.update(config.RESEARCHER_AIM_DOT_SPACING / axe.speed, player)
+                self.assertTrue(axe.finished)
 
     def test_throw_flies_level_then_falls_hits_once_and_owner_recovers_and_reuses_it(self):
         for side in (-1, 1):
@@ -215,7 +244,7 @@ class AxeEnemyTests(unittest.TestCase):
                 enemy.cooldown = 12
             for shooter in world.enemies[:3]:
                 shooter._start_move("throw")
-                shooter.animation.elapsed = 4.1 / shooter.attack_fps
+                shooter.animation.elapsed = config.AXE_ENEMY_THROW_WARNING
             world.update_projectiles(0)
             self.assertEqual(len(world.projectiles), 3)
             axes = list(world.projectiles)
